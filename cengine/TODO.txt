@@ -1,0 +1,30 @@
+- Architecture
+    - ...
+
+- Core
+    - Disable limited Memory capacity (allocate several times)
+    - Hash Table (for caching)
+    - Logger for work queue ?
+    - _CENGINE_HARDWARE for hardware accesleration if it will be
+
+- Window
+    - Switch to DPI stuff for monitor and window adjustment ?
+
+- Math
+    - CPU optimizations
+    - Other orthos & persps
+
+- Graphics
+    - Allocate rasterizer data on transient area
+    - Rendering in tiles (if it would be possible)
+    - Multi-threaded rendering
+    - Cache for rasterizer
+    - Batch rendering ?
+    - Texture/Image
+    - Entity system
+    - Particle system
+    - Hardware acceleration (D3D12)
+
+- Sound
+    - Initialize MMF (Microsoft Media Foundation)
+    - Sound callback

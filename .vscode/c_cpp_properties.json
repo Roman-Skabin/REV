@@ -1,0 +1,50 @@
+{
+	"env": {
+		"myIncludePath": [
+			"${workspaceFolder}/cengine/cengine"
+		],
+		"myPreDefines": [
+			"_CENGINE_DEV"
+		]
+	},
+	"configurations": [
+		{
+			"name": "DEBUG_x64",
+			"intelliSenseMode": "msvc-x64",
+			"compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2017/Enterprise/VC/Tools/MSVC/14.16.27023/bin/Hostx64/x64/cl.exe",
+			"defines": [
+				"${default}",
+				"_WIN64",
+				"${myPreDefines}"
+			],
+			"includePath": [
+				"${myIncludePath}"
+			],
+			"browse": {
+				"path": [
+					"${default}",
+					"${myIncludePath}"
+				]
+			}
+		},
+		{
+			"name": "DEBUG_x86",
+			"intelliSenseMode": "msvc-x86",
+			"compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2017/Enterprise/VC/Tools/MSVC/14.16.27023/bin/Hostx86/x86/cl.exe",
+			"defines": [
+				"${default}",
+				"${myPreDefines}"
+			],
+			"includePath": [
+				"${myIncludePath}"
+			],
+			"browse": {
+				"path": [
+					"${default}",
+					"${myIncludePath}"
+				]
+			}
+		}
+	],
+	"version": 4
+}

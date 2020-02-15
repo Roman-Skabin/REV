@@ -1,0 +1,19 @@
+[18:17:33]<Engine logger>: Success: Engine logger was created
+[18:17:33]<Engine logger>: Success: Window was created
+[18:17:33]<Engine logger>: Success: Monitor was initialized
+[18:17:33]<Engine logger>: Success: Mouse was created
+[18:17:33]<Engine logger>: Success: Gamepad created
+[18:17:33]<Engine logger>: Gamepad is not connected
+[18:17:33]<Engine logger>: Success: Timer was created
+[18:17:33]<Engine logger>: Success: Renderer was created
+[18:17:33]<Engine logger>: Thread was created: id = 1, queue = 0x00000191C07F0000
+[18:17:33]<Engine logger>: Success: Work queue was created
+[18:17:33]<Engine logger>: Additional threads count = 1
+[18:17:33]<Engine logger>: Window was resized
+[18:17:33]<Engine logger>: Timer was started
+[18:17:33]<Engine logger>: Window was resized
+[18:17:34]<Engine logger>: Window was resized
+[18:17:43]<Engine logger>: Timer was stopped
+[18:17:43]<Engine logger>: Window was destroyed
+[18:17:43]<Engine logger>: Input was destroyed
+[18:17:43]<Engine logger>: Engine logger was destroyed

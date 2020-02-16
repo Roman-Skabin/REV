@@ -20,6 +20,12 @@
     typedef struct EngineState EngineState;
 #endif
 
+#define USER_CALLBACK(name) void name(EngineState *engine_state)
+typedef USER_CALLBACK(UserCallback);
+
+#define AUDIO_CALLBACK(name) void name(EngineState *state, u32 *samples, u32 num_samples)
+typedef AUDIO_CALLBACK(AudioCallback);
+
 struct EngineState
 {
     _Out_ struct
@@ -65,6 +71,20 @@ struct EngineState
         b32 stopped;
     } timer;
 
+    struct
+    {
+        union
+        {
+            WAVEFORMATEXTENSIBLE *extensible;
+            WAVEFORMATEX         *ex;
+        } wave_format;
+        IAudioClient         *client;
+        IAudioRenderClient   *renderer;
+        IAudioStreamVolume   *volume;
+        HRESULT               error;
+        _In_ b32              pause;
+    } audio;
+
     _Out_ Renderer renderer;
 
     Logger logger;
@@ -77,12 +97,11 @@ struct EngineState
     _In_ void *user_ponter;
 };
 
-#define USER_CALLBACK(name) void name(EngineState *engine_state)
-
 CEXTERN USER_CALLBACK(User_OnInit);
 CEXTERN USER_CALLBACK(User_OnDestroy);
 CEXTERN USER_CALLBACK(User_OnUpdate);
 CEXTERN USER_CALLBACK(User_OnRender);
+CEXTERN AUDIO_CALLBACK(User_OnAudioPlay);
 
 CEXTERN void TimerStart(EngineState *state);
 CEXTERN void TimerStop(EngineState *state);

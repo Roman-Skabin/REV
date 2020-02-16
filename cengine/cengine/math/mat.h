@@ -767,7 +767,7 @@ INLINE m4 MATH_CALL m4_persp_lh_n0(f32 left, f32 right, f32 bottom, f32 top, f32
 
 INLINE m4 MATH_CALL m4_persp_lh_n0_fov(f32 aspect, deg fov, f32 near, f32 far)
 {
-    f32 tanfov2 = tanf(fov / 2.0f * CSTRCAT(M_PI, f) / 180.0f);
+    f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
     return m4_1(
         1.0f/(aspect*tanfov2),         0.0f,           0.0f,                   0.0f,
                          0.0f, 1.0f/tanfov2,           0.0f,                   0.0f,

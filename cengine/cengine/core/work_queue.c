@@ -102,8 +102,8 @@ WorkQueue *CreateWorkQueue(EngineState *state)
     GetSystemInfo(&info);
 
     u32 threads_count = info.dwNumberOfProcessors - GetCurrentThreadCount();
-    if (state->window.closed) --threads_count;
-    if (!threads_count      ) threads_count = 1;
+    if (state->window.closed && threads_count) --threads_count;
+    if (!threads_count                       ) threads_count = 1;
 
     WorkQueueThread *threads = PushToPA(WorkQueueThread, &state->memory, threads_count);
 

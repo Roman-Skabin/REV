@@ -42,6 +42,9 @@
     <ClCompile Include="cengine\core\memory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cengine\core\id.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cengine\core\core.h">
@@ -81,6 +84,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cengine\graphics\rasterizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cengine\core\id.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

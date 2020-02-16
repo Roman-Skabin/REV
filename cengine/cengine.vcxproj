@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="cengine\cengine.c" />
     <ClCompile Include="cengine\core\core.c" />
+    <ClCompile Include="cengine\core\id.c" />
     <ClCompile Include="cengine\core\logger.c" />
     <ClCompile Include="cengine\core\pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -40,6 +41,7 @@
   <ItemGroup>
     <ClInclude Include="cengine\cengine.h" />
     <ClInclude Include="cengine\core\core.h" />
+    <ClInclude Include="cengine\core\id.h" />
     <ClInclude Include="cengine\core\logger.h" />
     <ClInclude Include="cengine\core\memory.h" />
     <ClInclude Include="cengine\core\pch.h" />

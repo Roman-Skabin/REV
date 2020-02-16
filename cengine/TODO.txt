@@ -26,5 +26,4 @@
     - Hardware acceleration (D3D12)
 
 - Sound
-    - Initialize MMF (Microsoft Media Foundation)
-    - Sound callback
+    - Debug (Why there is no sound?)

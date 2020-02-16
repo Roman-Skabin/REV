@@ -63,6 +63,10 @@ USER_CALLBACK(User_OnInit)
     sandbox_state->t2.VS   = TriangleVS;
     sandbox_state->t2.PS   = Triangle2PS;
     sandbox_state->t2.proj = sandbox_state->t1.proj;
+
+    float volumes[2] = { 1.0f, 1.0f };
+    engine_state->audio.error = engine_state->audio.volume->lpVtbl->SetAllVolumes(engine_state->audio.volume, ArrayCount(volumes), volumes);
+    Check(SUCCEEDED(engine_state->audio.error));
 }
 
 USER_CALLBACK(User_OnDestroy)
@@ -120,4 +124,21 @@ USER_CALLBACK(User_OnRender)
     RenderTriangle(engine_state, sandbox_state->t2.p1, sandbox_state->t2.p2, sandbox_state->t2.p3, sandbox_state->t2.VS, sandbox_state->t2.PS);
 
     engine_state->user_ponter = sandbox_state;
+}
+
+AUDIO_CALLBACK(User_OnAudioPlay)
+{
+          u32 *      cur_sample  = samples;
+	const u32 *const last_sample = samples + num_samples;
+
+    enum { C4 = 262 };
+
+	while (cur_sample < last_sample)
+	{
+        // first channel
+        *cur_sample++ = C4;
+
+        // second channel
+        *cur_sample++ = C4;
+	}
 }

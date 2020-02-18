@@ -337,7 +337,7 @@ internal DWORD WINAPI AudioThreadProc(LPVOID arg)
 
     Check(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
 
-    HANDLE buffer_ready_event = CreateEventA(0, false, false, "Buffer Ready Event");
+    HANDLE buffer_ready_event = CreateEventA(0, false, false, "BufferReadyEvent");
     state->audio.error = state->audio.client->lpVtbl->SetEventHandle(state->audio.client, buffer_ready_event);
     Check(SUCCEEDED(state->audio.error));
 
@@ -348,9 +348,11 @@ internal DWORD WINAPI AudioThreadProc(LPVOID arg)
     state->audio.error = state->audio.client->lpVtbl->Start(state->audio.client);
     Check(SUCCEEDED(state->audio.error));
 
+    Success(&state->logger, "Sound was initialized");
+
     while (true)
     {
-        while (WaitForSingleObject(buffer_ready_event, INFINITE))
+        while (WaitForSingleObject(buffer_ready_event, INFINITE) != WAIT_OBJECT_0)
         {
         }
 
@@ -361,11 +363,12 @@ internal DWORD WINAPI AudioThreadProc(LPVOID arg)
             Check(SUCCEEDED(state->audio.error));
 
             u32  num_samples = buffer_size - padding;
-            u32 *samples     = 0;
+            f32 *samples     = 0;
+
             state->audio.error = state->audio.renderer->lpVtbl->GetBuffer(state->audio.renderer, num_samples, cast(u8 **, &samples));
             Check(SUCCEEDED(state->audio.error));
 
-            User_OnAudioPlay(state, samples, num_samples);
+            User_AudioCallback(state, samples, num_samples);
 
             state->audio.error = state->audio.renderer->lpVtbl->ReleaseBuffer(state->audio.renderer, num_samples, 0);
             Check(SUCCEEDED(state->audio.error));
@@ -381,67 +384,79 @@ internal void CreateAudio(EngineState *state)
     Check(SUCCEEDED(state->audio.error));
 
     IMMDeviceEnumerator *mmdevice_enumerator = 0;
-    state->audio.error = CoCreateInstance(&CLSID_MMDeviceEnumerator, 0, CLSCTX_ALL, &IID_IMMDeviceEnumerator, &mmdevice_enumerator);
+    state->audio.error = CoCreateInstance(&CLSID_MMDeviceEnumerator, 0, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &mmdevice_enumerator);
     Check(SUCCEEDED(state->audio.error));
 
-    IMMDevice *mmdevice = 0;
-    state->audio.error = mmdevice_enumerator->lpVtbl->GetDefaultAudioEndpoint(mmdevice_enumerator, eRender, eConsole, &mmdevice);
+    state->audio.error = mmdevice_enumerator->lpVtbl->GetDefaultAudioEndpoint(mmdevice_enumerator, eRender, eConsole, &state->audio.device);
     Check(SUCCEEDED(state->audio.error));
 
-    state->audio.error = mmdevice->lpVtbl->Activate(mmdevice, &IID_IAudioClient, CLSCTX_ALL | CLSCTX_ACTIVATE_64_BIT_SERVER, 0, &state->audio.client);
+    state->audio.error = state->audio.device->lpVtbl->Activate(state->audio.device, &IID_IAudioClient, CLSCTX_INPROC_SERVER | CLSCTX_ACTIVATE_64_BIT_SERVER, 0, &state->audio.client);
     Check(SUCCEEDED(state->audio.error));
 
-    WAVEFORMATEXTENSIBLE *expected_wave_format        = PushToTA(WAVEFORMATEXTENSIBLE, &state->memory, 1);
-    expected_wave_format->Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
-    expected_wave_format->Format.nChannels            = 2;
-    expected_wave_format->Format.nSamplesPerSec       = 48000;
-    expected_wave_format->Format.wBitsPerSample       = 32;
-    expected_wave_format->Format.nBlockAlign          = expected_wave_format->Format.nChannels * expected_wave_format->Format.wBitsPerSample / 8;
-    expected_wave_format->Format.nAvgBytesPerSec      = expected_wave_format->Format.nSamplesPerSec * expected_wave_format->Format.nBlockAlign;
-    expected_wave_format->Format.cbSize               = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
-    expected_wave_format->Samples.wValidBitsPerSample = expected_wave_format->Format.wBitsPerSample;
-    expected_wave_format->dwChannelMask               = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
-    expected_wave_format->SubFormat                   = GUID_KSDATAFORMAT_SUBTYPE_PCM;
-
-    state->audio.error = state->audio.client->lpVtbl->IsFormatSupported(state->audio.client, AUDCLNT_SHAREMODE_SHARED, cast(WAVEFORMATEX *, expected_wave_format), &state->audio.wave_format.ex);
+    DWORD device_state = 0;
+    state->audio.error = state->audio.device->lpVtbl->GetState(state->audio.device, &device_state);
     Check(SUCCEEDED(state->audio.error));
 
-    if (!state->audio.wave_format.extensible)
+    if (device_state == DEVICE_STATE_ACTIVE)
     {
-        state->audio.wave_format.extensible = PushToPA(WAVEFORMATEXTENSIBLE, &state->memory, 1);
-        CopyMemory(state->audio.wave_format.extensible, expected_wave_format, sizeof(WAVEFORMATEXTENSIBLE));
+        state->audio.wave_format.extensible.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
+        state->audio.wave_format.extensible.Format.nChannels            = 2;
+        state->audio.wave_format.extensible.Format.nSamplesPerSec       = 48000;
+        state->audio.wave_format.extensible.Format.wBitsPerSample       = 32;
+        state->audio.wave_format.extensible.Format.nBlockAlign          = state->audio.wave_format.extensible.Format.nChannels * state->audio.wave_format.extensible.Format.wBitsPerSample / 8;
+        state->audio.wave_format.extensible.Format.nAvgBytesPerSec      = state->audio.wave_format.extensible.Format.nSamplesPerSec * state->audio.wave_format.extensible.Format.nBlockAlign;
+        state->audio.wave_format.extensible.Format.cbSize               = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+        state->audio.wave_format.extensible.Samples.wValidBitsPerSample = state->audio.wave_format.extensible.Format.wBitsPerSample;
+        state->audio.wave_format.extensible.dwChannelMask               = SPEAKER_ALL;
+        state->audio.wave_format.extensible.SubFormat                   = GUID_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+
+        WAVEFORMATEXTENSIBLE *closest = 0; // suppressing state->audio.error = E_POINTER
+        state->audio.error = state->audio.client->lpVtbl->IsFormatSupported(state->audio.client, AUDCLNT_SHAREMODE_SHARED, &state->audio.wave_format.ex, cast(WAVEFORMATEX **, &closest));
+        Check(SUCCEEDED(state->audio.error));
+        
+        #define REFTIMES_PER_MICROSEC 10
+        #define REFTIMES_PER_MILLISEC 10000
+        #define REFTIMES_PER_SECOND   10000000
+
+        REFERENCE_TIME buffer_duration = 4 * REFTIMES_PER_MILLISEC;
+        DWORD stream_flags             = AUDCLNT_STREAMFLAGS_EVENTCALLBACK
+                                       | AUDCLNT_STREAMFLAGS_RATEADJUST
+                                       | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM;
+
+        state->audio.error = state->audio.client->lpVtbl->Initialize(state->audio.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, buffer_duration, 0, &state->audio.wave_format.ex, &GUID_NULL);
+        Check(SUCCEEDED(state->audio.error));
+
+        state->audio.error = state->audio.client->lpVtbl->GetService(state->audio.client, &IID_IAudioRenderClient, &state->audio.renderer);
+        Check(SUCCEEDED(state->audio.error));
+
+        state->audio.error = state->audio.client->lpVtbl->GetService(state->audio.client, &IID_IAudioStreamVolume, &state->audio.volume);
+        Check(SUCCEEDED(state->audio.error));
+
+        Check(CloseHandle(CreateThread(0, 0, AudioThreadProc, state, 0, 0)));
+
+        state->audio.pause = false;
+    }
+    else
+    {
+        Warning(&state->logger, "Audio device is not active");
+        state->audio.pause = true;
     }
 
-    #define REFTIMES_PER_MICROSEC 10
-    #define REFTIMES_PER_MILLISEC 10000
-    #define REFTIMES_PER_SECOND   10000000
-
-    REFERENCE_TIME buffer_duration = 4*REFTIMES_PER_MILLISEC;
-    DWORD stream_flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_RATEADJUST | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM;
-
-    state->audio.error = state->audio.client->lpVtbl->Initialize(state->audio.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, buffer_duration, 0, state->audio.wave_format.ex, 0);
-    Check(SUCCEEDED(state->audio.error));
-
-    state->audio.error = state->audio.client->lpVtbl->GetService(state->audio.client, &IID_IAudioRenderClient, &state->audio.renderer);
-    Check(SUCCEEDED(state->audio.error));
-
-    state->audio.error = state->audio.client->lpVtbl->GetService(state->audio.client, &IID_IAudioStreamVolume, &state->audio.volume);
-    Check(SUCCEEDED(state->audio.error));
-
-    Check(CloseHandle(CreateThread(0, 0, AudioThreadProc, state, 0, 0)));
-
     mmdevice_enumerator->lpVtbl->Release(mmdevice_enumerator);
-    // mmdevice->lpVtbl->Release(mmdevice);
 }
 
 internal void DestroyAudio(EngineState *state)
 {
+    state->audio.pause = true;
+
     state->audio.error = state->audio.client->lpVtbl->Stop(state->audio.client);
     Check(SUCCEEDED(state->audio.error));
 
     state->audio.volume->lpVtbl->Release(state->audio.volume);
     state->audio.renderer->lpVtbl->Release(state->audio.renderer);
     state->audio.client->lpVtbl->Release(state->audio.client);
+
+    Success(&state->logger, "Sound was destroyed");
 }
 
 //

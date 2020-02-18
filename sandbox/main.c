@@ -126,19 +126,17 @@ USER_CALLBACK(User_OnRender)
     engine_state->user_ponter = sandbox_state;
 }
 
-AUDIO_CALLBACK(User_OnAudioPlay)
+AUDIO_CALLBACK(User_AudioCallback)
 {
-          u32 *      cur_sample  = samples;
-	const u32 *const last_sample = samples + num_samples;
+    f32 *cur_sample  = samples;
+    f32 *last_sample = samples + num_samples;
 
-    enum { C4 = 262 };
-
-	while (cur_sample < last_sample)
-	{
+    while (cur_sample < last_sample)
+    {
         // first channel
-        *cur_sample++ = C4;
+        *cur_sample++ = 262.0f;
 
         // second channel
-        *cur_sample++ = C4;
-	}
+        *cur_sample++ = 262.0f;
+    }
 }

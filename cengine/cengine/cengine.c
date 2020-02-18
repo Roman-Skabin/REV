@@ -331,130 +331,167 @@ void SetFullscreen(EngineState *state, b32 set)
 // Sound
 //
 
-internal DWORD WINAPI AudioThreadProc(LPVOID arg)
+internal DWORD WINAPI SoundThreadProc(LPVOID arg)
 {
     EngineState *state = cast(EngineState *, arg);
 
     Check(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
-
-    HANDLE buffer_ready_event = CreateEventA(0, false, false, "BufferReadyEvent");
-    state->audio.error = state->audio.client->lpVtbl->SetEventHandle(state->audio.client, buffer_ready_event);
-    Check(SUCCEEDED(state->audio.error));
+    
+    HANDLE event       = CreateEventExA(0, "EngineSoundEvent", 0, EVENT_ALL_ACCESS);
+    state->sound.error = state->sound.client->lpVtbl->SetEventHandle(state->sound.client, event);
+    Check(SUCCEEDED(state->sound.error));
 
     u32 buffer_size = 0;
-    state->audio.error = state->audio.client->lpVtbl->GetBufferSize(state->audio.client, &buffer_size);
-    Check(SUCCEEDED(state->audio.error));
+    state->sound.error = state->sound.client->lpVtbl->GetBufferSize(state->sound.client, &buffer_size);
+    Check(SUCCEEDED(state->sound.error));
 
-    state->audio.error = state->audio.client->lpVtbl->Start(state->audio.client);
-    Check(SUCCEEDED(state->audio.error));
+    WAVEFORMATEXTENSIBLE *wave_format = 0;
+    state->sound.error = state->sound.client->lpVtbl->GetMixFormat(state->sound.client, cast(WAVEFORMATEX **, &wave_format));
+    Check(SUCCEEDED(state->sound.error));
 
-    Success(&state->logger, "Sound was initialized");
+    REFERENCE_TIME latency = 0;
+    state->sound.error = state->sound.client->lpVtbl->GetStreamLatency(state->sound.client, &latency);
+    Check(SUCCEEDED(state->sound.error));
+
+    SoundBuffer buffer;
+    buffer.channels_count = wave_format->Format.nChannels;
+    buffer.sample_type    = wave_format->SubFormat.Data1 == 3 ? SAMPLE_TYPE_F32 : SAMPLE_TYPE_U32;
+
+    state->sound.error = state->sound.client->lpVtbl->Start(state->sound.client);
+    Check(SUCCEEDED(state->sound.error));
 
     while (true)
     {
-        while (WaitForSingleObject(buffer_ready_event, INFINITE) != WAIT_OBJECT_0)
+        while (WaitForSingleObject(event, INFINITE) != WAIT_OBJECT_0)
         {
         }
 
-        if (!state->audio.pause)
+        if (!state->sound.pause)
         {
             u32 padding = 0;
-            state->audio.error = state->audio.client->lpVtbl->GetCurrentPadding(state->audio.client, &padding);
-            Check(SUCCEEDED(state->audio.error));
+            state->sound.error = state->sound.client->lpVtbl->GetCurrentPadding(state->sound.client, &padding);
+            Check(SUCCEEDED(state->sound.error));
 
-            u32  num_samples = buffer_size - padding;
-            f32 *samples     = 0;
+            buffer.samples_count = buffer_size - padding;
+            buffer.samples       = 0;
 
-            state->audio.error = state->audio.renderer->lpVtbl->GetBuffer(state->audio.renderer, num_samples, cast(u8 **, &samples));
-            Check(SUCCEEDED(state->audio.error));
+            state->sound.error = state->sound.renderer->lpVtbl->GetBuffer(state->sound.renderer, buffer.samples_count, cast(u8 **, &buffer.samples));
+            Check(SUCCEEDED(state->sound.error));
 
-            User_AudioCallback(state, samples, num_samples);
+            User_SoundCallback(state, &buffer);
 
-            state->audio.error = state->audio.renderer->lpVtbl->ReleaseBuffer(state->audio.renderer, num_samples, 0);
-            Check(SUCCEEDED(state->audio.error));
+            state->sound.error = state->sound.renderer->lpVtbl->ReleaseBuffer(state->sound.renderer, buffer.samples_count, 0);
+            Check(SUCCEEDED(state->sound.error));
         }
     }
 
     return 0;
 }
 
-internal void CreateAudio(EngineState *state)
+internal void CreateSound(EngineState *state)
 {
-    state->audio.error = CoInitializeEx(0, COINIT_MULTITHREADED);
-    Check(SUCCEEDED(state->audio.error));
+    state->sound.error = CoInitializeEx(0, COINIT_MULTITHREADED);
+    Check(SUCCEEDED(state->sound.error));
 
     IMMDeviceEnumerator *mmdevice_enumerator = 0;
-    state->audio.error = CoCreateInstance(&CLSID_MMDeviceEnumerator, 0, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &mmdevice_enumerator);
-    Check(SUCCEEDED(state->audio.error));
+    state->sound.error = CoCreateInstance(&CLSID_MMDeviceEnumerator, 0, CLSCTX_SERVER, &IID_IMMDeviceEnumerator, &mmdevice_enumerator);
+    Check(SUCCEEDED(state->sound.error));
 
-    state->audio.error = mmdevice_enumerator->lpVtbl->GetDefaultAudioEndpoint(mmdevice_enumerator, eRender, eConsole, &state->audio.device);
-    Check(SUCCEEDED(state->audio.error));
-
-    state->audio.error = state->audio.device->lpVtbl->Activate(state->audio.device, &IID_IAudioClient, CLSCTX_INPROC_SERVER | CLSCTX_ACTIVATE_64_BIT_SERVER, 0, &state->audio.client);
-    Check(SUCCEEDED(state->audio.error));
+    state->sound.error = mmdevice_enumerator->lpVtbl->GetDefaultAudioEndpoint(mmdevice_enumerator, eRender, eConsole, &state->sound.device);
+    Check(SUCCEEDED(state->sound.error));
 
     DWORD device_state = 0;
-    state->audio.error = state->audio.device->lpVtbl->GetState(state->audio.device, &device_state);
-    Check(SUCCEEDED(state->audio.error));
+    state->sound.error = state->sound.device->lpVtbl->GetState(state->sound.device, &device_state);
+    Check(SUCCEEDED(state->sound.error));
 
     if (device_state == DEVICE_STATE_ACTIVE)
     {
-        state->audio.wave_format.extensible.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
-        state->audio.wave_format.extensible.Format.nChannels            = 2;
-        state->audio.wave_format.extensible.Format.nSamplesPerSec       = 48000;
-        state->audio.wave_format.extensible.Format.wBitsPerSample       = 32;
-        state->audio.wave_format.extensible.Format.nBlockAlign          = state->audio.wave_format.extensible.Format.nChannels * state->audio.wave_format.extensible.Format.wBitsPerSample / 8;
-        state->audio.wave_format.extensible.Format.nAvgBytesPerSec      = state->audio.wave_format.extensible.Format.nSamplesPerSec * state->audio.wave_format.extensible.Format.nBlockAlign;
-        state->audio.wave_format.extensible.Format.cbSize               = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
-        state->audio.wave_format.extensible.Samples.wValidBitsPerSample = state->audio.wave_format.extensible.Format.wBitsPerSample;
-        state->audio.wave_format.extensible.dwChannelMask               = SPEAKER_ALL;
-        state->audio.wave_format.extensible.SubFormat                   = GUID_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT;
+        state->sound.error = state->sound.device->lpVtbl->Activate(state->sound.device, &IID_IAudioClient, CLSCTX_SERVER, 0, &state->sound.client);
+        Check(SUCCEEDED(state->sound.error));
 
-        WAVEFORMATEXTENSIBLE *closest = 0; // suppressing state->audio.error = E_POINTER
-        state->audio.error = state->audio.client->lpVtbl->IsFormatSupported(state->audio.client, AUDCLNT_SHAREMODE_SHARED, &state->audio.wave_format.ex, cast(WAVEFORMATEX **, &closest));
-        Check(SUCCEEDED(state->audio.error));
-        
+        WAVEFORMATEXTENSIBLE expected_wave_format;
+        expected_wave_format.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
+        expected_wave_format.Format.nChannels            = 2;
+        expected_wave_format.Format.nSamplesPerSec       = 48000;
+        expected_wave_format.Format.wBitsPerSample       = 32;
+        expected_wave_format.Format.nBlockAlign          = expected_wave_format.Format.nChannels * expected_wave_format.Format.wBitsPerSample / 8;
+        expected_wave_format.Format.nAvgBytesPerSec      = expected_wave_format.Format.nSamplesPerSec * expected_wave_format.Format.nBlockAlign;
+        expected_wave_format.Format.cbSize               = sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
+        expected_wave_format.Samples.wValidBitsPerSample = expected_wave_format.Format.wBitsPerSample;
+        expected_wave_format.dwChannelMask               = KSAUDIO_SPEAKER_STEREO;
+        expected_wave_format.SubFormat                   = (GUID){STATIC_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT};
+
+        WAVEFORMATEXTENSIBLE *closest_wave_format = 0;
+        state->sound.error = state->sound.client->lpVtbl->IsFormatSupported(state->sound.client, AUDCLNT_SHAREMODE_SHARED, cast(WAVEFORMATEX *, &expected_wave_format), cast(WAVEFORMATEX **, &closest_wave_format));
+        Check(SUCCEEDED(state->sound.error));
+
+        closest_wave_format = closest_wave_format ? closest_wave_format : &expected_wave_format;
+        Check(closest_wave_format->Format.wBitsPerSample == 32);
+
         #define REFTIMES_PER_MICROSEC 10
         #define REFTIMES_PER_MILLISEC 10000
         #define REFTIMES_PER_SECOND   10000000
 
         REFERENCE_TIME buffer_duration = 4 * REFTIMES_PER_MILLISEC;
-        DWORD stream_flags             = AUDCLNT_STREAMFLAGS_EVENTCALLBACK
+        DWORD          stream_flags    = AUDCLNT_STREAMFLAGS_EVENTCALLBACK
                                        | AUDCLNT_STREAMFLAGS_RATEADJUST
                                        | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM;
 
-        state->audio.error = state->audio.client->lpVtbl->Initialize(state->audio.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, buffer_duration, 0, &state->audio.wave_format.ex, &GUID_NULL);
-        Check(SUCCEEDED(state->audio.error));
+        state->sound.error = state->sound.client->lpVtbl->Initialize(state->sound.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, buffer_duration, 0, cast(WAVEFORMATEX *, closest_wave_format), &GUID_NULL);
+        Check(SUCCEEDED(state->sound.error));
 
-        state->audio.error = state->audio.client->lpVtbl->GetService(state->audio.client, &IID_IAudioRenderClient, &state->audio.renderer);
-        Check(SUCCEEDED(state->audio.error));
+        state->sound.error = state->sound.client->lpVtbl->GetService(state->sound.client, &IID_IAudioRenderClient, &state->sound.renderer);
+        Check(SUCCEEDED(state->sound.error));
 
-        state->audio.error = state->audio.client->lpVtbl->GetService(state->audio.client, &IID_IAudioStreamVolume, &state->audio.volume);
-        Check(SUCCEEDED(state->audio.error));
+        state->sound.error = state->sound.client->lpVtbl->GetService(state->sound.client, &IID_ISimpleAudioVolume, &state->sound.volume);
+        Check(SUCCEEDED(state->sound.error));
 
-        Check(CloseHandle(CreateThread(0, 0, AudioThreadProc, state, 0, 0)));
+        b32 mute = false;
+        state->sound.error = state->sound.volume->lpVtbl->GetMute(state->sound.volume, &mute);
+        Check(SUCCEEDED(state->sound.error));
 
-        state->audio.pause = false;
+        if (mute)
+        {
+            state->sound.error = state->sound.volume->lpVtbl->SetMute(state->sound.volume, false, 0);
+            Check(SUCCEEDED(state->sound.error));
+        }
+
+        float volume = 0.0f;
+        state->sound.error = state->sound.volume->lpVtbl->GetMasterVolume(state->sound.volume, &volume);
+        Check(SUCCEEDED(state->sound.error));
+
+        if (volume <= 0.0f)
+        {
+            state->sound.error = state->sound.volume->lpVtbl->SetMasterVolume(state->sound.volume, 1.0f, 0);
+            Check(SUCCEEDED(state->sound.error));
+        }
+        
+        Check(CloseHandle(CreateThread(0, 0, SoundThreadProc, state, 0, 0)));
+
+        Success(&state->logger, "Sound was initialized");
     }
     else
     {
-        Warning(&state->logger, "Audio device is not active");
-        state->audio.pause = true;
+        Warning(&state->logger, "Sound device is not active");
     }
 
     mmdevice_enumerator->lpVtbl->Release(mmdevice_enumerator);
 }
 
-internal void DestroyAudio(EngineState *state)
+internal void DestroySound(EngineState *state)
 {
-    state->audio.pause = true;
+    state->sound.pause = true;
 
-    state->audio.error = state->audio.client->lpVtbl->Stop(state->audio.client);
-    Check(SUCCEEDED(state->audio.error));
+    state->sound.error = state->sound.client->lpVtbl->Stop(state->sound.client);
+    Check(SUCCEEDED(state->sound.error));
 
-    state->audio.volume->lpVtbl->Release(state->audio.volume);
-    state->audio.renderer->lpVtbl->Release(state->audio.renderer);
-    state->audio.client->lpVtbl->Release(state->audio.client);
+    state->sound.error = state->sound.client->lpVtbl->Reset(state->sound.client);
+    Check(SUCCEEDED(state->sound.error));
+
+    state->sound.volume->lpVtbl->Release(state->sound.volume);
+    state->sound.renderer->lpVtbl->Release(state->sound.renderer);
+    state->sound.client->lpVtbl->Release(state->sound.client);
+    state->sound.device->lpVtbl->Release(state->sound.device);
 
     Success(&state->logger, "Sound was destroyed");
 }
@@ -608,7 +645,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
     InputCreate(&state);
     TimerCreate(&state);
     RendererCreate(&state);
-    CreateAudio(&state);
+    CreateSound(&state);
     Check(state.queue = CreateWorkQueue(&state));
 
     User_OnInit(&state);
@@ -655,7 +692,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
     }
 
     TimerStop(&state);
-    DestroyAudio(&state);
+    DestroySound(&state);
 
     User_OnDestroy(&state);
 

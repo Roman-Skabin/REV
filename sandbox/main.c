@@ -63,10 +63,6 @@ USER_CALLBACK(User_OnInit)
     sandbox_state->t2.VS   = TriangleVS;
     sandbox_state->t2.PS   = Triangle2PS;
     sandbox_state->t2.proj = sandbox_state->t1.proj;
-
-    float volumes[2] = { 1.0f, 1.0f };
-    engine_state->audio.error = engine_state->audio.volume->lpVtbl->SetAllVolumes(engine_state->audio.volume, ArrayCount(volumes), volumes);
-    Check(SUCCEEDED(engine_state->audio.error));
 }
 
 USER_CALLBACK(User_OnDestroy)
@@ -126,17 +122,28 @@ USER_CALLBACK(User_OnRender)
     engine_state->user_ponter = sandbox_state;
 }
 
-AUDIO_CALLBACK(User_AudioCallback)
+SOUND_CALLBACK(User_SoundCallback)
 {
-    f32 *cur_sample  = samples;
-    f32 *last_sample = samples + num_samples;
-
-    while (cur_sample < last_sample)
+    if (buffer->sample_type == SAMPLE_TYPE_F32)
     {
-        // first channel
-        *cur_sample++ = 262.0f;
+        f32 *cur_sample  = cast(f32 *, buffer->samples);
+        f32 *last_sample = cast(f32 *, buffer->samples) + buffer->samples_count;
 
-        // second channel
-        *cur_sample++ = 262.0f;
+        while (cur_sample < last_sample)
+        {
+            memset_f32(cur_sample, 261.63f, buffer->channels_count);
+            cur_sample += buffer->channels_count;
+        }
+    }
+    else
+    {
+        u32 *cur_sample  = cast(u32 *, buffer->samples);
+        u32 *last_sample = cast(u32 *, buffer->samples) + buffer->samples_count;
+
+        while (cur_sample < last_sample)
+        {
+            memset(cur_sample, 262, buffer->channels_count * sizeof(u32));
+            cur_sample += buffer->channels_count;
+        }
     }
 }

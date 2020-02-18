@@ -27,6 +27,4 @@
 
 - Sound
     - Deal with no sound
-    - Check if samples are f32 or u32
-    - Pass some wave format stuff to the AudioCallback and remove it from the Engine State
     - Some wrapper for audio files loading?

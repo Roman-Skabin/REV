@@ -53,6 +53,7 @@
     <ClInclude Include="cengine\math\mat.h" />
     <ClInclude Include="cengine\math\math.h" />
     <ClInclude Include="cengine\math\vec.h" />
+    <ClInclude Include="cengine\sound.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="cengine.log" />

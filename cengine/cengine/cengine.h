@@ -14,6 +14,7 @@
 #include "graphics/renderer.h"
 #include "core/work_queue.h"
 #include "core/memory.h"
+#include "sound.h"
 
 #ifndef ENGINE_STATE_DEFINED
 #define ENGINE_STATE_DEFINED
@@ -22,9 +23,6 @@
 
 #define USER_CALLBACK(name) void name(EngineState *engine_state)
 typedef USER_CALLBACK(UserCallback);
-
-#define AUDIO_CALLBACK(name) void name(EngineState *state, f32 *samples, u32 num_samples)
-typedef AUDIO_CALLBACK(AudioCallback);
 
 struct EngineState
 {
@@ -71,28 +69,11 @@ struct EngineState
         b32 stopped;
     } timer;
 
-    struct
-    {
-        union
-        {
-            WAVEFORMATEXTENSIBLE extensible;
-            WAVEFORMATEX         ex;
-        } wave_format;
-        IMMDevice            *device;
-        IAudioClient         *client;
-        IAudioRenderClient   *renderer;
-        IAudioStreamVolume   *volume;
-        HRESULT               error;
-        _In_ b32              pause;
-    } audio;
-
-    _Out_ Renderer renderer;
-
-    Logger logger;
-
-    _Out_ WorkQueue *queue;
-
-    _Out_ Memory memory;
+    _Out_ SoundStream  sound;
+    _Out_ Renderer     renderer;
+    _Out_ Logger       logger;
+    _Out_ WorkQueue   *queue;
+    _Out_ Memory       memory;
 
     _In_ f32   cpu_frame_rate_limit;
     _In_ void *user_ponter;
@@ -102,7 +83,7 @@ CEXTERN USER_CALLBACK(User_OnInit);
 CEXTERN USER_CALLBACK(User_OnDestroy);
 CEXTERN USER_CALLBACK(User_OnUpdate);
 CEXTERN USER_CALLBACK(User_OnRender);
-CEXTERN AUDIO_CALLBACK(User_AudioCallback);
+CEXTERN SOUND_CALLBACK(User_SoundCallback);
 
 CEXTERN void TimerStart(EngineState *state);
 CEXTERN void TimerStop(EngineState *state);

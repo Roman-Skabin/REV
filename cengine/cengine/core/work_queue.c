@@ -101,15 +101,15 @@ WorkQueue *CreateWorkQueue(EngineState *state)
     SYSTEM_INFO info;
     GetSystemInfo(&info);
 
-    u32 threads_count = info.dwNumberOfProcessors - GetCurrentThreadCount();
-    if (state->window.closed && threads_count) --threads_count;
-    if (!threads_count                       ) threads_count = 1;
+    s32 threads_count = info.dwNumberOfProcessors - GetCurrentThreadCount();
+    if (state->window.closed && threads_count > 0) --threads_count;
+    if (threads_count <= 0                       ) threads_count = 1;
 
     WorkQueueThread *threads = PushToPA(WorkQueueThread, &state->memory, threads_count);
 
     queue->semaphore = CreateSemaphoreExA(0, 0, threads_count, 0, 0, SEMAPHORE_ALL_ACCESS);
 
-    for (u32 i = 0; i < threads_count; ++i)
+    for (s32 i = 0; i < threads_count; ++i)
     {
         WorkQueueThread *thread = threads + i;
         thread->id    = i + 1;

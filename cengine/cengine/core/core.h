@@ -8,6 +8,10 @@
 
 #include "core/pch.h"
 
+#ifndef _WIN64
+#error Only for 64-bit systems
+#endif
+
 #ifdef DEBUG
 #undef DEBUG
 #endif
@@ -64,10 +68,10 @@
     #define NULL 0
 #endif
 
-#define KB(x) (  (x) * 1024u)
-#define MB(x) (KB(x) * 1024u)
-#define GB(x) (MB(x) * 1024u)
-#define TB(x) (GB(x) * 1024u)
+#define KB(x) (  (x) * 1024)
+#define MB(x) (KB(x) * 1024)
+#define GB(x) (MB(x) * 1024)
+#define TB(x) (GB(x) * 1024)
 
 #define BIT(x) (1 << (x))
 
@@ -200,8 +204,9 @@ CEXTERN void __cdecl DebugF(const char *const format, ...);
 // General Purpose Allocator
 //
 
-#define ALIGN_UP(x, a) (((x) + ((a) - 1)) & ~((a) - 1))
-#define IS_POW_2(x)    ((x) && (((x) & ((x)-1)) == 0))
+#define ALIGN_UP(x, a)   (((x) + ((a) - 1)) & ~((a) - 1))
+#define ALIGN_DOWN(x, a) ( (x)              & ~((a) - 1))
+#define IS_POW_2(x)      ((x) && (((x) & ((x)-1)) == 0))
 
 CEXTERN void *  Allocate(size_t bytes);
 CEXTERN void *ReAllocate(void *mem, size_t bytes);

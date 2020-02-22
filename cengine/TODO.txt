@@ -2,7 +2,7 @@
     - ...
 
 - Core
-    - Disable limited Memory capacity (allocate several times)
+    - Try to move Stretchy Buffers' allocation to Engine Memory
     - Hash Table (for caching)
     - Logger for work queue ?
     - _CENGINE_HARDWARE for hardware accesleration if it will be
@@ -26,5 +26,5 @@
     - Hardware acceleration (D3D12)
 
 - Sound
-    - Deal with no sound
-    - Some wrapper for audio files loading?
+    - Deal with no sound. Switch WASAPI to XAudio2 ?
+    - Some wrapper for audio files loading

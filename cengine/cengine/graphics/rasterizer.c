@@ -40,10 +40,6 @@ internal BUF RasterizerOutput *RasterizeTriangleSide(EngineState *state, v4 _low
         x_slope = (_upper.x - _lower.x) / (_upper.y - _lower.y);
         z_slope = (_upper.z - _lower.z) / (_upper.y - _lower.y);
     }
-    else if (_upper.x - _lower.x)
-    {
-        z_slope = (_upper.z - _lower.z) / (_upper.x - _lower.x);
-    }
 
     f32 x = _lower.x;
     f32 z = _lower.z;

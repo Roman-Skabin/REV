@@ -262,8 +262,6 @@ void TimerStop(EngineState *state)
 
 internal void RendererCreate(EngineState *state)
 {
-    state->renderer.rt.pixels = PushToTA(u32, &state->memory, state->window.size.w * state->window.size.h);
-
     state->renderer.rt.info.bmiHeader.biSize          = sizeof(BITMAPINFOHEADER);
     state->renderer.rt.info.bmiHeader.biWidth         = state->window.size.w;
     state->renderer.rt.info.bmiHeader.biHeight        = state->window.size.h;
@@ -271,8 +269,9 @@ internal void RendererCreate(EngineState *state)
     state->renderer.rt.info.bmiHeader.biBitCount      = 32;
     state->renderer.rt.info.bmiHeader.biCompression   = BI_RGB;
 
-    state->renderer.zb.z    = PushToTAA(f32, &state->memory, state->window.size.w * state->window.size.h, sizeof(__m256));
-    state->renderer.zb.size = ALIGN_UP(state->window.size.w * state->window.size.h * sizeof(f32), sizeof(__m256));
+    state->renderer.rt.pixels = PushToTA(u32, &state->memory, state->window.size.w * state->window.size.h);
+    state->renderer.zb.z      = PushToTAA(f32, &state->memory, state->window.size.w * state->window.size.h, sizeof(__m256));
+    state->renderer.zb.size   = ALIGN_UP(state->window.size.w * state->window.size.h * sizeof(f32), sizeof(__m256));
 
     Success(&state->logger, "Renderer was created");
 }
@@ -652,7 +651,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
     local EngineState state;
     
     state.logger = CreateLogger("Engine logger", "cengine.log", LOG_TO_FILE | LOG_TO_DEBUG | LOG_TO_CONSOLE);
-    CreateMemory(&state.memory, cast(u32, GB(1.75) + PAGE_SIZE));
+    CreateMemory(&state.memory, GB(4ui64));
     WindowCreate(&state, "CEngine", v2s_1(960, 540), 0);
     InputCreate(&state);
     TimerCreate(&state);
@@ -692,7 +691,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
             User_OnUpdate(&state);
 
             // Clear
-            memset_f32(state.renderer.zb.z, 1.0f, state.renderer.zb.size / sizeof(f32));
+            memset_f32(state.renderer.zb.z, state.renderer.zb.far, state.renderer.zb.size / sizeof(f32));
 
             // Render
             User_OnRender(&state);

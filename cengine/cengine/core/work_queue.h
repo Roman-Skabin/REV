@@ -16,7 +16,7 @@ typedef WORK_QUEUE_ENTRY_PROC(WorkQueueEntryProc);
 
 typedef struct WorkQueue WorkQueue;
 
-WorkQueue *CreateWorkQueue(EngineState *state);
+CEXTERN WorkQueue *CreateWorkQueue(EngineState *state);
 
-void AddWorkQueueEntry(WorkQueue *queue, WorkQueueEntryProc *Proc, void *arg);
-void WaitForWorkQueue(WorkQueue *queue);
+CEXTERN void AddWorkQueueEntry(WorkQueue *queue, WorkQueueEntryProc *Proc, void *arg);
+CEXTERN void WaitForWorkQueue(WorkQueue *queue);

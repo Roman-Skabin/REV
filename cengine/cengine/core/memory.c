@@ -20,7 +20,9 @@ void CreateMemory(Memory *memory, u32 memory_cap)
 
     memory->transient.cap = memory_cap - memory->permanent.cap;
 
-    Check(memory->transient.base = cast(u8 *, VirtualAlloc(0, memory_cap, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE)));
+    memory->transient.base = cast(u8 *, VirtualAlloc(0, memory_cap, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+    Check(memory->transient.base);
+
     memory->permanent.base = memory->transient.base + memory->transient.cap;
 
     memory->transient.size = 0;
@@ -33,8 +35,9 @@ void DestroyMemory(Memory *memory)
 
     if (memory->transient.base)
     {
-        Check(VirtualFree(memory->transient.base, 0, MEM_RELEASE));
+        DebugResult(b32, VirtualFree(memory->transient.base, 0, MEM_RELEASE));
     }
+
     ZeroMemory(memory, sizeof(Memory));
 }
 

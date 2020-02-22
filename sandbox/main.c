@@ -41,7 +41,7 @@ USER_CALLBACK(User_OnInit)
     engine_state->user_ponter   = sandbox_state;
 
     sandbox_state->logger = CreateLogger("Sandbox Logger", "sandbox.log", LOG_TO_FILE | LOG_TO_DEBUG);
-    Check(SetWindowTextA(engine_state->window.handle, WINDOW_TITLE));
+    DebugResult(b32, SetWindowTextA(engine_state->window.handle, WINDOW_TITLE));
 #if RELEASE
     SetFullscreen(engine_state, true);
 #endif
@@ -83,7 +83,7 @@ USER_CALLBACK(User_OnUpdate)
         char buffer[64];
         sprintf(buffer, WINDOW_TITLE" - FPS: %f - MSPF: %f", FPS, 1000.0f / FPS);
 
-        Check(SetWindowTextA(engine_state->window.handle, buffer));
+        DebugResult(b32, SetWindowTextA(engine_state->window.handle, buffer));
 
         last_print_time = engine_state->timer.seconds;
     }

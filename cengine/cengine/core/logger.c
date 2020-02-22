@@ -41,8 +41,8 @@ Logger CreateLogger(const char *name, const char *filename, LOG_TO log_to)
 void DestroyLogger(Logger *logger)
 {
     Log(logger, "%s was destroyed", logger->name);
-    if (logger->file)    Check(CloseHandle(logger->file));
-    if (logger->console) Check(CloseHandle(logger->console));
+    if (logger->file)    DebugResult(b32, CloseHandle(logger->file));
+    if (logger->console) DebugResult(b32, CloseHandle(logger->console));
     ZeroMemory(logger, sizeof(Logger));
 }
 
@@ -66,12 +66,12 @@ void __cdecl LoggerLog(Logger *logger, const char *format, ...)
 
         if (logger->file && (logger->log_to & LOG_TO_FILE))
         {
-            Check(WriteFile(logger->file, buffer, length, 0, 0));
+            DebugResult(b32, WriteFile(logger->file, buffer, length, 0, 0));
         }
         if (logger->console && (logger->log_to & LOG_TO_CONSOLE))
         {
-            Check(WriteConsoleA(logger->console, buffer, length, 0, 0));
-            Check(FlushConsoleInputBuffer(logger->console));
+            DebugResult(b32, WriteConsoleA(logger->console, buffer, length, 0, 0));
+            DebugResult(b32, FlushConsoleInputBuffer(logger->console));
         }
         if (logger->log_to & LOG_TO_DEBUG)
         {

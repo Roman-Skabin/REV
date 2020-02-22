@@ -80,14 +80,14 @@ u32 GetCurrentThreadCount()
     PROCESSENTRY32 entry = {0};
     entry.dwSize = sizeof(PROCESSENTRY32);
 
-    BOOL ret = false;
+    b32 ret = false;
     ret = Process32First(snapshot, &entry);
     while (ret && entry.th32ProcessID != id)
     {
         ret = Process32Next(snapshot, &entry);
     }
 
-    CloseHandle(snapshot);
+    DebugResult(b32, CloseHandle(snapshot));
 
     Check(entry.cntThreads);
     return entry.cntThreads;
@@ -108,13 +108,14 @@ WorkQueue *CreateWorkQueue(EngineState *state)
     WorkQueueThread *threads = PushToPA(WorkQueueThread, &state->memory, threads_count);
 
     queue->semaphore = CreateSemaphoreExA(0, 0, threads_count, 0, 0, SEMAPHORE_ALL_ACCESS);
+    Check(queue->semaphore);
 
     for (s32 i = 0; i < threads_count; ++i)
     {
         WorkQueueThread *thread = threads + i;
         thread->id    = i + 1;
         thread->queue = queue;
-        CloseHandle(CreateThread(0, 0, ThreadProc, thread, 0, 0));
+        DebugResult(b32, CloseHandle(CreateThread(0, 0, ThreadProc, thread, 0, 0)));
         Log(queue->logger, "Thread was created: id = %I32u, queue = 0x%p", thread->id, thread->queue);
     }
 

@@ -111,8 +111,11 @@ internal void InputCreate(EngineState *state)
 
     if (!gXinput)
     {
-        Check(gXinput         = LoadLibraryA(XINPUT_DLL_A));
-        Check(XInputGetState_ = cast(XINPUT_GET_STATE, GetProcAddress(gXinput, "XInputGetState")));
+        gXinput = LoadLibraryA(XINPUT_DLL_A);
+        Check(gXinput);
+
+        XInputGetState_ = cast(XINPUT_GET_STATE, GetProcAddress(gXinput, "XInputGetState"));
+        Check(XInputGetState_);
     }
 
     state->input.gamepad.left_trigger.threshold  = XINPUT_GAMEPAD_TRIGGER_THRESHOLD / cast(f32, MAXBYTE);
@@ -132,6 +135,12 @@ internal void InputCreate(EngineState *state)
     {
         Log(&state->logger, "Gamepad is not connected");
     }
+}
+
+internal void InputDestroy(EngineState *state)
+{
+    if (gXinput) FreeLibrary(gXinput);
+    Log(&state->logger, "Input was destroyed");
 }
 
 internal void InputReset(EngineState *state)
@@ -173,9 +182,6 @@ internal INLINE void InputPull(EngineState *state)
 // Timer
 //
 
-#define QPF(s64_val) QueryPerformanceFrequency(cast(LARGE_INTEGER *, &(s64_val)))
-#define QPC(s64_val) QueryPerformanceCounter(cast(LARGE_INTEGER *, &(s64_val)))
-
 internal void TimerCreate(EngineState *state)
 {
     if (QPF(state->timer.ticks_per_second) && QPC(state->timer.initial_ticks))
@@ -188,7 +194,7 @@ internal void TimerCreate(EngineState *state)
         FailedM("Timer creation failure");
     }
 
-    state->timer.stopped = true;
+    state->timer.stopped    = true;
     state->timer.stop_begin = state->timer.initial_ticks;
 }
 
@@ -271,7 +277,7 @@ internal void RendererCreate(EngineState *state)
     Success(&state->logger, "Renderer was created");
 }
 
-internal INLINE void RendererResize(EngineState *state)
+internal void RendererResize(EngineState *state)
 {
     state->renderer.rt.info.bmiHeader.biWidth  = state->window.size.w;
     state->renderer.rt.info.bmiHeader.biHeight = state->window.size.h;
@@ -298,6 +304,59 @@ internal INLINE void RendererPresent(EngineState *state)
 // Window
 //
 
+internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
+
+internal void WindowCreate(EngineState *state, const char *title, v2s size, HINSTANCE instance)
+{
+    WNDCLASSA wca     = {0};
+    wca.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
+    wca.lpfnWndProc   = WindowProc;
+    wca.hInstance     = instance;
+    wca.hCursor       = LoadCursorA(0, IDC_ARROW);
+    wca.lpszClassName = "cengine_window_class";
+    DebugResult(ATOM, RegisterClassA(&wca));
+
+    state->window.size = size;
+
+    s32 width  = state->window.size.w;
+    s32 height = state->window.size.h;
+
+    RECT wr = { 0, 0, width, height };
+    if (AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false))
+    {
+        width  = wr.right  - wr.left;
+        height = wr.bottom - wr.top;
+    }
+
+    state->window.handle = CreateWindowA(wca.lpszClassName, title, WS_OVERLAPPEDWINDOW, 10, 10, width, height, 0, 0, wca.hInstance, 0);
+    Check(state->window.handle);
+
+    state->window.context = GetDC(state->window.handle);
+    Check(state->window.context);
+
+    Success(&state->logger, "Window was created");
+
+    state->monitor.handle = MonitorFromWindow(state->window.handle, MONITOR_DEFAULTTONEAREST);
+    Check(state->monitor.handle);
+
+    MONITORINFO info;
+    info.cbSize = sizeof(MONITORINFO);
+    DebugResult(b32, GetMonitorInfoA(state->monitor.handle, &info));
+
+    state->monitor.pos  = v2s_1(info.rcMonitor.left, info.rcMonitor.top);
+    state->monitor.size = v2s_1(info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top);
+
+    Success(&state->logger, "Monitor was initialized");
+
+    SetWindowLongPtrA(state->window.handle, GWLP_USERDATA, cast(LONG_PTR, state));
+}
+
+internal void WindowDestroy(EngineState *state, HINSTANCE instance)
+{
+    DebugResult(b32, UnregisterClassA("cengine_window_class", instance));
+    Log(&state->logger, "Window was destroyed");
+}
+
 void SetFullscreen(EngineState *state, b32 set)
 {
     if (set != state->window.fullscreened)
@@ -306,21 +365,21 @@ void SetFullscreen(EngineState *state, b32 set)
 
         if (set)
         {
-            Check(GetWindowRect(state->window.handle, &wr));
+            DebugResult(b32, GetWindowRect(state->window.handle, &wr));
             SetWindowLongA(state->window.handle, GWL_STYLE,
-                GetWindowLongA(state->window.handle, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-            Check(SetWindowPos(state->window.handle, HWND_TOP,
-                state->monitor.pos.x, state->monitor.pos.y,
-                state->monitor.size.w, state->monitor.size.h,
-                SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
+                           GetWindowLongA(state->window.handle, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
+            DebugResult(b32, SetWindowPos(state->window.handle, HWND_TOP,
+                                           state->monitor.pos.x, state->monitor.pos.y,
+                                           state->monitor.size.w, state->monitor.size.h,
+                                           SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
         }
         else
         {
             SetWindowLongA(state->window.handle, GWL_STYLE,
-                GetWindowLongA(state->window.handle, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
-            Check(SetWindowPos(state->window.handle, HWND_TOP,
-                wr.left, wr.top, wr.right - wr.left, wr.bottom - wr.top,
-                SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
+                           GetWindowLongA(state->window.handle, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
+            DebugResult(b32, SetWindowPos(state->window.handle, HWND_TOP,
+                                           wr.left, wr.top, wr.right - wr.left, wr.bottom - wr.top,
+                                           SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
         }
 
         state->window.fullscreened = set;
@@ -335,7 +394,7 @@ internal DWORD WINAPI SoundThreadProc(LPVOID arg)
 {
     EngineState *state = cast(EngineState *, arg);
 
-    Check(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
+    DebugResult(b32, SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
     
     HANDLE event       = CreateEventExA(0, "EngineSoundEvent", 0, EVENT_ALL_ACCESS);
     state->sound.error = state->sound.client->lpVtbl->SetEventHandle(state->sound.client, event);
@@ -345,17 +404,9 @@ internal DWORD WINAPI SoundThreadProc(LPVOID arg)
     state->sound.error = state->sound.client->lpVtbl->GetBufferSize(state->sound.client, &buffer_size);
     Check(SUCCEEDED(state->sound.error));
 
-    WAVEFORMATEXTENSIBLE *wave_format = 0;
-    state->sound.error = state->sound.client->lpVtbl->GetMixFormat(state->sound.client, cast(WAVEFORMATEX **, &wave_format));
-    Check(SUCCEEDED(state->sound.error));
-
-    REFERENCE_TIME latency = 0;
-    state->sound.error = state->sound.client->lpVtbl->GetStreamLatency(state->sound.client, &latency);
-    Check(SUCCEEDED(state->sound.error));
-
     SoundBuffer buffer;
-    buffer.channels_count = wave_format->Format.nChannels;
-    buffer.sample_type    = wave_format->SubFormat.Data1 == 3 ? SAMPLE_TYPE_F32 : SAMPLE_TYPE_U32;
+    buffer.channels_count = state->sound.wave_format->Format.nChannels;
+    buffer.sample_type    = state->sound.wave_format->SubFormat.Data1 == 3 ? SAMPLE_TYPE_F32 : SAMPLE_TYPE_U32;
 
     state->sound.error = state->sound.client->lpVtbl->Start(state->sound.client);
     Check(SUCCEEDED(state->sound.error));
@@ -421,12 +472,11 @@ internal void CreateSound(EngineState *state)
         expected_wave_format.dwChannelMask               = KSAUDIO_SPEAKER_STEREO;
         expected_wave_format.SubFormat                   = (GUID){STATIC_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT};
 
-        WAVEFORMATEXTENSIBLE *closest_wave_format = 0;
-        state->sound.error = state->sound.client->lpVtbl->IsFormatSupported(state->sound.client, AUDCLNT_SHAREMODE_SHARED, cast(WAVEFORMATEX *, &expected_wave_format), cast(WAVEFORMATEX **, &closest_wave_format));
+        state->sound.error = state->sound.client->lpVtbl->IsFormatSupported(state->sound.client, AUDCLNT_SHAREMODE_SHARED, cast(WAVEFORMATEX *, &expected_wave_format), cast(WAVEFORMATEX **, &state->sound.wave_format));
         Check(SUCCEEDED(state->sound.error));
 
-        closest_wave_format = closest_wave_format ? closest_wave_format : &expected_wave_format;
-        Check(closest_wave_format->Format.wBitsPerSample == 32);
+        state->sound.wave_format = state->sound.wave_format ? state->sound.wave_format : &expected_wave_format;
+        Check(state->sound.wave_format->Format.wBitsPerSample == 32);
 
         #define REFTIMES_PER_MICROSEC 10
         #define REFTIMES_PER_MILLISEC 10000
@@ -437,7 +487,7 @@ internal void CreateSound(EngineState *state)
                                        | AUDCLNT_STREAMFLAGS_RATEADJUST
                                        | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM;
 
-        state->sound.error = state->sound.client->lpVtbl->Initialize(state->sound.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, buffer_duration, 0, cast(WAVEFORMATEX *, closest_wave_format), &GUID_NULL);
+        state->sound.error = state->sound.client->lpVtbl->Initialize(state->sound.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, buffer_duration, 0, cast(WAVEFORMATEX *, state->sound.wave_format), &GUID_NULL);
         Check(SUCCEEDED(state->sound.error));
 
         state->sound.error = state->sound.client->lpVtbl->GetService(state->sound.client, &IID_IAudioRenderClient, &state->sound.renderer);
@@ -466,7 +516,7 @@ internal void CreateSound(EngineState *state)
             Check(SUCCEEDED(state->sound.error));
         }
         
-        Check(CloseHandle(CreateThread(0, 0, SoundThreadProc, state, 0, 0)));
+        DebugResult(b32, CloseHandle(CreateThread(0, 0, SoundThreadProc, state, 0, 0)));
 
         Success(&state->logger, "Sound was initialized");
     }
@@ -483,9 +533,6 @@ internal void DestroySound(EngineState *state)
     state->sound.pause = true;
 
     state->sound.error = state->sound.client->lpVtbl->Stop(state->sound.client);
-    Check(SUCCEEDED(state->sound.error));
-
-    state->sound.error = state->sound.client->lpVtbl->Reset(state->sound.client);
     Check(SUCCEEDED(state->sound.error));
 
     state->sound.volume->lpVtbl->Release(state->sound.volume);
@@ -523,11 +570,12 @@ internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPA
         case WM_DISPLAYCHANGE: // 0x007E
         {
             // CloseHandle(state->monitor.handle);
-            Check(state->monitor.handle = MonitorFromWindow(state->window.handle, MONITOR_DEFAULTTONEAREST));
+            state->monitor.handle = MonitorFromWindow(state->window.handle, MONITOR_DEFAULTTONEAREST);
+            Check(state->monitor.handle);
 
             MONITORINFO info;
             info.cbSize = sizeof(MONITORINFO);
-            Check(GetMonitorInfoA(state->monitor.handle, &info));
+            DebugResult(b32, GetMonitorInfoA(state->monitor.handle, &info));
 
             state->monitor.pos  = v2s_1(info.rcMonitor.left, info.rcMonitor.top);
             state->monitor.size = v2s_1(info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top);
@@ -602,51 +650,15 @@ internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPA
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
 {
     local EngineState state;
-    // ZeroMemory(&state, sizeof(EngineState));
-
-    CreateMemory(&state.memory, cast(u32, GB(1.75) + PAGE_SIZE));
-
+    
     state.logger = CreateLogger("Engine logger", "cengine.log", LOG_TO_FILE | LOG_TO_DEBUG | LOG_TO_CONSOLE);
-
-    WNDCLASSA wca     = {0};
-    wca.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
-    wca.lpfnWndProc   = WindowProc;
-    wca.hInstance     = instance;
-    wca.hCursor       = LoadCursorA(0, IDC_ARROW);
-    wca.lpszClassName = "cengine_window_class";
-    Check(RegisterClassA(&wca));
-
-    state.window.size = v2s_1(960, 540);
-
-    LONG width  = state.window.size.w;
-    LONG height = state.window.size.h;
-
-    RECT wr = { 0, 0, width, height };
-    if (AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false))
-    {
-        width  = wr.right  - wr.left;
-        height = wr.bottom - wr.top;
-    }
-
-    Check(state.window.handle  = CreateWindowA(wca.lpszClassName, "CEngine", WS_OVERLAPPEDWINDOW, 10, 10, width, height, 0, 0, wca.hInstance, 0));
-    Check(state.window.context = GetDC(state.window.handle));
-    Success(&state.logger, "Window was created");
-
-    Check(state.monitor.handle = MonitorFromWindow(state.window.handle, MONITOR_DEFAULTTONEAREST));
-    MONITORINFO info;
-    info.cbSize = sizeof(MONITORINFO);
-    Check(GetMonitorInfoA(state.monitor.handle, &info));
-    state.monitor.pos  = v2s_1(info.rcMonitor.left, info.rcMonitor.top);
-    state.monitor.size = v2s_1(info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top);
-    Success(&state.logger, "Monitor was initialized");
-
-    SetWindowLongPtrA(state.window.handle, GWLP_USERDATA, cast(LONG_PTR, &state));
-
+    CreateMemory(&state.memory, cast(u32, GB(1.75) + PAGE_SIZE));
+    WindowCreate(&state, "CEngine", v2s_1(960, 540), 0);
     InputCreate(&state);
     TimerCreate(&state);
     RendererCreate(&state);
     CreateSound(&state);
-    Check(state.queue = CreateWorkQueue(&state));
+    state.queue = CreateWorkQueue(&state);
 
     User_OnInit(&state);
 
@@ -669,7 +681,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
 
         if (!state.window.closed)
         {
-            // Reinitialize all stuff, than was allocated on transient memory
+            // Reinitialize all stuff, was allocated on transient memory
             RendererResize(&state);
 
             // Pull
@@ -696,13 +708,10 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
 
     User_OnDestroy(&state);
 
-    ReleaseDC(state.window.handle, state.window.context);
-    UnregisterClassA(wca.lpszClassName, wca.hInstance);
-    Log(&state.logger, "Window was destroyed");
-    if (gXinput) FreeLibrary(gXinput);
-    Log(&state.logger, "Input was destroyed");
-    DestroyLogger(&state.logger);
+    WindowDestroy(&state, 0);
+    InputDestroy(&state);
     DestroyMemory(&state.memory);
+    DestroyLogger(&state.logger);
 
     return 0;
 }

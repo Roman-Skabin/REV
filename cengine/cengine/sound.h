@@ -30,12 +30,13 @@ typedef SOUND_CALLBACK(SoundCallback);
 
 typedef struct SoundStream
 {
-    IMMDevice           *device;
-    IAudioClient3       *client;
-    IAudioRenderClient  *renderer;
-    ISimpleAudioVolume  *volume;
-    HRESULT              error;
-    b32                  pause;
+    IMMDevice            *device;
+    IAudioClient3        *client;
+    IAudioRenderClient   *renderer;
+    ISimpleAudioVolume   *volume;
+    WAVEFORMATEXTENSIBLE *wave_format;
+    HRESULT               error;
+    b32                   pause;
 } SoundStream;
 
 inline void SoundPlay(SoundStream *stream)  { stream->pause = false; }

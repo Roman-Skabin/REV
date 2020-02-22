@@ -8,18 +8,20 @@
 #include "math/color.h"
 #include "graphics/rasterizer.h"
 
-internal INLINE v4 NormalizePoint(EngineState *state, v4 point)
+internal INLINE v4 MATH_CALL NormalizePoint(EngineState *state, v4 point)
 {
     v2 center = v2_1(state->window.size.w / 2.0f, state->window.size.h / 2.0f);
-    point.x = 1.0f/center.x * (point.x - center.x);
-    point.y = 1.0f/center.y * (point.y - center.y);
+    point.x = 1.0f / center.x * (point.x - center.x);
+    point.y = 1.0f / center.y * (point.y - center.y);
     return point;
 }
 
-internal INLINE v2 AdaptPoint(EngineState *state, v4 point)
+internal INLINE v2 MATH_CALL AdaptPoint(EngineState *state, v4 point)
 {
     v2 center = v2_1(state->window.size.w / 2.0f, state->window.size.h / 2.0f);
-    return v2_add(center, v2_mul(point.xy, center));
+    point.x = center.x + point.x * center.x;
+    point.y = center.y + point.y * center.y;
+    return point.xy;
 }
 
 void SetViewport(EngineState *state, f32 near, f32 far)
@@ -79,16 +81,16 @@ void RenderTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, P
             {
                 *zbuf_z = points[i].z;
 
-                u32 *pixel = state->renderer.rt.pixels
-                           + points[i].y * state->window.size.w
-                           + points[i].x;
+                u32 *dest_pixel = state->renderer.rt.pixels
+                                + points[i].y * state->window.size.w
+                                + points[i].x;
 
-                v4 point = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
+                v4 source_pixel = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
 
-                v4 source_color = PS(state, NormalizePoint(state, point));
-                v4 dest_color   = hex_to_norm(*pixel);
+                v4 source_color = PS(state, NormalizePoint(state, source_pixel));
+                v4 dest_color   = hex_to_norm(*dest_pixel);
 
-                *pixel = BlendColor(source_color, dest_color);
+                *dest_pixel = BlendColor(source_color, dest_color);
             }
         }
 

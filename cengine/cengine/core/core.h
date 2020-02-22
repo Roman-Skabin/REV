@@ -75,6 +75,9 @@
 
 #define ArrayCount(arr) (sizeof(arr) / sizeof(*(arr)))
 
+#define QPF(s64_val) QueryPerformanceFrequency(cast(LARGE_INTEGER *, &(s64_val)))
+#define QPC(s64_val) QueryPerformanceCounter(cast(LARGE_INTEGER *, &(s64_val)))
+
 //
 // Types
 //
@@ -152,6 +155,9 @@ CEXTERN void __cdecl DebugF(const char *const format, ...);
     #define Check(expr)           if (!(expr)) { MessageBoxA(0, DebugString(expr),     "Debug Error!", MB_OK | MB_ICONERROR); __debugbreak(); ExitProcess(1); }
     #define FailedM(message)                   { MessageBoxA(0, DebugStringM(message), "Failed!",      MB_OK | MB_ICONERROR); __debugbreak(); ExitProcess(1); }
 
+    #define DebugResult(ResultType, expr)           { ResultType debug_result = (expr); Check(debug_result);           }
+    #define DebugResultM(ResultType, expr, message) { ResultType debug_result = (expr); CheckM(debug_result, message); }
+
 #elif DEBUG
 
     #define DebugStringM(message)                              \
@@ -170,6 +176,9 @@ CEXTERN void __cdecl DebugF(const char *const format, ...);
     #define Check(expr)           if (!(expr)) { MessageBoxA(0, DebugString(expr),     "Debug Error!", MB_OK | MB_ICONERROR); ExitProcess(1); }
     #define FailedM(message)                   { MessageBoxA(0, DebugStringM(message), "Failed!",      MB_OK | MB_ICONERROR); ExitProcess(1); }
 
+    #define DebugResult(ResultType, expr)           { ResultType debug_result = (expr); Check(debug_result);           }
+    #define DebugResultM(ResultType, expr, message) { ResultType debug_result = (expr); CheckM(debug_result, message); }
+
 #else
 
     #define DebugStringM(message)                              \
@@ -178,9 +187,12 @@ CEXTERN void __cdecl DebugF(const char *const format, ...);
                 CSTRCAT(CSTRCAT("\nLINE: ", CSTR(__LINE__)),   \
                         CSTRCAT("\nFUNCTION: ", __FUNCSIG__)))
 
-    #define CheckM(expr, message) __pragma(warning(suppress: 4552)); expr
-    #define Check(expr)           __pragma(warning(suppress: 4552)); expr
+    #define CheckM(expr, message)
+    #define Check(expr)
     #define FailedM(message)      { MessageBoxA(0, DebugStringM(message), "Failed!", MB_OK | MB_ICONERROR); ExitProcess(1); }
+
+    #define DebugResult(ResultType, expr)           { (expr); }
+    #define DebugResultM(ResultType, expr, message) { (expr); }
 
 #endif
 

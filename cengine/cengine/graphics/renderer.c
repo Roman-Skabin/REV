@@ -69,8 +69,9 @@ void RenderTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, P
         p2.z = p2z;
         p3.z = p3z;
 
-        BUF RasterizerOutput *points = RasterizeTriangle(state, p1, p2, p3);
+        PUSHED_BUF RasterizerOutput *points = RasterizeTriangle(state, p1, p2, p3);
 
+#if 1
         for (u32 i = 0; i < buf_count(points); ++i)
         {
             f32 *zbuf_z = state->renderer.zb.z
@@ -93,7 +94,6 @@ void RenderTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, P
                 *dest_pixel = BlendColor(source_color, dest_color);
             }
         }
-
-        buf_free(points);
+#endif
     }
 }

@@ -20,4 +20,4 @@ typedef struct RasterizerOutput
     f32 z;
 } RasterizerOutput;
 
-CEXTERN BUF RasterizerOutput *RasterizeTriangle(EngineState *state, v4 p1, v4 p2, v4 p3);
+CEXTERN PUSHED_BUF RasterizerOutput *RasterizeTriangle(EngineState *state, v4 p1, v4 p2, v4 p3);

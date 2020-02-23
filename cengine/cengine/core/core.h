@@ -204,16 +204,22 @@ CEXTERN void __cdecl DebugF(const char *const format, ...);
 // General Purpose Allocator
 //
 
+#if DEBUG
+    extern u64 gAllocationsPerFrame;
+    extern u64 gReAllocationsPerFrame;
+    extern u64 gDeAllocationsPerFrame;
+#endif
+
 #define ALIGN_UP(x, a)   (((x) + ((a) - 1)) & ~((a) - 1))
 #define ALIGN_DOWN(x, a) ( (x)              & ~((a) - 1))
 #define IS_POW_2(x)      ((x) && (((x) & ((x)-1)) == 0))
 
-CEXTERN void *  Allocate(size_t bytes);
-CEXTERN void *ReAllocate(void *mem, size_t bytes);
+CEXTERN void *  Allocate(u64 bytes);
+CEXTERN void *ReAllocate(void *mem, u64 bytes);
 CEXTERN void  DeAllocate(void **mem);
 
-CEXTERN void *  AllocateAligned(size_t bytes, size_t alignment);
-CEXTERN void *ReAllocateAligned(void *mem, size_t bytes, size_t alignment);
+CEXTERN void *  AllocateAligned(u64 bytes, u64 alignment);
+CEXTERN void *ReAllocateAligned(void *mem, u64 bytes, u64 alignment);
 CEXTERN void  DeAllocateAligned(void **mem);
 
 #define   Alloc(Type, count)      cast(Type *, Allocate(sizeof(Type) * (count)))
@@ -228,13 +234,19 @@ CEXTERN void  DeAllocateAligned(void **mem);
 // Stretchy Buffers
 //
 
-// @NOTE(Roman): annotation, means variable is stretchy buffer
+// @NOTE(Roman): annotation, means a variable is a stretchy buffer.
 #define BUF
+
+// @NOTE(Roman): annotation, means a variable is a stretchy buffer
+//               and it already pushed to the Memory (you can't resize it).
+//               Kinda "achieved" buffer.
+#define PUSHED_BUF
+#define ACHIEVED_BUF PUSHED_BUF
 
 typedef struct BufHdr
 {
-    u32 count;
-    u32 cap;
+    u64 count;
+    u64 cap;
     u8  buf[0];
 } BufHdr;
 
@@ -249,4 +261,4 @@ typedef struct BufHdr
 #define buf_pop(b)      ((b) && buf_count(b) ? (b)[--(_BUFHDR(b)->count)] : 0)
 
 CEXTERN void buf_dealloc(BUF void *b);
-CEXTERN BUF void *buf_grow(BUF void *b, u32 new_count, size_t el_size);
+CEXTERN BUF void *buf_grow(BUF void *b, u64 new_count, u64 el_size);

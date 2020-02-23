@@ -668,6 +668,11 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
     while (!state.window.closed)
     {
         // Reset
+    #if DEBUG
+        gAllocationsPerFrame   = 0;
+        gReAllocationsPerFrame = 0;
+        gDeAllocationsPerFrame = 0;
+    #endif
         ResetTransientArea(&state.memory);
         state.window.resized = false;
         InputReset(&state);

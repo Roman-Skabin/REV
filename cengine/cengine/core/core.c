@@ -36,15 +36,26 @@ void __cdecl DebugF(const char *const format, ...)
 // General Purpose Allocator
 //
 
-void *Allocate(size_t bytes)
+#if DEBUG
+    u64 gAllocationsPerFrame   = 0;
+    u64 gReAllocationsPerFrame = 0;
+    u64 gDeAllocationsPerFrame = 0;
+#endif
+
+void *Allocate(u64 bytes)
 {
     CheckM(bytes, "0 bytes was passed");
+
     void *mem = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, bytes);
     CheckM(mem, "Heap Overflow");
+
+#if DEBUG
+    ++gAllocationsPerFrame;
+#endif
     return mem;
 }
 
-void *ReAllocate(void *mem, size_t bytes)
+void *ReAllocate(void *mem, u64 bytes)
 {
     if (!mem)
     {
@@ -60,6 +71,9 @@ void *ReAllocate(void *mem, size_t bytes)
     mem = HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, mem, bytes);
     CheckM(mem, "Heap Overflow");
 
+#if DEBUG
+    ++gReAllocationsPerFrame;
+#endif
     return mem;
 }
 
@@ -69,10 +83,13 @@ void DeAllocate(void **mem)
     {
         HeapFree(GetProcessHeap(), 0, *mem);
         *mem = 0;
+    #if DEBUG
+        ++gDeAllocationsPerFrame;
+    #endif
     }
 }
 
-void *AllocateAligned(size_t bytes, size_t alignment)
+void *AllocateAligned(u64 bytes, u64 alignment)
 {
     CheckM(bytes, "0 bytes was passed");
     CheckM(IS_POW_2(alignment), "Alignment must be power of 2");
@@ -82,10 +99,13 @@ void *AllocateAligned(size_t bytes, size_t alignment)
     void *mem = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, bytes);
     CheckM(mem, "Heap Overflow");
 
+#if DEBUG
+    ++gAllocationsPerFrame;
+#endif
     return mem;
 }
 
-void *ReAllocateAligned(void *mem, size_t bytes, size_t alignment)
+void *ReAllocateAligned(void *mem, u64 bytes, u64 alignment)
 {
     if (!mem)
     {
@@ -105,6 +125,9 @@ void *ReAllocateAligned(void *mem, size_t bytes, size_t alignment)
     mem = HeapReAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, mem, bytes);
     CheckM(mem, "Heap Overflow");
 
+#if DEBUG
+    ++gReAllocationsPerFrame;
+#endif
     return mem;
 }
 
@@ -114,6 +137,9 @@ void DeAllocateAligned(void **mem)
     {
         HeapFree(GetProcessHeap(), 0, *mem);
         *mem = 0;
+    #if DEBUG
+        ++gDeAllocationsPerFrame;
+    #endif
     }
 }
 
@@ -123,19 +149,20 @@ void DeAllocateAligned(void **mem)
 
 void buf_dealloc(BUF void *b)
 {
-    HeapFree(GetProcessHeap(), 0, _BUFHDR(b));
+    BufHdr *bufhdr = _BUFHDR(b);
+    DeAllocateAligned(&bufhdr);
 }
 
-BUF void *buf_grow(BUF void *b, u32 new_count, size_t el_size)
+BUF void *buf_grow(BUF void *b, u64 new_count, u64 el_size)
 {
     if (new_count > buf_cap(b))
     {
-        CheckM(buf_cap(b) <= (U32_MAX - sizeof(BufHdr)) / el_size / 2, "Buffer overflow");
+        CheckM(buf_cap(b) <= (U64_MAX - sizeof(BufHdr)) / el_size / 2, "Buffer overflow");
 
-        u32 new_cap = __max(sizeof(BufHdr), __max(2 * buf_cap(b), new_count));
-        Check(new_cap <= (U32_MAX - sizeof(BufHdr)) / el_size);
+        u64 new_cap = __max(2 * buf_cap(b), new_count);
+        Check(new_cap <= (U64_MAX - sizeof(BufHdr)) / el_size);
 
-        size_t new_size = sizeof(BufHdr) + new_cap * el_size;
+        u64 new_size = sizeof(BufHdr) + new_cap * el_size;
 
         BufHdr *new_buf;
         if (b)

@@ -4,7 +4,7 @@
 
 #pragma once
 
-// exchange with your own lib file (if you have it obviously)
+// @NOTE(Roman): Exchange with your own .lib file[s]
 #pragma comment(lib, "sandbox.lib")
 
 #include "core/core.h"

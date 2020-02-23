@@ -20,10 +20,10 @@ INLINE u32 MATH_CALL norm_to_hex(v4 color)
                              _mm_min_ps(
                                  _mm_set_ps1(1.0f),
                                  color.mm))));
-    return (MM128u32(mm, 3) << 24)
-         | (MM128u32(mm, 0) << 16)
-         | (MM128u32(mm, 1) <<  8)
-         | (MM128u32(mm, 2)      );
+    return (MM(mm, u32, 3) << 24)
+         | (MM(mm, u32, 0) << 16)
+         | (MM(mm, u32, 1) <<  8)
+         | (MM(mm, u32, 2)      );
 }
 
 INLINE v4 MATH_CALL norm_to_v4(v4 color)
@@ -72,10 +72,10 @@ INLINE v4 MATH_CALL v4_to_norm(v4 color)
 INLINE u32 MATH_CALL v4_to_hex(v4 color)
 {
     __m128i mm = _mm_cvtps_epi32(color.mm);
-    return (MM128u32(mm, 3) << 24)
-         | (MM128u32(mm, 0) << 16)
-         | (MM128u32(mm, 1) <<  8)
-         | (MM128u32(mm, 2)      );
+    return (MM(mm, u32, 3) << 24)
+         | (MM(mm, u32, 0) << 16)
+         | (MM(mm, u32, 1) <<  8)
+         | (MM(mm, u32, 2)      );
 }
 
 //
@@ -131,10 +131,10 @@ INLINE v4 MATH_CALL v4u_to_norm(v4u color)
 
 INLINE u32 MATH_CALL v4u_to_hex(v4u color)
 {
-    return (MM128u32(color.mm, 3) << 24)
-         | (MM128u32(color.mm, 0) << 16)
-         | (MM128u32(color.mm, 1) <<  8)
-         | (MM128u32(color.mm, 2)      );
+    return (MM(color.mm, u32, 3) << 24)
+         | (MM(color.mm, u32, 0) << 16)
+         | (MM(color.mm, u32, 1) <<  8)
+         | (MM(color.mm, u32, 2)      );
 }
 
 //

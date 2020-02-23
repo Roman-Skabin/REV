@@ -2,7 +2,6 @@
     - ...
 
 - Core
-    - Try to move Stretchy Buffers' allocation to Engine Memory
     - Hash Table (for caching)
     - Logger for work queue ?
     - _CENGINE_HARDWARE for hardware accesleration if it will be
@@ -15,11 +14,11 @@
     - Other orthos & persps
 
 - Graphics
-    - Allocate rasterizer data on transient area
-    - Rendering in tiles (if it would be possible)
-    - Multi-threaded rendering
     - Cache for rasterizer
+    - Rendering in tiles ?
+    - Multi-threaded rendering
     - Batch rendering ?
+    - Improved Blending (http://jcgt.org/published/0002/02/09/)
     - Texture/Image
     - Entity system
     - Particle system

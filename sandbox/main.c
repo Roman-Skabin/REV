@@ -17,6 +17,7 @@ typedef struct SandboxState
     Logger   logger;
     Triangle t1;
     Triangle t2;
+    f32      sin_arg;
 } SandboxState;
 
 internal VERTEX_SHADER(TriangleVS)
@@ -107,6 +108,8 @@ USER_CALLBACK(User_OnUpdate)
         sandbox_state->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
         sandbox_state->t2.proj = sandbox_state->t1.proj;
     }
+
+   
 }
 
 USER_CALLBACK(User_OnRender)
@@ -124,26 +127,22 @@ USER_CALLBACK(User_OnRender)
 
 SOUND_CALLBACK(User_SoundCallback)
 {
-    if (buffer->sample_type == SAMPLE_TYPE_F32)
-    {
-        f32 *cur_sample  = cast(f32 *, buffer->samples);
-        f32 *last_sample = cast(f32 *, buffer->samples) + buffer->samples_count;
+    SandboxState *sandbox_state = cast(SandboxState *, engine_state->user_ponter);
 
-        while (cur_sample < last_sample)
-        {
-            memset_f32(cur_sample, 261.63f, buffer->channels_count);
-            cur_sample += buffer->channels_count;
-        }
-    }
-    else
-    {
-        u32 *cur_sample  = cast(u32 *, buffer->samples);
-        u32 *last_sample = cast(u32 *, buffer->samples) + buffer->samples_count;
+    f32 *first_sample = buffer->samples;
+    f32 *last_sample  = buffer->samples + buffer->samples_count;
 
-        while (cur_sample < last_sample)
-        {
-            memset(cur_sample, 262, buffer->channels_count * sizeof(u32));
-            cur_sample += buffer->channels_count;
-        }
+    f32 amplitude = 10.0f;
+    f32 tone      = 261.63f; // C4
+    f32 period    = buffer->samples_per_second / tone;
+
+    while (first_sample < last_sample)
+    {
+        f32 value = amplitude * sinf(sandbox_state->sin_arg);
+
+        *first_sample++ = value;
+        *first_sample++ = value;
+
+        sandbox_state->sin_arg += 2.0f * f32_PI / period;
     }
 }

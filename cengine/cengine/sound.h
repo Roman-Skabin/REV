@@ -11,27 +11,21 @@
     typedef struct EngineState EngineState;
 #endif
 
-typedef enum SAMPLE_TYPE
-{
-    SAMPLE_TYPE_U32,
-    SAMPLE_TYPE_F32,
-} SAMPLE_TYPE;
-
 typedef struct SoundBuffer
 {
-    void         *samples;
-    u32           samples_count;
-    SAMPLE_TYPE   sample_type;
-    u16           channels_count;
+    f32 *samples;
+    u32  samples_count;
+    u32  samples_per_second;
+    u16  channels_count;
 } SoundBuffer;
 
-#define SOUND_CALLBACK(name) void name(EngineState *state, SoundBuffer *buffer)
+#define SOUND_CALLBACK(name) void name(EngineState *engine_state, SoundBuffer *buffer)
 typedef SOUND_CALLBACK(SoundCallback);
 
 typedef struct SoundStream
 {
     IMMDevice            *device;
-    IAudioClient3        *client;
+    IAudioClient         *client;
     IAudioRenderClient   *renderer;
     ISimpleAudioVolume   *volume;
     WAVEFORMATEXTENSIBLE *wave_format;

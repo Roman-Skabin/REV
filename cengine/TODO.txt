@@ -25,5 +25,4 @@
     - Hardware acceleration (D3D12)
 
 - Sound
-    - Deal with no sound. Switch WASAPI to XAudio2 ?
-    - Some wrapper for audio files loading
+    - audio files loading

@@ -22,14 +22,15 @@
     <ClCompile Include="cengine\cengine.c" />
     <ClCompile Include="cengine\core\core.c" />
     <ClCompile Include="cengine\core\id.c" />
-    <ClCompile Include="cengine\core\logger.c" />
+    <ClCompile Include="cengine\sound\audio.c" />
+    <ClCompile Include="cengine\tools\logger.c" />
     <ClCompile Include="cengine\core\pch.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="cengine\core\work_queue.c" />
+    <ClCompile Include="cengine\tools\work_queue.c" />
     <ClCompile Include="cengine\graphics\rasterizer.c" />
     <ClCompile Include="cengine\math\math.c">
       <SubType>
@@ -42,10 +43,10 @@
     <ClInclude Include="cengine\cengine.h" />
     <ClInclude Include="cengine\core\core.h" />
     <ClInclude Include="cengine\core\id.h" />
-    <ClInclude Include="cengine\core\logger.h" />
+    <ClInclude Include="cengine\tools\logger.h" />
     <ClInclude Include="cengine\core\memory.h" />
     <ClInclude Include="cengine\core\pch.h" />
-    <ClInclude Include="cengine\core\work_queue.h" />
+    <ClInclude Include="cengine\tools\work_queue.h" />
     <ClInclude Include="cengine\graphics\rasterizer.h" />
     <ClInclude Include="cengine\graphics\renderer.h" />
     <ClInclude Include="cengine\input.h" />
@@ -53,11 +54,10 @@
     <ClInclude Include="cengine\math\mat.h" />
     <ClInclude Include="cengine\math\math.h" />
     <ClInclude Include="cengine\math\vec.h" />
-    <ClInclude Include="cengine\sound.h" />
+    <ClInclude Include="cengine\sound\sound.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="cengine.log" />
-    <Text Include="sandbox.log" />
     <Text Include="TODO.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -169,7 +169,7 @@
       <TreatWarningAsError />
       <DiagnosticsFormat />
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed />
       <OmitFramePointers />
@@ -302,7 +302,7 @@
       <TreatWarningAsError />
       <DiagnosticsFormat />
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed />
       <EnableFiberSafeOptimizations />
@@ -437,7 +437,7 @@
       <TreatWarningAsError />
       <DiagnosticsFormat />
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
@@ -570,7 +570,7 @@
       <TreatWarningAsError />
       <DiagnosticsFormat />
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
       <WholeProgramOptimization>true</WholeProgramOptimization>

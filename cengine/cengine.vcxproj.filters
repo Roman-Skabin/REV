@@ -30,12 +30,6 @@
     <ClCompile Include="cengine\graphics\renderer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cengine\core\logger.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="cengine\core\work_queue.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="cengine\graphics\rasterizer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -43,6 +37,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="cengine\core\id.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cengine\tools\logger.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cengine\tools\work_queue.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cengine\sound\audio.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -74,12 +77,6 @@
     <ClInclude Include="cengine\graphics\renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cengine\core\logger.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="cengine\core\work_queue.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="cengine\core\memory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -89,13 +86,18 @@
     <ClInclude Include="cengine\core\id.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="cengine\sound.h">
+    <ClInclude Include="cengine\tools\logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cengine\tools\work_queue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cengine\sound\sound.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />
     <Text Include="cengine.log" />
-    <Text Include="sandbox.log" />
   </ItemGroup>
 </Project>

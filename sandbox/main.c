@@ -14,10 +14,10 @@ typedef struct Triangle
 
 typedef struct SandboxState
 {
-    Logger   logger;
-    Triangle t1;
-    Triangle t2;
-    f32      sin_arg;
+    Logger      logger;
+    Triangle    t1;
+    Triangle    t2;
+    AudioBuffer audio;
 } SandboxState;
 
 internal VERTEX_SHADER(TriangleVS)
@@ -36,12 +36,15 @@ internal PIXEL_SHADER(Triangle2PS)
     return v4_1(0.0f, 0.0f, 1.0f, 0.5f);
 }
 
+global SandboxState *gSandboxState;
+
 USER_CALLBACK(User_OnInit)
 {
     SandboxState *sandbox_state = PushToPA(SandboxState, &engine_state->memory, 1);
     engine_state->user_ponter   = sandbox_state;
+    gSandboxState               = sandbox_state;
 
-    sandbox_state->logger = CreateLogger("Sandbox Logger", "sandbox.log", LOG_TO_FILE | LOG_TO_DEBUG);
+    sandbox_state->logger = CreateLogger("Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE | LOG_TO_DEBUG);
     DebugResult(b32, SetWindowTextA(engine_state->window.handle, WINDOW_TITLE));
 #if RELEASE
     SetFullscreen(engine_state, true);
@@ -64,6 +67,8 @@ USER_CALLBACK(User_OnInit)
     sandbox_state->t2.VS   = TriangleVS;
     sandbox_state->t2.PS   = Triangle2PS;
     sandbox_state->t2.proj = sandbox_state->t1.proj;
+
+    sandbox_state->audio = LoadAudioFile(engine_state, "../sandbox/track.mp3");
 }
 
 USER_CALLBACK(User_OnDestroy)
@@ -108,8 +113,6 @@ USER_CALLBACK(User_OnUpdate)
         sandbox_state->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
         sandbox_state->t2.proj = sandbox_state->t1.proj;
     }
-
-   
 }
 
 USER_CALLBACK(User_OnRender)
@@ -127,22 +130,17 @@ USER_CALLBACK(User_OnRender)
 
 SOUND_CALLBACK(User_SoundCallback)
 {
-    SandboxState *sandbox_state = cast(SandboxState *, engine_state->user_ponter);
+    SandboxState *sandbox_state = gSandboxState; // cast(SandboxState *, engine_state->user_ponter);
+    AudioBuffer  *audio         = &sandbox_state->audio;
 
     f32 *first_sample = buffer->samples;
     f32 *last_sample  = buffer->samples + buffer->samples_count;
-
-    f32 amplitude = 10.0f;
-    f32 tone      = 261.63f; // C4
-    f32 period    = buffer->samples_per_second / tone;
-
+    
     while (first_sample < last_sample)
     {
-        f32 value = amplitude * sinf(sandbox_state->sin_arg);
+        if (audio->samples_index == audio->samples_count)
+            audio->samples_index = 0;
 
-        *first_sample++ = value;
-        *first_sample++ = value;
-
-        sandbox_state->sin_arg += 2.0f * f32_PI / period;
+        *first_sample++ = audio->samples[audio->samples_index++];
     }
 }

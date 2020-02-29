@@ -8,13 +8,13 @@
 #pragma comment(lib, "sandbox.lib")
 
 #include "core/core.h"
-#include "core/logger.h"
+#include "tools/logger.h"
 #include "math/mat.h"
 #include "input.h"
 #include "graphics/renderer.h"
-#include "core/work_queue.h"
+#include "tools/work_queue.h"
 #include "core/memory.h"
-#include "sound.h"
+#include "sound/sound.h"
 
 #ifndef ENGINE_STATE_DEFINED
 #define ENGINE_STATE_DEFINED

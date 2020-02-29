@@ -2,12 +2,14 @@
     - ...
 
 - Core
-    - Hash Table (for caching)
-    - Logger for work queue ?
     - _CENGINE_HARDWARE for hardware accesleration if it will be
 
+- Tools
+    - Hash Table (for rasterizer's caching)
+    - Logger for work queue?
+
 - Window
-    - Switch to DPI stuff for monitor and window adjustment ?
+    - Switch to DPI stuff for monitor and window adjustment?
 
 - Math
     - CPU optimizations
@@ -25,4 +27,8 @@
     - Hardware acceleration (D3D12)
 
 - Sound
-    - audio files loading
+    - Problem with some object (GUID = {A2322FB8-70F3-3639-9BE0-28EB43A67A2E})
+      on IMFSourceReader::SetCurrentMediaType call
+      in combase.dll!CStdMarshal::Begin_RemQIAndUnmarshal1(unsigned short cIIDs=1, _GUID * pIIDs=0x000000e1c80fd130, tagQICONTEXT * pQIC=0x000000e1c80fd050) Line 5721
+	  at onecore\com\combase\dcomrem\marshal.cxx(5721)
+    - Too slow playing (maybe upper problem causes)

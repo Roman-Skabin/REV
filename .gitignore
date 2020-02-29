@@ -1,5 +1,8 @@
 .vs/
-.vscode/
 debug/
 release/
+.vscode/
+*.json
 *.log
+*.wav
+*.mp3

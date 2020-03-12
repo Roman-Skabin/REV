@@ -69,8 +69,10 @@ void RenderTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, P
         p2.z = p2z;
         p3.z = p3z;
 
-        PUSHED_BUF RasterizerOutput *points = RasterizeTriangle(state, p1, p2, p3);
+        BUF RasterizerOutput *points = RasterizeTriangle(state, p1, p2, p3);
 
+        // @TODO(Roman): Remove, when batch rendering will be implemented.
+        //               Move to Present?
 #if 1
         for (u32 i = 0; i < buf_count(points); ++i)
         {

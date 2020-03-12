@@ -6,6 +6,62 @@
 #include "graphics/rasterizer.h"
 #include "cengine.h"
 
+typedef struct HashTable
+{
+    BUF RasterizerOutput *data[PAGE_SIZE];
+    // u8                 frames[PAGE_SIZE];
+    // Release data[i] if we don't use it for n frames
+    u32                   count;
+} HashTable;
+
+global HashTable gCache;
+
+typedef struct HashKey
+{
+    v4 left;
+    v4 right;
+    v4 middle;
+} HashKey;
+
+internal u32 Hash(HashKey *key)
+{
+    sizeof(HashTable);
+    enum { CHUNKS_COUNT = sizeof(HashKey) / sizeof(u32) };
+
+    u32 chunks[CHUNKS_COUNT];
+    Check(sizeof(chunks) == sizeof(HashKey));
+
+    memcpy(chunks, key, sizeof(HashKey));
+
+    for (u32 i = 1; i < CHUNKS_COUNT; ++i)
+    {
+        chunks[0] ^= chunks[i];
+    }
+
+    return chunks[0] % PAGE_SIZE;
+}
+
+internal INLINE void CacheRasterizerOutput(HashKey *key, BUF RasterizerOutput *data)
+{
+    u32 hash = Hash(key);
+
+    if (!gCache.data[hash])
+    {
+        ++gCache.count;
+    }
+
+    gCache.data[hash] = data;
+}
+
+internal INLINE BUF RasterizerOutput *GetCachedRasterizerOutput(HashKey *key)
+{
+    u32 hash = Hash(key);
+
+    // @TODO(Roman): release data, we don't use for n frames
+
+    return gCache.data[hash];
+}
+
 internal INLINE v4 *GetLeftPoint(v4 *p1, v4 *p2, v4 *p3)
 {
     if (p1->x < p2->x) return p1->x < p3->x ? p1 : p3;
@@ -25,12 +81,7 @@ internal INLINE v4 *GetMiddlePoint(v4 *p1, v4 *p2, v4 *p3, v4 *left, v4 *right)
     else            return p1 == right ? p2 : p1;
 }
 
-internal void RasterizeTriangleSide(
-    RasterizerOutput **triangle,
-    EngineState       *state,
-    v4                 _lower,
-    v4                 _upper
-)
+internal void RasterizeTriangleSide(RasterizerOutput **triangle, EngineState *state, v4 _lower, v4 _upper)
 {
     v4s upper = v4_to_v4s(_upper);
     v4s lower = v4_to_v4s(_lower);
@@ -379,40 +430,52 @@ internal BUF RasterizerOutput *RasterizeTriangleUpDownRightLower(EngineState *st
     return triangle;
 }
 
-PUSHED_BUF RasterizerOutput *RasterizeTriangle(EngineState *state, v4 p1, v4 p2, v4 p3)
+BUF RasterizerOutput *RasterizeTriangle(EngineState *state, v4 p1, v4 p2, v4 p3)
 {
     v4 *left   = GetLeftPoint(&p1, &p2, &p3);
     v4 *right  = GetRightPoint(&p1, &p2, &p3);
     v4 *middle = GetMiddlePoint(&p1, &p2, &p3, left, right);
 
-    BUF RasterizerOutput *triangle = 0;
+    HashKey key = { *left, *right, *middle };
+    
+    BUF RasterizerOutput *triangle = GetCachedRasterizerOutput(&key);
 
-    if (middle->y <= min(left->y, right->y))
+    if (!triangle)
     {
-        if (left->y <= right->y)
+        if (middle->y <= min(left->y, right->y))
         {
-            triangle = RasterizeTriangleDownUpLeftLower(state, *left, *middle, *right);
+            if (left->y <= right->y)
+            {
+                triangle = RasterizeTriangleDownUpLeftLower(state, *left, *middle, *right);
+            }
+            else
+            {
+                triangle = RasterizeTriangleDownUpRightLower(state, *left, *middle, *right);
+            }
         }
         else
         {
-            triangle = RasterizeTriangleDownUpRightLower(state, *left, *middle, *right);
+            if (left->y <= right->y)
+            {
+                triangle = RasterizeTriangleUpDownLeftLower(state, *left, *middle, *right);
+            }
+            else
+            {
+                triangle = RasterizeTriangleUpDownRightLower(state, *left, *middle, *right);
+            }
         }
-    }
-    else
-    {
-        if (left->y <= right->y)
-        {
-            triangle = RasterizeTriangleUpDownLeftLower(state, *left, *middle, *right);
-        }
-        else
-        {
-            triangle = RasterizeTriangleUpDownRightLower(state, *left, *middle, *right);
-        }
+
+        // @TODO(Roman): Return, when batch rendering will be implemented
+#if 0
+        BufHdr *pushed_triangle = PushToTransientArea(&state->memory, offsetof(BufHdr, buf) + buf_count(triangle) * sizeof(RasterizerOutput));
+        CopyMemory(pushed_triangle, _BUFHDR(triangle), offsetof(BufHdr, buf) + buf_count(triangle) * sizeof(RasterizerOutput));
+        buf_free(triangle);
+        
+        return cast(RasterizerOutput *, pushed_triangle->buf);
+#endif
+
+        CacheRasterizerOutput(&key, triangle);
     }
 
-    BufHdr *pushed_triangle = PushToTransientArea(&state->memory, offsetof(BufHdr, buf) + buf_count(triangle) * sizeof(RasterizerOutput));
-    CopyMemory(pushed_triangle, _BUFHDR(triangle), offsetof(BufHdr, buf) + buf_count(triangle) * sizeof(RasterizerOutput));
-    buf_free(triangle);
-
-    return cast(RasterizerOutput *, pushed_triangle->buf);
+    return triangle;
 }

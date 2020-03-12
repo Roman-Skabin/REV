@@ -5,7 +5,6 @@
 #pragma once
 
 #include "core/core.h"
-#include "core/memory.h"
 
 #ifndef ENGINE_STATE_DEFINED
 #define ENGINE_STATE_DEFINED

@@ -45,9 +45,9 @@ internal WORK_QUEUE_ENTRY_PROC(RenderTriangleMT)
     // @TODO(Roman): multi-threaded version
 }
 
-void RenderTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS)
+void RenderOpaqueTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS)
 {
-    if (state->renderer.zb.size)
+    if (state->renderer.common.count)
     {
         f32 p1z = p1.z;
         f32 p2z = p2.z;
@@ -71,9 +71,6 @@ void RenderTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, P
 
         BUF RasterizerOutput *points = RasterizeTriangle(state, p1, p2, p3);
 
-        // @TODO(Roman): Remove, when batch rendering will be implemented.
-        //               Move to Present?
-#if 1
         for (u32 i = 0; i < buf_count(points); ++i)
         {
             f32 *zbuf_z = state->renderer.zb.z
@@ -89,13 +86,53 @@ void RenderTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, P
                                 + points[i].x;
 
                 v4 source_pixel = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
-
                 v4 source_color = PS(state, NormalizePoint(state, source_pixel));
-                v4 dest_color   = hex_to_norm(*dest_pixel);
 
-                *dest_pixel = BlendColor(source_color, dest_color);
+                *dest_pixel = norm_to_hex(source_color);
             }
         }
-#endif
+    }
+}
+
+void RenderTranslucentTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS)
+{
+    if (state->renderer.common.count)
+    {
+        f32 p1z = p1.z;
+        f32 p2z = p2.z;
+        f32 p3z = p3.z;
+
+        p1 = VS(state, p1);
+        p2 = VS(state, p2);
+        p3 = VS(state, p3);
+
+        p1 = v4_normalize_w(p1);
+        p2 = v4_normalize_w(p2);
+        p3 = v4_normalize_w(p3);
+
+        p1.xy = AdaptPoint(state, p1);
+        p2.xy = AdaptPoint(state, p2);
+        p3.xy = AdaptPoint(state, p3);
+
+        p1.z = p1z;
+        p2.z = p2z;
+        p3.z = p3z;
+
+        BUF RasterizerOutput *points = RasterizeTriangle(state, p1, p2, p3);
+
+        for (u32 i = 0; i < buf_count(points); ++i)
+        {
+            f32 *zbuf_z = state->renderer.zb.z
+                        + points[i].y * state->window.size.w
+                        + points[i].x;
+
+            if (points[i].z < *zbuf_z)
+            {
+                v4 source_pixel = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
+                v4 source_color = PS(state, NormalizePoint(state, source_pixel));
+
+                BlendOnRender(state, points[i].x, points[i].y, points[i].z, source_color);
+            }
+        }
     }
 }

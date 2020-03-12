@@ -141,15 +141,51 @@ INLINE u32 MATH_CALL v4u_to_hex(v4u color)
 // Blending
 //
 
-INLINE u32 MATH_CALL BlendColor(v4 source, v4 dest)
+INLINE void MATH_CALL BlendOnRender(EngineState *state, u32 x, u32 y, f32 z, v4 color)
 {
-    v4 res;
-    res.mm = _mm_add_ps(
-                 _mm_mul_ps(
-                     source.mm,
-                     _mm_setr_ps(source.a, source.a, source.a, 1.0f)),
-                 _mm_mul_ps(
-                     dest.mm,
-                     _mm_set_ps1(1.0f - source.a)));
-    return norm_to_hex(res);
+    v4 *sum = state->renderer.blending.sum
+            + y * state->window.size.w
+            + x;
+
+    sum->mm = _mm_add_ps(
+                  sum->mm,
+                  _mm_mul_ps(
+                      color.mm,
+                      _mm_set_ps1(state->renderer.zb.far - z)));
+
+    state->renderer.blending.mul[y * state->window.size.w + x] *= 1.0f - color.a;
+}
+
+INLINE void MATH_CALL BlendOnPresent(u32 *pixel, v4 sum, f32 mul)
+{
+    __m128i mm = _mm_cvtps_epi32(
+                     _mm_mul_ps(
+                         _mm_set_ps1(255.0f),
+                         _mm_max_ps(
+                             _mm_setzero_ps(),
+                             _mm_min_ps(
+                                 _mm_set_ps1(1.0f),
+                                 _mm_add_ps(
+                                     _mm_mul_ps(
+                                         _mm_div_ps(
+                                             sum.mm,
+                                             _mm_set_ps1(sum.a)),
+                                         _mm_set_ps1(1.0f - mul)),
+                                     _mm_mul_ps(
+                                         _mm_div_ps(
+                                             _mm_cvtepi32_ps(
+                                                 _mm_and_si128(
+                                                     _mm_setr_epi32(
+                                                         *pixel >> 16,
+                                                         *pixel >> 8,
+                                                         *pixel,
+                                                         *pixel >> 24),
+                                                     _mm_set1_epi32(0xFF))),
+                                             _mm_set_ps1(255.0f)),
+                                         _mm_set_ps1(mul)))))));
+
+    *pixel = (MM(mm, u32, 3) << 24)
+           | (MM(mm, u32, 0) << 16)
+           | (MM(mm, u32, 1) <<  8)
+           | (MM(mm, u32, 2)      );
 }

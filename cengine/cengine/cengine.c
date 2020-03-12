@@ -5,6 +5,7 @@
 #include "core/pch.h"
 #include "cengine.h"
 #include "core/id.h"
+#include "math/color.h"
 
 //
 // Input
@@ -270,9 +271,12 @@ internal void RendererCreate(EngineState *state)
     state->renderer.rt.info.bmiHeader.biBitCount      = 32;
     state->renderer.rt.info.bmiHeader.biCompression   = BI_RGB;
 
-    state->renderer.rt.pixels = PushToTA(u32, &state->memory, state->window.size.w * state->window.size.h);
-    state->renderer.zb.z      = PushToTAA(f32, &state->memory, state->window.size.w * state->window.size.h, sizeof(__m256));
-    state->renderer.zb.size   = ALIGN_UP(state->window.size.w * state->window.size.h * sizeof(f32), sizeof(__m256));
+    state->renderer.common.count = state->window.size.w * state->window.size.h;
+
+    state->renderer.rt.pixels    = PushToTA(u32, &state->memory, state->renderer.common.count);
+    state->renderer.zb.z         = PushToTAA(f32, &state->memory, state->renderer.common.count, sizeof(__m256));
+    state->renderer.blending.sum = PushToTAA(v4, &state->memory, state->renderer.common.count, sizeof(__m256));
+    state->renderer.blending.mul = PushToTAA(f32, &state->memory, state->renderer.common.count, sizeof(__m256));
 
     Success(&state->logger, "Renderer was created");
 }
@@ -282,17 +286,31 @@ internal void RendererResize(EngineState *state)
     state->renderer.rt.info.bmiHeader.biWidth  = state->window.size.w;
     state->renderer.rt.info.bmiHeader.biHeight = state->window.size.h;
 
-    if (state->window.size.w * state->window.size.h)
-    {
-        state->renderer.rt.pixels = PushToTA(u32, &state->memory, state->window.size.w * state->window.size.h);
-        state->renderer.zb.z      = PushToTAA(f32, &state->memory, state->window.size.w * state->window.size.h, sizeof(__m256));
-    }
+    state->renderer.common.count = state->window.size.w * state->window.size.h;
 
-    state->renderer.zb.size = ALIGN_UP(state->window.size.w * state->window.size.h * sizeof(f32), sizeof(__m256));
+    if (state->renderer.common.count)
+    {
+        state->renderer.rt.pixels    = PushToTA(u32, &state->memory, state->renderer.common.count);
+        state->renderer.zb.z         = PushToTAA(f32, &state->memory, state->renderer.common.count, sizeof(__m256));
+        state->renderer.blending.sum = PushToTAA(v4, &state->memory, state->renderer.common.count, sizeof(__m256));
+        state->renderer.blending.mul = PushToTAA(f32, &state->memory, state->renderer.common.count, sizeof(__m256));
+    }
 }
 
 internal INLINE void RendererPresent(EngineState *state)
 {
+    for (u32 i = 0; i < state->renderer.common.count; ++i)
+    {
+        v4 *sum = state->renderer.blending.sum + i;
+
+        if (sum->r || sum->g || sum->b)
+        {
+            BlendOnPresent(state->renderer.rt.pixels + i,
+                           *sum,
+                           state->renderer.blending.mul[i]);
+        }
+    }
+
     SetDIBitsToDevice(state->window.context,
         0, 0, state->window.size.w, state->window.size.h,
         0, 0, 0, state->window.size.h,
@@ -661,7 +679,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
             User_OnUpdate(&state);
 
             // Clear
-            memset_f32(state.renderer.zb.z, state.renderer.zb.far, state.renderer.zb.size / sizeof(f32));
+            u32 bytes = ALIGN_UP(state.renderer.common.count * sizeof(f32), sizeof(__m256)) / sizeof(f32);
+            memset_f32(state.renderer.zb.z, state.renderer.zb.far, bytes);
+            memset_f32(state.renderer.blending.mul, 1.0f, bytes);
 
             // Render
             User_OnRender(&state);

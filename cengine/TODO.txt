@@ -15,11 +15,9 @@
     - Other orthos & persps
 
 - Graphics
+    - Optimize hashing (remove data, unused for n (60?) frames)
     - Rendering in tiles?
     - Multi-threaded rendering
-    - Batch rendering?
-    - Optimize hashing (remove data, unused for n (60?) frames)
-    - Improved Blending (http://jcgt.org/published/0002/02/09/)
     - Texture/Image
     - Entity system
     - Particle system

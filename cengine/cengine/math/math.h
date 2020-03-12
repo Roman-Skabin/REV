@@ -46,4 +46,4 @@ INLINE f32 MATH_CALL lerp(f32 start, f32 end, f32 percent)
 }
 
 // value <= 20
-u64 __fastcall fact(u8 value);
+CEXTERN u64 __fastcall fact(u8 value);

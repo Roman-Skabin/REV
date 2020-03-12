@@ -118,12 +118,13 @@ USER_CALLBACK(User_OnUpdate)
 USER_CALLBACK(User_OnRender)
 {
     SandboxState *sandbox_state = cast(SandboxState *, engine_state->user_ponter);
-
+    
     engine_state->user_ponter = &sandbox_state->t1;
-    RenderTriangle(engine_state, sandbox_state->t1.p1, sandbox_state->t1.p2, sandbox_state->t1.p3, sandbox_state->t1.VS, sandbox_state->t1.PS);
+    // RenderOpaqueTriangle(engine_state, sandbox_state->t1.p1, sandbox_state->t1.p2, sandbox_state->t1.p3, sandbox_state->t1.VS, sandbox_state->t1.PS);
+    RenderTranslucentTriangle(engine_state, sandbox_state->t1.p1, sandbox_state->t1.p2, sandbox_state->t1.p3, sandbox_state->t1.VS, sandbox_state->t1.PS);
 
     engine_state->user_ponter = &sandbox_state->t2;
-    RenderTriangle(engine_state, sandbox_state->t2.p1, sandbox_state->t2.p2, sandbox_state->t2.p3, sandbox_state->t2.VS, sandbox_state->t2.PS);
+    RenderTranslucentTriangle(engine_state, sandbox_state->t2.p1, sandbox_state->t2.p2, sandbox_state->t2.p3, sandbox_state->t2.VS, sandbox_state->t2.PS);
 
     engine_state->user_ponter = sandbox_state;
 }

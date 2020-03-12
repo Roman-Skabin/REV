@@ -33,8 +33,8 @@ typedef struct SoundStream
     b32                   pause;
 } SoundStream;
 
-inline void SoundPlay(SoundStream *stream)  { stream->pause = false; }
-inline void SoundPause(SoundStream *stream) { stream->pause = true; }
+INLINE void SoundPlay(SoundStream *stream)  { stream->pause = false; }
+INLINE void SoundPause(SoundStream *stream) { stream->pause = true; }
 
 typedef struct AudioBuffer
 {

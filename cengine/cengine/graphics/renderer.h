@@ -31,10 +31,21 @@ typedef struct Renderer
         f32 *z;
         f32 near;
         f32 far;
-        u32 size;
     } zb;
+
+    struct
+    {
+        v4  *sum;
+        f32 *mul;
+    } blending;
+
+    struct
+    {
+        u32 count;
+    } common;
 } Renderer;
 
 CEXTERN void SetViewport(EngineState *state, f32 near, f32 far);
 
-CEXTERN void RenderTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);
+CEXTERN void RenderOpaqueTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);
+CEXTERN void RenderTranslucentTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);

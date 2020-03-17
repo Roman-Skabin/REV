@@ -68,7 +68,8 @@ USER_CALLBACK(User_OnInit)
     sandbox_state->t2.PS   = Triangle2PS;
     sandbox_state->t2.proj = sandbox_state->t1.proj;
 
-    // sandbox_state->audio = LoadAudioFile(engine_state, "../sandbox/track.mp3");
+    sandbox_state->audio = LoadAudioFile(engine_state, "../sandbox/assets/audio.wav");
+    SoundPlay(&engine_state->sound);
 }
 
 USER_CALLBACK(User_OnDestroy)
@@ -131,21 +132,15 @@ USER_CALLBACK(User_OnRender)
 
 SOUND_CALLBACK(User_SoundCallback)
 {
-#if 0
     SandboxState *sandbox_state = gSandboxState; // cast(SandboxState *, engine_state->user_ponter);
     AudioBuffer  *audio         = &sandbox_state->audio;
 
-    f32 *first_sample = buffer->samples;
-    f32 *last_sample  = buffer->samples + buffer->samples_count;
-    
-    while (first_sample < last_sample)
+    for (u32 i = 0; i < buffer->samples_count; ++i)
     {
         if (audio->samples_index == audio->samples_count)
             audio->samples_index = 0;
 
-        *first_sample++ = audio->samples[audio->samples_index++];
+        buffer->samples[i * buffer->channels_count    ] = audio->samples[audio->samples_index++];
+        buffer->samples[i * buffer->channels_count + 1] = audio->samples[audio->samples_index++];
     }
-#else
-    memset_f32(buffer->samples, 0.0f, buffer->samples_count);
-#endif
 }

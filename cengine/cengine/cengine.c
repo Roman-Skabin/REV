@@ -414,7 +414,7 @@ internal DWORD WINAPI SoundThreadProc(LPVOID arg)
 
     DebugResult(b32, SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
     
-    HANDLE event       = CreateEventExA(0, "EngineSoundEvent", CREATE_EVENT_INITIAL_SET, EVENT_ALL_ACCESS);
+    HANDLE event       = CreateEventExA(0, "EngineSoundEvent", 0, EVENT_ALL_ACCESS);
     state->sound.error = state->sound.client->lpVtbl->SetEventHandle(state->sound.client, event);
     Check(SUCCEEDED(state->sound.error));
 
@@ -463,13 +463,13 @@ internal void CreateSound(EngineState *state)
     Check(SUCCEEDED(state->sound.error));
 
     IMMDeviceEnumerator *mmdevice_enumerator = 0;
-    state->sound.error = CoCreateInstance(&CLSID_MMDeviceEnumerator, 0, CLSCTX_SERVER, &IID_IMMDeviceEnumerator, &mmdevice_enumerator);
+    state->sound.error = CoCreateInstance(&CLSID_MMDeviceEnumerator, 0, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &mmdevice_enumerator);
     Check(SUCCEEDED(state->sound.error));
 
     state->sound.error = mmdevice_enumerator->lpVtbl->GetDefaultAudioEndpoint(mmdevice_enumerator, eRender, eConsole, &state->sound.device);
     Check(SUCCEEDED(state->sound.error));
 
-    state->sound.error = state->sound.device->lpVtbl->Activate(state->sound.device, &IID_IAudioClient, CLSCTX_SERVER, 0, &state->sound.client);
+    state->sound.error = state->sound.device->lpVtbl->Activate(state->sound.device, &IID_IAudioClient, CLSCTX_INPROC_SERVER | CLSCTX_ACTIVATE_64_BIT_SERVER, 0, &state->sound.client);
     Check(SUCCEEDED(state->sound.error));
 
     state->sound.wave_format.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
@@ -483,12 +483,11 @@ internal void CreateSound(EngineState *state)
     state->sound.wave_format.dwChannelMask               = KSAUDIO_SPEAKER_STEREO;
     state->sound.wave_format.SubFormat                   = (GUID){ STATIC_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT };
 
-    REFERENCE_TIME buffer_duration = 20 * 10000;
     DWORD stream_flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK
                        | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM
                        | AUDCLNT_STREAMFLAGS_RATEADJUST;
 
-    state->sound.error = state->sound.client->lpVtbl->Initialize(state->sound.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, buffer_duration, 0, cast(WAVEFORMATEX *, &state->sound.wave_format), 0);
+    state->sound.error = state->sound.client->lpVtbl->Initialize(state->sound.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, 0, 0, cast(WAVEFORMATEX *, &state->sound.wave_format), 0);
     Check(SUCCEEDED(state->sound.error));
 
     state->sound.error = state->sound.client->lpVtbl->GetService(state->sound.client, &IID_IAudioRenderClient, &state->sound.renderer);
@@ -503,7 +502,7 @@ internal void CreateSound(EngineState *state)
 
     mmdevice_enumerator->lpVtbl->Release(mmdevice_enumerator);
 
-    state->sound.error = MFStartup(MF_VERSION, MFSTARTUP_FULL);
+    state->sound.error = MFStartup(MF_VERSION, MFSTARTUP_LITE);
     Check(SUCCEEDED(state->sound.error));
     
     Success(&state->logger, "Sound was initialized");
@@ -642,7 +641,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
     state.queue = CreateWorkQueue(&state);
 
     User_OnInit(&state);
-    state.sound.pause = false;
 
     TimerStart(&state);
 

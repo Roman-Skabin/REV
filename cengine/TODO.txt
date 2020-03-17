@@ -17,6 +17,7 @@
 - Graphics
     - Optimize hashing (remove data, unused for n (60?) frames)
     - Rendering in tiles?
+    - Multi-threaded rasterizing?
     - Multi-threaded rendering
     - Texture/Image
     - Entity system
@@ -24,8 +25,4 @@
     - Hardware acceleration (D3D12)
 
 - Sound
-    - Problem with some object (GUID = {A2322FB8-70F3-3639-9BE0-28EB43A67A2E})
-      on IMFSourceReader::SetCurrentMediaType call
-      in combase.dll!CStdMarshal::Begin_RemQIAndUnmarshal1(unsigned short cIIDs=1, _GUID * pIIDs=0x000000e1c80fd130, tagQICONTEXT * pQIC=0x000000e1c80fd050) Line 5721
-	  at onecore\com\combase\dcomrem\marshal.cxx(5721)
-    - Too slow playing (upper problem causes probably)
+    - Different callbacks for audios and sounds (fx)?

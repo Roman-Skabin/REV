@@ -71,7 +71,7 @@ internal THREAD_PROC(ThreadProc)
     return 0;
 }
 
-u32 GetCurrentThreadCount()
+internal u32 GetCurrentThreadCount()
 {
     DWORD  id       = GetCurrentProcessId();
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -101,9 +101,9 @@ WorkQueue *CreateWorkQueue(EngineState *state)
     SYSTEM_INFO info;
     GetSystemInfo(&info);
 
-    s32 threads_count = info.dwNumberOfProcessors - GetCurrentThreadCount();
-    if (state->window.closed && threads_count > 0) --threads_count;
-    if (threads_count <= 0                       ) threads_count = 1;
+    s32 threads_count = info.dwNumberOfProcessors - 1; // minus main thread
+    if (threads_count >  0) --threads_count; // minus sound thread
+    if (threads_count <= 0) threads_count = 1;
 
     WorkQueueThread *threads = PushToPA(WorkQueueThread, &state->memory, threads_count);
 

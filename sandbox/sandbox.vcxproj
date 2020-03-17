@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.c" />
+    <ClCompile Include="source\main.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="sandbox.log" />

@@ -15,11 +15,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <Text Include="sandbox.log" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="sandbox.log" />
+    <ClCompile Include="source\main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

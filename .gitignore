@@ -3,6 +3,5 @@
 debug/
 release/
 *.log
-*.mp3
-*.wav
+assets/
 *.pdf

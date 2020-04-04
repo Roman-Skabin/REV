@@ -7,8 +7,8 @@
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfreadwrite.lib")
 
-// #define WIN32_LEAN_AND_MEAN
-// #define VC_EXTRALEAN
+#define WIN32_LEAN_AND_MEAN
+#define VC_EXTRALEAN
 #define NOMINMAX
 #define _CRT_SECURE_NO_WARNINGS
 #define INITGUID

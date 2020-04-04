@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug|Win32">
-      <Configuration>Debug</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
@@ -28,35 +20,20 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{910d9970-395a-4e9e-b8b9-e7e68694129c}</ProjectGuid>
     <RootNamespace>sandbox</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-    <SpectreMitigation />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
-    <SpectreMitigation />
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
     <SpectreMitigation />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
     <SpectreMitigation />
@@ -66,12 +43,6 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -79,34 +50,11 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)debug\$(PlatformTarget)\</OutDir>
-    <IntDir>$(OutDir)intermediates\$(ProjectName)\</IntDir>
-    <LinkIncremental>
-    </LinkIncremental>
-    <IgnoreImportLibrary />
-    <GenerateManifest />
-    <EmbedManifest />
-    <PreBuildEventUseInBuild />
-    <PreLinkEventUseInBuild />
-    <PostBuildEventUseInBuild />
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)debug\$(PlatformTarget)\</OutDir>
     <IntDir>$(OutDir)intermediates\$(ProjectName)\</IntDir>
     <LinkIncremental>
     </LinkIncremental>
-    <IgnoreImportLibrary />
-    <GenerateManifest />
-    <EmbedManifest />
-    <PreBuildEventUseInBuild />
-    <PreLinkEventUseInBuild />
-    <PostBuildEventUseInBuild />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)release\$(PlatformTarget)\</OutDir>
-    <IntDir>$(OutDir)intermediates\$(ProjectName)\</IntDir>
-    <LinkIncremental>false</LinkIncremental>
     <IgnoreImportLibrary />
     <GenerateManifest />
     <EmbedManifest />
@@ -125,136 +73,6 @@
     <PreLinkEventUseInBuild />
     <PostBuildEventUseInBuild />
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
-      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <SupportJustMyCode />
-      <TreatWarningAsError />
-      <DiagnosticsFormat />
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <FavorSizeOrSpeed />
-      <OmitFramePointers />
-      <EnableFiberSafeOptimizations />
-      <WholeProgramOptimization />
-      <UndefineAllPreprocessorDefinitions />
-      <IgnoreStandardIncludePath />
-      <PreprocessToFile />
-      <PreprocessSuppressLineNumbers />
-      <PreprocessKeepComments />
-      <MinimalRebuild />
-      <SmallerTypeCheck />
-      <BasicRuntimeChecks />
-      <StructMemberAlignment />
-      <BufferSecurityCheck />
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
-      <FloatingPointModel>Fast</FloatingPointModel>
-      <DisableLanguageExtensions />
-      <ConformanceMode />
-      <ForceConformanceInForLoopScope />
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
-      <ExpandAttributedSource />
-      <AssemblerOutput />
-      <AssemblerListingLocation />
-      <GenerateXMLDocumentationFiles />
-      <XMLDocumentationFileName />
-      <BrowseInformation />
-      <BrowseInformationFile />
-      <CallingConvention />
-      <CompileAs />
-      <ShowIncludes />
-      <UseFullPaths />
-      <OmitDefaultLibName />
-      <ErrorReporting />
-      <LanguageStandard>
-      </LanguageStandard>
-      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
-      <ExceptionHandling />
-      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
-      <AdditionalIncludeDirectories>$(SolutionDir)cengine\cengine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-    </ClCompile>
-    <Link>
-      <ShowProgress />
-    </Link>
-    <Link>
-      <RegisterOutput />
-    </Link>
-    <Link>
-      <PerUserRedirection />
-      <ManifestFile />
-      <AllowIsolation />
-      <EnableUAC />
-      <UACExecutionLevel />
-      <UACUIAccess />
-      <GenerateDebugInformation>DebugFastLink</GenerateDebugInformation>
-      <GenerateMapFile />
-      <MapExports />
-      <SwapRunFromCD />
-      <SwapRunFromNET />
-      <Driver />
-      <OptimizeReferences>
-      </OptimizeReferences>
-      <ProfileGuidedDatabase />
-      <IgnoreEmbeddedIDL />
-      <TypeLibraryResourceID />
-      <NoEntryPoint />
-      <SetChecksum />
-      <RandomizedBaseAddress />
-      <DataExecutionPrevention />
-      <TurnOffAssemblyGeneration />
-      <Profile />
-      <CLRImageType />
-      <LinkErrorReporting />
-      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreAllDefaultLibraries>
-      </IgnoreAllDefaultLibraries>
-    </Link>
-    <ProjectReference>
-      <LinkLibraryDependencies />
-    </ProjectReference>
-    <ProjectReference>
-      <UseLibraryDependencyInputs />
-    </ProjectReference>
-    <Manifest>
-      <GenerateCatalogFiles />
-    </Manifest>
-    <Manifest>
-      <EnableDpiAwareness />
-      <SuppressStartupBanner />
-      <VerboseOutput />
-      <UpdateFileHashes />
-    </Manifest>
-    <Xdcmake>
-      <SuppressStartupBanner />
-    </Xdcmake>
-    <Xdcmake>
-      <OutputFile />
-    </Xdcmake>
-    <Xdcmake>
-      <DocumentLibraryDependencies />
-    </Xdcmake>
-    <Bscmake>
-      <SuppressStartupBanner />
-    </Bscmake>
-    <Bscmake>
-      <OutputFile />
-    </Bscmake>
-    <Bscmake>
-      <PreserveSbr />
-    </Bscmake>
-    <CustomBuildStep>
-      <Message />
-    </CustomBuildStep>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -343,136 +161,6 @@
       <Profile />
       <CLRImageType />
       <LinkErrorReporting />
-      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <IgnoreAllDefaultLibraries>
-      </IgnoreAllDefaultLibraries>
-    </Link>
-    <ProjectReference>
-      <LinkLibraryDependencies />
-    </ProjectReference>
-    <ProjectReference>
-      <UseLibraryDependencyInputs />
-    </ProjectReference>
-    <Manifest>
-      <GenerateCatalogFiles />
-    </Manifest>
-    <Manifest>
-      <EnableDpiAwareness />
-      <SuppressStartupBanner />
-      <VerboseOutput />
-      <UpdateFileHashes />
-    </Manifest>
-    <Xdcmake>
-      <SuppressStartupBanner />
-    </Xdcmake>
-    <Xdcmake>
-      <OutputFile />
-    </Xdcmake>
-    <Xdcmake>
-      <DocumentLibraryDependencies />
-    </Xdcmake>
-    <Bscmake>
-      <SuppressStartupBanner />
-    </Bscmake>
-    <Bscmake>
-      <OutputFile />
-    </Bscmake>
-    <Bscmake>
-      <PreserveSbr />
-    </Bscmake>
-    <CustomBuildStep>
-      <Message />
-    </CustomBuildStep>
-  </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>
-      </FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <DebugInformationFormat>None</DebugInformationFormat>
-      <SupportJustMyCode />
-      <TreatWarningAsError />
-      <DiagnosticsFormat />
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <OmitFramePointers>true</OmitFramePointers>
-      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
-      <UndefineAllPreprocessorDefinitions />
-      <IgnoreStandardIncludePath />
-      <PreprocessToFile />
-      <PreprocessSuppressLineNumbers />
-      <PreprocessKeepComments />
-      <MinimalRebuild />
-      <SmallerTypeCheck />
-      <BasicRuntimeChecks />
-      <StructMemberAlignment />
-      <BufferSecurityCheck />
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
-      <FloatingPointModel>Fast</FloatingPointModel>
-      <DisableLanguageExtensions />
-      <ConformanceMode />
-      <ForceConformanceInForLoopScope />
-      <PrecompiledHeader>
-      </PrecompiledHeader>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
-      <ExpandAttributedSource />
-      <AssemblerOutput />
-      <AssemblerListingLocation />
-      <GenerateXMLDocumentationFiles />
-      <XMLDocumentationFileName />
-      <BrowseInformation />
-      <BrowseInformationFile />
-      <CallingConvention />
-      <CompileAs />
-      <ShowIncludes />
-      <UseFullPaths />
-      <OmitDefaultLibName />
-      <ErrorReporting />
-      <LanguageStandard>
-      </LanguageStandard>
-      <ObjectFileName>$(IntDir)obj\</ObjectFileName>
-      <ExceptionHandling />
-      <TreatWChar_tAsBuiltInType>false</TreatWChar_tAsBuiltInType>
-      <AdditionalIncludeDirectories>$(SolutionDir)cengine\cengine;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <PrecompiledHeaderOutputFile>
-      </PrecompiledHeaderOutputFile>
-    </ClCompile>
-    <Link>
-      <EnableCOMDATFolding>
-      </EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <ShowProgress />
-      <RegisterOutput />
-      <PerUserRedirection />
-      <ManifestFile />
-      <AllowIsolation />
-      <EnableUAC />
-      <UACExecutionLevel />
-      <UACUIAccess />
-      <GenerateDebugInformation>false</GenerateDebugInformation>
-      <GenerateMapFile />
-      <MapExports />
-      <SwapRunFromCD />
-      <SwapRunFromNET />
-      <Driver />
-      <ProfileGuidedDatabase />
-      <IgnoreEmbeddedIDL />
-      <TypeLibraryResourceID />
-      <NoEntryPoint />
-      <SetChecksum />
-      <RandomizedBaseAddress />
-      <DataExecutionPrevention />
-      <TurnOffAssemblyGeneration />
-      <Profile />
-      <CLRImageType />
-      <LinkErrorReporting />
-      <ImageHasSafeExceptionHandlers />
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>

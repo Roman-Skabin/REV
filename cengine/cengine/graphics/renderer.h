@@ -9,11 +9,11 @@
 
 #ifndef ENGINE_STATE_DEFINED
 #define ENGINE_STATE_DEFINED
-    typedef struct EngineState EngineState;
+    typedef struct Engine Engine;
 #endif
 
-#define VERTEX_SHADER(name) v4 name(EngineState *state, v4 pos) // output = new pos
-#define PIXEL_SHADER(name)  v4 name(EngineState *state, v4 pos) // output = color
+#define VERTEX_SHADER(name) v4 name(Engine *engine, v4 pos) // output = new pos
+#define PIXEL_SHADER(name)  v4 name(Engine *engine, v4 pos) // output = color
 
 typedef VERTEX_SHADER(VertexShader);
 typedef PIXEL_SHADER(PixelShader);
@@ -45,7 +45,7 @@ typedef struct Renderer
     } common;
 } Renderer;
 
-CEXTERN void SetViewport(EngineState *state, f32 near, f32 far);
+CEXTERN void SetViewport(Engine *engine, f32 near, f32 far);
 
-CEXTERN void RenderOpaqueTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);
-CEXTERN void RenderTranslucentTriangle(EngineState *state, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);
+CEXTERN void RenderOpaqueTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);
+CEXTERN void RenderTranslucentTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);

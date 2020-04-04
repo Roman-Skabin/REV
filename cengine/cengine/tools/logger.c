@@ -6,43 +6,41 @@
 #include "tools/logger.h"
 #include <time.h>
 
-Logger CreateLogger(const char *name, const char *filename, LOG_TO log_to)
+void CreateLogger(Logger *logger, const char *name, const char *filename, LOG_TO log_to)
 {
-    Logger logger = {0};
-    logger.log_to = log_to;
-    logger.name   = name;
+    logger->log_to = log_to;
+    logger->name   = name;
 
-    if ((logger.log_to & LOG_TO_FILE) && filename)
+    if ((logger->log_to & LOG_TO_FILE) && filename)
     {
-        logger.file = CreateFileA(filename, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, 0);
+        logger->file = CreateFileA(filename, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, 0);
 
-        if (logger.file == INVALID_HANDLE_VALUE)
+        if (logger->file == INVALID_HANDLE_VALUE)
         {
-            Error(&logger, "Failed to open log file");
-            logger.file = 0;
+            Error(logger, "Failed to open log file");
+            logger->file = 0;
         }
     }
 
-    if (logger.log_to & LOG_TO_CONSOLE)
+    if (logger->log_to & LOG_TO_CONSOLE)
     {
-        logger.console = GetStdHandle(STD_OUTPUT_HANDLE);
+        logger->console = GetStdHandle(STD_OUTPUT_HANDLE);
 
-        if (logger.console == INVALID_HANDLE_VALUE)
+        if (logger->console == INVALID_HANDLE_VALUE)
         {
-            Error(&logger, "Failed to open console handle");
-            logger.console = 0;
+            Error(logger, "Failed to open console handle");
+            logger->console = 0;
         }
     }
 
-    Success(&logger, "%s was created", logger.name);
-    return logger;
+    Success(logger, "%s was created", logger->name);
 }
 
 void DestroyLogger(Logger *logger)
 {
     Log(logger, "%s was destroyed", logger->name);
-    if (logger->file)    DebugResult(b32, CloseHandle(logger->file));
-    if (logger->console) DebugResult(b32, CloseHandle(logger->console));
+    if (logger->file)    DebugResult(CloseHandle(logger->file));
+    if (logger->console) DebugResult(CloseHandle(logger->console));
     ZeroMemory(logger, sizeof(Logger));
 }
 
@@ -64,14 +62,14 @@ void __cdecl LoggerLog(Logger *logger, const char *format, ...)
 
         va_end(args);
 
-        if (logger->file && (logger->log_to & LOG_TO_FILE))
+        if (logger->file && logger->file != INVALID_HANDLE_VALUE && (logger->log_to & LOG_TO_FILE))
         {
-            DebugResult(b32, WriteFile(logger->file, buffer, length, 0, 0));
+            DebugResult(WriteFile(logger->file, buffer, length, 0, 0));
         }
-        if (logger->console && (logger->log_to & LOG_TO_CONSOLE))
+        if (logger->console && logger->console != INVALID_HANDLE_VALUE && (logger->log_to & LOG_TO_CONSOLE))
         {
-            DebugResult(b32, WriteConsoleA(logger->console, buffer, length, 0, 0));
-            DebugResult(b32, FlushConsoleInputBuffer(logger->console));
+            DebugResult(WriteConsoleA(logger->console, buffer, length, 0, 0));
+            DebugResult(FlushConsoleInputBuffer(logger->console));
         }
         if (logger->log_to & LOG_TO_DEBUG)
         {

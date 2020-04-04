@@ -3,6 +3,7 @@
 
 - Core
     - _CENGINE_HARDWARE for hardware accesleration if it will be
+    - Make engine's user pointer and sandbox thread safety
 
 - Tools
     - Logger for work queue?
@@ -15,8 +16,8 @@
     - Other orthos & persps
 
 - Graphics
+    - Optimize blending on present
     - Optimize hashing (remove data, unused for n (60?) frames)
-    - Rendering in tiles?
     - Multi-threaded rasterizing?
     - Multi-threaded rendering
     - Texture/Image
@@ -25,4 +26,6 @@
     - Hardware acceleration (D3D12)
 
 - Sound
-    - Different callbacks for audios and sounds (fx)?
+    - Create a common audio session for entire program (btw it'd be nice if 'ey'll be shared)
+    - Allow to create more audio streams
+    - Different callbacks for audios and sounds (fx)

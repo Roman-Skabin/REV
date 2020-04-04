@@ -14,17 +14,18 @@
 #include "graphics/renderer.h"
 #include "tools/work_queue.h"
 #include "core/memory.h"
+#include "core/allocator.h"
 #include "sound/sound.h"
 
 #ifndef ENGINE_STATE_DEFINED
 #define ENGINE_STATE_DEFINED
-    typedef struct EngineState EngineState;
+    typedef struct Engine Engine;
 #endif
 
-#define USER_CALLBACK(name) void name(EngineState *engine_state)
+#define USER_CALLBACK(name) void name(Engine *engine)
 typedef USER_CALLBACK(UserCallback);
 
-struct EngineState
+struct Engine
 {
     _Out_ struct
     {
@@ -73,7 +74,8 @@ struct EngineState
     _Out_ Renderer     renderer;
     _Out_ Logger       logger;
     _Out_ WorkQueue   *queue;
-    _Out_ Memory       memory;
+    _Out_ Memory      *memory;
+    _Out_ Allocator    allocator;
 
     _In_ f32   cpu_frame_rate_limit;
     _In_ void *user_ponter;
@@ -85,7 +87,7 @@ CEXTERN USER_CALLBACK(User_OnUpdate);
 CEXTERN USER_CALLBACK(User_OnRender);
 CEXTERN SOUND_CALLBACK(User_SoundCallback);
 
-CEXTERN void TimerStart(EngineState *state);
-CEXTERN void TimerStop(EngineState *state);
+CEXTERN void TimerStart(Engine *engine);
+CEXTERN void TimerStop(Engine *engine);
 
-CEXTERN void SetFullscreen(EngineState *state, b32 set);
+CEXTERN void SetFullscreen(Engine *engine, b32 set);

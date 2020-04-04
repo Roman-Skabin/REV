@@ -22,7 +22,7 @@ typedef struct Logger
     LOG_TO log_to;
 } Logger;
 
-CEXTERN Logger       CreateLogger(const char *name, const char *filename, LOG_TO log_to);
+CEXTERN void         CreateLogger(Logger *logger, const char *name, const char *filename, LOG_TO log_to);
 CEXTERN void         DestroyLogger(Logger *logger);
 CEXTERN void __cdecl LoggerLog(Logger *logger, const char *format, ...);
 

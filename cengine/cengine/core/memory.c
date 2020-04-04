@@ -40,21 +40,24 @@ void memset_f32(f32 *mem, f32 val, u32 count)
     }
 }
 
-void CreateMemory(Memory *memory, u64 memory_cap)
+void CreateMemory(Memory *memory, u64 transient_area_cap, u64 permanent_area_cap)
 {
     Check(memory);
-    CheckM(memory_cap, "Memory capacity must be greater than 0");
+    CheckM(transient_area_cap, "Transient area capacity must be greater than 0");
+    CheckM(permanent_area_cap, "Permanent area capacity must be greater than 0");
 
-    memory_cap = memory_cap >= MAX_MEMORY ? MAX_MEMORY : ALIGN_UP(memory_cap, PAGE_SIZE);
+    transient_area_cap = ALIGN_UP(transient_area_cap, PAGE_SIZE);
+    permanent_area_cap = ALIGN_UP(permanent_area_cap, PAGE_SIZE);
+    Check(U64_MAX - transient_area_cap >= permanent_area_cap);
 
-    /**/ if (memory_cap == PAGE_SIZE) memory->permanent.cap = KB(2);
-    else if (memory_cap <= MB(1)    ) memory->permanent.cap = PAGE_SIZE;
-    else                              memory->permanent.cap = cast(u64, 0.2*memory_cap);
+    u64 memory_cap = transient_area_cap + permanent_area_cap;
+    Check(memory_cap <= MAX_MEMORY);
 
-    memory->transient.cap  = memory_cap - memory->permanent.cap;
+    memory->transient.cap = transient_area_cap;
+    memory->permanent.cap = permanent_area_cap;
 
     memory->transient.base = cast(u8 *, VirtualAlloc(0, memory_cap, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
-    CheckM(memory->transient.base, "Allocation failed");
+    CheckM(memory->transient.base, "Memory creation failed");
 
     memory->permanent.base = memory->transient.base + memory->transient.cap;
 
@@ -68,7 +71,7 @@ void DestroyMemory(Memory *memory)
 
     if (memory->transient.base)
     {
-        DebugResult(b32, VirtualFree(memory->transient.base, 0, MEM_RELEASE));
+        DebugResult(VirtualFree(memory->transient.base, 0, MEM_RELEASE));
     }
 
     ZeroMemory(memory, sizeof(Memory));

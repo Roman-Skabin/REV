@@ -4,11 +4,12 @@
 
 #include "core/pch.h"
 #include "graphics/rasterizer.h"
+#include "tools/buffer.h"
 #include "cengine.h"
 
 typedef struct HashTable
 {
-    BUF RasterizerOutput *data[PAGE_SIZE];
+    RasterizerOutput *data[PAGE_SIZE];
     // u8                 frames[PAGE_SIZE];
     // Release data[i] if we don't use it for n frames
     u32                   count;
@@ -31,7 +32,7 @@ internal u32 Hash(HashKey *key)
     u32 chunks[CHUNKS_COUNT];
     Check(sizeof(chunks) == sizeof(HashKey));
 
-    memcpy(chunks, key, sizeof(HashKey));
+    CopyMemory(chunks, key, sizeof(HashKey));
 
     for (u32 i = 1; i < CHUNKS_COUNT; ++i)
     {
@@ -41,7 +42,7 @@ internal u32 Hash(HashKey *key)
     return chunks[0] % PAGE_SIZE;
 }
 
-internal INLINE void CacheRasterizerOutput(HashKey *key, BUF RasterizerOutput *data)
+internal INLINE void CacheRasterizerOutput(HashKey *key, RasterizerOutput *data)
 {
     u32 hash = Hash(key);
 
@@ -53,7 +54,7 @@ internal INLINE void CacheRasterizerOutput(HashKey *key, BUF RasterizerOutput *d
     gCache.data[hash] = data;
 }
 
-internal INLINE BUF RasterizerOutput *GetCachedRasterizerOutput(HashKey *key)
+internal INLINE RasterizerOutput *GetCachedRasterizerOutput(HashKey *key)
 {
     u32 hash = Hash(key);
 
@@ -81,7 +82,7 @@ internal INLINE v4 *GetMiddlePoint(v4 *p1, v4 *p2, v4 *p3, v4 *left, v4 *right)
     else            return p1 == right ? p2 : p1;
 }
 
-internal void RasterizeTriangleSide(RasterizerOutput **triangle, EngineState *state, v4 _lower, v4 _upper)
+internal void RasterizeTriangleSide(RasterizerOutput **triangle, Engine *engine, v4 _lower, v4 _upper)
 {
     v4s upper = v4_to_v4s(_upper);
     v4s lower = v4_to_v4s(_lower);
@@ -103,14 +104,14 @@ internal void RasterizeTriangleSide(RasterizerOutput **triangle, EngineState *st
         v4   point = v4_1(x, cast(f32, y), z, 1.0f);
         v4s ipoint = v4_to_v4s(point);
 
-        if (                      0 <= ipoint.x && ipoint.x <  state->window.size.w
-        &&                        0 <= ipoint.y && ipoint.y <  state->window.size.h
-        &&  state->renderer.zb.near <=  point.z &&  point.z <= state->renderer.zb.far)
+        if (                      0 <= ipoint.x && ipoint.x <  engine->window.size.w
+        &&                        0 <= ipoint.y && ipoint.y <  engine->window.size.h
+        &&  engine->renderer.zb.near <=  point.z &&  point.z <= engine->renderer.zb.far)
         {
             RasterizerOutput el;
             el.xy = ipoint.xy;
             el.z  = point.z;
-            buf_push(*triangle, el);
+            BufferPushBack(*triangle, el);
         }
 
         x += x_slope;
@@ -118,21 +119,21 @@ internal void RasterizeTriangleSide(RasterizerOutput **triangle, EngineState *st
     }
 }
 
-internal BUF RasterizerOutput *RasterizeTriangleDownUpLeftLower(EngineState *state, v4 left, v4 middle, v4 right)
+internal RasterizerOutput *RasterizeTriangleDownUpLeftLower(Engine *engine, v4 left, v4 middle, v4 right)
 {
-    BUF RasterizerOutput *triangle = 0;
+    RasterizerOutput *triangle = CreateBuffer(&engine->allocator, CACHE_LINE_SIZE);
 
-    RasterizeTriangleSide(&triangle, state, middle, left);
+    RasterizeTriangleSide(&triangle, engine, middle, left);
     u64 left_line_first = 0;
-    u64 left_line_last  = buf_count(triangle) - 1;
+    u64 left_line_last  = BufferGetCount(triangle) - 1;
 
-    RasterizeTriangleSide(&triangle, state, middle, right);
+    RasterizeTriangleSide(&triangle, engine, middle, right);
     u64 right_line_first = left_line_last + 1;
-    u64 right_line_last  = buf_count(triangle) - 1;
+    u64 right_line_last  = BufferGetCount(triangle) - 1;
 
-    RasterizeTriangleSide(&triangle, state, left, right);
+    RasterizeTriangleSide(&triangle, engine, left, right);
     u64 upper_line_first = right_line_last + 1;
-    u64 upper_line_last  = buf_count(triangle) - 1;
+    u64 upper_line_last  = BufferGetCount(triangle) - 1;
 
     u64 lower_index = 0;
     u64 upper_index = 0;
@@ -155,7 +156,7 @@ internal BUF RasterizerOutput *RasterizeTriangleDownUpLeftLower(EngineState *sta
             el.x = x;
             el.y = y;
             el.z = z;
-            buf_push(triangle, el);
+            BufferPushBack(triangle, el);
 
             z += z_slope;
         }
@@ -181,7 +182,7 @@ internal BUF RasterizerOutput *RasterizeTriangleDownUpLeftLower(EngineState *sta
             el.x = x;
             el.y = y;
             el.z = z;
-            buf_push(triangle, el);
+            BufferPushBack(triangle, el);
 
             z += z_slope;
         }
@@ -193,21 +194,21 @@ internal BUF RasterizerOutput *RasterizeTriangleDownUpLeftLower(EngineState *sta
     return triangle;
 }
 
-internal BUF RasterizerOutput *RasterizeTriangleDownUpRightLower(EngineState *state, v4 left, v4 middle, v4 right)
+internal RasterizerOutput *RasterizeTriangleDownUpRightLower(Engine *engine, v4 left, v4 middle, v4 right)
 {
-    BUF RasterizerOutput *triangle = 0;
+    RasterizerOutput *triangle = CreateBuffer(&engine->allocator, CACHE_LINE_SIZE);
 
-    RasterizeTriangleSide(&triangle, state, middle, left);
+    RasterizeTriangleSide(&triangle, engine, middle, left);
     u64 left_line_first = 0;
-    u64 left_line_last  = buf_count(triangle) - 1;
+    u64 left_line_last  = BufferGetCount(triangle) - 1;
 
-    RasterizeTriangleSide(&triangle, state, middle, right);
+    RasterizeTriangleSide(&triangle, engine, middle, right);
     u64 right_line_first = left_line_last + 1;
-    u64 right_line_last  = buf_count(triangle) - 1;
+    u64 right_line_last  = BufferGetCount(triangle) - 1;
 
-    RasterizeTriangleSide(&triangle, state, right, left);
+    RasterizeTriangleSide(&triangle, engine, right, left);
     u64 upper_line_first = right_line_last + 1;
-    u64 upper_line_last  = buf_count(triangle) - 1;
+    u64 upper_line_last  = BufferGetCount(triangle) - 1;
 
     u64 lower_index = 0;
     u64 upper_index = 0;
@@ -230,7 +231,7 @@ internal BUF RasterizerOutput *RasterizeTriangleDownUpRightLower(EngineState *st
             el.x = x;
             el.y = y;
             el.z = z;
-            buf_push(triangle, el);
+            BufferPushBack(triangle, el);
 
             z += z_slope;
         }
@@ -256,7 +257,7 @@ internal BUF RasterizerOutput *RasterizeTriangleDownUpRightLower(EngineState *st
             el.x = x;
             el.y = y;
             el.z = z;
-            buf_push(triangle, el);
+            BufferPushBack(triangle, el);
 
             z += z_slope;
         }
@@ -268,21 +269,21 @@ internal BUF RasterizerOutput *RasterizeTriangleDownUpRightLower(EngineState *st
     return triangle;
 }
 
-internal BUF RasterizerOutput *RasterizeTriangleUpDownLeftLower(EngineState *state, v4 left, v4 middle, v4 right)
+internal RasterizerOutput *RasterizeTriangleUpDownLeftLower(Engine *engine, v4 left, v4 middle, v4 right)
 {
-    BUF RasterizerOutput *triangle = 0;
+    RasterizerOutput *triangle = CreateBuffer(&engine->allocator, CACHE_LINE_SIZE);
     
-    RasterizeTriangleSide(&triangle, state, left, middle);
+    RasterizeTriangleSide(&triangle, engine, left, middle);
     u64 left_line_first = 0;
-    u64 left_line_last  = buf_count(triangle) - 1;
+    u64 left_line_last  = BufferGetCount(triangle) - 1;
 
-    RasterizeTriangleSide(&triangle, state, right, middle);
+    RasterizeTriangleSide(&triangle, engine, right, middle);
     u64 right_line_first = left_line_last + 1;
-    u64 right_line_last  = buf_count(triangle) - 1;
+    u64 right_line_last  = BufferGetCount(triangle) - 1;
 
-    RasterizeTriangleSide(&triangle, state, left, right);
+    RasterizeTriangleSide(&triangle, engine, left, right);
     u64 lower_line_first = right_line_last + 1;
-    u64 lower_line_last  = buf_count(triangle) - 1;
+    u64 lower_line_last  = BufferGetCount(triangle) - 1;
 
     u64 upper_index = 0;
     u64 lower_index = 0;
@@ -308,7 +309,7 @@ internal BUF RasterizerOutput *RasterizeTriangleUpDownLeftLower(EngineState *sta
             el.x = x;
             el.y = y;
             el.z = z;
-            buf_push(triangle, el);
+            BufferPushBack(triangle, el);
 
             z += z_slope;
         }
@@ -337,7 +338,7 @@ internal BUF RasterizerOutput *RasterizeTriangleUpDownLeftLower(EngineState *sta
             el.x = x;
             el.y = y;
             el.z = z;
-            buf_push(triangle, el);
+            BufferPushBack(triangle, el);
 
             z += z_slope;
         }
@@ -349,21 +350,21 @@ internal BUF RasterizerOutput *RasterizeTriangleUpDownLeftLower(EngineState *sta
     return triangle;
 }
 
-internal BUF RasterizerOutput *RasterizeTriangleUpDownRightLower(EngineState *state, v4 left, v4 middle, v4 right)
+internal RasterizerOutput *RasterizeTriangleUpDownRightLower(Engine *engine, v4 left, v4 middle, v4 right)
 {
-    BUF RasterizerOutput *triangle = 0;
+    RasterizerOutput *triangle = CreateBuffer(&engine->allocator, CACHE_LINE_SIZE);
     
-    RasterizeTriangleSide(&triangle, state, left, middle);
+    RasterizeTriangleSide(&triangle, engine, left, middle);
     u64 left_line_first = 0;
-    u64 left_line_last  = buf_count(triangle) - 1;
+    u64 left_line_last  = BufferGetCount(triangle) - 1;
 
-    RasterizeTriangleSide(&triangle, state, right, middle);
+    RasterizeTriangleSide(&triangle, engine, right, middle);
     u64 right_line_first = left_line_last + 1;
-    u64 right_line_last  = buf_count(triangle) - 1;
+    u64 right_line_last  = BufferGetCount(triangle) - 1;
 
-    RasterizeTriangleSide(&triangle, state, right, left);
+    RasterizeTriangleSide(&triangle, engine, right, left);
     u64 lower_line_first = right_line_last + 1;
-    u64 lower_line_last  = buf_count(triangle) - 1;
+    u64 lower_line_last  = BufferGetCount(triangle) - 1;
 
     u64 upper_index = 0;
     u64 lower_index = 0;
@@ -389,7 +390,7 @@ internal BUF RasterizerOutput *RasterizeTriangleUpDownRightLower(EngineState *st
             el.x = x;
             el.y = y;
             el.z = z;
-            buf_push(triangle, el);
+            BufferPushBack(triangle, el);
 
             z += z_slope;
         }
@@ -418,7 +419,7 @@ internal BUF RasterizerOutput *RasterizeTriangleUpDownRightLower(EngineState *st
             el.x = x;
             el.y = y;
             el.z = z;
-            buf_push(triangle, el);
+            BufferPushBack(triangle, el);
 
             z += z_slope;
         }
@@ -430,7 +431,7 @@ internal BUF RasterizerOutput *RasterizeTriangleUpDownRightLower(EngineState *st
     return triangle;
 }
 
-BUF RasterizerOutput *RasterizeTriangle(EngineState *state, v4 p1, v4 p2, v4 p3)
+RasterizerOutput *RasterizeTriangle(Engine *engine, v4 p1, v4 p2, v4 p3)
 {
     v4 *left   = GetLeftPoint(&p1, &p2, &p3);
     v4 *right  = GetRightPoint(&p1, &p2, &p3);
@@ -438,7 +439,7 @@ BUF RasterizerOutput *RasterizeTriangle(EngineState *state, v4 p1, v4 p2, v4 p3)
 
     HashKey key = { *left, *right, *middle };
     
-    BUF RasterizerOutput *triangle = GetCachedRasterizerOutput(&key);
+    RasterizerOutput *triangle = GetCachedRasterizerOutput(&key);
 
     if (!triangle)
     {
@@ -446,33 +447,24 @@ BUF RasterizerOutput *RasterizeTriangle(EngineState *state, v4 p1, v4 p2, v4 p3)
         {
             if (left->y <= right->y)
             {
-                triangle = RasterizeTriangleDownUpLeftLower(state, *left, *middle, *right);
+                triangle = RasterizeTriangleDownUpLeftLower(engine, *left, *middle, *right);
             }
             else
             {
-                triangle = RasterizeTriangleDownUpRightLower(state, *left, *middle, *right);
+                triangle = RasterizeTriangleDownUpRightLower(engine, *left, *middle, *right);
             }
         }
         else
         {
             if (left->y <= right->y)
             {
-                triangle = RasterizeTriangleUpDownLeftLower(state, *left, *middle, *right);
+                triangle = RasterizeTriangleUpDownLeftLower(engine, *left, *middle, *right);
             }
             else
             {
-                triangle = RasterizeTriangleUpDownRightLower(state, *left, *middle, *right);
+                triangle = RasterizeTriangleUpDownRightLower(engine, *left, *middle, *right);
             }
         }
-
-        // @TODO(Roman): Return, when batch rendering will be implemented
-#if 0
-        BufHdr *pushed_triangle = PushToTransientArea(&state->memory, offsetof(BufHdr, buf) + buf_count(triangle) * sizeof(RasterizerOutput));
-        CopyMemory(pushed_triangle, _BUFHDR(triangle), offsetof(BufHdr, buf) + buf_count(triangle) * sizeof(RasterizerOutput));
-        buf_free(triangle);
-        
-        return cast(RasterizerOutput *, pushed_triangle->buf);
-#endif
 
         CacheRasterizerOutput(&key, triangle);
     }

@@ -79,8 +79,9 @@
 
 #define ArrayCount(arr) (sizeof(arr) / sizeof(*(arr)))
 
-#define QPF(s64_val) QueryPerformanceFrequency(cast(LARGE_INTEGER *, &(s64_val)))
-#define QPC(s64_val) QueryPerformanceCounter(cast(LARGE_INTEGER *, &(s64_val)))
+#define ALIGN_UP(x, a)   (((x) + ((a) - 1)) & ~((a) - 1))
+#define ALIGN_DOWN(x, a) ( (x)              & ~((a) - 1))
+#define IS_POW_2(x)      ((x) && (((x) & ((x) - 1)) == 0))
 
 //
 // Types
@@ -103,6 +104,8 @@ typedef f32 rad;
 typedef f32 deg;
 
 typedef s32 b32;
+
+typedef u8 byte;
 
 #ifndef __cplusplus
     #define true  1
@@ -143,122 +146,59 @@ CEXTERN void __cdecl DebugF(const char *const format, ...);
 
 #if DEVDEBUG
 
-    #define DebugStringM(message)                              \
-        CSTRCAT(CSTRCAT(CSTRCAT("\nMESSAGE: ", message),       \
-                        CSTRCAT("\nFILE: ", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\nLINE: ", CSTR(__LINE__)),   \
-                        CSTRCAT("\nFUNCTION: ", __FUNCSIG__)))
+    #define DebugStringM(message)                                 \
+        CSTRCAT(CSTRCAT(CSTRCAT("MESSAGE:\n", message),           \
+                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
+                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
+                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
 
-    #define DebugString(expr)                                  \
-        CSTRCAT(CSTRCAT(CSTRCAT("EXPRESSION: ", CSTR(expr)),   \
-                        CSTRCAT("\nFILE: ", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\nLINE: ", CSTR(__LINE__)),   \
-                        CSTRCAT("\nFUNCTION: ", __FUNCSIG__)))
+    #define DebugString(expr)                                     \
+        CSTRCAT(CSTRCAT(CSTRCAT("EXPRESSION:\n", CSTR(expr)),     \
+                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
+                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
+                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
 
     #define CheckM(expr, message) if (!(expr)) { MessageBoxA(0, DebugStringM(message), "Debug Error!", MB_OK | MB_ICONERROR); __debugbreak(); ExitProcess(1); }
     #define Check(expr)           if (!(expr)) { MessageBoxA(0, DebugString(expr),     "Debug Error!", MB_OK | MB_ICONERROR); __debugbreak(); ExitProcess(1); }
     #define FailedM(message)                   { MessageBoxA(0, DebugStringM(message), "Failed!",      MB_OK | MB_ICONERROR); __debugbreak(); ExitProcess(1); }
 
-    #define DebugResult(ResultType, expr)           { ResultType debug_result = (expr); Check(debug_result);           }
-    #define DebugResultM(ResultType, expr, message) { ResultType debug_result = (expr); CheckM(debug_result, message); }
+    #define DebugResult(expr)           Check(expr)
+    #define DebugResultM(expr, message) CheckM(expr, message)
 
 #elif DEBUG
 
-    #define DebugStringM(message)                              \
-        CSTRCAT(CSTRCAT(CSTRCAT("\nMESSAGE: ", message),       \
-                        CSTRCAT("\nFILE: ", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\nLINE: ", CSTR(__LINE__)),   \
-                        CSTRCAT("\nFUNCTION: ", __FUNCSIG__)))
+    #define DebugStringM(message)                                 \
+        CSTRCAT(CSTRCAT(CSTRCAT("MESSAGE:\n", message),           \
+                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
+                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
+                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
 
-    #define DebugString(expr)                                  \
-        CSTRCAT(CSTRCAT(CSTRCAT("EXPRESSION: ", CSTR(expr)),   \
-                        CSTRCAT("\nFILE: ", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\nLINE: ", CSTR(__LINE__)),   \
-                        CSTRCAT("\nFUNCTION: ", __FUNCSIG__)))
+    #define DebugString(expr)                                     \
+        CSTRCAT(CSTRCAT(CSTRCAT("EXPRESSION:\n", CSTR(expr)),     \
+                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
+                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
+                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
 
     #define CheckM(expr, message) if (!(expr)) { MessageBoxA(0, DebugStringM(message), "Debug Error!", MB_OK | MB_ICONERROR); ExitProcess(1); }
     #define Check(expr)           if (!(expr)) { MessageBoxA(0, DebugString(expr),     "Debug Error!", MB_OK | MB_ICONERROR); ExitProcess(1); }
     #define FailedM(message)                   { MessageBoxA(0, DebugStringM(message), "Failed!",      MB_OK | MB_ICONERROR); ExitProcess(1); }
 
-    #define DebugResult(ResultType, expr)           { ResultType debug_result = (expr); Check(debug_result);           }
-    #define DebugResultM(ResultType, expr, message) { ResultType debug_result = (expr); CheckM(debug_result, message); }
+    #define DebugResult(expr)           Check(expr)
+    #define DebugResultM(expr, message) CheckM(expr, message)
 
 #else
 
-    #define DebugStringM(message)                              \
-        CSTRCAT(CSTRCAT(CSTRCAT("\nMESSAGE: ", message),       \
-                        CSTRCAT("\nFILE: ", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\nLINE: ", CSTR(__LINE__)),   \
-                        CSTRCAT("\nFUNCTION: ", __FUNCSIG__)))
+    #define DebugStringM(message)                                 \
+        CSTRCAT(CSTRCAT(CSTRCAT("MESSAGE:\n", message),           \
+                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
+                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
+                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
 
     #define CheckM(expr, message)
     #define Check(expr)
     #define FailedM(message)      { MessageBoxA(0, DebugStringM(message), "Failed!", MB_OK | MB_ICONERROR); ExitProcess(1); }
 
-    #define DebugResult(ResultType, expr)           { (expr); }
-    #define DebugResultM(ResultType, expr, message) { (expr); }
+    #define DebugResult(expr)           expr
+    #define DebugResultM(expr, message) expr
 
 #endif
-
-//
-// General Purpose Allocator
-//
-
-#if DEBUG
-    extern u64 gAllocationsPerFrame;
-    extern u64 gReAllocationsPerFrame;
-    extern u64 gDeAllocationsPerFrame;
-#endif
-
-#define ALIGN_UP(x, a)   (((x) + ((a) - 1)) & ~((a) - 1))
-#define ALIGN_DOWN(x, a) ( (x)              & ~((a) - 1))
-#define IS_POW_2(x)      ((x) && (((x) & ((x)-1)) == 0))
-
-CEXTERN void *  Allocate(u64 bytes);
-CEXTERN void *ReAllocate(void *mem, u64 bytes);
-CEXTERN void  DeAllocate(void **mem);
-
-CEXTERN void *  AllocateAligned(u64 bytes, u64 alignment);
-CEXTERN void *ReAllocateAligned(void *mem, u64 bytes, u64 alignment);
-CEXTERN void  DeAllocateAligned(void **mem);
-
-#define   Alloc(Type, count)      cast(Type *, Allocate(sizeof(Type) * (count)))
-#define ReAlloc(Type, mem, count) cast(Type *, ReAllocate(mem, sizeof(Type) * (count)))
-#define DeAlloc(mem)              DeAllocate(&(mem))
-
-#define   AllocA(Type, count, alignment)      cast(Type *, AllocateAligned(sizeof(Type) * (count), alignment))
-#define ReAllocA(Type, mem, count, alignment) cast(Type *, ReAllocateAligned(mem, sizeof(Type) * (count), alignment))
-#define DeAllocA(mem)                         DeAllocateAligned(&(mem))
-
-//
-// Stretchy Buffers
-//
-
-// @NOTE(Roman): annotation, means a variable is a stretchy buffer.
-#define BUF
-
-// @NOTE(Roman): annotation, means a variable is a stretchy buffer
-//               and it already pushed to the Memory (you can't resize it).
-//               Kinda "achieved" buffer.
-#define PUSHED_BUF
-#define ACHIEVED_BUF PUSHED_BUF
-
-typedef struct BufHdr
-{
-    u64 count;
-    u64 cap;
-    u8  buf[0];
-} BufHdr;
-
-#define _BUFHDR(b) cast(BufHdr *, cast(u8 *, (b)) - offsetof(BufHdr, buf))
-
-#define buf_free(b) ((b) ? buf_dealloc(b) : 0)
-
-#define buf_count(b) ((b) ? _BUFHDR(b)->count : 0)
-#define buf_cap(b)   ((b) ? _BUFHDR(b)->cap   : 0)
-
-#define buf_push(b, el) ((b) = buf_grow(b, buf_count(b) + 1, sizeof(*(b))), (b)[_BUFHDR(b)->count++] = (el))
-#define buf_pop(b)      ((b) && buf_count(b) ? (b)[--(_BUFHDR(b)->count)] : 0)
-
-CEXTERN void buf_dealloc(BUF void *b);
-CEXTERN BUF void *buf_grow(BUF void *b, u64 new_count, u64 el_size);

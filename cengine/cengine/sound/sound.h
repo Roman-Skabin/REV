@@ -8,7 +8,7 @@
 
 #ifndef ENGINE_STATE_DEFINED
 #define ENGINE_STATE_DEFINED
-    typedef struct EngineState EngineState;
+    typedef struct Engine Engine;
 #endif
 
 typedef struct SoundBuffer
@@ -19,7 +19,7 @@ typedef struct SoundBuffer
     u16  channels_count;
 } SoundBuffer;
 
-#define SOUND_CALLBACK(name) void name(EngineState *engine_state, SoundBuffer *buffer)
+#define SOUND_CALLBACK(name) void name(Engine *engine, SoundBuffer *buffer)
 typedef SOUND_CALLBACK(SoundCallback);
 
 typedef struct SoundStream
@@ -44,4 +44,4 @@ typedef struct AudioBuffer
     u16  channels_count;
 } AudioBuffer;
 
-CEXTERN AudioBuffer LoadAudioFile(EngineState *state, const char *filename);
+CEXTERN AudioBuffer LoadAudioFile(Engine *engine, const char *filename);

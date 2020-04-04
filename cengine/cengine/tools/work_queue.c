@@ -87,16 +87,16 @@ internal u32 GetCurrentThreadCount()
         ret = Process32Next(snapshot, &entry);
     }
 
-    DebugResult(b32, CloseHandle(snapshot));
+    DebugResult(CloseHandle(snapshot));
 
     Check(entry.cntThreads);
     return entry.cntThreads;
 }
 
-WorkQueue *CreateWorkQueue(EngineState *state)
+WorkQueue *CreateWorkQueue(Engine *engine)
 {
-    WorkQueue *queue = PushToPA(WorkQueue, &state->memory, 1);
-    queue->logger    = &state->logger;
+    WorkQueue *queue = PushToPA(WorkQueue, engine->memory, 1);
+    queue->logger    = &engine->logger;
 
     SYSTEM_INFO info;
     GetSystemInfo(&info);
@@ -105,7 +105,7 @@ WorkQueue *CreateWorkQueue(EngineState *state)
     if (threads_count >  0) --threads_count; // minus sound thread
     if (threads_count <= 0) threads_count = 1;
 
-    WorkQueueThread *threads = PushToPA(WorkQueueThread, &state->memory, threads_count);
+    WorkQueueThread *threads = PushToPA(WorkQueueThread, engine->memory, threads_count);
 
     queue->semaphore = CreateSemaphoreExA(0, 0, threads_count, 0, 0, SEMAPHORE_ALL_ACCESS);
     Check(queue->semaphore);
@@ -115,7 +115,7 @@ WorkQueue *CreateWorkQueue(EngineState *state)
         WorkQueueThread *thread = threads + i;
         thread->id    = i + 1;
         thread->queue = queue;
-        DebugResult(b32, CloseHandle(CreateThread(0, 0, ThreadProc, thread, 0, 0)));
+        DebugResult(CloseHandle(CreateThread(0, 0, ThreadProc, thread, 0, 0)));
         Log(queue->logger, "Thread was created: id = %I32u, queue = 0x%p", thread->id, thread->queue);
     }
 

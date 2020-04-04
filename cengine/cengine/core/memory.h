@@ -33,7 +33,7 @@ typedef struct Memory
     Area permanent;
 } Memory;
 
-CEXTERN void CreateMemory(Memory *memory, u64 memory_cap);
+CEXTERN void CreateMemory(Memory *memory, u64 transient_area_cap, u64 permanent_area_cap);
 CEXTERN void DestroyMemory(Memory *memory);
 
 CEXTERN void *PushToTransientArea(Memory *memory, u64 bytes);

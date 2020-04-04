@@ -141,19 +141,19 @@ INLINE u32 MATH_CALL v4u_to_hex(v4u color)
 // Blending
 //
 
-INLINE void MATH_CALL BlendOnRender(EngineState *state, u32 x, u32 y, f32 z, v4 color)
+INLINE void MATH_CALL BlendOnRender(Engine *engine, u32 x, u32 y, f32 z, v4 color)
 {
-    v4 *sum = state->renderer.blending.sum
-            + y * state->window.size.w
+    v4 *sum = engine->renderer.blending.sum
+            + y * engine->window.size.w
             + x;
 
     sum->mm = _mm_add_ps(
                   sum->mm,
                   _mm_mul_ps(
                       color.mm,
-                      _mm_set_ps1(state->renderer.zb.far - z)));
+                      _mm_set_ps1(engine->renderer.zb.far - z)));
 
-    state->renderer.blending.mul[y * state->window.size.w + x] *= 1.0f - color.a;
+    engine->renderer.blending.mul[y * engine->window.size.w + x] *= 1.0f - color.a;
 }
 
 INLINE void MATH_CALL BlendOnPresent(u32 *pixel, v4 sum, f32 mul)

@@ -12,17 +12,20 @@ typedef struct Triangle
     m4            proj;
 } Triangle;
 
-typedef struct SandboxState
+typedef struct Sandbox
 {
     Logger      logger;
     Triangle    t1;
     Triangle    t2;
     AudioBuffer audio;
-} SandboxState;
+} Sandbox;
+
+// @CleanUp(Roman): after making sandbox thread safety delete gSandbox
+global Sandbox *gSandbox;
 
 internal VERTEX_SHADER(TriangleVS)
 {
-    Triangle *triangle = state->user_ponter;
+    Triangle *triangle = engine->user_ponter;
     return m4_mul_v(triangle->proj, pos);
 }
 
@@ -36,108 +39,107 @@ internal PIXEL_SHADER(Triangle2PS)
     return v4_1(0.0f, 0.0f, 1.0f, 0.5f);
 }
 
-global SandboxState *gSandboxState;
-
 USER_CALLBACK(User_OnInit)
 {
-    SandboxState *sandbox_state = PushToPA(SandboxState, &engine_state->memory, 1);
-    engine_state->user_ponter   = sandbox_state;
-    gSandboxState               = sandbox_state;
+    // @TODO(Roman): make sandbox thread safety
+    Sandbox *sandbox    = PushToPA(Sandbox, engine->memory, 1);
+    engine->user_ponter = sandbox;
+    gSandbox            = sandbox;
 
-    sandbox_state->logger = CreateLogger("Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE | LOG_TO_DEBUG);
-    DebugResult(b32, SetWindowTextA(engine_state->window.handle, WINDOW_TITLE));
+    CreateLogger(&sandbox->logger, "Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE | LOG_TO_DEBUG);
+    DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
 #if RELEASE
-    SetFullscreen(engine_state, true);
+    SetFullscreen(engine, true);
 #endif
-    SetViewport(engine_state, 0.1f, 1.0f);
+    SetViewport(engine, 0.1f, 1.0f);
 
-    v2 size = v2s_to_v2(engine_state->window.size);
+    v2 size = v2s_to_v2(engine->window.size);
 
-    sandbox_state->t1.p1   = v4_1(-size.w*0.5f, -size.h*0.5f, 0.13f, 1.0f);
-    sandbox_state->t1.p2   = v4_1(        0.0f,  size.h*0.5f, 0.20f, 1.0f);
-    sandbox_state->t1.p3   = v4_1( size.w*0.5f, -size.h*0.5f, 0.40f, 1.0f);
-    sandbox_state->t1.VS   = TriangleVS;
-    sandbox_state->t1.PS   = Triangle1PS;
-    sandbox_state->t1.proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
-    // sandbox_state->t1.proj = m4_ortho_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
+    sandbox->t1.p1   = v4_1(-size.w*0.5f, -size.h*0.5f, 0.13f, 1.0f);
+    sandbox->t1.p2   = v4_1(        0.0f,  size.h*0.5f, 0.20f, 1.0f);
+    sandbox->t1.p3   = v4_1( size.w*0.5f, -size.h*0.5f, 0.40f, 1.0f);
+    sandbox->t1.VS   = TriangleVS;
+    sandbox->t1.PS   = Triangle1PS;
+    sandbox->t1.proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
+    // sandbox->t1.proj = m4_ortho_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
 
-    sandbox_state->t2.p1   = v4_1(-size.w*0.5f, -size.h*0.185f, 0.10f, 1.0f);
-    sandbox_state->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.23f, 1.0f);
-    sandbox_state->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
-    sandbox_state->t2.VS   = TriangleVS;
-    sandbox_state->t2.PS   = Triangle2PS;
-    sandbox_state->t2.proj = sandbox_state->t1.proj;
+    sandbox->t2.p1   = v4_1(-size.w*0.5f, -size.h*0.185f, 0.10f, 1.0f);
+    sandbox->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.23f, 1.0f);
+    sandbox->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
+    sandbox->t2.VS   = TriangleVS;
+    sandbox->t2.PS   = Triangle2PS;
+    sandbox->t2.proj = sandbox->t1.proj;
 
-    sandbox_state->audio = LoadAudioFile(engine_state, "../sandbox/assets/audio.wav");
-    SoundPlay(&engine_state->sound);
+    sandbox->audio = LoadAudioFile(engine, "../sandbox/assets/audio.wav");
+    SoundPlay(&engine->sound);
 }
 
 USER_CALLBACK(User_OnDestroy)
 {
-    SandboxState *sandbox_state = cast(SandboxState *, engine_state->user_ponter);
-    DestroyLogger(&sandbox_state->logger);
+    Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
+    DestroyLogger(&sandbox->logger);
 }
 
 USER_CALLBACK(User_OnUpdate)
 {
-    SandboxState *sandbox_state = cast(SandboxState *, engine_state->user_ponter);
+    Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
 
     local f32 last_print_time;
-    if (engine_state->timer.seconds - last_print_time >= 0.1)
+    if (engine->timer.seconds - last_print_time >= 0.1)
     {
-        f32 FPS = engine_state->timer.ticks_per_second / cast(f32, engine_state->timer.delta_ticks);
+        f32 FPS = engine->timer.ticks_per_second / cast(f32, engine->timer.delta_ticks);
 
         char buffer[64];
         sprintf(buffer, WINDOW_TITLE" - FPS: %f - MSPF: %f", FPS, 1000.0f / FPS);
 
-        DebugResult(b32, SetWindowTextA(engine_state->window.handle, buffer));
+        DebugResult(SetWindowTextA(engine->window.handle, buffer));
 
-        last_print_time = engine_state->timer.seconds;
+        last_print_time = engine->timer.seconds;
     }
 
-    if (engine_state->input.keys[KEY_F11].pressed)
+    if (engine->input.keys[KEY_F11].pressed)
     {
-        SetFullscreen(engine_state, !engine_state->window.fullscreened);
+        SetFullscreen(engine, !engine->window.fullscreened);
     }
 
-    if (engine_state->window.resized)
+    if (engine->window.resized)
     {
-        v2 size = v2s_to_v2(engine_state->window.size);
+        v2 size = v2s_to_v2(engine->window.size);
 
-        sandbox_state->t1.p1   = v4_1(-size.w*0.5f, -size.h*0.5f, 0.13f, 1.0f);
-        sandbox_state->t1.p2   = v4_1(        0.0f,  size.h*0.5f, 0.20f, 1.0f);
-        sandbox_state->t1.p3   = v4_1( size.w*0.5f, -size.h*0.5f, 0.40f, 1.0f);
-        sandbox_state->t1.proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
+        sandbox->t1.p1   = v4_1(-size.w*0.5f, -size.h*0.5f, 0.13f, 1.0f);
+        sandbox->t1.p2   = v4_1(        0.0f,  size.h*0.5f, 0.20f, 1.0f);
+        sandbox->t1.p3   = v4_1( size.w*0.5f, -size.h*0.5f, 0.40f, 1.0f);
+        sandbox->t1.proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
 
-        sandbox_state->t2.p1   = v4_1(-size.w*0.5f, -size.h*0.185f, 0.10f, 1.0f);
-        sandbox_state->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.23f, 1.0f);
-        sandbox_state->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
-        sandbox_state->t2.proj = sandbox_state->t1.proj;
+        sandbox->t2.p1   = v4_1(-size.w*0.5f, -size.h*0.185f, 0.10f, 1.0f);
+        sandbox->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.23f, 1.0f);
+        sandbox->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
+        sandbox->t2.proj = sandbox->t1.proj;
     }
 }
 
 USER_CALLBACK(User_OnRender)
 {
-    SandboxState *sandbox_state = cast(SandboxState *, engine_state->user_ponter);
+    Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
     
-    engine_state->user_ponter = &sandbox_state->t1;
-    // RenderOpaqueTriangle(engine_state, sandbox_state->t1.p1, sandbox_state->t1.p2, sandbox_state->t1.p3, sandbox_state->t1.VS, sandbox_state->t1.PS);
-    RenderTranslucentTriangle(engine_state, sandbox_state->t1.p1, sandbox_state->t1.p2, sandbox_state->t1.p3, sandbox_state->t1.VS, sandbox_state->t1.PS);
+    engine->user_ponter = &sandbox->t1;
+    // RenderOpaqueTriangle(engine, sandbox->t1.p1, sandbox->t1.p2, sandbox->t1.p3, sandbox->t1.VS, sandbox->t1.PS);
+    RenderTranslucentTriangle(engine, sandbox->t1.p1, sandbox->t1.p2, sandbox->t1.p3, sandbox->t1.VS, sandbox->t1.PS);
 
-    engine_state->user_ponter = &sandbox_state->t2;
-    RenderTranslucentTriangle(engine_state, sandbox_state->t2.p1, sandbox_state->t2.p2, sandbox_state->t2.p3, sandbox_state->t2.VS, sandbox_state->t2.PS);
+    engine->user_ponter = &sandbox->t2;
+    RenderTranslucentTriangle(engine, sandbox->t2.p1, sandbox->t2.p2, sandbox->t2.p3, sandbox->t2.VS, sandbox->t2.PS);
 
-    engine_state->user_ponter = sandbox_state;
+    engine->user_ponter = sandbox;
 }
 
 SOUND_CALLBACK(User_SoundCallback)
 {
-    SandboxState *sandbox_state = gSandboxState; // cast(SandboxState *, engine_state->user_ponter);
-    AudioBuffer  *audio         = &sandbox_state->audio;
+    Sandbox     *sandbox = gSandbox; // cast(Sandbox *, engine->user_ponter);
+    AudioBuffer *audio   = &sandbox->audio;
 
     for (u32 i = 0; i < buffer->samples_count; ++i)
     {
-        if (audio->samples_index == audio->samples_count)
+        if (audio->samples_index >= audio->samples_count)
             audio->samples_index = 0;
 
         buffer->samples[i * buffer->channels_count    ] = audio->samples[audio->samples_index++];

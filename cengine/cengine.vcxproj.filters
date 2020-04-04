@@ -48,6 +48,12 @@
     <ClCompile Include="cengine\sound\audio.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cengine\core\allocator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cengine\tools\buffer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cengine\core\core.h">
@@ -93,6 +99,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cengine\sound\sound.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cengine\core\allocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="cengine\tools\buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

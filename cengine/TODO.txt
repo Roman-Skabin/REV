@@ -16,7 +16,6 @@
     - Other orthos & persps
 
 - Graphics
-    - Optimize blending on present
     - Optimize hashing (remove data, unused for n (60?) frames)
     - Multi-threaded rasterizing?
     - Multi-threaded rendering

@@ -17,8 +17,8 @@
 #include "core/allocator.h"
 #include "sound/sound.h"
 
-#ifndef ENGINE_STATE_DEFINED
-#define ENGINE_STATE_DEFINED
+#ifndef ENGINE_DEFINED
+#define ENGINE_DEFINED
     typedef struct Engine Engine;
 #endif
 

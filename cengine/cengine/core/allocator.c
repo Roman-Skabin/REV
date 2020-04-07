@@ -16,9 +16,9 @@
 
 typedef enum BLOCK_STATE
 {
-  BLOCK_STATE_NONE,
-  BLOCK_STATE_ALLOCATED,
-  BLOCK_STATE_IN_FREE_LIST,
+    BLOCK_STATE_NONE,
+    BLOCK_STATE_ALLOCATED,
+    BLOCK_STATE_IN_FREE_LIST,
 } BLOCK_STATE;
 
 struct BlockHeader
@@ -280,6 +280,7 @@ void *ReAllocate(Allocator *allocator, void **mem, u64 bytes)
 
 void *AllocateAligned(Allocator *allocator, u64 bytes, u64 alignment)
 {
+    if (alignment < sizeof(void *)) alignment = sizeof(void *);
     CheckM(IS_POW_2(alignment), "Alignment must be power of 2");
     u64 aligned_bytes = ALIGN_UP(bytes, alignment);
     return Allocate(allocator, aligned_bytes);
@@ -292,6 +293,7 @@ void DeAllocateAligned(Allocator *allocator, void **mem)
 
 void *ReAllocateAligned(Allocator *allocator, void **mem, u64 bytes, u64 alignment)
 {
+    if (alignment < sizeof(void *)) alignment = sizeof(void *);
     CheckM(IS_POW_2(alignment), "Alignment must be power of 2");
     u64 aligned_bytes = ALIGN_UP(bytes, alignment);
     return ReAllocate(allocator, mem, aligned_bytes);

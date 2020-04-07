@@ -300,18 +300,44 @@ internal void RendererResize(Engine *engine)
     }
 }
 
-internal INLINE void RendererPresent(Engine *engine)
+internal void RendererPresent(Engine *engine)
 {
-    // @Optimize(Roman): optimization required
-    for (u32 i = 0; i < engine->renderer.common.count; ++i)
+    if (engine->renderer.blending.last.x != U32_MAX)
     {
-        v4 *sum = engine->renderer.blending.sum + i;
+        engine->renderer.blending.first.x = __max(engine->renderer.blending.first.x, 0);
+        engine->renderer.blending.first.y = __max(engine->renderer.blending.first.y, 0);
+        engine->renderer.blending.last.x  = __min(engine->renderer.blending.last.x, engine->window.size.w);
+        engine->renderer.blending.last.y  = __min(engine->renderer.blending.last.y, engine->window.size.h);
 
-        if (sum->r || sum->g || sum->b || sum->a)
+        s32 x = engine->renderer.blending.first.x;
+        s32 y = engine->renderer.blending.first.y;
+
+        s32 offset = y * engine->window.size.w + x;
+
+        u32 *pixels_row_begin = engine->renderer.rt.pixels    + offset;
+        v4  *sum_row_begin    = engine->renderer.blending.sum + offset;
+        f32 *mul_row_begin    = engine->renderer.blending.mul + offset;
+
+        for (; y <= engine->renderer.blending.last.y; ++y)
         {
-            BlendOnPresent(engine->renderer.rt.pixels + i,
-                           *sum,
-                           engine->renderer.blending.mul[i]);
+            u32 *pixel = pixels_row_begin;
+            v4  *sum   = sum_row_begin;
+            f32 *mul   = mul_row_begin;
+
+            for (x = engine->renderer.blending.first.x; x <= engine->renderer.blending.last.x; ++x)
+            {
+                if (sum->r || sum->g || sum->b)
+                {
+                    BlendOnPresent(pixel, *sum, *mul);
+                }
+                ++pixel;
+                ++sum;
+                ++mul;
+            }
+
+            pixels_row_begin += engine->window.size.w;
+            sum_row_begin    += engine->window.size.w;
+            mul_row_begin    += engine->window.size.w;
         }
     }
 
@@ -546,7 +572,7 @@ internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPA
         case WM_SIZE: // 0x0005
         {
             engine->window.size = v2s_1(cast(s32, lparam & 0xFFFF), cast(s32, lparam >> 16));
-            RendererResize(engine);
+            // RendererResize(engine);
             engine->window.resized = true;
             Log(&engine->logger, "Window was resized");
         } break;
@@ -639,7 +665,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
     Engine *engine = PushToPA(Engine, &engine_memory, 1);
     engine->memory = &engine_memory;
 
-    void* base_address = PushToPermanentArea(engine->memory, GB(1ui64));
+    void *base_address = PushToPermanentArea(engine->memory, GB(1ui64));
     CreateAllocator(&engine->allocator, base_address, cast(u64, GB(1.5)), false);
 
     CreateLogger(&engine->logger, "Engine logger", "cengine.log", LOG_TO_FILE | LOG_TO_DEBUG | LOG_TO_CONSOLE);
@@ -667,6 +693,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
         ResetTransientArea(engine->memory);
         engine->window.resized = false;
         InputReset(engine);
+        engine->renderer.blending.first = v2s_0(S32_MAX);
+        engine->renderer.blending.last  = v2s_0(S32_MIN);
 
         while (PeekMessageA(&msg, engine->window.handle, 0, 0, PM_REMOVE))
         {

@@ -64,7 +64,7 @@ USER_CALLBACK(User_OnInit)
     // sandbox->t1.proj = m4_ortho_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
 
     sandbox->t2.p1   = v4_1(-size.w*0.5f, -size.h*0.185f, 0.10f, 1.0f);
-    sandbox->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.23f, 1.0f);
+    sandbox->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.30f, 1.0f);
     sandbox->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
     sandbox->t2.VS   = TriangleVS;
     sandbox->t2.PS   = Triangle2PS;
@@ -112,7 +112,7 @@ USER_CALLBACK(User_OnUpdate)
         sandbox->t1.proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
 
         sandbox->t2.p1   = v4_1(-size.w*0.5f, -size.h*0.185f, 0.10f, 1.0f);
-        sandbox->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.23f, 1.0f);
+        sandbox->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.30f, 1.0f);
         sandbox->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
         sandbox->t2.proj = sandbox->t1.proj;
     }
@@ -127,6 +127,7 @@ USER_CALLBACK(User_OnRender)
     RenderTranslucentTriangle(engine, sandbox->t1.p1, sandbox->t1.p2, sandbox->t1.p3, sandbox->t1.VS, sandbox->t1.PS);
 
     engine->user_ponter = &sandbox->t2;
+    // RenderOpaqueTriangle(engine, sandbox->t2.p1, sandbox->t2.p2, sandbox->t2.p3, sandbox->t2.VS, sandbox->t2.PS);
     RenderTranslucentTriangle(engine, sandbox->t2.p1, sandbox->t2.p2, sandbox->t2.p3, sandbox->t2.VS, sandbox->t2.PS);
 
     engine->user_ponter = sandbox;

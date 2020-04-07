@@ -7,15 +7,15 @@
 #include "core/core.h"
 #include "math/vec.h"
 
-#ifndef ENGINE_STATE_DEFINED
-#define ENGINE_STATE_DEFINED
+#ifndef ENGINE_DEFINED
+#define ENGINE_DEFINED
     typedef struct Engine Engine;
 #endif
 
 #define VERTEX_SHADER(name) v4 name(Engine *engine, v4 pos) // output = new pos
-#define PIXEL_SHADER(name)  v4 name(Engine *engine, v4 pos) // output = color
-
 typedef VERTEX_SHADER(VertexShader);
+
+#define PIXEL_SHADER(name)  v4 name(Engine *engine, v4 pos) // output = color
 typedef PIXEL_SHADER(PixelShader);
 
 typedef struct Renderer
@@ -37,6 +37,8 @@ typedef struct Renderer
     {
         v4  *sum;
         f32 *mul;
+        v2s  first;
+        v2s  last;
     } blending;
 
     struct

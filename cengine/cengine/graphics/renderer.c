@@ -31,21 +31,6 @@ void SetViewport(Engine *engine, f32 near, f32 far)
     engine->renderer.zb.near = near;
 }
 
-typedef struct RenderTriangleData
-{
-    v4            p1;
-    v4            p2;
-    v4            p3;
-    VertexShader *VS;
-    PixelShader  *PS;
-    Engine  *engine;
-} RenderTriangleData;
-
-internal WORK_QUEUE_ENTRY_PROC(RenderTriangleMT)
-{
-    // @TODO(Roman): multi-threaded version
-}
-
 void RenderOpaqueTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS)
 {
     if (engine->renderer.common.count)
@@ -74,20 +59,20 @@ void RenderOpaqueTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS,
 
         for (u32 i = 0; i < BufferGetCount(points); ++i)
         {
-            f32 *zbuf_z = engine->renderer.zb.z
-                        + points[i].y * engine->window.size.w
-                        + points[i].x;
+            u32 offset = points[i].y * engine->window.size.w
+                       + points[i].x;
+
+            f32 *zbuf_z = engine->renderer.zb.z + offset;
 
             if (points[i].z < *zbuf_z)
             {
                 *zbuf_z = points[i].z;
 
-                u32 *dest_pixel = engine->renderer.rt.pixels
-                                + points[i].y * engine->window.size.w
-                                + points[i].x;
+                u32 *dest_pixel = engine->renderer.rt.pixels + offset;
 
                 v4 source_pixel = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
                 v4 source_color = PS(engine, NormalizePoint(engine, source_pixel));
+                source_color.a  = 1.0f;
 
                 *dest_pixel = norm_to_hex(source_color);
             }
@@ -129,8 +114,19 @@ void RenderTranslucentTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader
 
             if (points[i].z < *zbuf_z)
             {
+                if (engine->renderer.blending.first.x > points[i].x)
+                    engine->renderer.blending.first.x = points[i].x;
+                if (engine->renderer.blending.first.y > points[i].y)
+                    engine->renderer.blending.first.y = points[i].y;
+                if (engine->renderer.blending.last.x < points[i].x)
+                    engine->renderer.blending.last.x = points[i].x;
+                if (engine->renderer.blending.last.y < points[i].y)
+                    engine->renderer.blending.last.y = points[i].y;
+
                 v4 source_pixel = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
                 v4 source_color = PS(engine, NormalizePoint(engine, source_pixel));
+
+                CheckM(source_color.a < 1.0f, "alpha >= 1.0f, use RenderOpaqueTriangle instead");
 
                 BlendOnRender(engine, points[i].x, points[i].y, points[i].z, source_color);
             }

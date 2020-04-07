@@ -35,13 +35,13 @@
 #define f32_SQRT2    CSTRCAT(f64_SQRT2, f)
 #define f32_1_SQRT_2 CSTRCAT(f64_1_SQRT_2, f)
 
-#define MM(mm, Type, i) ((Type *)&(mm))[i]
-#define MM(mm, Type, i) ((Type *)&(mm))[i]
-#define MM(mm, Type, i) ((Type *)&(mm))[i]
+#define MM(mm, Type, i) (cast(Type *, &(mm))[i])
+#define MM(mm, Type, i) (cast(Type *, &(mm))[i])
+#define MM(mm, Type, i) (cast(Type *, &(mm))[i])
 
 INLINE f32 MATH_CALL lerp(f32 start, f32 end, f32 percent)
 {
-    percent = max(0.0f, min(1.0f, percent));
+    percent = __max(0.0f, __min(1.0f, percent));
     return (end - start) * percent + start;
 }
 

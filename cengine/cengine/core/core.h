@@ -16,6 +16,10 @@
 #undef DEBUG
 #endif
 
+#ifdef RELEASE
+#undef RELEASE
+#endif
+
 #ifdef _DEBUG
     #define DEBUG   1
     #define RELEASE 0

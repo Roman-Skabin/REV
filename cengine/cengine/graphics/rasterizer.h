@@ -4,7 +4,12 @@
 
 #pragma once
 
-#include "graphics/renderer.h"
+#include "math/vec.h"
+
+#ifndef ENGINE_DEFINED
+#define ENGINE_DEFINED
+    typedef struct Engine Engine;
+#endif
 
 typedef struct RasterizerOutput
 {

@@ -66,31 +66,38 @@ internal INLINE void CacheRasterizerOutput(HashKey *key, RasterizerOutput *data)
 
 internal INLINE RasterizerOutput *GetCachedRasterizerOutput(HashKey *key)
 {
-    u32 hash = Hash(key);
-
-    gCache.frames[hash] = 0;
-
-    if (gFrameStart)
+    if (gCache.count)
     {
-        for (s32 i = 0; i < DATA_COUNT; ++i)
-        {
-            ++gCache.frames[i];
+        u32 hash = Hash(key);
 
-            if (gCache.frames[i] >= MAX_FRAMES_IDDLE)
+        gCache.frames[hash] = 0;
+
+        if (gFrameStart)
+        {
+            for (s32 i = 0; i < DATA_COUNT; ++i)
             {
-                gCache.data[i]   = 0;
-                gCache.frames[i] = 0;
-                --gCache.count;
+                if (gCache.data[i])
+                {
+                    ++gCache.frames[i];
+
+                    if (gCache.frames[i] >= MAX_FRAMES_IDDLE)
+                    {
+                        gCache.data[i] = 0;
+                        gCache.frames[i] = 0;
+                        --gCache.count;
+                    }
+                }
             }
+
+            if (gCache.frames[hash] > 0)
+                gCache.frames[hash] = 0;
+
+            gFrameStart = false;
         }
 
-        if (gCache.frames[hash] > 0)
-            gCache.frames[hash] = 0;
-
-        gFrameStart = false;
+        return gCache.data[hash];
     }
-
-    return gCache.data[hash];
+    return 0;
 }
 
 internal INLINE v4 *GetLeftPoint(v4 *p1, v4 *p2, v4 *p3)
@@ -134,8 +141,8 @@ internal void RasterizeTriangleSide(RasterizerOutput **triangle, Engine *engine,
         v4   point = v4_1(x, cast(f32, y), z, 1.0f);
         v4s ipoint = v4_to_v4s(point);
 
-        if (                      0 <= ipoint.x && ipoint.x <  engine->window.size.w
-        &&                        0 <= ipoint.y && ipoint.y <  engine->window.size.h
+        if (                       0 <= ipoint.x && ipoint.x <  engine->window.size.w
+        &&                         0 <= ipoint.y && ipoint.y <  engine->window.size.h
         &&  engine->renderer.zb.near <=  point.z &&  point.z <= engine->renderer.zb.far)
         {
             RasterizerOutput el;

@@ -2,31 +2,26 @@
 
 #define WINDOW_TITLE "Sandbox"
 
-typedef struct Triangle
-{
-    v4            p1;
-    v4            p2;
-    v4            p3;
-    VertexShader *VS;
-    PixelShader  *PS;
-    m4            proj;
-} Triangle;
-
 typedef struct Sandbox
 {
     Logger      logger;
     Triangle    t1;
     Triangle    t2;
+    m4          t1_proj;
+    m4          t2_proj;
     AudioBuffer audio;
 } Sandbox;
 
-// @CleanUp(Roman): after making sandbox thread safety delete gSandbox
-global Sandbox *gSandbox;
-
-internal VERTEX_SHADER(TriangleVS)
+internal VERTEX_SHADER(Triangle1VS)
 {
-    Triangle *triangle = engine->user_ponter;
-    return m4_mul_v(triangle->proj, pos);
+    Sandbox *sandbox = engine->user_ponter;
+    return m4_mul_v(sandbox->t1_proj, pos);
+}
+
+internal VERTEX_SHADER(Triangle2VS)
+{
+    Sandbox *sandbox = engine->user_ponter;
+    return m4_mul_v(sandbox->t2_proj, pos);
 }
 
 internal PIXEL_SHADER(Triangle1PS)
@@ -44,7 +39,6 @@ USER_CALLBACK(User_OnInit)
     // @TODO(Roman): make sandbox thread safety
     Sandbox *sandbox    = PushToPA(Sandbox, engine->memory, 1);
     engine->user_ponter = sandbox;
-    gSandbox            = sandbox;
 
     CreateLogger(&sandbox->logger, "Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE | LOG_TO_DEBUG);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
@@ -58,17 +52,17 @@ USER_CALLBACK(User_OnInit)
     sandbox->t1.p1   = v4_1(-size.w*0.5f, -size.h*0.5f, 0.13f, 1.0f);
     sandbox->t1.p2   = v4_1(        0.0f,  size.h*0.5f, 0.20f, 1.0f);
     sandbox->t1.p3   = v4_1( size.w*0.5f, -size.h*0.5f, 0.40f, 1.0f);
-    sandbox->t1.VS   = TriangleVS;
+    sandbox->t1.VS   = Triangle1VS;
     sandbox->t1.PS   = Triangle1PS;
-    sandbox->t1.proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
+    sandbox->t1_proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
     // sandbox->t1.proj = m4_ortho_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
 
     sandbox->t2.p1   = v4_1(-size.w*0.5f, -size.h*0.185f, 0.10f, 1.0f);
     sandbox->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.30f, 1.0f);
     sandbox->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
-    sandbox->t2.VS   = TriangleVS;
+    sandbox->t2.VS   = Triangle2VS;
     sandbox->t2.PS   = Triangle2PS;
-    sandbox->t2.proj = sandbox->t1.proj;
+    sandbox->t2_proj = sandbox->t1_proj;
 
     sandbox->audio = LoadAudioFile(engine, "../sandbox/assets/audio.wav");
     SoundPlay(&engine->sound);
@@ -109,33 +103,30 @@ USER_CALLBACK(User_OnUpdate)
         sandbox->t1.p1   = v4_1(-size.w*0.5f, -size.h*0.5f, 0.13f, 1.0f);
         sandbox->t1.p2   = v4_1(        0.0f,  size.h*0.5f, 0.20f, 1.0f);
         sandbox->t1.p3   = v4_1( size.w*0.5f, -size.h*0.5f, 0.40f, 1.0f);
-        sandbox->t1.proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
+        sandbox->t1_proj = m4_persp_lh_n0(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
 
         sandbox->t2.p1   = v4_1(-size.w*0.5f, -size.h*0.185f, 0.10f, 1.0f);
         sandbox->t2.p2   = v4_1(        0.0f,  size.h*0.185f, 0.30f, 1.0f);
         sandbox->t2.p3   = v4_1( size.w*0.5f, -size.h*0.185f, 0.27f, 1.0f);
-        sandbox->t2.proj = sandbox->t1.proj;
+        sandbox->t2_proj = sandbox->t1_proj;
     }
 }
 
 USER_CALLBACK(User_OnRender)
 {
     Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
-    
-    engine->user_ponter = &sandbox->t1;
-    // RenderOpaqueTriangle(engine, sandbox->t1.p1, sandbox->t1.p2, sandbox->t1.p3, sandbox->t1.VS, sandbox->t1.PS);
-    RenderTranslucentTriangle(engine, sandbox->t1.p1, sandbox->t1.p2, sandbox->t1.p3, sandbox->t1.VS, sandbox->t1.PS);
 
-    engine->user_ponter = &sandbox->t2;
-    // RenderOpaqueTriangle(engine, sandbox->t2.p1, sandbox->t2.p2, sandbox->t2.p3, sandbox->t2.VS, sandbox->t2.PS);
-    RenderTranslucentTriangle(engine, sandbox->t2.p1, sandbox->t2.p2, sandbox->t2.p3, sandbox->t2.VS, sandbox->t2.PS);
-
-    engine->user_ponter = sandbox;
+    Triangle *triangles[] =
+    {
+        &sandbox->t1,
+        &sandbox->t2
+    };
+    DrawTranslucentTriangles(engine, triangles, ArrayCount(triangles));
 }
 
 SOUND_CALLBACK(User_SoundCallback)
 {
-    Sandbox     *sandbox = gSandbox; // cast(Sandbox *, engine->user_ponter);
+    Sandbox     *sandbox = cast(Sandbox *, engine->user_ponter);
     AudioBuffer *audio   = &sandbox->audio;
 
     for (u32 i = 0; i < buffer->samples_count; ++i)

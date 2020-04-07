@@ -51,7 +51,6 @@
     <ClInclude Include="cengine\sound\sound.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="cengine.log" />
     <Text Include="TODO.txt" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

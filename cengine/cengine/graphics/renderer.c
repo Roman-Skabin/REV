@@ -31,103 +31,179 @@ void SetViewport(Engine *engine, f32 near, f32 far)
     engine->renderer.zb.near = near;
 }
 
-void RenderOpaqueTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS)
+typedef struct RenderData
 {
-    if (engine->renderer.common.count)
+    Engine           *engine;
+    RasterizerOutput *points;
+    PixelShader      *PS;
+    volatile u64      i;
+} RenderData;
+
+internal WORK_QUEUE_ENTRY_PROC(RenderOpaqueTriangle)
+{
+    RenderData *data = arg;
+
+    while (!data->points)
     {
-        f32 p1z = p1.z;
-        f32 p2z = p2.z;
-        f32 p3z = p3.z;
+        // Wait till our triangle will be rasterized.
+    }
 
-        p1 = VS(engine, p1);
-        p2 = VS(engine, p2);
-        p3 = VS(engine, p3);
+    u64 old_i = data->i;
+    u64 new_i = old_i + 1;
 
-        p1 = v4_normalize_w(p1);
-        p2 = v4_normalize_w(p2);
-        p3 = v4_normalize_w(p3);
-
-        p1.xy = AdaptPoint(engine, p1);
-        p2.xy = AdaptPoint(engine, p2);
-        p3.xy = AdaptPoint(engine, p3);
-
-        p1.z = p1z;
-        p2.z = p2z;
-        p3.z = p3z;
-
-        RasterizerOutput *points = RasterizeTriangle(engine, p1, p2, p3);
-
-        for (u32 i = 0; i < BufferGetCount(points); ++i)
+    u64 points_count = BufferGetCount(data->points);
+    while (old_i < points_count)
+    {
+        if (old_i == _InterlockedCompareExchange64(&data->i, new_i, old_i))
         {
-            u32 offset = points[i].y * engine->window.size.w
-                       + points[i].x;
+            f32 z = data->points[old_i].z;
 
-            f32 *zbuf_z = engine->renderer.zb.z + offset;
+            u32 offset = data->points[old_i].y * data->engine->window.size.w
+                       + data->points[old_i].x;
 
-            if (points[i].z < *zbuf_z)
+            f32 *zbuf_z = data->engine->renderer.zb.z + offset;
+
+            if (z < *zbuf_z)
             {
-                *zbuf_z = points[i].z;
+                *zbuf_z = z;
 
-                v4 source_pixel = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
-                v4 source_color = PS(engine, NormalizePoint(engine, source_pixel));
-                source_color.a  = 1.0f;
+                v4 source_pixel = v4_2(v2s_to_v2(data->points[old_i].xy), z, 1.0f);
+                v4 source_color = data->PS(data->engine, NormalizePoint(data->engine, source_pixel));
+                source_color.a = 1.0f;
 
-                engine->renderer.rt.pixels[offset] = norm_to_hex(source_color);
+                data->engine->renderer.rt.pixels[offset] = norm_to_hex(source_color);
             }
+
+            old_i = data->i;
+            new_i = old_i + 1;
         }
     }
 }
 
-void RenderTranslucentTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS)
+internal WORK_QUEUE_ENTRY_PROC(RenderTranslucentTriangle)
 {
-    if (engine->renderer.common.count)
+    RenderData *data = arg;
+
+    while (!data->points)
     {
-        f32 p1z = p1.z;
-        f32 p2z = p2.z;
-        f32 p3z = p3.z;
+        // Wait till our triangle will be rasterized.
+    }
 
-        p1 = VS(engine, p1);
-        p2 = VS(engine, p2);
-        p3 = VS(engine, p3);
+    u64 old_i = data->i;
+    u64 new_i = old_i + 1;
 
-        p1 = v4_normalize_w(p1);
-        p2 = v4_normalize_w(p2);
-        p3 = v4_normalize_w(p3);
-
-        p1.xy = AdaptPoint(engine, p1);
-        p2.xy = AdaptPoint(engine, p2);
-        p3.xy = AdaptPoint(engine, p3);
-
-        p1.z = p1z;
-        p2.z = p2z;
-        p3.z = p3z;
-
-        RasterizerOutput *points = RasterizeTriangle(engine, p1, p2, p3);
-
-        for (u32 i = 0; i < BufferGetCount(points); ++i)
+    u64 points_count = BufferGetCount(data->points);
+    while (old_i < points_count)
+    {
+        if (old_i == _InterlockedCompareExchange64(&data->i, new_i, old_i))
         {
-            f32 *zbuf_z = engine->renderer.zb.z
-                        + points[i].y * engine->window.size.w
-                        + points[i].x;
+            s32 x = data->points[old_i].x;
+            s32 y = data->points[old_i].y;
+            f32 z = data->points[old_i].z;
 
-            if (points[i].z < *zbuf_z)
+            f32 *zbuf_z = data->engine->renderer.zb.z
+                        + y * data->engine->window.size.w
+                        + x;
+
+            if (z < *zbuf_z)
             {
-                if (engine->renderer.blending.first.x > points[i].x)
-                    engine->renderer.blending.first.x = points[i].x;
-                if (engine->renderer.blending.first.y > points[i].y)
-                    engine->renderer.blending.first.y = points[i].y;
-                if (engine->renderer.blending.last.x < points[i].x)
-                    engine->renderer.blending.last.x = points[i].x;
-                if (engine->renderer.blending.last.y < points[i].y)
-                    engine->renderer.blending.last.y = points[i].y;
+                if (data->engine->renderer.blending.first.x > x) data->engine->renderer.blending.first.x = x;
+                if (data->engine->renderer.blending.first.y > y) data->engine->renderer.blending.first.y = y;
+                if (data->engine->renderer.blending.last.x  < x) data->engine->renderer.blending.last.x = x;
+                if (data->engine->renderer.blending.last.y  < y) data->engine->renderer.blending.last.y = y;
 
-                v4 source_pixel = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
-                v4 source_color = PS(engine, NormalizePoint(engine, source_pixel));
+                v4 source_pixel = v4_2(v2s_to_v2(data->points[old_i].xy), z, 1.0f);
+                v4 source_color = data->PS(data->engine, NormalizePoint(data->engine, source_pixel));
 
                 CheckM(source_color.a < 1.0f, "alpha >= 1.0f, use RenderOpaqueTriangle instead");
 
-                BlendOnRender(engine, points[i].x, points[i].y, points[i].z, source_color);
+                BlendOnRender(data->engine, x, y, z, source_color);
             }
+
+            old_i = data->i;
+            new_i = old_i + 1;
+        }
+    }
+}
+
+void DrawOpaqueTriangles(Engine *engine, Triangle **triangles, u64 triangles_count)
+{
+    if (engine->renderer.common.count)
+    {
+        for (u64 i = 0; i < triangles_count; ++i)
+        {
+            Triangle *triangle = triangles[i];
+
+            v4 p1 = triangle->VS(engine, triangle->p1);
+            v4 p2 = triangle->VS(engine, triangle->p2);
+            v4 p3 = triangle->VS(engine, triangle->p3);
+
+            p1 = v4_normalize_w(p1);
+            p2 = v4_normalize_w(p2);
+            p3 = v4_normalize_w(p3);
+
+            p1.xy = AdaptPoint(engine, p1);
+            p2.xy = AdaptPoint(engine, p2);
+            p3.xy = AdaptPoint(engine, p3);
+
+            p1.z = triangle->p1.z;
+            p2.z = triangle->p2.z;
+            p3.z = triangle->p3.z;
+
+            triangle->private_data = RasterizeTriangle(engine, p1, p2, p3);
+        }
+
+        for (u64 i = 0; i < triangles_count; ++i)
+        {
+            Triangle *triangle = triangles[i];
+
+            RenderData *data = PushToTA(RenderData, engine->memory, 1);
+            data->engine     = engine;
+            data->points     = triangle->private_data;
+            data->PS         = triangle->PS;
+
+            AddWorkQueueEntry(engine->queue, RenderOpaqueTriangle, data);
+        }
+    }
+}
+
+void DrawTranslucentTriangles(Engine *engine, Triangle **triangles, u64 triangles_count)
+{
+    if (engine->renderer.common.count)
+    {
+        for (u64 i = 0; i < triangles_count; ++i)
+        {
+            Triangle *triangle = triangles[i];
+
+            v4 p1 = triangle->VS(engine, triangle->p1);
+            v4 p2 = triangle->VS(engine, triangle->p2);
+            v4 p3 = triangle->VS(engine, triangle->p3);
+
+            p1 = v4_normalize_w(p1);
+            p2 = v4_normalize_w(p2);
+            p3 = v4_normalize_w(p3);
+
+            p1.xy = AdaptPoint(engine, p1);
+            p2.xy = AdaptPoint(engine, p2);
+            p3.xy = AdaptPoint(engine, p3);
+
+            p1.z = triangle->p1.z;
+            p2.z = triangle->p2.z;
+            p3.z = triangle->p3.z;
+
+            triangle->private_data = RasterizeTriangle(engine, p1, p2, p3);
+        }
+
+        for (u64 i = 0; i < triangles_count; ++i)
+        {
+            Triangle *triangle = triangles[i];
+
+            RenderData *data = PushToTA(RenderData, engine->memory, 1);
+            data->engine     = engine;
+            data->points     = triangle->private_data;
+            data->PS         = triangle->PS;
+
+            AddWorkQueueEntry(engine->queue, RenderTranslucentTriangle, data);
         }
     }
 }

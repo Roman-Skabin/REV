@@ -102,7 +102,6 @@ WorkQueue *CreateWorkQueue(Engine *engine)
     GetSystemInfo(&info);
 
     s32 threads_count = info.dwNumberOfProcessors - 1; // minus main thread
-    if (threads_count >  0) --threads_count; // minus sound thread
     if (threads_count <= 0) threads_count = 1;
 
     WorkQueueThread *threads = PushToPA(WorkQueueThread, engine->memory, threads_count);

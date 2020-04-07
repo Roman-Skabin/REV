@@ -304,6 +304,7 @@ internal void RendererResize(Engine *engine)
 
 internal void RendererPresent(Engine *engine)
 {
+    // @TODO(Roman): Make this blending stage multi-threaded
     if (engine->renderer.blending.last.x != U32_MAX)
     {
         engine->renderer.blending.first.x = __max(engine->renderer.blending.first.x, 0);
@@ -342,6 +343,11 @@ internal void RendererPresent(Engine *engine)
             mul_row_begin    += engine->window.size.w;
         }
     }
+
+    // @TODO(Roman): after making last blending stage
+    //               multi-threaded WaitForWorkQueue
+    //               must be placed here
+    // WaitForWorkQueue(engine->queue);
 
     SetDIBitsToDevice(engine->window.context,
         0, 0, engine->window.size.w, engine->window.size.h,
@@ -726,6 +732,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
             User_OnRender(engine);
 
             // Present
+            // @TODO(Roman): remove after making last blendig stage multi-threded
             WaitForWorkQueue(engine->queue);
             RendererPresent(engine);
         }

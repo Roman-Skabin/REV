@@ -110,6 +110,5 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="TODO.txt" />
-    <Text Include="cengine.log" />
   </ItemGroup>
 </Project>

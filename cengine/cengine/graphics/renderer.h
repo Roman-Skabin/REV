@@ -49,5 +49,15 @@ typedef struct Renderer
 
 CEXTERN void SetViewport(Engine *engine, f32 near, f32 far);
 
-CEXTERN void RenderOpaqueTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);
-CEXTERN void RenderTranslucentTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS, PixelShader *PS);
+typedef struct Triangle
+{
+    _In_  v4                p1;
+    _In_  v4                p2;
+    _In_  v4                p3;
+    _In_  VertexShader     *VS;
+    _In_  PixelShader      *PS;
+    void                   *private_data; // FOR INTERNAL USE ONLY. DO NOT TOUCH!!!
+} Triangle;
+
+CEXTERN void DrawOpaqueTriangles(Engine *engine, Triangle **triangles, u64 triangles_count);
+CEXTERN void DrawTranslucentTriangles(Engine *engine, Triangle **triangles, u64 triangles_count);

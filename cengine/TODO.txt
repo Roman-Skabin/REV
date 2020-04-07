@@ -16,8 +16,9 @@
     - Other orthos & persps
 
 - Graphics
-    - Multi-threaded rasterizing?
-    - Multi-threaded rendering
+    - Make last blending stage multi-threded
+    - Multi-threaded rasterizing
+    - Tiled rendering?
     - Texture/Image
     - Entity system
     - Particle system

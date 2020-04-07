@@ -12,11 +12,10 @@
     - Switch to DPI stuff for monitor and window adjustment?
 
 - Math
-    - CPU optimizations
+    - AVX2 optimizations
     - Other orthos & persps
 
 - Graphics
-    - Optimize hashing (remove data, unused for n (60?) frames)
     - Multi-threaded rasterizing?
     - Multi-threaded rendering
     - Texture/Image

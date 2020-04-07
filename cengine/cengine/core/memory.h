@@ -22,9 +22,9 @@ CEXTERN void memset_f32(f32 *mem, f32 val, u32 count);
 
 typedef struct Area
 {
-    u8  *base;
-    u64  size;
-    u64  cap;
+    byte *base;
+    u64   size;
+    u64   cap;
 } Area;
 
 typedef struct Memory

@@ -7,15 +7,8 @@
 #include "tools/buffer.h"
 #include "cengine.h"
 
-typedef struct HashTable
-{
-    RasterizerOutput *data[PAGE_SIZE];
-    // u8                 frames[PAGE_SIZE];
-    // Release data[i] if we don't use it for n frames
-    u32                   count;
-} HashTable;
-
-global HashTable gCache;
+// Resets to true in cengine.c on frame start
+extern b32 gFrameStart;
 
 typedef struct HashKey
 {
@@ -24,22 +17,38 @@ typedef struct HashKey
     v4 middle;
 } HashKey;
 
+enum
+{
+    DATA_COUNT       = PAGE_SIZE,
+    CHUNKS_COUNT     = sizeof(HashKey) / sizeof(u32),
+    MAX_FRAMES_IDDLE = 120,
+};
+
+typedef struct HashTable
+{
+    RasterizerOutput *data[DATA_COUNT];
+    u32               frames[DATA_COUNT];
+    u32               count;
+} HashTable;
+
+global HashTable gCache;
+
 internal u32 Hash(HashKey *key)
 {
-    sizeof(HashTable);
-    enum { CHUNKS_COUNT = sizeof(HashKey) / sizeof(u32) };
+    union
+    {
+        u32     chunks[CHUNKS_COUNT];
+        HashKey key;
+    } _;
 
-    u32 chunks[CHUNKS_COUNT];
-    Check(sizeof(chunks) == sizeof(HashKey));
-
-    CopyMemory(chunks, key, sizeof(HashKey));
+    _.key = *key;
 
     for (u32 i = 1; i < CHUNKS_COUNT; ++i)
     {
-        chunks[0] ^= chunks[i];
+        _.chunks[0] ^= _.chunks[i];
     }
 
-    return chunks[0] % PAGE_SIZE;
+    return _.chunks[0] % DATA_COUNT;
 }
 
 internal INLINE void CacheRasterizerOutput(HashKey *key, RasterizerOutput *data)
@@ -48,6 +57,7 @@ internal INLINE void CacheRasterizerOutput(HashKey *key, RasterizerOutput *data)
 
     if (!gCache.data[hash])
     {
+        CheckM(gCache.count < DATA_COUNT, "Rasterizer's cache overflow");
         ++gCache.count;
     }
 
@@ -58,7 +68,27 @@ internal INLINE RasterizerOutput *GetCachedRasterizerOutput(HashKey *key)
 {
     u32 hash = Hash(key);
 
-    // @TODO(Roman): release data, we don't use for n frames
+    gCache.frames[hash] = 0;
+
+    if (gFrameStart)
+    {
+        for (s32 i = 0; i < DATA_COUNT; ++i)
+        {
+            ++gCache.frames[i];
+
+            if (gCache.frames[i] >= MAX_FRAMES_IDDLE)
+            {
+                gCache.data[i]   = 0;
+                gCache.frames[i] = 0;
+                --gCache.count;
+            }
+        }
+
+        if (gCache.frames[hash] > 0)
+            gCache.frames[hash] = 0;
+
+        gFrameStart = false;
+    }
 
     return gCache.data[hash];
 }

@@ -102,7 +102,7 @@ INLINE m2 MATH_CALL m2_reflection_y() { return m2_1( 1.0f, 0.0f, 0.0f, -1.0f); }
 INLINE m2 MATH_CALL m2_shearing(f32 shx, f32 shy) { return m2_1(1.0f, shx, shy, 1.0f); }
 
 //
-// m3 (2D)
+// m3
 //
 
 typedef union m3
@@ -254,10 +254,25 @@ INLINE v3 MATH_CALL m3_mul_v(m3 l, v3 r)
 
 INLINE f32 MATH_CALL m3_det(m3 m)
 {
-    // @Optimize(Roman): maybe there is a way to perform it via mm intrinsics?
+#if 1
+    __m128 a = _mm_mul_ps(
+                   _mm_setr_ps(m.e11, m.e10, m.e10, 0.0f),
+                   _mm_setr_ps(m.e22, m.e22, m.e21, 0.0f));
+
+    __m128 b = _mm_mul_ps(
+                   _mm_setr_ps(m.e12, m.e12, m.e11, 0.0f),
+                   _mm_setr_ps(m.e21, m.e20, m.e20, 0.0f));
+
+    __m128 c = _mm_mul_ps(
+                   _mm_setr_ps(m.e00, m.e01, m.e02, 0.0f),
+                   _mm_sub_ps(a, b));
+
+    return c.m128_f32[0] - c.m128_f32[1] + c.m128_f32[2];
+#else
     return m.e00 * (m.e11 * m.e22 - m.e12 * m.e21)
          - m.e01 * (m.e10 * m.e22 - m.e12 * m.e20)
          + m.e02 * (m.e10 * m.e21 - m.e11 * m.e20);
+#endif
 }
 
 INLINE m3 MATH_CALL m3_inverse(m3 m)
@@ -338,7 +353,7 @@ INLINE m3 MATH_CALL m3_ortho(f32 left, f32 right, f32 bottom, f32 top)
 }
 
 //
-// m4 (3D)
+// m4
 //
 
 typedef union m4
@@ -403,6 +418,20 @@ INLINE m4 MATH_CALL m4_3(f32 arr[16])
     m4 m;
     m.mm0 = _mm256_loadu_ps(arr    );
     m.mm1 = _mm256_loadu_ps(arr + 8);
+    return m;
+}
+
+INLINE m4 MATH_CALL m4_4(__m128 c0, __m128 c1, __m128 c2, __m128 c3)
+{
+    m4 m;
+    m.mm0 = _mm256_setr_ps(
+        c0.m128_f32[0], c1.m128_f32[0], c2.m128_f32[0], c3.m128_f32[0],
+        c0.m128_f32[1], c1.m128_f32[1], c2.m128_f32[1], c3.m128_f32[1]
+    );
+    m.mm1 = _mm256_setr_ps(
+        c0.m128_f32[2], c1.m128_f32[2], c2.m128_f32[2], c3.m128_f32[2],
+        c0.m128_f32[3], c1.m128_f32[3], c2.m128_f32[3], c3.m128_f32[3]
+    );
     return m;
 }
 
@@ -630,15 +659,46 @@ INLINE m4 MATH_CALL m4_rotation_z(rad angle)
 
 INLINE m4 MATH_CALL m4_rotation(v4 v, rad angle)
 {
-    // @Optimize(Roman): perform it via mm intrinsics
     f32 s = sinf(angle);
     f32 c = cosf(angle);
+#if 1
+    __m128 col1 = _mm_setr_ps(v.x, v.x, v.x, 0.0f);
+    __m128 col2 = _mm_setr_ps(v.x, v.y, v.y, 0.0f);
+    __m128 col3 = _mm_setr_ps(v.x, v.y, v.z, 0.0f);
+
+    col1 = _mm_mul_ps(col1, _mm_set_ps(v.x, v.y, v.z, 0.0f));
+    col2 = _mm_mul_ps(col2, _mm_set_ps(v.y, v.y, v.z, 0.0f));
+    col3 = _mm_mul_ps(col3, _mm_set_ps(v.z, v.z, v.z, 0.0f));
+
+    __m128 invc = _mm_set_ps1(1.0f - c);
+    invc.m128_f32[3] = 0.0f;
+
+    col1 = _mm_mul_ps(col1, invc);
+    col2 = _mm_mul_ps(col2, invc);
+    col3 = _mm_mul_ps(col3, invc);
+
+    __m128 m1 = _mm_setr_ps(1.0f,  v.z,  v.y, 0.0f);
+    __m128 m2 = _mm_setr_ps(-v.z, 1.0f,  v.x, 0.0f);
+    __m128 m3 = _mm_setr_ps( v.y, -v.x, 1.0f, 0.0f);
+
+    m1 = _mm_mul_ps(m1, _mm_setr_ps(c, s, s, 0.0f));
+    m2 = _mm_mul_ps(m2, _mm_setr_ps(s, c, s, 0.0f));
+    m3 = _mm_mul_ps(m3, _mm_setr_ps(s, s, c, 0.0f));
+
+    col1 = _mm_add_ps(col1, m1);
+    col2 = _mm_add_ps(col2, m2);
+    col3 = _mm_add_ps(col3, m3);
+
+    return m4_4(col1, col2, col3, _mm_setr_ps(0.0f, 0.0f, 0.0f, 1.0f));
+
+#else
     return m4_1(
         v.x*v.x*(1-c)+    c, v.x*v.y*(1-c)-v.z*s, v.x*v.z*(1-c)+v.y*s, 0.0f,
         v.x*v.y*(1-c)+v.z*s, v.y*v.y*(1-c)+    c, v.y*v.z*(1-c)-v.x*s, 0.0f,
         v.x*v.z*(1-c)+v.y*s, v.y*v.z*(1-c)+v.x*s, v.z*v.z*(1-c)+    c, 0.0f,
                        0.0f,                0.0f,                0.0f, 1.0f
     );
+#endif
 }
 
 INLINE m4 MATH_CALL m4_reflection_x()

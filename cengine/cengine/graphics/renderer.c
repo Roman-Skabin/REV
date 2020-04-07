@@ -68,13 +68,11 @@ void RenderOpaqueTriangle(Engine *engine, v4 p1, v4 p2, v4 p3, VertexShader *VS,
             {
                 *zbuf_z = points[i].z;
 
-                u32 *dest_pixel = engine->renderer.rt.pixels + offset;
-
                 v4 source_pixel = v4_2(v2s_to_v2(points[i].xy), points[i].z, 1.0f);
                 v4 source_color = PS(engine, NormalizePoint(engine, source_pixel));
                 source_color.a  = 1.0f;
 
-                *dest_pixel = norm_to_hex(source_color);
+                engine->renderer.rt.pixels[offset] = norm_to_hex(source_color);
             }
         }
     }

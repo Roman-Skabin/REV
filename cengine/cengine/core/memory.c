@@ -56,7 +56,7 @@ void CreateMemory(Memory *memory, u64 transient_area_cap, u64 permanent_area_cap
     memory->transient.cap = transient_area_cap;
     memory->permanent.cap = permanent_area_cap;
 
-    memory->transient.base = cast(u8 *, VirtualAlloc(0, memory_cap, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+    memory->transient.base = cast(byte *, VirtualAlloc(0, memory_cap, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
     CheckM(memory->transient.base, "Memory creation failed");
 
     memory->permanent.base = memory->transient.base + memory->transient.cap;
@@ -83,7 +83,7 @@ void *PushToTransientArea(Memory *memory, u64 bytes)
     CheckM(bytes, "0 bytes was passed");
     CheckM(memory->transient.size + bytes <= memory->transient.cap, "Transient area overflow");
 
-    void *retptr = memory->transient.base + memory->transient.size;
+    byte *retptr = memory->transient.base + memory->transient.size;
     memory->transient.size += bytes;
 
     return retptr;
@@ -98,7 +98,7 @@ void *PushToTransientAreaAligned(Memory *memory, u64 bytes, u64 alignment)
     bytes = ALIGN_UP(bytes, alignment);
     CheckM(memory->transient.size + bytes <= memory->transient.cap, "Transient area overflow");
 
-    void *retptr = memory->transient.base + memory->transient.size;
+    byte *retptr = memory->transient.base + memory->transient.size;
     memory->transient.size += bytes;
 
     return retptr;
@@ -117,7 +117,7 @@ void *PushToPermanentArea(Memory *memory, u64 bytes)
     CheckM(bytes, "0 bytes was passed");
     CheckM(memory->permanent.size + bytes <= memory->permanent.cap, "Permanent area overflow");
 
-    void *retptr = memory->permanent.base + memory->permanent.size;
+    byte *retptr = memory->permanent.base + memory->permanent.size;
     memory->permanent.size += bytes;
 
     return retptr;
@@ -132,7 +132,7 @@ void *PushToPermanentAreaAligned(Memory *memory, u64 bytes, u64 alignment)
     bytes = ALIGN_UP(bytes, alignment);
     CheckM(memory->permanent.size + bytes <= memory->permanent.cap, "Permanent area overflow");
 
-    void *retptr = memory->permanent.base + memory->permanent.size;
+    byte *retptr = memory->permanent.base + memory->permanent.size;
     memory->permanent.size += bytes;
 
     return retptr;

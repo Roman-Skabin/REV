@@ -7,6 +7,8 @@
 #include "core/id.h"
 #include "math/color.h"
 
+b32 gFrameStart = false;
+
 //
 // Input
 //
@@ -695,6 +697,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
         InputReset(engine);
         engine->renderer.blending.first = v2s_0(S32_MAX);
         engine->renderer.blending.last  = v2s_0(S32_MIN);
+        gFrameStart = true;
 
         while (PeekMessageA(&msg, engine->window.handle, 0, 0, PM_REMOVE))
         {

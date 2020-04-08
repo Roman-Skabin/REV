@@ -43,7 +43,7 @@ USER_CALLBACK(User_OnInit)
     CreateLogger(&sandbox->logger, "Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE | LOG_TO_DEBUG);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
 #if RELEASE
-    SetFullscreen(engine, true);
+    // SetFullscreen(engine, true);
 #endif
     SetViewport(engine, 0.1f, 1.0f);
 
@@ -121,6 +121,7 @@ USER_CALLBACK(User_OnRender)
         &sandbox->t1,
         &sandbox->t2
     };
+    // DrawOpaqueTriangles(engine, triangles, ArrayCount(triangles));
     DrawTranslucentTriangles(engine, triangles, ArrayCount(triangles));
 }
 

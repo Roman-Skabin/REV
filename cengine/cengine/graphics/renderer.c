@@ -36,7 +36,7 @@ typedef struct RenderData
     Engine           *engine;
     RasterizerOutput *points;
     PixelShader      *PS;
-    volatile u64      i;
+    volatile u64      current_point;
 } RenderData;
 
 internal WORK_QUEUE_ENTRY_PROC(RenderOpaqueTriangle)
@@ -48,35 +48,35 @@ internal WORK_QUEUE_ENTRY_PROC(RenderOpaqueTriangle)
         // Wait till our triangle will be rasterized.
     }
 
-    u64 old_i = data->i;
-    u64 new_i = old_i + 1;
+    u64 old_current_point = data->current_point;
+    u64 new_current_point = old_current_point + 1;
 
     u64 points_count = BufferGetCount(data->points);
-    while (old_i < points_count)
+    while (old_current_point < points_count)
     {
-        if (old_i == _InterlockedCompareExchange64(&data->i, new_i, old_i))
+        if (old_current_point == _InterlockedCompareExchange64_HLERelease(&data->current_point, new_current_point, old_current_point))
         {
-            f32 z = data->points[old_i].z;
+            f32 z = data->points[old_current_point].z;
 
-            u32 offset = data->points[old_i].y * data->engine->window.size.w
-                       + data->points[old_i].x;
+            u32 offset = data->points[old_current_point].y * data->engine->window.size.w
+                       + data->points[old_current_point].x;
 
             f32 *zbuf_z = data->engine->renderer.zb.z + offset;
 
             if (z < *zbuf_z)
             {
                 *zbuf_z = z;
-
-                v4 source_pixel = v4_2(v2s_to_v2(data->points[old_i].xy), z, 1.0f);
+                    
+                v4 source_pixel = v4_2(v2s_to_v2(data->points[old_current_point].xy), z, 1.0f);
                 v4 source_color = data->PS(data->engine, NormalizePoint(data->engine, source_pixel));
-                source_color.a = 1.0f;
+                source_color.a  = 1.0f;
 
                 data->engine->renderer.rt.pixels[offset] = norm_to_hex(source_color);
             }
-
-            old_i = data->i;
-            new_i = old_i + 1;
         }
+
+        old_current_point = data->current_point;
+        new_current_point = old_current_point + 1;
     }
 }
 
@@ -89,40 +89,40 @@ internal WORK_QUEUE_ENTRY_PROC(RenderTranslucentTriangle)
         // Wait till our triangle will be rasterized.
     }
 
-    u64 old_i = data->i;
-    u64 new_i = old_i + 1;
+    u64 old_current_point = data->current_point;
+    u64 new_current_point = old_current_point + 1;
 
     u64 points_count = BufferGetCount(data->points);
-    while (old_i < points_count)
+    while (old_current_point < points_count)
     {
-        if (old_i == _InterlockedCompareExchange64(&data->i, new_i, old_i))
+        if (old_current_point == _InterlockedCompareExchange64_HLERelease(&data->current_point, new_current_point, old_current_point))
         {
-            s32 x = data->points[old_i].x;
-            s32 y = data->points[old_i].y;
-            f32 z = data->points[old_i].z;
+            s32 x = data->points[old_current_point].x;
+            s32 y = data->points[old_current_point].y;
+            f32 z = data->points[old_current_point].z;
 
-            f32 *zbuf_z = data->engine->renderer.zb.z
-                        + y * data->engine->window.size.w
-                        + x;
-
-            if (z < *zbuf_z)
+            if (z < data->engine->renderer.zb.z[y * data->engine->window.size.w + x])
             {
-                if (data->engine->renderer.blending.first.x > x) data->engine->renderer.blending.first.x = x;
-                if (data->engine->renderer.blending.first.y > y) data->engine->renderer.blending.first.y = y;
-                if (data->engine->renderer.blending.last.x  < x) data->engine->renderer.blending.last.x = x;
-                if (data->engine->renderer.blending.last.y  < y) data->engine->renderer.blending.last.y = y;
+                if (data->engine->renderer.blending.first.x > x)
+                    _InterlockedExchange_HLERelease(&data->engine->renderer.blending.first.x, x);
+                if (data->engine->renderer.blending.first.y > y)
+                    _InterlockedExchange_HLERelease(&data->engine->renderer.blending.first.y, y);
+                if (data->engine->renderer.blending.last.x  < x)
+                    _InterlockedExchange_HLERelease(&data->engine->renderer.blending.last.x, x);
+                if (data->engine->renderer.blending.last.y  < y)
+                    _InterlockedExchange_HLERelease(&data->engine->renderer.blending.last.y, y);
 
-                v4 source_pixel = v4_2(v2s_to_v2(data->points[old_i].xy), z, 1.0f);
+                v4 source_pixel = v4_2(v2s_to_v2(data->points[old_current_point].xy), z, 1.0f);
                 v4 source_color = data->PS(data->engine, NormalizePoint(data->engine, source_pixel));
 
                 CheckM(source_color.a < 1.0f, "alpha >= 1.0f, use RenderOpaqueTriangle instead");
 
                 BlendOnRender(data->engine, x, y, z, source_color);
             }
-
-            old_i = data->i;
-            new_i = old_i + 1;
         }
+
+        old_current_point = data->current_point;
+        new_current_point = old_current_point + 1;
     }
 }
 

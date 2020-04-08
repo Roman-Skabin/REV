@@ -302,9 +302,81 @@ internal void RendererResize(Engine *engine)
     }
 }
 
+typedef struct MergeOutputData
+{
+             Engine *         engine;
+    volatile s32              x;
+    volatile s32              y;
+             u32    *volatile pixel_row_start;
+             v4     *volatile sum_row_start;
+             f32    *volatile mul_row_start;
+} MergeOutputData;
+
+internal WORK_QUEUE_ENTRY_PROC(MergeOutput)
+{
+    MergeOutputData *data = arg;
+
+    s32 old_y = data->y;
+    s32 new_y = old_y + 1;
+
+    while (old_y <= data->engine->renderer.blending.last.y)
+    {
+        if (old_y == _InterlockedCompareExchange_HLERelease(&data->y, new_y, old_y))
+        {
+            u32 *old_pixel_row_start = data->pixel_row_start;
+            u32 *new_pixel_row_start = old_pixel_row_start + data->engine->window.size.w;
+
+            v4 *old_sum_row_start = data->sum_row_start;
+            v4 *new_sum_row_start = old_sum_row_start + data->engine->window.size.w;
+
+            f32 *old_mul_row_start = data->mul_row_start;
+            f32 *new_mul_row_start = old_mul_row_start + data->engine->window.size.w;
+
+            u32 *pixel = old_pixel_row_start;
+            v4  *sum   = old_sum_row_start;
+            f32 *mul   = old_mul_row_start;
+
+            s32 old_x = data->x;
+            s32 new_x = old_x + 1;
+
+            while (old_x <= data->engine->renderer.blending.last.x)
+            {
+                if (old_x == _InterlockedCompareExchange_HLERelease(&data->x, new_x, old_x))
+                {
+                    if (sum->r || sum->g || sum->b)
+                    {
+                        BlendOnPresent(pixel, *sum, *mul);
+                    }
+                    ++pixel;
+                    ++sum;
+                    ++mul;
+                }
+
+                old_x = data->x;
+                new_x = old_x + 1;
+            }
+
+            s32 cmp_val = data->engine->renderer.blending.last.x + 1;
+            if (cmp_val == _InterlockedCompareExchange_HLERelease(&data->x,
+                                                                  data->engine->renderer.blending.first.x,
+                                                                  cmp_val))
+            {
+                _InterlockedCompareExchangePointer_HLERelease(&data->pixel_row_start, new_pixel_row_start, old_pixel_row_start);
+                _InterlockedCompareExchangePointer_HLERelease(&data->sum_row_start, new_sum_row_start, old_sum_row_start);
+                _InterlockedCompareExchangePointer_HLERelease(&data->mul_row_start, new_mul_row_start, old_mul_row_start);
+            }
+        }
+
+        old_y = data->y;
+        new_y = old_y + 1;
+    }
+}
+
 internal void RendererPresent(Engine *engine)
 {
-    // @TODO(Roman): Make this blending stage multi-threaded
+    // Waiting for renderer
+    WaitForWorkQueue(engine->queue);
+
     if (engine->renderer.blending.last.x != U32_MAX)
     {
         engine->renderer.blending.first.x = __max(engine->renderer.blending.first.x, 0);
@@ -312,42 +384,22 @@ internal void RendererPresent(Engine *engine)
         engine->renderer.blending.last.x  = __min(engine->renderer.blending.last.x, engine->window.size.w);
         engine->renderer.blending.last.y  = __min(engine->renderer.blending.last.y, engine->window.size.h);
 
-        s32 x = engine->renderer.blending.first.x;
-        s32 y = engine->renderer.blending.first.y;
+        s32 offset = engine->renderer.blending.first.y * engine->window.size.w
+                   + engine->renderer.blending.first.x;
 
-        s32 offset = y * engine->window.size.w + x;
+        MergeOutputData data; // = PushToTA(MergeOutputData, engine->memory, 1);
+        data.engine           = engine;
+        data.x                = engine->renderer.blending.first.x;
+        data.y                = engine->renderer.blending.first.y;
+        data.pixel_row_start  = engine->renderer.rt.pixels    + offset;
+        data.sum_row_start    = engine->renderer.blending.sum + offset;
+        data.mul_row_start    = engine->renderer.blending.mul + offset;
 
-        u32 *pixels_row_begin = engine->renderer.rt.pixels    + offset;
-        v4  *sum_row_begin    = engine->renderer.blending.sum + offset;
-        f32 *mul_row_begin    = engine->renderer.blending.mul + offset;
+        AddWorkQueueEntry(engine->queue, MergeOutput, &data);
 
-        for (; y <= engine->renderer.blending.last.y; ++y)
-        {
-            u32 *pixel = pixels_row_begin;
-            v4  *sum   = sum_row_begin;
-            f32 *mul   = mul_row_begin;
-
-            for (x = engine->renderer.blending.first.x; x <= engine->renderer.blending.last.x; ++x)
-            {
-                if (sum->r || sum->g || sum->b)
-                {
-                    BlendOnPresent(pixel, *sum, *mul);
-                }
-                ++pixel;
-                ++sum;
-                ++mul;
-            }
-
-            pixels_row_begin += engine->window.size.w;
-            sum_row_begin    += engine->window.size.w;
-            mul_row_begin    += engine->window.size.w;
-        }
+        // Waiting for merging
+        WaitForWorkQueue(engine->queue);
     }
-
-    // @TODO(Roman): after making last blending stage
-    //               multi-threaded WaitForWorkQueue
-    //               must be placed here
-    // WaitForWorkQueue(engine->queue);
 
     SetDIBitsToDevice(engine->window.context,
         0, 0, engine->window.size.w, engine->window.size.h,
@@ -732,8 +784,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
             User_OnRender(engine);
 
             // Present
-            // @TODO(Roman): remove after making last blendig stage multi-threded
-            WaitForWorkQueue(engine->queue);
             RendererPresent(engine);
         }
     }

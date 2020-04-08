@@ -244,11 +244,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>
       </FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <DebugInformationFormat>None</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <SupportJustMyCode />
       <TreatWarningAsError />
       <DiagnosticsFormat />
@@ -302,8 +302,7 @@
       </OpenMPSupport>
     </ClCompile>
     <Link>
-      <EnableCOMDATFolding>
-      </EnableCOMDATFolding>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <ShowProgress />
       <RegisterOutput />
@@ -313,13 +312,12 @@
       <EnableUAC />
       <UACExecutionLevel />
       <UACUIAccess />
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>DebugFastLink</GenerateDebugInformation>
       <GenerateMapFile />
       <MapExports />
       <SwapRunFromCD />
       <SwapRunFromNET />
       <Driver />
-      <ProfileGuidedDatabase />
       <IgnoreEmbeddedIDL />
       <TypeLibraryResourceID />
       <NoEntryPoint />
@@ -335,6 +333,8 @@
       <ModuleDefinitionFile>
       </ModuleDefinitionFile>
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ProfileGuidedDatabase />
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies />

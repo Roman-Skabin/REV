@@ -202,11 +202,11 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Full</Optimization>
       <FunctionLevelLinking>
       </FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <DebugInformationFormat>None</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <SupportJustMyCode />
       <TreatWarningAsError />
       <DiagnosticsFormat />

@@ -25,12 +25,11 @@ enum
 
 struct WorkQueue
 {
-             Logger         *logger;
              HANDLE          semaphore;
-    volatile s16             completion_goal;
-    volatile s16             entries_completed;
-    volatile s16             next_entry_to_read;
-    volatile s16             next_entry_to_write;
+    volatile s32             completion_goal;
+    volatile s32             entries_completed;
+    volatile s32             next_entry_to_read;
+    volatile s32             next_entry_to_write;
              WorkQueueEntry  entries[MAX_ENTRIES];
 };
 
@@ -45,20 +44,20 @@ internal THREAD_PROC(ThreadProc)
     WorkQueueThread *thread = (WorkQueueThread *)param;
     while (true)
     {
-        s16 old_next_entry_to_read = thread->queue->next_entry_to_read;
-        s16 new_next_entry_to_read = (old_next_entry_to_read + 1) % MAX_ENTRIES;
+        s32 old_next_entry_to_read = thread->queue->next_entry_to_read;
+        s32 new_next_entry_to_read = (old_next_entry_to_read + 1) % MAX_ENTRIES;
 
         if (old_next_entry_to_read != thread->queue->next_entry_to_write)
         {
-            s16 old = _InterlockedCompareExchange16(&thread->queue->next_entry_to_read,
-                                                      new_next_entry_to_read,
-                                                      old_next_entry_to_read);
+            s32 old = _InterlockedCompareExchange_HLERelease(&thread->queue->next_entry_to_read,
+                                                             new_next_entry_to_read,
+                                                             old_next_entry_to_read);
 
             if (old == old_next_entry_to_read)
             {
                 WorkQueueEntry *entry = thread->queue->entries + old;
                 entry->Proc(thread->id, entry->arg);
-                _InterlockedIncrement16(&thread->queue->entries_completed);
+                _InterlockedIncrement(&thread->queue->entries_completed);
             }
         }
         else
@@ -71,38 +70,20 @@ internal THREAD_PROC(ThreadProc)
     return 0;
 }
 
-internal u32 GetCurrentThreadCount()
-{
-    DWORD  id       = GetCurrentProcessId();
-    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    Check(snapshot != INVALID_HANDLE_VALUE);
-
-    PROCESSENTRY32 entry = {0};
-    entry.dwSize = sizeof(PROCESSENTRY32);
-
-    b32 ret = false;
-    ret = Process32First(snapshot, &entry);
-    while (ret && entry.th32ProcessID != id)
-    {
-        ret = Process32Next(snapshot, &entry);
-    }
-
-    DebugResult(CloseHandle(snapshot));
-
-    Check(entry.cntThreads);
-    return entry.cntThreads;
-}
-
 WorkQueue *CreateWorkQueue(Engine *engine)
 {
     WorkQueue *queue = PushToPA(WorkQueue, engine->memory, 1);
-    queue->logger    = &engine->logger;
 
+#if 1
     SYSTEM_INFO info;
     GetSystemInfo(&info);
 
     s32 threads_count = info.dwNumberOfProcessors - 1; // minus main thread
+    if (threads_count >  0) --threads_count;           // minus sound thread
     if (threads_count <= 0) threads_count = 1;
+#else
+    s32 threads_count = MAX_THREADS;
+#endif
 
     WorkQueueThread *threads = PushToPA(WorkQueueThread, engine->memory, threads_count);
 
@@ -115,11 +96,11 @@ WorkQueue *CreateWorkQueue(Engine *engine)
         thread->id    = i + 1;
         thread->queue = queue;
         DebugResult(CloseHandle(CreateThread(0, 0, ThreadProc, thread, 0, 0)));
-        Log(queue->logger, "Thread was created: id = %I32u, queue = 0x%p", thread->id, thread->queue);
+        Log(&engine->logger, "Thread was created: id = %I32u, queue = 0x%p", thread->id, thread->queue);
     }
 
-    Success(queue->logger, "Work queue was created");
-    Log(queue->logger, "Additional threads count = %I32u", threads_count);
+    Success(&engine->logger, "Work queue was created");
+    Log(&engine->logger, "Additional threads count = %I32u", threads_count);
     return queue;
 }
 
@@ -127,8 +108,8 @@ void AddWorkQueueEntry(WorkQueue *queue, WorkQueueEntryProc *Proc, void *arg)
 {
     while (true)
     {
-        s16 old_next_entry_to_write = queue->next_entry_to_write;
-        s16 new_next_entry_to_write = (old_next_entry_to_write + 1) % MAX_ENTRIES;
+        s32 old_next_entry_to_write = queue->next_entry_to_write;
+        s32 new_next_entry_to_write = (old_next_entry_to_write + 1) % MAX_ENTRIES;
 
         if (new_next_entry_to_write != queue->next_entry_to_read)
         {
@@ -136,13 +117,13 @@ void AddWorkQueueEntry(WorkQueue *queue, WorkQueueEntryProc *Proc, void *arg)
             entry->Proc           = Proc;
             entry->arg            = arg;
 
-            s16 old = _InterlockedCompareExchange16(&queue->next_entry_to_write,
-                                                      new_next_entry_to_write,
-                                                      old_next_entry_to_write);
+            s32 old = _InterlockedCompareExchange_HLERelease(&queue->next_entry_to_write,
+                                                             new_next_entry_to_write,
+                                                             old_next_entry_to_write);
 
             if (old == old_next_entry_to_write)
             {
-                _InterlockedIncrement16(&queue->completion_goal);
+                _InterlockedIncrement(&queue->completion_goal);
                 ReleaseSemaphore(queue->semaphore, 1, 0);
             }
 
@@ -155,20 +136,20 @@ void WaitForWorkQueue(WorkQueue *queue)
 {
     while (queue->entries_completed < queue->completion_goal)
     {
-        s16 old_next_entry_to_read = queue->next_entry_to_read;
-        s16 new_next_entry_to_read = (old_next_entry_to_read + 1) % MAX_ENTRIES;
+        s32 old_next_entry_to_read = queue->next_entry_to_read;
+        s32 new_next_entry_to_read = (old_next_entry_to_read + 1) % MAX_ENTRIES;
 
         if (old_next_entry_to_read != queue->next_entry_to_write)
         {
-            s16 old = _InterlockedCompareExchange16(&queue->next_entry_to_read,
-                                                      new_next_entry_to_read,
-                                                      old_next_entry_to_read);
+            s32 old = _InterlockedCompareExchange_HLERelease(&queue->next_entry_to_read,
+                                                             new_next_entry_to_read,
+                                                             old_next_entry_to_read);
 
             if (old == old_next_entry_to_read)
             {
                 WorkQueueEntry *entry = queue->entries + old;
                 entry->Proc(0, entry->arg);
-                _InterlockedIncrement16(&queue->entries_completed);
+                _InterlockedIncrement(&queue->entries_completed);
             }
         }
     }

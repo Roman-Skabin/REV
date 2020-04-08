@@ -6,7 +6,7 @@
     - Make engine's user pointer and sandbox thread safety
 
 - Tools
-    - Logger for work queue?
+    - ...
 
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
@@ -16,7 +16,6 @@
     - Other orthos & persps
 
 - Graphics
-    - Make last blending stage multi-threded
     - Multi-threaded rasterizing
     - Tiled rendering?
     - Texture/Image

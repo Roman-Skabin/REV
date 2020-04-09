@@ -715,7 +715,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
     void *base_address = PushToPermanentArea(engine->memory, GB(1ui64));
     CreateAllocator(&engine->allocator, base_address, cast(u64, GB(1.5)), false);
 
-    CreateLogger(&engine->logger, "Engine logger", "cengine.log", LOG_TO_FILE | LOG_TO_DEBUG | LOG_TO_CONSOLE);
+    CreateLogger(&engine->logger, "Engine logger", "cengine.log", LOG_TO_FILE);
     WindowCreate(engine, "CEngine", v2s_1(960, 540), instance);
     InputCreate(engine);
     TimerCreate(engine);

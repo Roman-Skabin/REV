@@ -148,7 +148,7 @@ void DrawOpaqueTriangles(Engine *engine, Triangle **triangles, u64 triangles_cou
             p2.z = triangle->p2.z;
             p3.z = triangle->p3.z;
 
-            triangle->private_data = RasterizeTriangle(engine, p1, p2, p3);
+            triangle->private_data = RasterizeTriangle(engine, p1.mm, p2.mm, p3.mm);
         }
 
         for (u64 i = 0; i < triangles_count; ++i)
@@ -189,7 +189,7 @@ void DrawTranslucentTriangles(Engine *engine, Triangle **triangles, u64 triangle
             p2.z = triangle->p2.z;
             p3.z = triangle->p3.z;
 
-            triangle->private_data = RasterizeTriangle(engine, p1, p2, p3);
+            triangle->private_data = RasterizeTriangle(engine, p1.mm, p2.mm, p3.mm);
         }
 
         for (u64 i = 0; i < triangles_count; ++i)

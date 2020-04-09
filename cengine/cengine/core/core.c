@@ -18,7 +18,7 @@ void __cdecl DebugF(const char *const format, ...)
     {
         char buffer[BUFSIZ] = {'\0'};
         int len             = vsprintf(buffer, format, args);
-        buffer[len - 1]     = '\n';
+        buffer[len]         = '\n';
 
         OutputDebugStringA(buffer);
     }

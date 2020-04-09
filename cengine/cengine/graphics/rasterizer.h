@@ -25,4 +25,4 @@ typedef struct RasterizerOutput
     f32 z;
 } RasterizerOutput;
 
-CEXTERN RasterizerOutput *RasterizeTriangle(Engine *engine, v4 p1, v4 p2, v4 p3);
+CEXTERN RasterizerOutput *MATH_CALL RasterizeTriangle(Engine *engine, __m128 p1, __m128 p2, __m128 p3);

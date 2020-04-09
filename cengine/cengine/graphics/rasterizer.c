@@ -12,9 +12,9 @@ extern b32 gFrameStart;
 
 typedef struct HashKey
 {
-    v4 left;
-    v4 right;
-    v4 middle;
+    __m128 left;
+    __m128 right;
+    __m128 middle;
 } HashKey;
 
 enum
@@ -33,7 +33,7 @@ typedef struct HashTable
 
 global HashTable gCache;
 
-internal u32 Hash(HashKey *key)
+internal INLINE u32 Hash(HashKey *key)
 {
     union
     {
@@ -100,94 +100,94 @@ internal INLINE RasterizerOutput *GetCachedRasterizerOutput(HashKey *key)
     return 0;
 }
 
-internal INLINE v4 *GetLeftPoint(v4 *p1, v4 *p2, v4 *p3)
+internal INLINE __m128 *MATH_CALL GetLeftPoint(__m128 *p1, __m128 *p2, __m128 *p3)
 {
-    if (p1->x < p2->x) return p1->x < p3->x ? p1 : p3;
-    else               return p2->x < p3->x ? p2 : p3;
+    if (p1->m128_f32[0] < p2->m128_f32[0]) return p1->m128_f32[0] < p3->m128_f32[0] ? p1 : p3;
+    else                                   return p2->m128_f32[0] < p3->m128_f32[0] ? p2 : p3;
 }
 
-internal INLINE v4 *GetRightPoint(v4 *p1, v4 *p2, v4 *p3)
+internal INLINE __m128 *MATH_CALL GetRightPoint(__m128 *p1, __m128 *p2, __m128 *p3)
 {
-    if (p1->x > p2->x) return p1->x > p3->x ? p1 : p3;
-    else               return p2->x > p3->x ? p2 : p3;
+    if (p1->m128_f32[0] > p2->m128_f32[0]) return p1->m128_f32[0] > p3->m128_f32[0] ? p1 : p3;
+    else                                   return p2->m128_f32[0] > p3->m128_f32[0] ? p2 : p3;
 }
 
-internal INLINE v4 *GetMiddlePoint(v4 *p1, v4 *p2, v4 *p3, v4 *left, v4 *right)
+internal INLINE __m128 *MATH_CALL GetMiddlePoint(__m128 *p1, __m128 *p2, __m128 *p3, __m128 *left, __m128 *right)
 {
     if (p1 == left) return p2 == right ? p3 : p2;
     if (p2 == left) return p1 == right ? p3 : p1;
     else            return p1 == right ? p2 : p1;
 }
 
-internal void RasterizeTriangleSide(RasterizerOutput **triangle, Engine *engine, v4 _lower, v4 _upper)
+internal void MATH_CALL RasterizeTriangleSide(RasterizerOutput **triangle, Engine *engine, __m128 _lower, __m128 _upper)
 {
-    v4s upper = v4_to_v4s(_upper);
-    v4s lower = v4_to_v4s(_lower);
+    __m128i upper = _mm_cvtps_epi32(_upper);
+    __m128i lower = _mm_cvtps_epi32(_lower);
 
     f32 x_slope = 0.0f;
     f32 z_slope = 0.0f;
 
-    if (_upper.y - _lower.y)
+    f32 d = MMf(_upper, 1) - MMf(_lower, 1);
+    if (d)
     {
-        x_slope = (_upper.x - _lower.x) / (_upper.y - _lower.y);
-        z_slope = (_upper.z - _lower.z) / (_upper.y - _lower.y);
+        x_slope = (MMf(_upper, 0) - MMf(_lower, 0)) / d;
+        z_slope = (MMf(_upper, 2) - MMf(_lower, 2)) / d;
     }
 
-    f32 x = _lower.x;
-    f32 z = _lower.z;
+    __m128 point = _lower;
+    MMf(point, 3) = 1.0f;
 
-    for (s32 y = lower.y; y <= upper.y; ++y)
+    for (s32 y = MMs(lower, 1); y <= MMs(upper, 1); ++y)
     {
-        v4   point = v4_1(x, cast(f32, y), z, 1.0f);
-        v4s ipoint = v4_to_v4s(point);
+        MMf(point, 1) = cast(f32, y);
+        __m128i ipoint = _mm_cvtps_epi32(point);
 
-        if (                       0 <= ipoint.x && ipoint.x <  engine->window.size.w
-        &&                         0 <= ipoint.y && ipoint.y <  engine->window.size.h
-        &&  engine->renderer.zb.near <=  point.z &&  point.z <= engine->renderer.zb.far)
+        if (                       0 <= MMs(ipoint, 0) && MMs(ipoint, 0) <  engine->window.size.w
+        &&                         0 <= MMs(ipoint, 1) && MMs(ipoint, 1) <  engine->window.size.h
+        &&  engine->renderer.zb.near <= MMf( point, 2) && MMf( point, 2) <= engine->renderer.zb.far)
         {
             RasterizerOutput el;
-            el.xy = ipoint.xy;
-            el.z  = point.z;
+            el.x = MMs(ipoint, 0);
+            el.y = MMs(ipoint, 1);
+            el.z = MMf( point, 2);
             BufferPushBack(*triangle, el);
         }
 
-        x += x_slope;
-        z += z_slope;
+        MMf(point, 0) += x_slope;
+        MMf(point, 2) += z_slope;
     }
 }
 
-internal RasterizerOutput *RasterizeTriangleDownUpLeftLower(Engine *engine, v4 left, v4 middle, v4 right)
+internal RasterizerOutput *MATH_CALL RasterizeTriangleDownUpLeftLower(Engine *engine, __m128 left, __m128 middle, __m128 right)
 {
     RasterizerOutput *triangle = CreateBuffer(&engine->allocator, CACHE_LINE_SIZE);
 
     RasterizeTriangleSide(&triangle, engine, middle, left);
-    u64 left_line_first = 0;
-    u64 left_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *left_line_first = triangle;
+    RasterizerOutput *left_line_last  = triangle + BufferGetCount(triangle) - 1;
 
     RasterizeTriangleSide(&triangle, engine, middle, right);
-    u64 right_line_first = left_line_last + 1;
-    u64 right_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *right_line_last  = triangle + BufferGetCount(triangle) - 1;
 
     RasterizeTriangleSide(&triangle, engine, left, right);
-    u64 upper_line_first = right_line_last + 1;
-    u64 upper_line_last  = BufferGetCount(triangle) - 1;
 
-    u64 lower_index = 0;
-    u64 upper_index = 0;
+    RasterizerOutput *left_line_point  = left_line_first;
+    RasterizerOutput *right_line_point = left_line_last + 1;
+    RasterizerOutput *upper_line_point = right_line_last + 1;
 
-    for (s32 y = triangle[left_line_first].y; y < triangle[left_line_last].y; ++y)
+    for (s32 y = left_line_first->y; y < left_line_last->y; ++y)
     {
         f32 z_slope = 0.0f;
 
-        if (triangle[right_line_first + lower_index].x - triangle[left_line_first + lower_index].x)
+        s32 d = right_line_point->x - left_line_point->x;
+        if (d)
         {
-            z_slope = (triangle[right_line_first + lower_index].z - triangle[left_line_first + lower_index].z)
-                    / (triangle[right_line_first + lower_index].x - triangle[left_line_first + lower_index].x);
+            z_slope = (right_line_point->z - left_line_point->z) / d;
         }
 
-        f32 z = triangle[left_line_first + lower_index].z;
+        f32 z = left_line_point->z;
 
-        for (s32 x = triangle[left_line_first + lower_index].x; x <= triangle[right_line_first + lower_index].x; ++x)
+        for (s32 x = left_line_point->x; x <= right_line_point->x; ++x)
         {
             RasterizerOutput el;
             el.x = x;
@@ -198,22 +198,23 @@ internal RasterizerOutput *RasterizeTriangleDownUpLeftLower(Engine *engine, v4 l
             z += z_slope;
         }
 
-        ++lower_index;
+        ++left_line_point;
+        ++right_line_point;
     }
 
-    for (s32 y = triangle[left_line_last].y; y <= triangle[right_line_last].y; ++y)
+    for (s32 y = left_line_last->y; y <= right_line_last->y; ++y)
     {
         f32 z_slope = 0.0f;
 
-        if (triangle[right_line_first + lower_index].x - triangle[upper_line_first + upper_index].x)
+        s32 d = right_line_point->x - upper_line_point->x;
+        if (d)
         {
-            z_slope = (triangle[right_line_first + lower_index].z - triangle[upper_line_first + upper_index].z)
-                    / (triangle[right_line_first + lower_index].x - triangle[upper_line_first + upper_index].x);
+            z_slope = (right_line_point->z - upper_line_point->z) / d;
         }
 
-        f32 z = triangle[upper_line_first + upper_index].z;
+        f32 z = upper_line_point->z;
 
-        for (s32 x = triangle[upper_line_first + upper_index].x; x <= triangle[right_line_first + lower_index].x; ++x)
+        for (s32 x = upper_line_point->x; x <= right_line_point->x; ++x)
         {
             RasterizerOutput el;
             el.x = x;
@@ -224,45 +225,43 @@ internal RasterizerOutput *RasterizeTriangleDownUpLeftLower(Engine *engine, v4 l
             z += z_slope;
         }
 
-        ++lower_index;
-        ++upper_index;
+        ++right_line_point;
+        ++upper_line_point;
     }
 
     return triangle;
 }
 
-internal RasterizerOutput *RasterizeTriangleDownUpRightLower(Engine *engine, v4 left, v4 middle, v4 right)
+internal RasterizerOutput *MATH_CALL RasterizeTriangleDownUpRightLower(Engine *engine, __m128 left, __m128 middle, __m128 right)
 {
     RasterizerOutput *triangle = CreateBuffer(&engine->allocator, CACHE_LINE_SIZE);
 
     RasterizeTriangleSide(&triangle, engine, middle, left);
-    u64 left_line_first = 0;
-    u64 left_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *left_line_last  = triangle + BufferGetCount(triangle) - 1;
 
     RasterizeTriangleSide(&triangle, engine, middle, right);
-    u64 right_line_first = left_line_last + 1;
-    u64 right_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *right_line_first = left_line_last + 1;
+    RasterizerOutput *right_line_last  = triangle + BufferGetCount(triangle) - 1;
 
     RasterizeTriangleSide(&triangle, engine, right, left);
-    u64 upper_line_first = right_line_last + 1;
-    u64 upper_line_last  = BufferGetCount(triangle) - 1;
 
-    u64 lower_index = 0;
-    u64 upper_index = 0;
+    RasterizerOutput *left_line_point  = triangle;
+    RasterizerOutput *right_line_point = right_line_first;
+    RasterizerOutput *upper_line_point = right_line_last + 1;
 
-    for (s32 y = triangle[right_line_first].y; y < triangle[right_line_last].y; ++y)
+    for (s32 y = right_line_first->y; y < right_line_last->y; ++y)
     {
         f32 z_slope = 0.0f;
 
-        if (triangle[right_line_first + lower_index].x - triangle[left_line_first + lower_index].x)
+        s32 d = right_line_point->x - left_line_point->x;
+        if (d)
         {
-            z_slope = (triangle[right_line_first + lower_index].z - triangle[left_line_first + lower_index].z)
-                    / (triangle[right_line_first + lower_index].x - triangle[left_line_first + lower_index].x);
+            z_slope = (right_line_point->z - left_line_point->z) / d;
         }
 
-        f32 z = triangle[left_line_first + lower_index].z;
+        f32 z = left_line_point->z;
 
-        for (s32 x = triangle[left_line_first + lower_index].x; x <= triangle[right_line_first + lower_index].x; ++x)
+        for (s32 x = left_line_point->x; x <= right_line_point->x; ++x)
         {
             RasterizerOutput el;
             el.x = x;
@@ -273,22 +272,23 @@ internal RasterizerOutput *RasterizeTriangleDownUpRightLower(Engine *engine, v4 
             z += z_slope;
         }
 
-        ++lower_index;
+        ++left_line_point;
+        ++right_line_point;
     }
 
-    for (s32 y = triangle[right_line_last].y; y <= triangle[left_line_last].y; ++y)
+    for (s32 y = right_line_last->y; y <= left_line_last->y; ++y)
     {
         f32 z_slope = 0.0f;
 
-        if (triangle[upper_line_first + upper_index].x - triangle[left_line_first + lower_index].x)
+        s32 d = upper_line_point->x - left_line_point->x;
+        if (d)
         {
-            z_slope = (triangle[upper_line_first + upper_index].z - triangle[left_line_first + lower_index].z)
-                    / (triangle[upper_line_first + upper_index].x - triangle[left_line_first + lower_index].x);
+            z_slope = (upper_line_point->z - left_line_point->z) / d;
         }
 
-        f32 z = triangle[left_line_first + lower_index].z;
+        f32 z = left_line_point->z;
 
-        for (s32 x = triangle[left_line_first + lower_index].x; x <= triangle[upper_line_first + upper_index].x; ++x)
+        for (s32 x = left_line_point->x; x <= upper_line_point->x; ++x)
         {
             RasterizerOutput el;
             el.x = x;
@@ -299,48 +299,43 @@ internal RasterizerOutput *RasterizeTriangleDownUpRightLower(Engine *engine, v4 
             z += z_slope;
         }
 
-        ++lower_index;
-        ++upper_index;
+        ++left_line_point;
+        ++upper_line_point;
     }
 
     return triangle;
 }
 
-internal RasterizerOutput *RasterizeTriangleUpDownLeftLower(Engine *engine, v4 left, v4 middle, v4 right)
+internal RasterizerOutput *MATH_CALL RasterizeTriangleUpDownLeftLower(Engine *engine, __m128 left, __m128 middle, __m128 right)
 {
     RasterizerOutput *triangle = CreateBuffer(&engine->allocator, CACHE_LINE_SIZE);
     
     RasterizeTriangleSide(&triangle, engine, left, middle);
-    u64 left_line_first = 0;
-    u64 left_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *left_line_last  = triangle + BufferGetCount(triangle) - 1;
 
     RasterizeTriangleSide(&triangle, engine, right, middle);
-    u64 right_line_first = left_line_last + 1;
-    u64 right_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *right_line_first = left_line_last + 1;
+    RasterizerOutput *right_line_last  = triangle + BufferGetCount(triangle) - 1;
 
     RasterizeTriangleSide(&triangle, engine, left, right);
-    u64 lower_line_first = right_line_last + 1;
-    u64 lower_line_last  = BufferGetCount(triangle) - 1;
 
-    u64 upper_index = 0;
-    u64 lower_index = 0;
+    RasterizerOutput *left_line_point  = left_line_last;
+    RasterizerOutput *right_line_point = right_line_last;
+    RasterizerOutput *lower_line_point = triangle + BufferGetCount(triangle) - 1;
 
-    for (s32 y = triangle[right_line_last].y; y > triangle[right_line_first].y; --y)
+    for (s32 y = right_line_last->y; y > right_line_first->y; --y)
     {
-        u64 right_index = right_line_last - upper_index;
-        u64 left_index  = left_line_last  - upper_index;
-
         f32 z_slope = 0.0f;
 
-        if (triangle[right_index].x - triangle[left_index].x)
+        s32 d = right_line_point->x - left_line_point->x;
+        if (d)
         {
-            z_slope = (triangle[right_index].z - triangle[left_index].z)
-                    / (triangle[right_index].x - triangle[left_index].x);
+            z_slope = (right_line_point->z - left_line_point->z) / d;
         }
 
-        f32 z = triangle[left_index].z;
+        f32 z = left_line_point->z;
 
-        for (s32 x = triangle[left_index].x; x <= triangle[right_index].x; ++x)
+        for (s32 x = left_line_point->x; x <= right_line_point->x; ++x)
         {
             RasterizerOutput el;
             el.x = x;
@@ -351,25 +346,23 @@ internal RasterizerOutput *RasterizeTriangleUpDownLeftLower(Engine *engine, v4 l
             z += z_slope;
         }
 
-        ++upper_index;
+        --right_line_point;
+        --left_line_point;
     }
 
-    for (s32 y = triangle[right_line_first].y; y >= triangle[left_line_first].y; --y)
+    for (s32 y = right_line_first->y; y >= triangle->y; --y)
     {
-        u64 lower_line_index = lower_line_last - lower_index;
-        u64 left_index       = left_line_last  - upper_index;
-
         f32 z_slope = 0.0f;
 
-        if (triangle[lower_line_index].x - triangle[left_index].x)
+        s32 d = lower_line_point->x - left_line_point->x;
+        if (d)
         {
-            z_slope = (triangle[lower_line_index].z - triangle[left_index].z)
-                    / (triangle[lower_line_index].x - triangle[left_index].x);
+            z_slope = (lower_line_point->z - left_line_point->z) / d;
         }
 
-        f32 z = triangle[left_index].z;
+        f32 z = left_line_point->z;
 
-        for (s32 x = triangle[left_index].x; x <= triangle[lower_line_index].x; ++x)
+        for (s32 x = left_line_point->x; x <= lower_line_point->x; ++x)
         {
             RasterizerOutput el;
             el.x = x;
@@ -380,48 +373,44 @@ internal RasterizerOutput *RasterizeTriangleUpDownLeftLower(Engine *engine, v4 l
             z += z_slope;
         }
 
-        ++lower_index;
-        ++upper_index;
+        --lower_line_point;
+        --left_line_point;
     }
 
     return triangle;
 }
 
-internal RasterizerOutput *RasterizeTriangleUpDownRightLower(Engine *engine, v4 left, v4 middle, v4 right)
+internal RasterizerOutput *MATH_CALL RasterizeTriangleUpDownRightLower(Engine *engine, __m128 left, __m128 middle, __m128 right)
 {
     RasterizerOutput *triangle = CreateBuffer(&engine->allocator, CACHE_LINE_SIZE);
     
     RasterizeTriangleSide(&triangle, engine, left, middle);
-    u64 left_line_first = 0;
-    u64 left_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *left_line_first = triangle;
+    RasterizerOutput *left_line_last  = triangle + BufferGetCount(triangle) - 1;
 
     RasterizeTriangleSide(&triangle, engine, right, middle);
-    u64 right_line_first = left_line_last + 1;
-    u64 right_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *right_line_last  = triangle + BufferGetCount(triangle) - 1;
 
     RasterizeTriangleSide(&triangle, engine, right, left);
-    u64 lower_line_first = right_line_last + 1;
-    u64 lower_line_last  = BufferGetCount(triangle) - 1;
+    RasterizerOutput *lower_line_first = right_line_last + 1;
 
-    u64 upper_index = 0;
-    u64 lower_index = 0;
+    RasterizerOutput *left_line_point  = left_line_last;
+    RasterizerOutput *right_line_point = right_line_last;
+    RasterizerOutput *lower_line_point = triangle + BufferGetCount(triangle) - 1;
 
-    for (s32 y = triangle[left_line_last].y; y > triangle[left_line_first].y; --y)
+    for (s32 y = left_line_last->y; y > left_line_first->y; --y)
     {
-        u64 left_index  = left_line_last  - upper_index;
-        u64 right_index = right_line_last - upper_index;
-
         f32 z_slope = 0.0f;
 
-        if (triangle[right_index].x - triangle[left_index].x)
+        s32 d = right_line_point->x - left_line_point->x;
+        if (d)
         {
-            z_slope = (triangle[right_index].z - triangle[left_index].z)
-                    / (triangle[right_index].x - triangle[left_index].x);
+            z_slope = (right_line_point->z - left_line_point->z) / d;
         }
 
-        f32 z = triangle[left_index].z;
+        f32 z = left_line_point->z;
 
-        for (s32 x = triangle[left_index].x; x <= triangle[right_index].x; ++x)
+        for (s32 x = left_line_point->x; x <= right_line_point->x; ++x)
         {
             RasterizerOutput el;
             el.x = x;
@@ -432,25 +421,23 @@ internal RasterizerOutput *RasterizeTriangleUpDownRightLower(Engine *engine, v4 
             z += z_slope;
         }
 
-        ++upper_index;
+        --left_line_point;
+        --right_line_point;
     }
 
-    for (s32 y = triangle[left_line_first].y; y >= triangle[lower_line_first].y; --y)
+    for (s32 y = left_line_first->y; y >= lower_line_first->y; --y)
     {
-        u64 right_index      = right_line_last - upper_index;
-        u64 lower_line_index = lower_line_last - lower_index;
-
         f32 z_slope = 0.0f;
 
-        if (triangle[right_index].x - triangle[lower_line_index].x)
+        s32 d = right_line_point->x - lower_line_point->x;
+        if (d)
         {
-            z_slope = (triangle[right_index].z - triangle[lower_line_index].z)
-                    / (triangle[right_index].x - triangle[lower_line_index].x);
+            z_slope = (right_line_point->z - lower_line_point->z) / d;
         }
 
-        f32 z = triangle[lower_line_index].z;
+        f32 z = lower_line_point->z;
 
-        for (s32 x = triangle[lower_line_index].x; x <= triangle[right_index].x; ++x)
+        for (s32 x = lower_line_point->x; x <= right_line_point->x; ++x)
         {
             RasterizerOutput el;
             el.x = x;
@@ -461,18 +448,18 @@ internal RasterizerOutput *RasterizeTriangleUpDownRightLower(Engine *engine, v4 
             z += z_slope;
         }
 
-        ++lower_index;
-        ++upper_index;
+        --lower_line_point;
+        --right_line_point;
     }
 
     return triangle;
 }
 
-RasterizerOutput *RasterizeTriangle(Engine *engine, v4 p1, v4 p2, v4 p3)
+RasterizerOutput *MATH_CALL RasterizeTriangle(Engine *engine, __m128 p1, __m128 p2, __m128 p3)
 {
-    v4 *left   = GetLeftPoint(&p1, &p2, &p3);
-    v4 *right  = GetRightPoint(&p1, &p2, &p3);
-    v4 *middle = GetMiddlePoint(&p1, &p2, &p3, left, right);
+    __m128 *left   = GetLeftPoint(&p1, &p2, &p3);
+    __m128 *right  = GetRightPoint(&p1, &p2, &p3);
+    __m128 *middle = GetMiddlePoint(&p1, &p2, &p3, left, right);
 
     HashKey key = { *left, *right, *middle };
     
@@ -480,9 +467,9 @@ RasterizerOutput *RasterizeTriangle(Engine *engine, v4 p1, v4 p2, v4 p3)
 
     if (!triangle)
     {
-        if (middle->y <= min(left->y, right->y))
+        if (middle->m128_f32[1] <= __min(left->m128_f32[1], right->m128_f32[1]))
         {
-            if (left->y <= right->y)
+            if (left->m128_f32[1] <= right->m128_f32[1])
             {
                 triangle = RasterizeTriangleDownUpLeftLower(engine, *left, *middle, *right);
             }
@@ -493,7 +480,7 @@ RasterizerOutput *RasterizeTriangle(Engine *engine, v4 p1, v4 p2, v4 p3)
         }
         else
         {
-            if (left->y <= right->y)
+            if (left->m128_f32[1] <= right->m128_f32[1])
             {
                 triangle = RasterizeTriangleUpDownLeftLower(engine, *left, *middle, *right);
             }

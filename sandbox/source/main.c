@@ -36,11 +36,10 @@ internal PIXEL_SHADER(Triangle2PS)
 
 USER_CALLBACK(User_OnInit)
 {
-    // @TODO(Roman): make sandbox thread safety
     Sandbox *sandbox    = PushToPA(Sandbox, engine->memory, 1);
     engine->user_ponter = sandbox;
 
-    CreateLogger(&sandbox->logger, "Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE | LOG_TO_DEBUG);
+    CreateLogger(&sandbox->logger, "Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
 #if RELEASE
     // SetFullscreen(engine, true);

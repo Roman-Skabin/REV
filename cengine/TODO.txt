@@ -16,7 +16,7 @@
     - Other orthos & persps
 
 - Graphics
-    - Multi-threaded rasterizing
+    - Parallelize rasterization
     - Tiled rendering?
     - Texture/Image
     - Entity system

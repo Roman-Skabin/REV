@@ -101,23 +101,21 @@ internal WORK_QUEUE_ENTRY_PROC(RenderTranslucentTriangle)
             s32 y = data->points[old_current_point].y;
             f32 z = data->points[old_current_point].z;
 
-            if (z < data->engine->renderer.zb.z[y * data->engine->window.size.w + x])
+            s32 offset = y * data->engine->window.size.w + x;
+
+            if (z < data->engine->renderer.zb.z[offset])
             {
-                if (data->engine->renderer.blending.first.x > x)
-                    _InterlockedExchange_HLERelease(&data->engine->renderer.blending.first.x, x);
-                if (data->engine->renderer.blending.first.y > y)
-                    _InterlockedExchange_HLERelease(&data->engine->renderer.blending.first.y, y);
-                if (data->engine->renderer.blending.last.x  < x)
-                    _InterlockedExchange_HLERelease(&data->engine->renderer.blending.last.x, x);
-                if (data->engine->renderer.blending.last.y  < y)
-                    _InterlockedExchange_HLERelease(&data->engine->renderer.blending.last.y, y);
-
                 v4 source_pixel = v4_2(v2s_to_v2(data->points[old_current_point].xy), z, 1.0f);
-                v4 source_color = data->PS(data->engine, NormalizePoint(data->engine, source_pixel));
 
-                CheckM(source_color.a < 1.0f, "alpha >= 1.0f, use RenderOpaqueTriangle instead");
+                __m128 source_color = data->PS(data->engine, NormalizePoint(data->engine, source_pixel)).mm;
+                CheckM(source_color.m128_f32[3] < 1.0f, "alpha >= 1.0f, use RenderOpaqueTriangle instead");
 
-                BlendOnRender(data->engine, x, y, z, source_color);
+                v4 *sum = data->engine->renderer.blending.sum + offset;
+                sum->mm = _mm_add_ps(sum->mm,
+                                     _mm_mul_ps(source_color,
+                                                _mm_set_ps1(data->engine->renderer.zb.far - z)));
+
+                data->engine->renderer.blending.mul[offset] *= 1.0f - source_color.m128_f32[3];
             }
         }
 

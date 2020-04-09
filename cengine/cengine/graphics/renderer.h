@@ -37,8 +37,6 @@ typedef struct Renderer
     {
         v4  *sum;
         f32 *mul;
-        volatile v2s first;
-        volatile v2s last;
     } blending;
 
     struct

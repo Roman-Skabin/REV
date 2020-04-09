@@ -41,6 +41,8 @@ typedef struct WorkQueueThread
 
 internal THREAD_PROC(ThreadProc)
 {
+    DebugResult(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
+
     WorkQueueThread *thread = (WorkQueueThread *)param;
     while (true)
     {
@@ -79,7 +81,7 @@ WorkQueue *CreateWorkQueue(Engine *engine)
     GetSystemInfo(&info);
 
     s32 threads_count = info.dwNumberOfProcessors - 1; // minus main thread
-    if (threads_count >  0) --threads_count;           // minus sound thread
+    // if (threads_count >  0) --threads_count;           // minus sound thread
     if (threads_count <= 0) threads_count = 1;
 #else
     s32 threads_count = MAX_THREADS;

@@ -280,7 +280,7 @@ internal void RendererCreate(Engine *engine)
 
     engine->renderer.rt.pixels    = PushToTA(u32, engine->memory, engine->renderer.common.count);
     engine->renderer.zb.z         = PushToTAA(f32, engine->memory, engine->renderer.common.count, sizeof(__m256));
-    engine->renderer.blending.sum = PushToTAA(v4, engine->memory, engine->renderer.common.count, sizeof(__m256));
+    engine->renderer.blending.sum = PushToTA(v4, engine->memory, engine->renderer.common.count);
     engine->renderer.blending.mul = PushToTAA(f32, engine->memory, engine->renderer.common.count, sizeof(__m256));
 
     Success(&engine->logger, "Renderer was created");
@@ -297,78 +297,62 @@ internal void RendererResize(Engine *engine)
     {
         engine->renderer.rt.pixels    = PushToTA(u32, engine->memory, engine->renderer.common.count);
         engine->renderer.zb.z         = PushToTAA(f32, engine->memory, engine->renderer.common.count, sizeof(__m256));
-        engine->renderer.blending.sum = PushToTAA(v4, engine->memory, engine->renderer.common.count, sizeof(__m256));
+        engine->renderer.blending.sum = PushToTA(v4, engine->memory, engine->renderer.common.count);
         engine->renderer.blending.mul = PushToTAA(f32, engine->memory, engine->renderer.common.count, sizeof(__m256));
     }
 }
 
-typedef struct MergeOutputData
+typedef struct ChunkInfo
 {
-             Engine *         engine;
-    volatile s32              x;
-    volatile s32              y;
-             u32    *volatile pixel_row_start;
-             v4     *volatile sum_row_start;
-             f32    *volatile mul_row_start;
-} MergeOutputData;
+    Engine *engine;
+    u32     start;
+    u32     end;
+} ChunkInfo;
 
 internal WORK_QUEUE_ENTRY_PROC(MergeOutput)
 {
-    MergeOutputData *data = arg;
+    ChunkInfo *info = arg;
 
-    s32 old_y = data->y;
-    s32 new_y = old_y + 1;
-
-    while (old_y <= data->engine->renderer.blending.last.y)
+    for (u32 i = info->start; i < info->end; ++i)
     {
-        if (old_y == _InterlockedCompareExchange_HLERelease(&data->y, new_y, old_y))
+        u32 *pixel = info->engine->renderer.rt.pixels    + i;
+        v4  *sum   = info->engine->renderer.blending.sum + i;
+
+        if (sum->r || sum->g || sum->b)
         {
-            u32 *old_pixel_row_start = data->pixel_row_start;
-            u32 *new_pixel_row_start = old_pixel_row_start + data->engine->window.size.w;
+            __m128 mm_mul = _mm_set_ps1(info->engine->renderer.blending.mul[i]);
+            __m128 mm_one = _mm_set_ps1(1.0f);
+            __m128 mm_255 = _mm_set_ps1(255.0f);
 
-            v4 *old_sum_row_start = data->sum_row_start;
-            v4 *new_sum_row_start = old_sum_row_start + data->engine->window.size.w;
+            // hex_to_norm with zero alpha
+            __m128 dest_color = _mm_div_ps(
+                                    _mm_cvtepi32_ps(
+                                        _mm_and_si128(
+                                            _mm_setr_epi32(*pixel >> 16, *pixel >> 8, *pixel, 0),
+                                            _mm_set1_epi32(0xFF))),
+                                    mm_255);
+        
+            __m128 fraction = _mm_div_ps(sum->mm, _mm_set_ps(sum->a, sum->a, sum->a, 1.0f));
+            __m128 bracket  = _mm_sub_ps(mm_one, mm_mul);
+            __m128 left     = _mm_mul_ps(fraction, bracket);
+            __m128 right    = _mm_mul_ps(dest_color, mm_mul);
+            __m128 norm     = _mm_add_ps(left, right);
 
-            f32 *old_mul_row_start = data->mul_row_start;
-            f32 *new_mul_row_start = old_mul_row_start + data->engine->window.size.w;
+            // norm_to_hex
+            __m128i hex = _mm_cvtps_epi32(
+                              _mm_mul_ps(
+                                  mm_255,
+                                  _mm_max_ps(
+                                      _mm_setzero_ps(),
+                                      _mm_min_ps(
+                                          mm_one,
+                                          norm))));
 
-            u32 *pixel = old_pixel_row_start;
-            v4  *sum   = old_sum_row_start;
-            f32 *mul   = old_mul_row_start;
-
-            s32 old_x = data->x;
-            s32 new_x = old_x + 1;
-
-            while (old_x <= data->engine->renderer.blending.last.x)
-            {
-                if (old_x == _InterlockedCompareExchange_HLERelease(&data->x, new_x, old_x))
-                {
-                    if (sum->r || sum->g || sum->b)
-                    {
-                        BlendOnPresent(pixel, *sum, *mul);
-                    }
-                    ++pixel;
-                    ++sum;
-                    ++mul;
-                }
-
-                old_x = data->x;
-                new_x = old_x + 1;
-            }
-
-            s32 cmp_val = data->engine->renderer.blending.last.x + 1;
-            if (cmp_val == _InterlockedCompareExchange_HLERelease(&data->x,
-                                                                  data->engine->renderer.blending.first.x,
-                                                                  cmp_val))
-            {
-                _InterlockedCompareExchangePointer_HLERelease(&data->pixel_row_start, new_pixel_row_start, old_pixel_row_start);
-                _InterlockedCompareExchangePointer_HLERelease(&data->sum_row_start, new_sum_row_start, old_sum_row_start);
-                _InterlockedCompareExchangePointer_HLERelease(&data->mul_row_start, new_mul_row_start, old_mul_row_start);
-            }
+            *pixel = (hex.m128i_u32[3] << 24)
+                   | (hex.m128i_u32[0] << 16)
+                   | (hex.m128i_u32[1] << 8 )
+                   | (hex.m128i_u32[2]      );
         }
-
-        old_y = data->y;
-        new_y = old_y + 1;
     }
 }
 
@@ -377,29 +361,32 @@ internal void RendererPresent(Engine *engine)
     // Waiting for renderer
     WaitForWorkQueue(engine->queue);
 
-    if (engine->renderer.blending.last.x != U32_MAX)
+    u32 chunks_count = engine->renderer.common.count / PAGE_SIZE;
+
+    u32 additional_last_chunk_bytes = engine->renderer.common.count % PAGE_SIZE;
+    if (additional_last_chunk_bytes)
     {
-        engine->renderer.blending.first.x = __max(engine->renderer.blending.first.x, 0);
-        engine->renderer.blending.first.y = __max(engine->renderer.blending.first.y, 0);
-        engine->renderer.blending.last.x  = __min(engine->renderer.blending.last.x, engine->window.size.w);
-        engine->renderer.blending.last.y  = __min(engine->renderer.blending.last.y, engine->window.size.h);
+        ChunkInfo info;
+        info.engine = engine;
+        info.start  = engine->renderer.common.count + additional_last_chunk_bytes - PAGE_SIZE;
+        info.end    = engine->renderer.common.count;
 
-        s32 offset = engine->renderer.blending.first.y * engine->window.size.w
-                   + engine->renderer.blending.first.x;
-
-        MergeOutputData data; // = PushToTA(MergeOutputData, engine->memory, 1);
-        data.engine           = engine;
-        data.x                = engine->renderer.blending.first.x;
-        data.y                = engine->renderer.blending.first.y;
-        data.pixel_row_start  = engine->renderer.rt.pixels    + offset;
-        data.sum_row_start    = engine->renderer.blending.sum + offset;
-        data.mul_row_start    = engine->renderer.blending.mul + offset;
-
-        AddWorkQueueEntry(engine->queue, MergeOutput, &data);
-
-        // Waiting for merging
-        WaitForWorkQueue(engine->queue);
+        AddWorkQueueEntry(engine->queue, MergeOutput, &info);
     }
+
+    ChunkInfo *infos = PushToTA(ChunkInfo, engine->memory, chunks_count);
+    for (u32 i = 0; i < chunks_count; ++i)
+    {
+        ChunkInfo *info = infos + i;
+        info->engine    = engine;
+        info->start     = i * PAGE_SIZE;
+        info->end       = info->start + PAGE_SIZE;
+
+        AddWorkQueueEntry(engine->queue, MergeOutput, info);
+    }
+
+    // Waiting for merging
+    WaitForWorkQueue(engine->queue);
 
     SetDIBitsToDevice(engine->window.context,
         0, 0, engine->window.size.w, engine->window.size.h,
@@ -477,17 +464,17 @@ void SetFullscreen(Engine *engine, b32 set)
             SetWindowLongA(engine->window.handle, GWL_STYLE,
                            GetWindowLongA(engine->window.handle, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
             DebugResult(SetWindowPos(engine->window.handle, HWND_TOP,
-                                           engine->monitor.pos.x, engine->monitor.pos.y,
-                                           engine->monitor.size.w, engine->monitor.size.h,
-                                           SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
+                                     engine->monitor.pos.x, engine->monitor.pos.y,
+                                     engine->monitor.size.w, engine->monitor.size.h,
+                                     SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
         }
         else
         {
             SetWindowLongA(engine->window.handle, GWL_STYLE,
                            GetWindowLongA(engine->window.handle, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
             DebugResult(SetWindowPos(engine->window.handle, HWND_TOP,
-                                           wr.left, wr.top, wr.right - wr.left, wr.bottom - wr.top,
-                                           SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
+                                     wr.left, wr.top, wr.right - wr.left, wr.bottom - wr.top,
+                                     SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
         }
 
         engine->window.fullscreened = set;
@@ -502,8 +489,6 @@ internal DWORD WINAPI SoundThreadProc(LPVOID arg)
 {
     Engine *engine = cast(Engine *, arg);
 
-    DebugResult(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
-    
     HANDLE event       = CreateEventExA(0, "EngineSoundEvent", 0, EVENT_ALL_ACCESS);
     engine->sound.error = engine->sound.client->lpVtbl->SetEventHandle(engine->sound.client, event);
     Check(SUCCEEDED(engine->sound.error));
@@ -719,6 +704,8 @@ internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPA
 
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
 {
+    DebugResult(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
+
     Memory engine_memory;
     CreateMemory(&engine_memory, GB(1ui64), GB(3ui64));
 
@@ -753,8 +740,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
         ResetTransientArea(engine->memory);
         engine->window.resized = false;
         InputReset(engine);
-        engine->renderer.blending.first = v2s_0(S32_MAX);
-        engine->renderer.blending.last  = v2s_0(S32_MIN);
         gFrameStart = true;
 
         while (PeekMessageA(&msg, engine->window.handle, 0, 0, PM_REMOVE))

@@ -25,6 +25,7 @@ enum
 
 struct WorkQueue
 {
+             s32             cpu_virtual_threads_count;
              HANDLE          semaphore;
     volatile s32             completion_goal;
     volatile s32             entries_completed;
@@ -78,21 +79,20 @@ WorkQueue *CreateWorkQueue(Engine *engine)
 
 #if 1
     SYSTEM_INFO info;
-    GetSystemInfo(&info);
+    GetNativeSystemInfo(&info);
 
-    s32 threads_count = info.dwNumberOfProcessors - 1; // minus main thread
-    // if (threads_count >  0) --threads_count;           // minus sound thread
-    if (threads_count <= 0) threads_count = 1;
+    queue->cpu_virtual_threads_count = info.dwNumberOfProcessors - 1; // minus main thread
+    if (queue->cpu_virtual_threads_count <= 0) queue->cpu_virtual_threads_count = 1;
 #else
-    s32 threads_count = MAX_THREADS;
+    queue->cpu_virtual_threads_count = MAX_THREADS;
 #endif
 
-    WorkQueueThread *threads = PushToPA(WorkQueueThread, engine->memory, threads_count);
+    WorkQueueThread *threads = PushToPA(WorkQueueThread, engine->memory, queue->cpu_virtual_threads_count);
 
-    queue->semaphore = CreateSemaphoreExA(0, 0, threads_count, 0, 0, SEMAPHORE_ALL_ACCESS);
+    queue->semaphore = CreateSemaphoreExA(0, 0, queue->cpu_virtual_threads_count, 0, 0, SEMAPHORE_ALL_ACCESS);
     Check(queue->semaphore);
 
-    for (s32 i = 0; i < threads_count; ++i)
+    for (s32 i = 0; i < queue->cpu_virtual_threads_count; ++i)
     {
         WorkQueueThread *thread = threads + i;
         thread->id    = i + 1;
@@ -102,7 +102,7 @@ WorkQueue *CreateWorkQueue(Engine *engine)
     }
 
     Success(&engine->logger, "Work queue was created");
-    Log(&engine->logger, "Additional threads count = %I32u", threads_count);
+    Log(&engine->logger, "Additional threads count = %I32u", queue->cpu_virtual_threads_count);
     return queue;
 }
 
@@ -158,4 +158,10 @@ void WaitForWorkQueue(WorkQueue *queue)
 
     queue->entries_completed = 0;
     queue->completion_goal   = 0;
+}
+
+CEXTERN s32 GetThreadsCount(WorkQueue *queue)
+{
+    Check(queue);
+    return queue->cpu_virtual_threads_count;
 }

@@ -17,7 +17,6 @@
 
 - Graphics
     - Parallelize rasterization
-    - Tiled rendering?
     - Texture/Image
     - Entity system
     - Particle system

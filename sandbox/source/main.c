@@ -26,12 +26,12 @@ internal VERTEX_SHADER(Triangle2VS)
 
 internal PIXEL_SHADER(Triangle1PS)
 {
-    return v4_1(1.0f, 0.0f, 0.0f, 0.5f);
+    return v4_1(1.0f, 0.0f, 0.0f, 0.4f);
 }
 
 internal PIXEL_SHADER(Triangle2PS)
 {
-    return v4_1(0.0f, 0.0f, 1.0f, 0.5f);
+    return v4_1(0.0f, 0.0f, 1.0f, 0.7f);
 }
 
 USER_CALLBACK(User_OnInit)

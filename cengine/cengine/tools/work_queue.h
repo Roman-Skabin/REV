@@ -20,3 +20,5 @@ CEXTERN WorkQueue *CreateWorkQueue(Engine *engine);
 
 CEXTERN void AddWorkQueueEntry(WorkQueue *queue, WorkQueueEntryProc *Proc, void *arg);
 CEXTERN void WaitForWorkQueue(WorkQueue *queue);
+
+CEXTERN s32 GetThreadsCount(WorkQueue *queue);

@@ -361,14 +361,18 @@ internal void RendererPresent(Engine *engine)
     // Waiting for renderer
     WaitForWorkQueue(engine->queue);
 
-    u32 chunks_count = engine->renderer.common.count / PAGE_SIZE;
+    u32 chunk_size = engine->window.size.h
+                   / __min(64, 4 * (GetThreadsCount(engine->queue) + 1))
+                   * engine->window.size.w;
 
-    u32 additional_last_chunk_bytes = engine->renderer.common.count % PAGE_SIZE;
+    u32 chunks_count = engine->renderer.common.count / chunk_size;
+
+    u32 additional_last_chunk_bytes = engine->renderer.common.count % chunk_size;
     if (additional_last_chunk_bytes)
     {
         ChunkInfo info;
         info.engine = engine;
-        info.start  = engine->renderer.common.count + additional_last_chunk_bytes - PAGE_SIZE;
+        info.start  = engine->renderer.common.count + additional_last_chunk_bytes - chunk_size;
         info.end    = engine->renderer.common.count;
 
         AddWorkQueueEntry(engine->queue, MergeOutput, &info);
@@ -379,8 +383,8 @@ internal void RendererPresent(Engine *engine)
     {
         ChunkInfo *info = infos + i;
         info->engine    = engine;
-        info->start     = i * PAGE_SIZE;
-        info->end       = info->start + PAGE_SIZE;
+        info->start     = i * chunk_size;
+        info->end       = info->start + chunk_size;
 
         AddWorkQueueEntry(engine->queue, MergeOutput, info);
     }

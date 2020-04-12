@@ -5,57 +5,78 @@
 #pragma once
 
 #include "core/core.h"
-#include "math/vec.h"
+#include "math/mat.h"
 
 #ifndef ENGINE_DEFINED
 #define ENGINE_DEFINED
     typedef struct Engine Engine;
 #endif
 
-#define VERTEX_SHADER(name) v4 name(Engine *engine, v4 pos) // output = new pos
-typedef VERTEX_SHADER(VertexShader);
-
-#define PIXEL_SHADER(name)  v4 name(Engine *engine, v4 pos) // output = color
-typedef PIXEL_SHADER(PixelShader);
+enum
+{
+    BUFFERS_COUNT = 2,
+};
 
 typedef struct Renderer
 {
-    struct
-    {
-        u32        *pixels;
-        BITMAPINFO  info;
-    } rt;
+#if DEBUG
+    ID3D12Debug                 *debug;
+#endif
+    IDXGIFactory2               *factory;
+    IDXGIAdapter1               *adapter;
+    ID3D12Device                *device;
+    ID3D12CommandQueue          *queue;
+    ID3D12CommandAllocator      *allocators[BUFFERS_COUNT];
+    ID3D12GraphicsCommandList   *graphcis_lists[BUFFERS_COUNT];
+    IDXGISwapChain4             *swap_chain;
 
-    struct
-    {
-        f32 *z;
-        f32 near;
-        f32 far;
-    } zb;
+    ID3D12DescriptorHeap        *rtv_heap_desc;
+    ID3D12Resource              *rt_buffers[BUFFERS_COUNT];
+    D3D12_CPU_DESCRIPTOR_HANDLE  rtv_cpu_desc_handle;
+    u32                          rtv_desc_size;
+    u32                          current_buffer;
 
-    struct
-    {
-        v4  *sum;
-        f32 *mul;
-    } blending;
+    ID3D12DescriptorHeap        *ds_heap_desc;
+    ID3D12Resource              *ds_buffer;
+    D3D12_CPU_DESCRIPTOR_HANDLE  dsv_cpu_desc_handle;
 
-    struct
-    {
-        u32 count;
-    } common;
+    ID3D12Fence                 *fences[BUFFERS_COUNT];
+    u64                          fences_value[BUFFERS_COUNT];
+    HANDLE                       fence_event;
+
+    HRESULT error;
+    b32     vsync;
 } Renderer;
-
-CEXTERN void SetViewport(Engine *engine, f32 near, f32 far);
 
 typedef struct Triangle
 {
-    _In_  v4                p1;
-    _In_  v4                p2;
-    _In_  v4                p3;
-    _In_  VertexShader     *VS;
-    _In_  PixelShader      *PS;
-    void                   *private_data; // FOR INTERNAL USE ONLY. DO NOT TOUCH!!!
+    v4 vertices[3];
+    m4 model;
+    m4 view;
 } Triangle;
 
-CEXTERN void DrawOpaqueTriangles(Engine *engine, Triangle **triangles, u64 triangles_count);
-CEXTERN void DrawTranslucentTriangles(Engine *engine, Triangle **triangles, u64 triangles_count);
+typedef struct Rect
+{
+    v4 vertices[4];
+    m4 model;
+    m4 view;
+} Rect;
+
+typedef struct Mesh
+{
+    v4  *vertices;
+    u64  count;
+    m4   model;
+    m4   view;
+} Mesh;
+
+CEXTERN void SetVSync(Engine *engine, b32 enable);
+
+CEXTERN void DrawOpaqueTriangles(Engine *engine, Triangle **triangles, u64 count);
+CEXTERN void DrawTranslucentTriangles(Engine *engine, Triangle **triangles, u64 count);
+
+CEXTERN void DrawOpaqueRects(Engine *engine, Rect **rects, u64 count);
+CEXTERN void DrawTranslucentRects(Engine *engine, Rect **rects, u64 count);
+
+CEXTERN void DrawOpaqueMeshes(Engine *engine, Mesh **meshes, u64 count);
+CEXTERN void DrawTranslucentMeshes(Engine *engine, Mesh **meshes, u64 count);

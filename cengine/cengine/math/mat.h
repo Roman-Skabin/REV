@@ -791,12 +791,7 @@ INLINE m4 MATH_CALL m4_translation_v(v4 dv)
     );
 }
 
-// @TODO(Roman):
-// m4_ortho_lh_n0 (near > 0)
-// m4_ortho_lh_nn
-// m4_ortho_rh_n0 (near > 0)
-// m4_ortho_rh_nn
-INLINE m4 MATH_CALL m4_ortho_lh_n0(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
+INLINE m4 MATH_CALL m4_ortho_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
 {
     return m4_1(
         2.0f/(right-left),              0.0f,            0.0f, -(right+left)/(right-left),
@@ -806,32 +801,55 @@ INLINE m4 MATH_CALL m4_ortho_lh_n0(f32 left, f32 right, f32 bottom, f32 top, f32
     );
 }
 
-// @TODO(Roman):
-// m4_persp_lh_n0     (near > 0)
-// m4_persp_lh_nn
-// m4_persp_rh_n0     (near > 0)
-// m4_persp_rh_nn
-// m4_persp_lh_n0_fov (near > 0)
-// m4_persp_lh_nn_fov
-// m4_persp_rh_n0_fov (near > 0)
-// m4_persp_rh_nn_fov
-INLINE m4 MATH_CALL m4_persp_lh_n0(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
+// @TODO(Roman): m4_ortho_rh
+INLINE m4 MATH_CALL m4_ortho_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
 {
     return m4_1(
-        2.0f*near/(right-left),                   0.0f, (right+left)/(right-left),                   0.0f,
-                          0.0f, 2.0f*near/(top-bottom), (top+bottom)/(top-bottom),                   0.0f,
-                          0.0f,                   0.0f,            far/(far-near), -(far*near)/(far-near),
-                          0.0f,                   0.0f,                      1.0f,                   0.0f
+        2.0f/(right-left),              0.0f,            0.0f, -(right+left)/(right-left),
+                     0.0f, 2.0f/(top-bottom),            0.0f, -(top+bottom)/(top-bottom),
+                     0.0f,              0.0f, 1.0f/(far-near),           -near/(far-near),
+                     0.0f,              0.0f,            0.0f,                       1.0f
     );
 }
 
-INLINE m4 MATH_CALL m4_persp_lh_n0_fov(f32 aspect, deg fov, f32 near, f32 far)
+INLINE m4 MATH_CALL m4_persp_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
+{
+    return m4_1(
+        2.0f*near/(right-left),                   0.0f,                  0.0f,                        0.0f,
+                          0.0f, 2.0f*near/(top-bottom),                  0.0f,                        0.0f,
+                          0.0f,                   0.0f, (far+near)/(far-near), -(2.0f*near*far)/(far-near),
+                          0.0f,                   0.0f,                  1.0f,                        0.0f
+    );
+}
+
+INLINE m4 MATH_CALL m4_persp_lh_fov(f32 aspect, deg fov, f32 near, f32 far)
 {
     f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
     return m4_1(
-        1.0f/(aspect*tanfov2),         0.0f,           0.0f,                   0.0f,
-                         0.0f, 1.0f/tanfov2,           0.0f,                   0.0f,
-                         0.0f,         0.0f, far/(far-near), -(far*near)/(far-near),
-                         0.0f,         0.0f,           1.0f,                   0.0f
+        1.0f/(aspect*tanfov2),         0.0f,                  0.0f,                        0.0f,
+                         0.0f, 1.0f/tanfov2,                  0.0f,                        0.0f,
+                         0.0f,         0.0f, (far+near)/(far-near), -(2.0f*near*far)/(far-near),
+                         0.0f,         0.0f,                  1.0f,                        0.0f
+    );
+}
+
+INLINE m4 MATH_CALL m4_persp_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
+{
+    return m4_1(
+        2.0f*near/(right-left),                   0.0f,                  0.0f,                       0.0f,
+                          0.0f, 2.0f*near/(top-bottom),                  0.0f,                       0.0f,
+                          0.0f,                   0.0f, (far+near)/(far-near), (2.0f*near*far)/(far-near),
+                          0.0f,                   0.0f,                 -1.0f,                       0.0f
+    );
+}
+
+INLINE m4 MATH_CALL m4_persp_rh_fov(f32 aspect, deg fov, f32 near, f32 far)
+{
+    f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
+    return m4_1(
+        1.0f/(aspect*tanfov2),         0.0f,                  0.0f,                       0.0f,
+                         0.0f, 1.0f/tanfov2,                  0.0f,                       0.0f,
+                         0.0f,         0.0f, (far+near)/(far-near), (2.0f*near*far)/(far-near),
+                         0.0f,         0.0f,                 -1.0f,                       0.0f
     );
 }

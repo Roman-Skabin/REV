@@ -30,9 +30,6 @@
     <ClCompile Include="cengine\graphics\renderer.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="cengine\graphics\rasterizer.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="cengine\core\memory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -84,9 +81,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cengine\core\memory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="cengine\graphics\rasterizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="cengine\core\id.h">

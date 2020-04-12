@@ -23,7 +23,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="cengine\tools\work_queue.c" />
-    <ClCompile Include="cengine\graphics\rasterizer.c" />
     <ClCompile Include="cengine\math\math.c">
       <SubType>
       </SubType>
@@ -41,7 +40,6 @@
     <ClInclude Include="cengine\core\memory.h" />
     <ClInclude Include="cengine\core\pch.h" />
     <ClInclude Include="cengine\tools\work_queue.h" />
-    <ClInclude Include="cengine\graphics\rasterizer.h" />
     <ClInclude Include="cengine\graphics\renderer.h" />
     <ClInclude Include="cengine\input.h" />
     <ClInclude Include="cengine\math\color.h" />

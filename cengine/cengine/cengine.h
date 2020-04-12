@@ -27,7 +27,7 @@ typedef USER_CALLBACK(UserCallback);
 
 struct Engine
 {
-    _Out_ struct
+    struct
     {
         HWND handle;
         HDC  context;
@@ -37,21 +37,21 @@ struct Engine
         b32  fullscreened;
     } window;
 
-    _Out_ struct
+    struct
     {
         HMONITOR handle;
         v2s      pos;
         v2s      size;
     } monitor;
 
-    _Out_ struct
+    struct
     {
         Key     keys[KEY_MAX];
         Mouse   mouse;
         Gamepad gamepad;
     } input;
 
-    _Out_ struct
+    struct
     {
         s64 initial_ticks;
         s64 ticks_per_second;
@@ -70,15 +70,14 @@ struct Engine
         b32 stopped;
     } timer;
 
-    _Out_ SoundStream  sound;
-    _Out_ Renderer     renderer;
-    _Out_ Logger       logger;
-    _Out_ WorkQueue   *queue;
-    _Out_ Memory      *memory;
-    _Out_ Allocator    allocator;
+    SoundStream  sound;
+    Renderer     renderer;
+    Logger       logger;
+    WorkQueue   *queue;
+    Memory      *memory;
+    Allocator    allocator;
 
-    _In_ f32   cpu_frame_rate_limit;
-    _In_ void *user_ponter;
+    void *user_ponter;
 };
 
 CEXTERN USER_CALLBACK(User_OnInit);

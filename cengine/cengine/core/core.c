@@ -11,6 +11,7 @@
 
 void __cdecl DebugF(const char *const format, ...)
 {
+#if DEBUG
     va_list args;
     va_start(args, format);
 
@@ -29,4 +30,5 @@ void __cdecl DebugF(const char *const format, ...)
     }
 
     va_end(args);
+#endif
 }

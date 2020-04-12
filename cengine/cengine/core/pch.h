@@ -6,6 +6,8 @@
 
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfreadwrite.lib")
+#pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "dxgi.lib")
 
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
@@ -22,6 +24,8 @@
 #include <mfidl.h>
 #include <mfapi.h>
 #include <mfreadwrite.h>
+#include <d3d12.h>
+#include <dxgi1_6.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

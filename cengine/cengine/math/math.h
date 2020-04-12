@@ -37,9 +37,9 @@
 
 #define MM(mm, Type, i) (cast(Type *, &(mm))[i])
 
-#define MMf(mm, n)  mm.m128_f32[n]
-#define MMs(mm, n) mm.m128i_i32[n]
-#define MMu(mm, n) mm.m128i_u32[n]
+#define MMf(mm, n)  (mm).m128_f32[n]
+#define MMs(mm, n) (mm).m128i_i32[n]
+#define MMu(mm, n) (mm).m128i_u32[n]
 
 INLINE f32 MATH_CALL lerp(f32 start, f32 end, f32 percent)
 {

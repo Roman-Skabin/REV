@@ -352,6 +352,42 @@ internal void RendererCreate(Engine *engine)
 
     CreateAdapterAndDevice(engine);
 
+    // @TODO(Roman): support D3D12_ROOT_PARAMETER and D3D12_STATIC_SAMPLER_DESC
+    D3D12_ROOT_SIGNATURE_DESC grsd;
+    grsd.NumParameters     = 0;
+    grsd.pParameters       = 0;
+    grsd.NumStaticSamplers = 0;
+    grsd.pStaticSamplers   = 0;
+    grsd.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+                           // @TODO(Roman): support stream output
+                           /*| D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT*/;
+
+    ID3DBlob *error = 0;
+    engine->renderer.error = D3D12SerializeRootSignature(&grsd,
+                                                         D3D_ROOT_SIGNATURE_VERSION_1_0,
+                                                         &engine->renderer.graphics_signature,
+                                                         &error);
+#if DEVDEBUG
+    if (FAILED(engine->renderer.error))
+    {
+        MessageBoxA(0, error->lpVtbl->GetBufferPointer(error), "Debug Error!", MB_OK | MB_ICONERROR);
+        __debugbreak();
+        ExitProcess(1);
+    }
+#else
+    Check(SUCCEEDED(engine->renderer.error));
+#endif
+
+    SafeRelease(error);
+
+    engine->renderer.error = engine->renderer.device->lpVtbl->CreateRootSignature(engine->renderer.device,
+                                                                                  0,
+                                                                                  engine->renderer.graphics_signature->lpVtbl->GetBufferPointer(engine->renderer.graphics_signature),
+                                                                                  engine->renderer.graphics_signature->lpVtbl->GetBufferSize(engine->renderer.graphics_signature),
+                                                                                  &IID_ID3D12RootSignature,
+                                                                                  &engine->renderer.graphics_root_signature);
+    Check(SUCCEEDED(engine->renderer.error));
+
     D3D12_COMMAND_QUEUE_DESC cqd;
     cqd.Type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
     cqd.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
@@ -376,9 +412,12 @@ internal void RendererCreate(Engine *engine)
                                                                                     cqd.NodeMask,
                                                                                     cqd.Type,
                                                                                     engine->renderer.allocators[i],
-                                                                                    0, // @TODO(Roman): Initial pipeline state
+                                                                                    0,
                                                                                     &IID_ID3D12GraphicsCommandList,
-                                                                                    engine->renderer.graphcis_lists + i);
+                                                                                    engine->renderer.graphics_lists + i);
+        Check(SUCCEEDED(engine->renderer.error));
+
+        engine->renderer.error = engine->renderer.graphics_lists[i]->lpVtbl->Close(engine->renderer.graphics_lists[i]);
         Check(SUCCEEDED(engine->renderer.error));
     }
 
@@ -515,7 +554,7 @@ internal void RendererCreate(Engine *engine)
                                                                                       &engine->renderer.ds_buffer);
     Check(SUCCEEDED(engine->renderer.error));
 
-    #pragma warning(suppress: 4020)
+    #pragma warning(suppress: 4020) // I know what I'm doing.
     engine->renderer.ds_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->renderer.ds_heap_desc, &engine->renderer.dsv_cpu_desc_handle);
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsvd = {0};
@@ -530,39 +569,33 @@ internal void RendererCreate(Engine *engine)
     for (u64 i = 0; i < BUFFERS_COUNT; ++i)
     {
         engine->renderer.error = engine->renderer.device->lpVtbl->CreateFence(engine->renderer.device,
-                                                                              engine->renderer.fences_value[i],
+                                                                              engine->renderer.fences_values[i],
                                                                               D3D12_FENCE_FLAG_NONE, // D3D12_FENCE_FLAG_SHARED ?
                                                                               &IID_ID3D12Fence,
                                                                               engine->renderer.fences + i);
         Check(SUCCEEDED(engine->renderer.error));
-        ++engine->renderer.fences_value[i];
+        ++engine->renderer.fences_values[i];
     }
 
     engine->renderer.fence_event = CreateEventExA(0, "Fence Event", 0, EVENT_ALL_ACCESS);
     Check(engine->renderer.fence_event);
 
     Success(&engine->logger, "Renderer was created");
-
-    for (u32 i = 0; i < BUFFERS_COUNT; ++i)
-    {
-        engine->renderer.error = engine->renderer.graphcis_lists[i]->lpVtbl->Close(engine->renderer.graphcis_lists[i]);
-        Check(SUCCEEDED(engine->renderer.error));
-    }
 }
 
 internal void RendererDestroy(Engine *engine)
 {
     // Wait for GPU
-    u64 current_fence_value = engine->renderer.fences_value[engine->renderer.current_buffer];
+    u64 current_fence_value = engine->renderer.fences_values[engine->renderer.current_buffer];
     engine->renderer.queue->lpVtbl->Signal(engine->renderer.queue,
                                            engine->renderer.fences[engine->renderer.current_buffer],
                                            current_fence_value);
 
     u64 value = engine->renderer.fences[engine->renderer.current_buffer]->lpVtbl->GetCompletedValue(engine->renderer.fences[engine->renderer.current_buffer]);
-    if (value < engine->renderer.fences_value[engine->renderer.current_buffer])
+    if (value < engine->renderer.fences_values[engine->renderer.current_buffer])
     {
         engine->renderer.error = engine->renderer.fences[engine->renderer.current_buffer]->lpVtbl->SetEventOnCompletion(engine->renderer.fences[engine->renderer.current_buffer],
-                                                                                                                        engine->renderer.fences_value[engine->renderer.current_buffer],
+                                                                                                                        engine->renderer.fences_values[engine->renderer.current_buffer],
                                                                                                                         engine->renderer.fence_event);
         Check(SUCCEEDED(engine->renderer.error));
         while (WaitForSingleObjectEx(engine->renderer.fence_event, INFINITE, false) != WAIT_OBJECT_0)
@@ -570,7 +603,7 @@ internal void RendererDestroy(Engine *engine)
         }
     }
 
-    engine->renderer.fences_value[engine->renderer.current_buffer] = current_fence_value + 1;
+    engine->renderer.fences_values[engine->renderer.current_buffer] = current_fence_value + 1;
 
     // Release everything
     SafeRelease(engine->renderer.ds_buffer);
@@ -580,12 +613,16 @@ internal void RendererDestroy(Engine *engine)
     {
         SafeRelease(engine->renderer.fences[i]);
         SafeRelease(engine->renderer.rt_buffers[i]);
-        SafeRelease(engine->renderer.graphcis_lists[i]);
+        SafeRelease(engine->renderer.graphics_lists[i]);
         SafeRelease(engine->renderer.allocators[i]);
     }
     SafeRelease(engine->renderer.rtv_heap_desc);
     SafeRelease(engine->renderer.swap_chain);
     SafeRelease(engine->renderer.queue);
+    SafeRelease(engine->renderer.compute_root_signature);
+    SafeRelease(engine->renderer.compute_signature);
+    SafeRelease(engine->renderer.graphics_root_signature);
+    SafeRelease(engine->renderer.graphics_signature);
     SafeRelease(engine->renderer.device);
     SafeRelease(engine->renderer.adapter);
     SafeRelease(engine->renderer.factory);
@@ -596,88 +633,15 @@ internal void RendererDestroy(Engine *engine)
 
 internal void RendererResize(Engine *engine)
 {
-#if 0
-    // Release all reeferencies to buffers and reset all memory
-    engine->renderer.error = engine->renderer.allocator->lpVtbl->Reset(engine->renderer.allocator);
-    Check(SUCCEEDED(engine->renderer.error));
-
-    engine->renderer.error = engine->renderer.graphcis_list->lpVtbl->Reset(engine->renderer.graphcis_list,
-                                                                           engine->renderer.allocator,
-                                                                           0);
-    Check(SUCCEEDED(engine->renderer.error));
-
-    for (u32 i = 0; i < BUFFERS_COUNT; ++i)
-    {
-        SafeRelease(engine->renderer.rt_buffer[i]);
-    }
-
-    // Resize Buffers
-    engine->renderer.error = engine->renderer.swap_chain->lpVtbl->ResizeBuffers(engine->renderer.swap_chain,
-                                                                                BUFFERS_COUNT,
-                                                                                engine->window.size.w,
-                                                                                engine->window.size.h,
-                                                                                0,
-                                                                                0);
-    Check(SUCCEEDED(engine->renderer.error));
-
-    // Recreate buffers
-    D3D12_CPU_DESCRIPTOR_HANDLE rtv_cpu_desc_handle = {0};
-    #pragma warning(suppress: 4020)
-    engine->renderer.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->renderer.rtv_heap_desc, &rtv_cpu_desc_handle);
-
-    for (u32 i = 0; i < BUFFERS_COUNT; ++i)
-    {
-        engine->renderer.error = engine->renderer.swap_chain->lpVtbl->GetBuffer(engine->renderer.swap_chain,
-                                                                                i,
-                                                                                &IID_ID3D12Resource,
-                                                                                engine->renderer.rt_buffer + i);
-        Check(SUCCEEDED(engine->renderer.error));
-
-        engine->renderer.device->lpVtbl->CreateRenderTargetView(engine->renderer.device,
-                                                                engine->renderer.rt_buffer[i],
-                                                                0,
-                                                                rtv_cpu_desc_handle);
-
-        rtv_cpu_desc_handle.ptr += engine->renderer.rtv_desc_size;
-    }
-
-    engine->renderer.current_buffer = 0;
-#endif
+    // @TODO(Roman): Resize
+    //     1. Flush GPU (wait for ALL buffers)
+    //     2. Reset all memory and release all reeferencies to buffers
+    //     3. Resize buffers (rts & ds)
+    //     4. Recreate buffers (rts & ds)
 }
 
 internal void RendererPresent(Engine *engine)
 {
-    // Set viewport
-    D3D12_VIEWPORT viewport;
-    viewport.TopLeftX = 0.0f;
-    viewport.TopLeftY = 0.0f;
-    viewport.Width    = cast(f32, engine->window.size.w);
-    viewport.Height   = cast(f32, engine->window.size.h);
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-
-    engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->RSSetViewports(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
-                                                                                          1,
-                                                                                          &viewport);
-
-    // Set scissor rect (optimization)
-    D3D12_RECT scissor_rect;
-    scissor_rect.left   = 0;
-    scissor_rect.top    = 0;
-    scissor_rect.right  = engine->window.size.w;
-    scissor_rect.bottom = engine->window.size.h;
-
-    engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->RSSetScissorRects(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
-                                                                                                1,
-                                                                                                &scissor_rect);
-
-    // Set Render Target
-    engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->OMSetRenderTargets(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
-                                                                                                 1,
-                                                                                                 &engine->renderer.rtv_cpu_desc_handle,
-                                                                                                 false,
-                                                                                                 &engine->renderer.dsv_cpu_desc_handle);
-
     // Complete stage
     D3D12_RESOURCE_BARRIER barrier;
     barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -687,16 +651,16 @@ internal void RendererPresent(Engine *engine)
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
     barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
 
-    engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->ResourceBarrier(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
-                                                                                           1,
-                                                                                           &barrier);
+    engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->ResourceBarrier(engine->renderer.graphics_lists[engine->renderer.current_buffer],
+                                                                                              1,
+                                                                                              &barrier);
 
-    engine->renderer.error = engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->Close(engine->renderer.graphcis_lists[engine->renderer.current_buffer]);
+    engine->renderer.error = engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->Close(engine->renderer.graphics_lists[engine->renderer.current_buffer]);
     Check(SUCCEEDED(engine->renderer.error));
 
     ID3D12CommandList *lists[] =
     {
-        engine->renderer.graphcis_lists[engine->renderer.current_buffer]
+        engine->renderer.graphics_lists[engine->renderer.current_buffer]
     };
 
     engine->renderer.queue->lpVtbl->ExecuteCommandLists(engine->renderer.queue, ArrayCount(lists), lists);
@@ -718,16 +682,16 @@ internal void RendererPresent(Engine *engine)
     first_frame = false;
 
     // Wait for GPU
-    u64 current_fence_value = engine->renderer.fences_value[engine->renderer.current_buffer];
+    u64 current_fence_value = engine->renderer.fences_values[engine->renderer.current_buffer];
     engine->renderer.queue->lpVtbl->Signal(engine->renderer.queue,
                                            engine->renderer.fences[engine->renderer.current_buffer],
                                            current_fence_value);
 
     u64 value = engine->renderer.fences[engine->renderer.current_buffer]->lpVtbl->GetCompletedValue(engine->renderer.fences[engine->renderer.current_buffer]);
-    if (value < engine->renderer.fences_value[engine->renderer.current_buffer])
+    if (value < engine->renderer.fences_values[engine->renderer.current_buffer])
     {
         engine->renderer.error = engine->renderer.fences[engine->renderer.current_buffer]->lpVtbl->SetEventOnCompletion(engine->renderer.fences[engine->renderer.current_buffer],
-                                                                                                                        engine->renderer.fences_value[engine->renderer.current_buffer],
+                                                                                                                        engine->renderer.fences_values[engine->renderer.current_buffer],
                                                                                                                         engine->renderer.fence_event);
         Check(SUCCEEDED(engine->renderer.error));
         while (WaitForSingleObjectEx(engine->renderer.fence_event, INFINITE, false) != WAIT_OBJECT_0)
@@ -735,7 +699,7 @@ internal void RendererPresent(Engine *engine)
         }
     }
 
-    engine->renderer.fences_value[engine->renderer.current_buffer] = current_fence_value + 1;
+    engine->renderer.fences_values[engine->renderer.current_buffer] = current_fence_value + 1;
 
     // Swap buffers
     engine->renderer.current_buffer = engine->renderer.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->renderer.swap_chain);
@@ -802,6 +766,7 @@ internal void WindowDestroy(Engine *engine, HINSTANCE instance)
     Log(&engine->logger, "Window was destroyed");
 }
 
+// @TODO(Roman): Enable fullsreen mode for D3D12
 void SetFullscreen(Engine *engine, b32 set)
 {
     if (set != engine->window.fullscreened)
@@ -1125,16 +1090,56 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
             engine->renderer.error = engine->renderer.allocators[engine->renderer.current_buffer]->lpVtbl->Reset(engine->renderer.allocators[engine->renderer.current_buffer]);
             Check(SUCCEEDED(engine->renderer.error));
 
-            engine->renderer.error = engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->Reset(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
+            engine->renderer.error = engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->Reset(engine->renderer.graphics_lists[engine->renderer.current_buffer],
                                                                                                                      engine->renderer.allocators[engine->renderer.current_buffer],
                                                                                                                      0);
             Check(SUCCEEDED(engine->renderer.error));
 
+            // Set Graphics Root Signature
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->SetGraphicsRootSignature(engine->renderer.graphics_lists[engine->renderer.current_buffer],
+                                                                                                               engine->renderer.graphics_root_signature);
+            
+            // Set Primitive Topology
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->IASetPrimitiveTopology(engine->renderer.graphics_lists[engine->renderer.current_buffer],
+                                                                                                             D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+            // Set viewport
+            D3D12_VIEWPORT viewport;
+            viewport.TopLeftX = 0.0f;
+            viewport.TopLeftY = 0.0f;
+            viewport.Width    = cast(f32, engine->window.size.w);
+            viewport.Height   = cast(f32, engine->window.size.h);
+            viewport.MinDepth = 0.0f;
+            viewport.MaxDepth = 1.0f;
+
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->RSSetViewports(engine->renderer.graphics_lists[engine->renderer.current_buffer],
+                                                                                                     1,
+                                                                                                     &viewport);
+
+            // Set scissor rect (optimization)
+            D3D12_RECT scissor_rect;
+            scissor_rect.left   = 0;
+            scissor_rect.top    = 0;
+            scissor_rect.right  = engine->window.size.w;
+            scissor_rect.bottom = engine->window.size.h;
+
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->RSSetScissorRects(engine->renderer.graphics_lists[engine->renderer.current_buffer],
+                                                                                                        1,
+                                                                                                        &scissor_rect);
+
+            // Set RTV And DSV
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->OMSetRenderTargets(engine->renderer.graphics_lists[engine->renderer.current_buffer],
+                                                                                                         1,
+                                                                                                         &engine->renderer.rtv_cpu_desc_handle,
+                                                                                                         false,
+                                                                                                         &engine->renderer.dsv_cpu_desc_handle);
+
+            // Set Resource Barrier
             rtv_barrier.Transition.pResource   = engine->renderer.rt_buffers[engine->renderer.current_buffer];
             rtv_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
             rtv_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-            engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->ResourceBarrier(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->ResourceBarrier(engine->renderer.graphics_lists[engine->renderer.current_buffer],
                                                                                                       1,
                                                                                                       &rtv_barrier);
 
@@ -1144,7 +1149,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
                 dsv_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
                 dsv_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
-                engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->ResourceBarrier(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
+                engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->ResourceBarrier(engine->renderer.graphics_lists[engine->renderer.current_buffer],
                                                                                                           1,
                                                                                                           &dsv_barrier);
             }
@@ -1153,12 +1158,12 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
             User_OnUpdate(engine);
 
             // Clear
-            float clear_color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-            engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->ClearRenderTargetView(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
+            f32 clear_color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->ClearRenderTargetView(engine->renderer.graphics_lists[engine->renderer.current_buffer],
                                                                                                             engine->renderer.rtv_cpu_desc_handle,
                                                                                                             clear_color,
                                                                                                             0, 0);
-            engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->ClearDepthStencilView(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->ClearDepthStencilView(engine->renderer.graphics_lists[engine->renderer.current_buffer],
                                                                                                             engine->renderer.dsv_cpu_desc_handle,
                                                                                                             D3D12_CLEAR_FLAG_DEPTH,
                                                                                                             1.0f, 0,
@@ -1171,7 +1176,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
             dsv_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
             dsv_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
-            engine->renderer.graphcis_lists[engine->renderer.current_buffer]->lpVtbl->ResourceBarrier(engine->renderer.graphcis_lists[engine->renderer.current_buffer],
+            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->ResourceBarrier(engine->renderer.graphics_lists[engine->renderer.current_buffer],
                                                                                                       1,
                                                                                                       &dsv_barrier);
 

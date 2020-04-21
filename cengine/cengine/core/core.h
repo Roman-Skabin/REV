@@ -72,6 +72,10 @@
     #define NULL 0
 #endif
 
+#ifndef __cplusplus
+    #define nullptr 0
+#endif
+
 #define KB(x) (  (x) * 1024)
 #define MB(x) (KB(x) * 1024)
 #define GB(x) (MB(x) * 1024)

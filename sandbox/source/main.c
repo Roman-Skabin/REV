@@ -4,13 +4,20 @@
 
 typedef struct Sandbox
 {
-    Logger      logger;
-    Triangle    t1;
-    Rect        ground;
-    AudioBuffer audio;
-    v4          camera;
-    m4          proj;
+    Logger        logger;
+    AudioBuffer   audio;
+    VertexBuffer  vertex_buffer;
+    IndexBuffer   index_buffer;
+    Shader        vertex_shader;
+    Shader        pixel_shader;
+    PipelineStage rect_stage;
 } Sandbox;
+
+typedef struct Vertex
+{
+    v4 pos;
+    v4 col;
+} Vertex;
 
 USER_CALLBACK(User_OnInit)
 {
@@ -20,33 +27,63 @@ USER_CALLBACK(User_OnInit)
     CreateLogger(&sandbox->logger, "Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
 #if RELEASE
+    // @TODO(Roman): removed yet we're not supporting resizing
     // SetFullscreen(engine, true);
 #endif
 
-    v2 size = v2s_to_v2(engine->window.size);
-
-    sandbox->ground.vertices[0] = v4_1(-size.w, -size.h, 0.1f, 1.0f);
-    sandbox->ground.vertices[1] = v4_1(-size.w, -size.h, 1.5f, 1.0f);
-    sandbox->ground.vertices[2] = v4_1( size.w, -size.h, 1.5f, 1.0f);
-    sandbox->ground.vertices[3] = v4_1( size.w, -size.h, 0.1f, 1.0f);
-    sandbox->ground.model       = m4_identity();
-    sandbox->ground.view        = m4_identity();
-
-    sandbox->t1.vertices[0] = v4_1(-size.w*0.5f, -size.h*0.75f, 0.13f, 1.0f);
-    sandbox->t1.vertices[1] = v4_1(        0.0f, -size.h*0.50f, 0.20f, 1.0f);
-    sandbox->t1.vertices[2] = v4_1( size.w*0.5f, -size.h*0.75f, 0.40f, 1.0f);
-    sandbox->t1.model       = m4_identity();
-    sandbox->t1.view        = m4_identity();
-
-    sandbox->proj = m4_persp_lh(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
-
     sandbox->audio = LoadAudioFile(engine, "../sandbox/assets/audio.wav");
-    // SoundPlay(&engine->sound);
+    SoundPlay(&engine->sound);
+
+    sandbox->vertex_shader = CreateShader(engine, "../sandbox/shaders/vertex.hlsl", "main", SHADER_KIND_VERTEX);
+    sandbox->pixel_shader  = CreateShader(engine, "../sandbox/shaders/pixel.hlsl", "main", SHADER_KIND_PIXEL);
+
+    v2  size   = v2s_to_v2(engine->window.size);
+    m4  proj   = m4_persp_lh(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
+
+    Vertex vertices[] =
+    {
+        // @Remove(Roman): hard-coded matrix multiplication yet we're not supporting SRVs
+        //                 to pass projection matrix to the shader
+        { m4_mul_v(proj, v4_1(-1.0f * size.w, -1.0f * size.h, 0.1f, 1.0f)), v4_1(1.0f, 0.0f, 0.0f, 1.0f) },
+        { m4_mul_v(proj, v4_1(-1.0f * size.w, -1.0f * size.h, 1.0f, 1.0f)), v4_1(0.0f, 1.0f, 0.0f, 1.0f) },
+        { m4_mul_v(proj, v4_1( 1.0f * size.w, -1.0f * size.h, 1.0f, 1.0f)), v4_1(0.0f, 0.0f, 1.0f, 1.0f) },
+        { m4_mul_v(proj, v4_1( 1.0f * size.w, -1.0f * size.h, 0.1f, 1.0f)), v4_1(1.0f, 1.0f, 0.0f, 1.0f) }
+    };
+    sandbox->vertex_buffer = CreateVertexBuffer(engine, vertices, ArrayCount(vertices), sizeof(Vertex));
+
+    u32 indecies[] =
+    {
+        0, 1, 2,
+        0, 2, 3
+    };
+    sandbox->index_buffer = CreateIndexBuffer(engine, indecies, ArrayCount(indecies));
+
+    ShaderArg shader_args[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0 },
+        { "COLOR"   , 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0 }
+    };
+
+    CreatePipelineStage(engine,
+                        &sandbox->vertex_shader,
+                        0, 0, 0,
+                        &sandbox->pixel_shader,
+                        false,
+                        ArrayCount(shader_args),
+                        shader_args,
+                        &sandbox->vertex_buffer,
+                        &sandbox->index_buffer,
+                        &sandbox->rect_stage);
 }
 
 USER_CALLBACK(User_OnDestroy)
 {
     Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
+    DestroyPipelineStage(&sandbox->rect_stage);
+    DestroyIndexBuffer(&sandbox->index_buffer);
+    DestroyVertexBuffer(&sandbox->vertex_buffer);
+    DestroyShader(&sandbox->pixel_shader);
+    DestroyShader(&sandbox->vertex_shader);
     DestroyLogger(&sandbox->logger);
 }
 
@@ -71,81 +108,12 @@ USER_CALLBACK(User_OnUpdate)
     {
         SetFullscreen(engine, !engine->window.fullscreened);
     }
-
-    if (engine->window.resized)
-    {
-        v2 size = v2s_to_v2(engine->window.size);
-
-        sandbox->ground.vertices[0] = v4_1(-size.w, -size.h, 0.1f, 1.0f);
-        sandbox->ground.vertices[1] = v4_1(-size.w, -size.h, 1.5f, 1.0f);
-        sandbox->ground.vertices[2] = v4_1( size.w, -size.h, 1.5f, 1.0f);
-        sandbox->ground.vertices[3] = v4_1( size.w, -size.h, 0.1f, 1.0f);
-
-        sandbox->t1.vertices[0] = v4_1(-size.w*0.5f, -size.h*0.75f, 0.13f, 1.0f);
-        sandbox->t1.vertices[1] = v4_1(        0.0f,  size.h*0.50f, 0.20f, 1.0f);
-        sandbox->t1.vertices[2] = v4_1( size.w*0.5f, -size.h*0.75f, 0.40f, 1.0f);
-
-        sandbox->proj = m4_persp_lh(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
-    }
-    
-    v4 dpos = v4_0(0.0f);
-
-    if (engine->input.mouse.dpos.x || engine->input.mouse.dpos.y)
-    {
-        dpos.x = 0.2f * -engine->input.mouse.dpos.x * engine->timer.delta_seconds;
-        dpos.y = 0.2f * -engine->input.mouse.dpos.y * engine->timer.delta_seconds;
-    }
-    else if (engine->input.keys[KEY_UP].down   || engine->input.keys[KEY_DOWN].down
-         ||  engine->input.keys[KEY_LEFT].down || engine->input.keys[KEY_RIGHT].down)
-    {
-        /**/ if (engine->input.keys[KEY_UP].down)    dpos.y = -0.5f*engine->timer.delta_seconds;
-        else if (engine->input.keys[KEY_DOWN].down)  dpos.y =  0.5f*engine->timer.delta_seconds;
-        /**/ if (engine->input.keys[KEY_LEFT].down)  dpos.x =  0.5f*engine->timer.delta_seconds;
-        else if (engine->input.keys[KEY_RIGHT].down) dpos.x = -0.5f*engine->timer.delta_seconds;
-    }
-    sandbox->t1.view = m4_mul(sandbox->t1.view, m4_translation_v(dpos));
-
-    /**/ if (engine->input.keys[KEY_A].down) dpos.x = -engine->timer.delta_seconds;
-    else if (engine->input.keys[KEY_D].down) dpos.x =  engine->timer.delta_seconds;
-    /**/ if (engine->input.keys[KEY_W].down) dpos.z =  0.1f*engine->timer.delta_seconds;
-    else if (engine->input.keys[KEY_S].down) dpos.z = -0.1f*engine->timer.delta_seconds;
-
-    if (engine->input.keys[KEY_Q].down)
-    {
-        sandbox->t1.view = m4_mul(sandbox->t1.view, m4_rotation_z(f32_PI / 12.0f));
-    }
-    else if (engine->input.keys[KEY_E].down)
-    {
-        sandbox->t1.view = m4_mul(sandbox->t1.view, m4_rotation_z(-f32_PI / 12.0f));
-    }
-
-    if (engine->input.mouse.dwheel > 0)
-    {
-        sandbox->t1.view = m4_mul(sandbox->t1.view, m4_scaling(2.0f, 2.0f, 1.0f));
-    }
-    else if (engine->input.mouse.dwheel < 0)
-    {
-        sandbox->t1.view = m4_mul(sandbox->t1.view, m4_scaling(0.5f, 0.5f, 1.0f));
-    }
-
-    sandbox->t1.view = m4_mul(sandbox->t1.view, m4_translation_v(dpos));
 }
 
 USER_CALLBACK(User_OnRender)
 {
     Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
-
-    Rect *rects[] =
-    {
-        &sandbox->ground
-    };
-    DrawOpaqueRects(engine, rects, ArrayCount(rects));
-
-    Triangle *triangles[] =
-    {
-        &sandbox->t1
-    };
-    DrawTranslucentTriangles(engine, triangles, ArrayCount(triangles));
+    RenderPipelineStage(engine, &sandbox->rect_stage);
 }
 
 SOUND_CALLBACK(User_SoundCallback)

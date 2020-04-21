@@ -17,12 +17,13 @@
 - Graphics
     - Initialize D3D12
         - Resizing
-        - Pipeline State
-        - Shaders
+        - Support D3D12_ROOT_PARAMETER and D3D12_STATIC_SAMPLER_DESC
         - Custom blenging
-        - Adapter changed
-    - Abstract command queues and command lists but keep them flexible.
-      Make it possible to create custom command queues and command lists
+        - Compute pipeline
+    - Abstract command lists but keep them flexible.
+      Make it possible to create custom command lists.
+    - Support triangle strips
+    - Support stream output
     - Textures
     - Entity system
     - Particle system

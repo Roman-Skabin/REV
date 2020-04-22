@@ -16,7 +16,6 @@
 
 - Graphics
     - Initialize D3D12
-        - Resizing
         - Support D3D12_ROOT_PARAMETER and D3D12_STATIC_SAMPLER_DESC
         - Custom blenging
         - Compute pipeline

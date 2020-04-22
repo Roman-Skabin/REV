@@ -32,7 +32,7 @@ USER_CALLBACK(User_OnInit)
 #endif
 
     sandbox->audio = LoadAudioFile(engine, "../sandbox/assets/audio.wav");
-    SoundPlay(&engine->sound);
+    // SoundPlay(&engine->sound);
 
     sandbox->vertex_shader = CreateShader(engine, "../sandbox/shaders/vertex.hlsl", "main", SHADER_KIND_VERTEX);
     sandbox->pixel_shader  = CreateShader(engine, "../sandbox/shaders/pixel.hlsl", "main", SHADER_KIND_PIXEL);
@@ -107,6 +107,46 @@ USER_CALLBACK(User_OnUpdate)
     if (engine->input.keys[KEY_F11].pressed)
     {
         SetFullscreen(engine, !engine->window.fullscreened);
+    }
+
+    // @Remove(Roman): Destraction of the vertex buffer yet we're not supporing SRVs
+    //                 to pass projection matrix to the shader
+    if (engine->window.resized)
+    {
+        DestroyPipelineStage(&sandbox->rect_stage);
+        DestroyVertexBuffer(&sandbox->vertex_buffer);
+
+        v2 size = v2s_to_v2(engine->window.size);
+        m4 proj = m4_persp_lh(-size.w, size.w, -size.h, size.h, 0.1f, 1.0f);
+
+        Vertex vertices[] =
+        {
+            // @Remove(Roman): hard-coded matrix multiplication yet we're not supporting SRVs
+            //                 to pass projection matrix to the shader
+            { m4_mul_v(proj, v4_1(-1.0f * size.w, -1.0f * size.h, 0.1f, 1.0f)), v4_1(1.0f, 0.0f, 0.0f, 1.0f) },
+            { m4_mul_v(proj, v4_1(-1.0f * size.w, -1.0f * size.h, 1.0f, 1.0f)), v4_1(0.0f, 1.0f, 0.0f, 1.0f) },
+            { m4_mul_v(proj, v4_1( 1.0f * size.w, -1.0f * size.h, 1.0f, 1.0f)), v4_1(0.0f, 0.0f, 1.0f, 1.0f) },
+            { m4_mul_v(proj, v4_1( 1.0f * size.w, -1.0f * size.h, 0.1f, 1.0f)), v4_1(1.0f, 1.0f, 0.0f, 1.0f) }
+        };
+        sandbox->vertex_buffer = CreateVertexBuffer(engine, vertices, ArrayCount(vertices), sizeof(Vertex));
+
+        ShaderArg shader_args[] =
+        {
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0 },
+            { "COLOR"   , 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0 }
+        };
+
+        CreatePipelineStage(engine,
+                            &sandbox->vertex_shader,
+                            0, 0, 0,
+                            &sandbox->pixel_shader,
+                            false,
+                            ArrayCount(shader_args),
+                            shader_args,
+                            &sandbox->vertex_buffer,
+                            &sandbox->index_buffer,
+                            &sandbox->rect_stage);
+
     }
 }
 

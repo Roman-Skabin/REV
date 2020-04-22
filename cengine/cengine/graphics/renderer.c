@@ -477,6 +477,9 @@ void RenderPipelineStage(Engine *engine, PipelineStage *pipeline_stage)
                                                                                                  1,
                                                                                                  &vbv);
 
+    engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->IASetPrimitiveTopology(engine->renderer.graphics_lists[engine->renderer.current_buffer],
+                                                                                                     D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
     engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->SetPipelineState(engine->renderer.graphics_lists[engine->renderer.current_buffer],
                                                                                                pipeline_stage->pipeline);
 

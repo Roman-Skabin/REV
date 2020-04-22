@@ -29,7 +29,7 @@ typedef struct Renderer
     ID3DBlob                        *graphics_signature;
     ID3D12RootSignature             *graphics_root_signature;
 
-    ID3DBlob                        *compute_signature;
+    ID3DBlob                        *compute_signature;      // Currently not supported
     ID3D12RootSignature             *compute_root_signature; // Currently not supported
 
     ID3D12CommandQueue              *queue;
@@ -51,8 +51,11 @@ typedef struct Renderer
     u64                              fences_values[BUFFERS_COUNT];
     HANDLE                           fence_event;
 
+    b32                              vsync;
+    b32                              first_frame;
+    b32                              tearing_supported;
+
     HRESULT error;
-    b32     vsync;
 } Renderer;
 
 CEXTERN void SetVSync(Engine *engine, b32 enable);

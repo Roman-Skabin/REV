@@ -427,8 +427,7 @@ internal void RendererCreate(Engine *engine)
                                                                               &factory5);
     Check(SUCCEEDED(engine->renderer.error));
 
-    b32 tearing_supported = false;
-    engine->renderer.error = factory5->lpVtbl->CheckFeatureSupport(factory5, DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearing_supported, sizeof(b32));
+    engine->renderer.error = factory5->lpVtbl->CheckFeatureSupport(factory5, DXGI_FEATURE_PRESENT_ALLOW_TEARING, &engine->renderer.tearing_supported, sizeof(b32));
     Check(SUCCEEDED(engine->renderer.error));
 
     SafeRelease(factory5);
@@ -447,7 +446,7 @@ internal void RendererCreate(Engine *engine)
     scd1.AlphaMode          = DXGI_ALPHA_MODE_UNSPECIFIED;
     scd1.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // DXGI_SWAP_CHAIN_FLAG_RESTRICT_SHARED_RESOURCE_DRIVER ?
 
-    if (tearing_supported) scd1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    if (engine->renderer.tearing_supported) scd1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     DXGI_SWAP_CHAIN_FULLSCREEN_DESC scfd;
     scfd.RefreshRate.Numerator   = 0;
@@ -469,6 +468,11 @@ internal void RendererCreate(Engine *engine)
     engine->renderer.error = swap_chain1->lpVtbl->QueryInterface(swap_chain1,
                                                                  &IID_IDXGISwapChain4,
                                                                  &engine->renderer.swap_chain);
+    Check(SUCCEEDED(engine->renderer.error));
+
+    engine->renderer.error = engine->renderer.factory->lpVtbl->MakeWindowAssociation(engine->renderer.factory,
+                                                                                     engine->window.handle,
+                                                                                     DXGI_MWA_NO_ALT_ENTER);
     Check(SUCCEEDED(engine->renderer.error));
 
     D3D12_DESCRIPTOR_HEAP_DESC rtv_dhd;
@@ -580,12 +584,13 @@ internal void RendererCreate(Engine *engine)
     engine->renderer.fence_event = CreateEventExA(0, "Fence Event", 0, EVENT_ALL_ACCESS);
     Check(engine->renderer.fence_event);
 
+    engine->renderer.first_frame = true;
+
     Success(&engine->logger, "Renderer was created");
 }
 
-internal void RendererDestroy(Engine *engine)
+internal void WaitForGPU(Engine *engine)
 {
-    // Wait for GPU
     u64 current_fence_value = engine->renderer.fences_values[engine->renderer.current_buffer];
     engine->renderer.queue->lpVtbl->Signal(engine->renderer.queue,
                                            engine->renderer.fences[engine->renderer.current_buffer],
@@ -604,8 +609,30 @@ internal void RendererDestroy(Engine *engine)
     }
 
     engine->renderer.fences_values[engine->renderer.current_buffer] = current_fence_value + 1;
+}
 
-    // Release everything
+internal void FlushGPU(Engine *engine)
+{
+    for (u32 buffer_index = 0; buffer_index < BUFFERS_COUNT; ++buffer_index)
+    {
+        engine->renderer.queue->lpVtbl->Signal(engine->renderer.queue,
+                                               engine->renderer.fences[buffer_index],
+                                               engine->renderer.fences_values[buffer_index]);
+
+        engine->renderer.error = engine->renderer.fences[buffer_index]->lpVtbl->SetEventOnCompletion(engine->renderer.fences[buffer_index],
+                                                                                                     engine->renderer.fences_values[buffer_index],
+                                                                                                     engine->renderer.fence_event);
+        Check(SUCCEEDED(engine->renderer.error));
+        while (WaitForSingleObjectEx(engine->renderer.fence_event, INFINITE, false) != WAIT_OBJECT_0)
+        {
+        }
+
+        ++engine->renderer.fences_values[buffer_index];
+    }
+}
+
+internal void RendererDestroy(Engine *engine)
+{
     SafeRelease(engine->renderer.ds_buffer);
     SafeRelease(engine->renderer.ds_heap_desc);
     DebugResult(CloseHandle(engine->renderer.fence_event));
@@ -633,11 +660,110 @@ internal void RendererDestroy(Engine *engine)
 
 internal void RendererResize(Engine *engine)
 {
-    // @TODO(Roman): Resize
-    //     1. Flush GPU (wait for ALL buffers)
-    //     2. Reset all memory and release all reeferencies to buffers
-    //     3. Resize buffers (rts & ds)
-    //     4. Recreate buffers (rts & ds)
+    // Wait for the GPU, reset memory and release buffers
+    for (u32 i = 0; i < BUFFERS_COUNT; ++i)
+    {
+        engine->renderer.queue->lpVtbl->Signal(engine->renderer.queue,
+                                               engine->renderer.fences[i],
+                                               engine->renderer.fences_values[i]);
+
+        engine->renderer.error = engine->renderer.fences[i]->lpVtbl->SetEventOnCompletion(engine->renderer.fences[i],
+                                                                                          engine->renderer.fences_values[i],
+                                                                                          engine->renderer.fence_event);
+        Check(SUCCEEDED(engine->renderer.error));
+        while (WaitForSingleObjectEx(engine->renderer.fence_event, INFINITE, false) != WAIT_OBJECT_0)
+        {
+        }
+
+        ++engine->renderer.fences_values[i];
+
+        SafeRelease(engine->renderer.rt_buffers[i]);
+    }
+
+    SafeRelease(engine->renderer.ds_buffer);
+
+    // Resize buffers
+    u32 flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // DXGI_SWAP_CHAIN_FLAG_RESTRICT_SHARED_RESOURCE_DRIVER ?
+    if (engine->renderer.tearing_supported) flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+
+    engine->renderer.error = engine->renderer.swap_chain->lpVtbl->ResizeBuffers(engine->renderer.swap_chain,
+                                                                                BUFFERS_COUNT,
+                                                                                engine->window.size.w,
+                                                                                engine->window.size.h,
+                                                                                DXGI_FORMAT_R8G8B8A8_UNORM,
+                                                                                flags);
+    Check(SUCCEEDED(engine->renderer.error));
+
+    // Recreate buffers
+    #pragma warning(suppress: 4020) // I know what I'm doing.
+    engine->renderer.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->renderer.rtv_heap_desc, &engine->renderer.rtv_cpu_desc_handle);
+
+    for (u32 i = 0; i < BUFFERS_COUNT; ++i)
+    {
+        engine->renderer.error = engine->renderer.swap_chain->lpVtbl->GetBuffer(engine->renderer.swap_chain,
+                                                                                i,
+                                                                                &IID_ID3D12Resource,
+                                                                                engine->renderer.rt_buffers + i);
+        Check(SUCCEEDED(engine->renderer.error));
+
+        engine->renderer.device->lpVtbl->CreateRenderTargetView(engine->renderer.device,
+                                                                engine->renderer.rt_buffers[i],
+                                                                0,
+                                                                engine->renderer.rtv_cpu_desc_handle);
+
+        engine->renderer.rtv_cpu_desc_handle.ptr += engine->renderer.rtv_desc_size;
+    }
+
+    engine->renderer.rtv_cpu_desc_handle.ptr -= BUFFERS_COUNT * engine->renderer.rtv_desc_size;
+    engine->renderer.current_buffer           = engine->renderer.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->renderer.swap_chain);
+    engine->renderer.rtv_cpu_desc_handle.ptr += engine->renderer.current_buffer * engine->renderer.rtv_desc_size;
+
+    // Recreate DS buffer & DSV
+    D3D12_HEAP_PROPERTIES ds_hp;
+    ds_hp.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    ds_hp.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    ds_hp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    ds_hp.CreationNodeMask     = 0;
+    ds_hp.VisibleNodeMask      = 0;
+
+    D3D12_RESOURCE_DESC ds_rd;
+    ds_rd.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    ds_rd.Alignment          = 0;
+    ds_rd.Width              = engine->window.size.w;
+    ds_rd.Height             = engine->window.size.h;
+    ds_rd.DepthOrArraySize   = 1;
+    ds_rd.MipLevels          = 0;
+    ds_rd.Format             = DXGI_FORMAT_D32_FLOAT;
+    ds_rd.SampleDesc.Count   = 1;
+    ds_rd.SampleDesc.Quality = 0;
+    ds_rd.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    ds_rd.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+    D3D12_CLEAR_VALUE ds_cv;
+    ds_cv.Format               = DXGI_FORMAT_D32_FLOAT;
+    ds_cv.DepthStencil.Depth   = 1.0f;
+    ds_cv.DepthStencil.Stencil = 0;
+
+    engine->renderer.error = engine->renderer.device->lpVtbl->CreateCommittedResource(engine->renderer.device,
+                                                                                      &ds_hp,
+                                                                                      D3D12_HEAP_FLAG_SHARED,
+                                                                                      &ds_rd,
+                                                                                      D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                                                                                      &ds_cv,
+                                                                                      &IID_ID3D12Resource,
+                                                                                      &engine->renderer.ds_buffer);
+    Check(SUCCEEDED(engine->renderer.error));
+
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsvd = {0};
+    dsvd.Format        = DXGI_FORMAT_D32_FLOAT;
+    dsvd.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+
+    engine->renderer.device->lpVtbl->CreateDepthStencilView(engine->renderer.device,
+                                                            engine->renderer.ds_buffer,
+                                                            &dsvd,
+                                                            engine->renderer.dsv_cpu_desc_handle);
+
+    engine->renderer.first_frame = true;
 }
 
 internal void RendererPresent(Engine *engine)
@@ -667,39 +793,28 @@ internal void RendererPresent(Engine *engine)
     Check(SUCCEEDED(engine->renderer.error));
 
     // Present
-    DXGI_PRESENT_PARAMETERS pp;
-    pp.DirtyRectsCount = 0;
-    pp.pDirtyRects     = 0;
-    pp.pScrollRect     = 0;
-    pp.pScrollOffset   = 0;
-
-    local b32 first_frame = true;
-    engine->renderer.error = engine->renderer.swap_chain->lpVtbl->Present1(engine->renderer.swap_chain,
-                                                                           engine->renderer.vsync,
-                                                                           first_frame ? 0 : DXGI_PRESENT_DO_NOT_SEQUENCE, // optimization
-                                                                           &pp);
-    Check(SUCCEEDED(engine->renderer.error));
-    first_frame = false;
-
-    // Wait for GPU
-    u64 current_fence_value = engine->renderer.fences_values[engine->renderer.current_buffer];
-    engine->renderer.queue->lpVtbl->Signal(engine->renderer.queue,
-                                           engine->renderer.fences[engine->renderer.current_buffer],
-                                           current_fence_value);
-
-    u64 value = engine->renderer.fences[engine->renderer.current_buffer]->lpVtbl->GetCompletedValue(engine->renderer.fences[engine->renderer.current_buffer]);
-    if (value < engine->renderer.fences_values[engine->renderer.current_buffer])
+    u32 present_flags = 0;
+    if (!engine->renderer.vsync)
     {
-        engine->renderer.error = engine->renderer.fences[engine->renderer.current_buffer]->lpVtbl->SetEventOnCompletion(engine->renderer.fences[engine->renderer.current_buffer],
-                                                                                                                        engine->renderer.fences_values[engine->renderer.current_buffer],
-                                                                                                                        engine->renderer.fence_event);
-        Check(SUCCEEDED(engine->renderer.error));
-        while (WaitForSingleObjectEx(engine->renderer.fence_event, INFINITE, false) != WAIT_OBJECT_0)
+        present_flags |= DXGI_PRESENT_DO_NOT_WAIT;
+        if (engine->renderer.tearing_supported)
         {
+            present_flags |= DXGI_PRESENT_ALLOW_TEARING;
         }
     }
+    if (engine->renderer.first_frame)
+    {
+        engine->renderer.first_frame = false;
+    }
+    else
+    {
+        present_flags |= DXGI_PRESENT_DO_NOT_SEQUENCE;
+    }
 
-    engine->renderer.fences_values[engine->renderer.current_buffer] = current_fence_value + 1;
+    engine->renderer.error = engine->renderer.swap_chain->lpVtbl->Present(engine->renderer.swap_chain,
+                                                                          engine->renderer.vsync,
+                                                                          present_flags);
+    Check(SUCCEEDED(engine->renderer.error));
 
     // Swap buffers
     engine->renderer.current_buffer = engine->renderer.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->renderer.swap_chain);
@@ -766,33 +881,37 @@ internal void WindowDestroy(Engine *engine, HINSTANCE instance)
     Log(&engine->logger, "Window was destroyed");
 }
 
-// @TODO(Roman): Enable fullsreen mode for D3D12
 void SetFullscreen(Engine *engine, b32 set)
 {
-    if (set != engine->window.fullscreened)
+    local RECT wr;
+
+    if (engine->window.fullscreened == BIT(31))
     {
-        local RECT wr;
-
-        if (set)
-        {
-            DebugResult(GetWindowRect(engine->window.handle, &wr));
-            SetWindowLongA(engine->window.handle, GWL_STYLE,
-                           GetWindowLongA(engine->window.handle, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-            DebugResult(SetWindowPos(engine->window.handle, HWND_TOP,
-                                     engine->monitor.pos.x, engine->monitor.pos.y,
-                                     engine->monitor.size.w, engine->monitor.size.h,
-                                     SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
-        }
-        else
-        {
-            SetWindowLongA(engine->window.handle, GWL_STYLE,
-                           GetWindowLongA(engine->window.handle, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
-            DebugResult(SetWindowPos(engine->window.handle, HWND_TOP,
-                                     wr.left, wr.top, wr.right - wr.left, wr.bottom - wr.top,
-                                     SWP_FRAMECHANGED | SWP_ASYNCWINDOWPOS));
-        }
-
-        engine->window.fullscreened = set;
+        DebugResult(GetWindowRect(engine->window.handle, &wr));
+        SetWindowLongPtrA(engine->window.handle, GWL_STYLE,
+                          GetWindowLongPtrA(engine->window.handle, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
+        DebugResult(SetWindowPos(engine->window.handle, HWND_TOP,
+                                 engine->monitor.pos.x, engine->monitor.pos.y,
+                                 engine->monitor.size.w, engine->monitor.size.h,
+                                 SWP_ASYNCWINDOWPOS | SWP_FRAMECHANGED | SWP_DEFERERASE | SWP_NOCOPYBITS | SWP_NOREDRAW));
+        engine->window.fullscreened = true;
+    }
+    else if (engine->window.fullscreened == BIT(30))
+    {
+        SetWindowLongPtrA(engine->window.handle, GWL_STYLE,
+                          GetWindowLongPtrA(engine->window.handle, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
+        DebugResult(SetWindowPos(engine->window.handle, HWND_TOP,
+                                 wr.left, wr.top, wr.right - wr.left, wr.bottom - wr.top,
+                                 SWP_ASYNCWINDOWPOS | SWP_FRAMECHANGED | SWP_DEFERERASE | SWP_NOCOPYBITS | SWP_NOREDRAW));
+        engine->window.fullscreened = false;
+    }
+    else if (set == 1 && engine->window.fullscreened != 1)
+    {
+        engine->window.fullscreened = BIT(31);
+    }
+    else if (set == 0 && engine->window.fullscreened != 0)
+    {
+        engine->window.fullscreened = BIT(30);
     }
 }
 
@@ -919,8 +1038,8 @@ internal void DestroySound(Engine *engine)
 
 internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
 {
-    LRESULT      result = 0;
-    Engine *engine  = cast(Engine *, GetWindowLongPtrA(window, GWLP_USERDATA));
+    LRESULT result = 0;
+    Engine *engine = cast(Engine *, GetWindowLongPtrA(window, GWLP_USERDATA));
 
     switch (message)
     {
@@ -931,10 +1050,14 @@ internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPA
 
         case WM_SIZE: // 0x0005
         {
+            v2s saved_size      = engine->window.size;
             engine->window.size = v2s_1(cast(s32, lparam & 0xFFFF), cast(s32, lparam >> 16));
-            RendererResize(engine);
-            engine->window.resized = true;
-            Log(&engine->logger, "Window was resized");
+            if ((engine->window.size.x != saved_size.x || engine->window.size.y != saved_size.y) && wparam != SIZE_MINIMIZED)
+            {
+                RendererResize(engine);
+                engine->window.resized = true;
+                Log(&engine->logger, "Window was resized");
+            }
         } break;
 
         case WM_DISPLAYCHANGE: // 0x007E
@@ -1055,8 +1178,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
     dsv_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     dsv_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
-    b32 first_frame = true;
-
     MSG msg = {0};
     ShowWindow(engine->window.handle, SW_SHOW);
     while (!engine->window.closed)
@@ -1079,14 +1200,19 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
 
         if (!engine->window.closed)
         {
-            // Reinitialize all stuff, was allocated on transient memory
+            // Reinitialize all stuff was allocated on transient memory
             // ...
 
             // Pull
             InputPull(engine);
             TimerPull(engine);
 
+            // Delayed SetFullscreen if we need to.
+            SetFullscreen(engine, engine->window.fullscreened);
+
             // Frame start
+            WaitForGPU(engine);
+
             engine->renderer.error = engine->renderer.allocators[engine->renderer.current_buffer]->lpVtbl->Reset(engine->renderer.allocators[engine->renderer.current_buffer]);
             Check(SUCCEEDED(engine->renderer.error));
 
@@ -1099,10 +1225,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
             engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->SetGraphicsRootSignature(engine->renderer.graphics_lists[engine->renderer.current_buffer],
                                                                                                                engine->renderer.graphics_root_signature);
             
-            // Set Primitive Topology
-            engine->renderer.graphics_lists[engine->renderer.current_buffer]->lpVtbl->IASetPrimitiveTopology(engine->renderer.graphics_lists[engine->renderer.current_buffer],
-                                                                                                             D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
             // Set viewport
             D3D12_VIEWPORT viewport;
             viewport.TopLeftX = 0.0f;
@@ -1143,7 +1265,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
                                                                                                       1,
                                                                                                       &rtv_barrier);
 
-            if (!first_frame)
+            if (!engine->renderer.first_frame)
             {
                 dsv_barrier.Transition.pResource   = engine->renderer.ds_buffer;
                 dsv_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -1182,13 +1304,12 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
 
             // Present
             RendererPresent(engine);
-
-            first_frame = false;
         }
     }
 
     TimerStop(engine);
     DestroySound(engine);
+    FlushGPU(engine);
 
     User_OnDestroy(engine);
 

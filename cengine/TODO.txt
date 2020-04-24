@@ -11,8 +11,9 @@
     - Switch to DPI stuff for monitor and window adjustment?
 
 - Math
-    - AVX2 optimizations
-    - Other orthos & persps
+    - Clean up vec.h
+    - Adapt m4 for AVX-512 (#ifdef __AVX512F__)
+    - Other orthos
 
 - Graphics
     - Initialize D3D12

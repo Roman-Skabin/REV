@@ -27,8 +27,7 @@ USER_CALLBACK(User_OnInit)
     CreateLogger(&sandbox->logger, "Sandbox Logger", "../sandbox/sandbox.log", LOG_TO_FILE);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
 #if RELEASE
-    // @TODO(Roman): removed yet we're not supporting resizing
-    // SetFullscreen(engine, true);
+    SetFullscreen(engine, true);
 #endif
 
     sandbox->audio = LoadAudioFile(engine, "../sandbox/assets/audio.wav");

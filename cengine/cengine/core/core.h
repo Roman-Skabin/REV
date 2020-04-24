@@ -48,6 +48,9 @@
     #define INLINE __forceinline
 #endif
 
+#define __align(bytes) __declspec(align(bytes))
+#define __intrin_type __declspec(intrin_type)
+
 #define global   static
 #define internal static
 #define local    static

@@ -108,7 +108,7 @@ INLINE v3 MATH_CALL v3_0(f32 val            ) { v3 v; v.mm = _mm_setr_ps(val, va
 INLINE v3 MATH_CALL v3_1(f32 x, f32 y, f32 z) { v3 v; v.mm = _mm_setr_ps(   x,    y, z, 0.0f); return v; }
 INLINE v3 MATH_CALL v3_2(v2 xy,        f32 z) { v3 v; v.mm = _mm_setr_ps(xy.x, xy.y, z, 0.0f); return v; }
 
-INLINE f32 MATH_CALL v3_dot(v3 l, v3 r) { return _mm_cvtss_f32(_mm_dp_ps(l.mm, r.mm, 0xFF)); }
+INLINE f32 MATH_CALL v3_dot(v3 l, v3 r) { return _mm_cvtss_f32(_mm_dp_ps(l.mm, r.mm, 0x71)); }
 
 INLINE f32 MATH_CALL v3_length(v3 v) { return sqrtf(v3_dot(v, v)); }
 INLINE f32 MATH_CALL v3_length_sq(v3 v) { return v3_dot(v, v); }
@@ -151,7 +151,11 @@ INLINE s32 MATH_CALL v3s_dot(v3s l, v3s r)
     __m128i m = _mm_mul_epi32(l.mm, r.mm);
     __m128i h = _mm_hadd_epi32(m, m);
     __m128i d = _mm_hadd_epi32(h, h);
+#if 0
     return d.m128i_i32[0];
+#else
+    return _mm_cvtsi128_si32(d);
+#endif
 }
 
 INLINE v3s MATH_CALL v3s_round(v3 v) { v3s r; r.mm = _mm_cvtps_epi32(v.mm); return r; }
@@ -185,7 +189,11 @@ INLINE u32 MATH_CALL v3u_dot(v3u l, v3u r)
     __m128i m = _mm_mul_epi32(l.mm, r.mm);
     __m128i h = _mm_hadd_epi32(m, m);
     __m128i d = _mm_hadd_epi32(h, h);
-    return d.m128i_u32[0];
+#if 0
+    return d.m128i_i32[0];
+#else
+    return _mm_cvtsi128_si32(d);
+#endif
 }
 
 INLINE v3u MATH_CALL v3u_round(v3 v) { v3u r; r.mm = _mm_cvtps_epi32(v.mm); return r; }
@@ -229,7 +237,7 @@ INLINE v4 MATH_CALL v4_1(f32 x, f32 y, f32 z, f32 w) { v4 v; v.mm = _mm_setr_ps(
 INLINE v4 MATH_CALL v4_2(v2 xy,        f32 z, f32 w) { v4 v; v.mm = _mm_setr_ps(xy.x, xy.y, z, w); return v; }
 INLINE v4 MATH_CALL v4_3(v3 xyz,              f32 w) { v4 v; v.mm = _mm_move_ss(xyz.mm, _mm_load_ss(&w)); return v; }
 
-INLINE f32 MATH_CALL v4_dot(v4 l, v4 r) { __m128 mm = _mm_dp_ps(l.mm, r.mm, 0xFF); return mm.m128_f32[0]; }
+INLINE f32 MATH_CALL v4_dot(v4 l, v4 r) { return _mm_cvtss_f32(_mm_dp_ps(l.mm, r.mm, 0xF1)); }
 
 INLINE f32 MATH_CALL v4_length(v4 v)    { return sqrtf(v.x*v.x + v.y*v.y + v.z*v.z); }
 INLINE f32 MATH_CALL v4_length_sq(v4 v) { return       v.x*v.x + v.y*v.y + v.z*v.z ; }
@@ -322,7 +330,11 @@ INLINE s32 MATH_CALL v4s_dot(v4s l, v4s r)
     __m128i m = _mm_mul_epi32(l.mm, r.mm);
     __m128i h = _mm_hadd_epi32(m, m);
     __m128i d = _mm_hadd_epi32(h, h);
+#if 0
     return d.m128i_i32[0];
+#else
+    return _mm_cvtsi128_si32(d);
+#endif
 }
 
 INLINE v4s MATH_CALL v4s_round(v4 v) { v4s r; r.mm = _mm_cvtps_epi32(v.mm); return r; }
@@ -375,7 +387,11 @@ INLINE u32 MATH_CALL v4u_dot(v4u l, v4u r)
     __m128i m = _mm_mul_epi32(l.mm, r.mm);
     __m128i h = _mm_hadd_epi32(m, m);
     __m128i d = _mm_hadd_epi32(h, h);
-    return d.m128i_u32[0];
+#if 0
+    return d.m128i_i32[0];
+#else
+    return _mm_cvtsi128_si32(d);
+#endif
 }
 
 INLINE v4u MATH_CALL v4u_round(v4 v) { v4u r; r.mm = _mm_cvtps_epi32(v.mm); return r; }

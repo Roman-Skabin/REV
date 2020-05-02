@@ -1,7 +1,4 @@
 .vs/
 .vscode/
-debug/
-release/
-*.log
-assets/
 *.pdf
+assets/audio/*.*

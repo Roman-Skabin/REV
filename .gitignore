@@ -2,4 +2,3 @@
 .vscode/
 *.pdf
 log/*.log
-assets/audio/*.*

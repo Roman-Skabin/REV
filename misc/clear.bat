@@ -6,6 +6,6 @@ cls
 
 pushd ..
     del /S /Q bin\*.*
-    del /Q *.log
+    del /Q log\*.log
     del /Q *.exe, *.dll, *.lib, *.exp, 
 popd

@@ -1,0 +1,34 @@
+- Architecture
+    - ...
+
+- Build system
+    - Make a production build
+
+- Core
+    - Make engine's user pointer and sandbox thread safety
+
+- Tools
+    - ...
+
+- Window
+    - Switch to DPI stuff for monitor and window adjustment?
+
+- Math
+    - Clean up vec.h
+    - Adapt m4 for AVX-512
+
+- Graphics
+    - Custom graphics shaders parser and GraphicsProgram generation // I'm going to break everything and it gonna be awesome :)
+    - Custom compute shader parser and ComputeProgram generation    // Continue breaking everything
+    - Custom blenging (I have no idea how to implement it)
+    - User-side GPU command lists and bundles
+    - Support triangle strips (define topology in shaders?)
+    - Support stream output (in shaders too?)
+    - Textures
+    - Entity system
+    - Particle system
+
+- Sound
+    - Create a common audio session for entire program
+    - Allow to create more audio streams
+    - Different callbacks for audios and sounds (fx)

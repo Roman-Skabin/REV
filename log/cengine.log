@@ -1,0 +1,17 @@
+[02:30:29]<Engine logger>: Success: Engine logger was created
+[02:30:29]<Engine logger>: Success: Window was created
+[02:30:29]<Engine logger>: Success: Monitor was initialized
+[02:30:29]<Engine logger>: Success: Mouse was created
+[02:30:29]<Engine logger>: Success: Gamepad created
+[02:30:29]<Engine logger>: Gamepad is not connected
+[02:30:29]<Engine logger>: Success: Timer was created
+[02:30:29]<Engine logger>: Success: Renderer was created
+[02:30:30]<Engine logger>: Success: Sound was initialized
+[02:30:31]<Engine logger>: Timer was started
+[02:30:31]<Engine logger>: Window was resized
+[02:30:32]<Engine logger>: Window was resized
+[02:30:36]<Engine logger>: Timer was stopped
+[02:30:36]<Engine logger>: Success: Sound was destroyed
+[02:30:36]<Engine logger>: Input was destroyed
+[02:30:36]<Engine logger>: Window was destroyed
+[02:30:36]<Engine logger>: Engine logger was destroyed

@@ -4,13 +4,11 @@
 
 #pragma once
 
-#if 0
 #pragma comment(lib, "mfplat.lib")
 #pragma comment(lib, "mfreadwrite.lib")
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
-#endif
 
 #define WIN32_LEAN_AND_MEAN     1
 #define VC_EXTRALEAN            1
@@ -39,7 +37,6 @@
 #undef near
 #undef far
 
-#if 0
 #pragma intrinsic(abs)
 #pragma intrinsic(fabs)
 #pragma intrinsic(labs)
@@ -86,4 +83,3 @@
 #pragma intrinsic(memcmp)
 #pragma intrinsic(memcpy)
 #pragma intrinsic(memset)
-#endif

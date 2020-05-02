@@ -33,7 +33,7 @@ if !COMPILE_CENGINE! == 1 (
     set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
     set LANGUAGE= -Zc:wchar_t- -Zc:inline
     set DIAGNOSTICS= -W3
-    set IMPORT_LIBS= User32.lib Ole32.lib mfplat.lib mfreadwrite.lib d3d12.lib dxgi.lib d3dcompiler.lib
+    set IMPORT_LIBS= User32.lib Ole32.lib
     set LINKER= -link
     set LINKING=
     set INPUT_FILES= cengine\*.c cengine\core\*.c cengine\graphics\*.c cengine\math\*.c cengine\sound\*.c cengine\tools\*.c
@@ -57,7 +57,7 @@ if !COMPILE_CENGINE! == 1 (
     pushd ..
         echo ==========================    Compiling cengine...    ==========================
         cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! !LINKING! !DIAGNOSTICS! !OUTPUT_FILES! !INPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
-        echo =======================    Cengine have been compiled    =======================
+        echo =======================    Cengine has been compiled    ========================
     popd
 )
 
@@ -91,6 +91,6 @@ if !COMPILE_SANDBOX! == 1 (
     pushd ..
         echo ==========================    Compiling sandbox...    ==========================
         cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! !DIAGNOSTICS! !LINKING! !INPUT_FILES! !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
-        echo =======================    Sandbox have been compiled    =======================
+        echo =======================    Sandbox has been compiled    ========================
     popd
 )

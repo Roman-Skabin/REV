@@ -40,6 +40,10 @@ void memset_f32(f32 *mem, f32 val, u32 count)
     }
 }
 
+//
+// Memory
+//
+
 void CreateMemory(Memory *memory, u64 transient_area_cap, u64 permanent_area_cap)
 {
     Check(memory);
@@ -104,7 +108,7 @@ void *PushToTransientAreaAligned(Memory *memory, u64 bytes, u64 alignment)
     return retptr;
 }
 
-void  ResetTransientArea(Memory *memory)
+void ResetTransientArea(Memory *memory)
 {
     Check(memory);
     ZeroMemory(memory->transient.base, memory->transient.size);

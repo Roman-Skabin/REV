@@ -4,6 +4,6 @@ rem use: run
 
 cls
 
-pushd ..
-    call bin\sandbox.exe
+pushd ..\bin
+    call sandbox.exe
 popd

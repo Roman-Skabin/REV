@@ -7,6 +7,9 @@
 #include "core/core.h"
 #include "core/allocator.h"
 
+// @NOTE(Roman): annotation for buffers
+#define BUF
+
 typedef struct BufferHeader
 {
     Allocator *allocator;

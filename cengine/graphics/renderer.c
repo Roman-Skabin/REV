@@ -193,44 +193,8 @@ void DrawIndices(Engine *engine, IndexBuffer *buffer)
 // Shader
 //
 
-internal byte *ReadEntireShaderFile(Engine *engine, const char *filename, u32 *filesize)
+internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3D_SHADER_MACRO *predefines)
 {
-    if (filename)
-    {
-        HANDLE file = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, 0);
-        CheckM(file != INVALID_HANDLE_VALUE, "File does not exist");
-
-        *filesize    = GetFileSize(file, 0);
-        byte *buffer = PushToTransientArea(engine->memory, *filesize);
-
-        DebugResult(ReadFile(file, buffer, *filesize, 0, 0));
-
-        DebugResult(CloseHandle(file));
-        return buffer;
-    }
-    return 0;
-}
-
-// @TODO(Roman): remove or rewrite
-internal void CompileShader(
-    IN       Engine           *engine,
-    IN       const char       *filename,
-    OPTIONAL const char       *name,
-    OPTIONAL D3D_SHADER_MACRO *defines,
-    OPTIONAL ID3DInclude      *includes,
-    IN       const char       *entry_point,
-    IN       const char       *target,
-    OUT      Shader           *shader)
-{
-    shader->name        = name;
-    shader->defines     = defines;
-    shader->include     = includes;
-    shader->entry_point = entry_point;
-    shader->target      = target;
-
-    u32   source_size = 0;
-    byte *source      = ReadEntireShaderFile(engine, filename, &source_size);
-
     u32 compile_flags = 0; // D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR ?
 #if DEBUG
     compile_flags |= D3DCOMPILE_DEBUG
@@ -242,13 +206,13 @@ internal void CompileShader(
 #endif
 
     ID3DBlob *errors = 0;
-    engine->renderer.error = D3DCompile(source,
-                                        source_size,
-                                        shader->name,
-                                        shader->defines,
+    engine->renderer.error = D3DCompile(desc->code_start,
+                                        desc->code_end - desc->code_start,
+                                        desc->name,
+                                        predefines,
                                         shader->include,
-                                        shader->entry_point,
-                                        shader->target,
+                                        desc->entry_point,
+                                        desc->target,
                                         compile_flags,
                                         0,
                                         &shader->blob,
@@ -264,170 +228,45 @@ internal void CompileShader(
     SafeRelease(errors);
 }
 
-/////////////////////////////////////////////////////////////
-//// EVERYTHING BELOW IS BROKEN       ///////////////////////
-/////////////////////////////////////////////////////////////
-
 //
 // GraphicsProgram
 //
 
-typedef struct Token
+CEXTERN void ParseShaders(Engine *engine, const char *file_with_shaders, GraphicsProgramDesc *gpd);
+
+void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_SHADER_MACRO *predefines, GraphicsProgram *graphics_program)
 {
-    const char *start;
-    const char *end;
-} Token;
+    Check(engine);
+    Check(file_with_shaders);
+    Check(graphics_program);
 
-internal byte *GetNextToken(Token *token, byte *code)
-{
-    while (*code && isspace(*code)) ++code;
+    GraphicsProgramDesc gpd = {0};
+    ParseShaders(engine, file_with_shaders, &gpd);
 
-    if (*code)
+    graphics_program->shaders_count = gpd.sd.count;
+
+    for (u32 i = 0; i < graphics_program->shaders_count; ++i)
     {
-        token->start = code;
-        if (*code == '#' || *code == '(' || *code == ')' || *code == '"')
-        {
-            token->end = ++code;
-        }
-        else
-        {
-            while (*code && (!isspace(*code) || *code != '(' || *code != ')' || *code != '"'))
-            {
-                ++code;
-            }
-            token->end = code;
-        }
-    }
-    return code;
-}
-
-internal void CheckSyntax(Token *token, const char *expected, u32 expected_len)
-{
-    if ((token->end - token->start != expected_len)
-    ||  memcmp(token->start, expected, token->end - token->start))
-    {
-        MessageF(MESSAGE_TYPE_ERROR,
-                 "Shader syntax error: exected '%s', got '%.*s'",
-                 expected,
-                 token->end - token->start, token->start);
-    }
-}
-#define CheckSyntaxCSTR(token, expected) CheckSyntax(token, expected, CSTRLEN(expected))
-#define CheckSyntaxChar(token, expected) CheckSyntax(token, expected, 1)
-
-#define TokenEqualsCSTR(token, cstr)                                 \
-    (((token)->end - (token)->start == CSTRLEN(cstr))                \
-    && !memcmp((token)->start, cstr, (token)->end - (token)->start))
-
-internal byte *ParsePragma(Engine *engine, Token *token, byte *code, GraphicsProgram *program)
-{
-    code = GetNextToken(&token, code);
-
-    if (TokenEqualsCSTR(token, "type"))
-    {
-        code = GetNextToken(&token, code);
-        CheckSyntaxChar(token, '(');
-        code = GetNextToken(&token, code);
-
-        Shader *shader = program->shaders + program->shaders_count;
-        if (TokenEqualsCSTR(token, "vertex"))
-        {
-            shader->target = "vs_5_0";
-            shader->entry_point = "VSMain";
-        }
-        else if (TokenEqualsCSTR(token, "hull"))
-        {
-            shader->target = "hs_5_0";
-            shader->entry_point = "HSMain";
-        }
-        else if (TokenEqualsCSTR(token, "domain"))
-        {
-            shader->target = "ds_5_0";
-            shader->entry_point = "DSMain";
-        }
-        else if (TokenEqualsCSTR(token, "geometry"))
-        {
-            shader->target = "gs_5_0";
-            shader->entry_point = "GSMain";
-        }
-        else if (TokenEqualsCSTR(token, "pixel"))
-        {
-            shader->target = "ps_5_0";
-            shader->entry_point = "PSMain";
-        }
-        else
-        {
-            MessageF(MESSAGE_TYPE_ERROR,
-                     "Shader syntax error: wrong shader type "
-                     "expected 'vertex' or 'hull' or 'domain' "
-                     "or 'geometry' or 'pixel', got %.*s",
-                     token->end - token->start, token->start);
-        }
-    }
-    else if (TokenEqualsCSTR(token, "name"))
-    {
-        code = GetNextToken(&token, code);
-        CheckSyntaxChar(token, '(');
-        code = GetNextToken(&token, code);
-        CheckSyntaxChar(token, '"');
-        code = GetNextToken(&token, code);
-
-        Shader *shader = program->shaders + program->shaders_count;
-        shader->name = PushToTA(char, engine->memory, token->end - token->start);
-        CopyMemory(shader->name, token->start, token->end - token->start);
-
-        code = GetNextToken(&token, code);
-        CheckSyntaxChar(token, '"');
+        CompileShader(engine,
+                      graphics_program->shaders + i,
+                      gpd.sd.descs + i,
+                      predefines);
     }
 
-    code = GetNextToken(&token, code);
-    CheckSyntaxChar(token, ')');
-    return code = GetNextToken(&token, code);
-}
-
-internal byte *ParseDefine(Engine *engine, Token *token, byte *code, GraphicsProgram *program)
-{
-    code = GetNextToken(&token, code);
-
-    Shader *shader = program->shaders + program->shaders_count;
-
-    // shader->defines[0].Definition = ;
-}
-
-internal void ParseFileWithShaders(Engine *engine, const char *file, GraphicsProgram *program)
-{
-    u32   size = 0;
-    byte *code = ReadEntireShaderFile(engine, file, size);
-
-    Token token = {0};
-    code = GetNextToken(&token, code);
-
-    while (*code)
-    {
-        if (*token.start == '#')
-        {
-            code = GetNextToken(&token, code);
-            if (TokenEqualsCSTR(&token, "pragma"))
-            {
-                code = ParsePragma(engine, &token, code, program);
-            }
-            else if (TokenEqualsCSTR(&token, "define"))
-            {
-                code = ParseDefine(engine, &token, code, program);
-            }
-        }
-    }
-}
-
-void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, GraphicsProgram *graphics_program)
-{
-#if 0
-    ParseFileWithShaders(engine, file_with_shaders, graphics_program);
+    // @TODO(Roman): Parse root signature stuff from shaders
+    D3D12_ROOT_SIGNATURE_DESC rsd;
+    rsd.NumParameters     = 0;
+    rsd.pParameters       = 0;
+    rsd.NumStaticSamplers = 0;
+    rsd.pStaticSamplers   = 0;
+    rsd.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+                        // @TODO(Roman): support stream output
+                        /*| D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT*/;
 
     ID3DBlob *error = 0;
     engine->renderer.error = D3D12SerializeRootSignature(&rsd,
                                                          D3D_ROOT_SIGNATURE_VERSION_1_0,
-                                                         &shader_resources->signature,
+                                                         &graphics_program->signature,
                                                          &error);
 #if DEVDEBUG
     if (FAILED(engine->renderer.error))
@@ -444,20 +283,163 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, Graph
 
     engine->renderer.error = engine->renderer.device->lpVtbl->CreateRootSignature(engine->renderer.device,
                                                                                   0,
-                                                                                  shader_resources->signature->lpVtbl->GetBufferPointer(shader_resources->signature),
-                                                                                  shader_resources->signature->lpVtbl->GetBufferSize(shader_resources->signature),
+                                                                                  graphics_program->signature->lpVtbl->GetBufferPointer(graphics_program->signature),
+                                                                                  graphics_program->signature->lpVtbl->GetBufferSize(graphics_program->signature),
                                                                                   &IID_ID3D12RootSignature,
-                                                                                  &shader_resources->root_signature);
+                                                                                  &graphics_program->root_signature);
     Check(SUCCEEDED(engine->renderer.error));
-#endif
+
+    // @TODO(Roman): support stream output
+    D3D12_STREAM_OUTPUT_DESC sod;
+    sod.pSODeclaration   = 0;
+    sod.NumEntries       = 0;
+    sod.pBufferStrides   = 0;
+    sod.NumStrides       = 0;
+    sod.RasterizedStream = 0;
+
+    D3D12_RENDER_TARGET_BLEND_DESC rtbd;
+    rtbd.BlendEnable           = false;
+    rtbd.LogicOpEnable         = false;
+    rtbd.SrcBlend              = D3D12_BLEND_ONE;
+    rtbd.DestBlend             = D3D12_BLEND_ZERO;
+    rtbd.BlendOp               = D3D12_BLEND_OP_ADD;
+    rtbd.SrcBlendAlpha         = D3D12_BLEND_ONE;
+    rtbd.DestBlendAlpha        = D3D12_BLEND_ZERO;
+    rtbd.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
+    rtbd.LogicOp               = D3D12_LOGIC_OP_NOOP;
+    rtbd.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+    D3D12_BLEND_DESC blend_desc;
+    blend_desc.AlphaToCoverageEnable  = false;
+    blend_desc.IndependentBlendEnable = false;
+    for (u32 i = 0; i < ArrayCount(blend_desc.RenderTarget); ++i)
+    {
+        blend_desc.RenderTarget[i] = rtbd;
+    }
+
+    D3D12_RASTERIZER_DESC rasterizer_desc;
+    rasterizer_desc.FillMode              = D3D12_FILL_MODE_SOLID;
+    rasterizer_desc.CullMode              = D3D12_CULL_MODE_BACK;
+    rasterizer_desc.FrontCounterClockwise = false;
+    rasterizer_desc.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;
+    rasterizer_desc.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+    rasterizer_desc.SlopeScaledDepthBias  = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+    rasterizer_desc.DepthClipEnable       = true;
+    rasterizer_desc.MultisampleEnable     = false;
+    rasterizer_desc.AntialiasedLineEnable = false;
+    rasterizer_desc.ForcedSampleCount     = 0;
+    rasterizer_desc.ConservativeRaster    = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+    D3D12_DEPTH_STENCIL_DESC depth_desc;
+    depth_desc.DepthEnable                  = gpd.psd.depth_test_enabled;
+    depth_desc.DepthWriteMask               = gpd.psd.blending_enabled ? D3D12_DEPTH_WRITE_MASK_ZERO : D3D12_DEPTH_WRITE_MASK_ALL;
+    depth_desc.DepthFunc                    = D3D12_COMPARISON_FUNC_LESS;
+    depth_desc.StencilEnable                = false;
+    depth_desc.StencilReadMask              = U8_MAX;
+    depth_desc.StencilWriteMask             = U8_MAX;
+    depth_desc.FrontFace.StencilFailOp      = D3D12_STENCIL_OP_KEEP;
+    depth_desc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+    depth_desc.FrontFace.StencilPassOp      = D3D12_STENCIL_OP_KEEP;
+    depth_desc.FrontFace.StencilFunc        = D3D12_COMPARISON_FUNC_NEVER;
+    depth_desc.BackFace.StencilFailOp       = D3D12_STENCIL_OP_KEEP;
+    depth_desc.BackFace.StencilDepthFailOp  = D3D12_STENCIL_OP_KEEP;
+    depth_desc.BackFace.StencilPassOp       = D3D12_STENCIL_OP_KEEP;
+    depth_desc.BackFace.StencilFunc         = D3D12_COMPARISON_FUNC_NEVER;
+
+    // @TODO(Roman): Cached pipeline state
+    D3D12_CACHED_PIPELINE_STATE cached_pipeline_state;
+    cached_pipeline_state.pCachedBlob           = 0;
+    cached_pipeline_state.CachedBlobSizeInBytes = 0;
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC gpsd = {0};
+    gpsd.pRootSignature        = graphics_program->root_signature;
+    for (u32 i = 0; i < graphics_program->shaders_count; ++i)
+    {
+        Shader *shader = graphics_program->shaders + i;
+
+        switch (*gpd.sd.descs[i].target)
+        {
+            case 'v':
+            {
+                Check(!gpsd.VS.pShaderBytecode);
+                gpsd.VS = shader->bytecode;
+            } break;
+            
+            case 'h':
+            {
+                Check(!gpsd.HS.pShaderBytecode);
+                gpsd.HS = shader->bytecode;
+            } break;
+            
+            case 'd':
+            {
+                Check(!gpsd.DS.pShaderBytecode);
+                gpsd.DS = shader->bytecode;
+            } break;
+            
+            case 'g':
+            {
+                Check(!gpsd.GS.pShaderBytecode);
+                gpsd.GS = shader->bytecode;
+            } break;
+            
+            case 'p':
+            {
+                Check(!gpsd.PS.pShaderBytecode);
+                gpsd.PS = shader->bytecode;
+            } break;
+        }
+    }
+    gpsd.StreamOutput          = sod;
+    gpsd.BlendState            = blend_desc;
+    gpsd.SampleMask            = UINT_MAX;
+    gpsd.RasterizerState       = rasterizer_desc;
+    gpsd.DepthStencilState     = depth_desc;
+    gpsd.InputLayout           = gpd.psd.input_layout;
+    gpsd.IBStripCutValue       = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED; // @TODO(Roman): support triangle strips
+    gpsd.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    gpsd.NumRenderTargets      = 1;
+    for (u32 i = 0; i < gpsd.NumRenderTargets; ++i)
+    {
+        gpsd.RTVFormats[i] = DXGI_FORMAT_R8G8B8A8_UNORM;
+    }
+    for (u32 i = gpsd.NumRenderTargets; i < ArrayCount(gpsd.RTVFormats); ++i)
+    {
+        gpsd.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+    }
+    gpsd.DSVFormat             = DXGI_FORMAT_D32_FLOAT;
+    gpsd.SampleDesc.Count      = 1;
+    gpsd.SampleDesc.Quality    = 0;
+    gpsd.NodeMask              = 0;
+    gpsd.CachedPSO             = cached_pipeline_state;
+    gpsd.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+    engine->renderer.error = engine->renderer.device->lpVtbl->CreateGraphicsPipelineState(engine->renderer.device,
+                                                                                          &gpsd,
+                                                                                          &IID_ID3D12PipelineState,
+                                                                                          &graphics_program->pipeline_state);
+    Check(SUCCEEDED(engine->renderer.error));
 }
 
 void GraphicsProgram_Destroy(GraphicsProgram *graphics_program)
 {
+    for (u32 i = 0; i < graphics_program->shaders_count; ++i)
+    {
+        SafeRelease(graphics_program->shaders[i].blob);
+    }
+    SafeRelease(graphics_program->pipeline_state);
+    SafeRelease(graphics_program->root_signature);
+    SafeRelease(graphics_program->signature);
 }
 
 void GraphicsProgram_Bind(Engine *engine, GraphicsProgram *graphics_program)
 {
+    ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
+
+    graphics_list->lpVtbl->SetGraphicsRootSignature(graphics_list, graphics_program->root_signature);
+
+    graphics_list->lpVtbl->IASetPrimitiveTopology(graphics_list, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    graphics_list->lpVtbl->SetPipelineState(graphics_list, graphics_program->pipeline_state);
 }
 
 void GraphicsProgram_SetConstants(Engine *engine, GraphicsProgram *graphics_program, void *constants, u32 slot_index, u32 count)
@@ -472,27 +454,11 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
 {
 }
 
+//
+// Useful-ish garbage :)
+//
+
 #if 0
-    void BindShaderResources(Engine *engine, ShaderResources *shader_resources)
-    {
-        Check(engine);
-        Check(shader_resources);
-
-        switch (shader_resources->kind)
-        {
-            case SHADER_RESOURCES_KIND_GRAPHICS:
-            {
-                ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
-                graphics_list->lpVtbl->SetGraphicsRootSignature(graphics_list, shader_resources->root_signature);
-            } break;
-
-            case SHADER_RESOURCES_KIND_COMPUTE:
-            {
-                ID3D12GraphicsCommandList *compute_list = engine->renderer.compute_lists[engine->renderer.current_buffer];
-                compute_list->lpVtbl->SetGraphicsRootSignature(compute_list, shader_resources->root_signature);
-            } break;
-        }
-    }
 
     void SetShaderConstants(Engine *engine, ShaderResources *shader_resources, u32 index, void *constants, u32 count, u32 start_offset)
     {
@@ -549,148 +515,8 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
     }
 
     //
-    // PipelineState
+    // Compute PipelineState
     //
-
-    void CreateGraphicsPipelineState(
-        IN       Engine              *engine,
-        IN       Shader              *vertex_shader,
-        OPTIONAL Shader              *hull_shader,
-        OPTIONAL Shader              *domain_shader,
-        OPTIONAL Shader              *geometry_shader,
-        IN       Shader              *pixel_shader,
-        IN       b32                  enable_blending,
-        IN       u32                  shader_args_count,
-        IN       ShaderArg           *shader_args,
-        IN       ShadersResources    *shaders_resources,
-        OUT      PipelineState       *pipeline_state)
-    {
-        Check(engine);
-        Check(vertex_shader);
-        Check(pixel_shader);
-        Check(shader_args && shader_args_count);
-        Check(shaders_resources);
-        Check(pipeline_state);
-        CheckM(shaders_resources->kind == SHADERS_RESOURCES_KIND_GRAPHICS, "SHADERS_RESOURCES_KIND must be SHADERS_RESOURCES_KIND_GRAPHICS if you want to create graphics pipeline state");
-
-        pipeline_state->shaders_resources = shaders_resources;
-        pipeline_state->kind              = PIPELINE_STATE_KIND_GRAPHICS;
-
-        // @TODO(Roman): support stream output
-        D3D12_STREAM_OUTPUT_DESC sod;
-        sod.pSODeclaration   = 0;
-        sod.NumEntries       = 0;
-        sod.pBufferStrides   = 0;
-        sod.NumStrides       = 0;
-        sod.RasterizedStream = 0;
-
-        D3D12_RENDER_TARGET_BLEND_DESC rtbd;
-        rtbd.BlendEnable           = false;
-        rtbd.LogicOpEnable         = false;
-        rtbd.SrcBlend              = D3D12_BLEND_ONE;
-        rtbd.DestBlend             = D3D12_BLEND_ZERO;
-        rtbd.BlendOp               = D3D12_BLEND_OP_ADD;
-        rtbd.SrcBlendAlpha         = D3D12_BLEND_ONE;
-        rtbd.DestBlendAlpha        = D3D12_BLEND_ZERO;
-        rtbd.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
-        rtbd.LogicOp               = D3D12_LOGIC_OP_NOOP;
-        rtbd.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-        D3D12_BLEND_DESC blend_desc;
-        blend_desc.AlphaToCoverageEnable  = false;
-        blend_desc.IndependentBlendEnable = false;
-        for (u32 i = 0; i < ArrayCount(blend_desc.RenderTarget); ++i)
-        {
-        blend_desc.RenderTarget[i] = rtbd;
-        }
-
-        D3D12_RASTERIZER_DESC rasterizer_desc;
-        rasterizer_desc.FillMode              = D3D12_FILL_MODE_SOLID;
-        rasterizer_desc.CullMode              = D3D12_CULL_MODE_BACK;
-        rasterizer_desc.FrontCounterClockwise = false;
-        rasterizer_desc.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;
-        rasterizer_desc.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-        rasterizer_desc.SlopeScaledDepthBias  = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-        rasterizer_desc.DepthClipEnable       = true;
-        rasterizer_desc.MultisampleEnable     = false; // true?
-        rasterizer_desc.AntialiasedLineEnable = false; // true?
-        rasterizer_desc.ForcedSampleCount     = 0;
-        rasterizer_desc.ConservativeRaster    = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-
-        D3D12_DEPTH_STENCIL_DESC depth_desc;
-        depth_desc.DepthEnable                  = true;
-        depth_desc.DepthWriteMask               = enable_blending ? D3D12_DEPTH_WRITE_MASK_ZERO : D3D12_DEPTH_WRITE_MASK_ALL;
-        depth_desc.DepthFunc                    = D3D12_COMPARISON_FUNC_LESS;
-        depth_desc.StencilEnable                = false;
-        depth_desc.StencilReadMask              = U8_MAX;
-        depth_desc.StencilWriteMask             = U8_MAX;
-        depth_desc.FrontFace.StencilFailOp      = D3D12_STENCIL_OP_KEEP;
-        depth_desc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-        depth_desc.FrontFace.StencilPassOp      = D3D12_STENCIL_OP_KEEP;
-        depth_desc.FrontFace.StencilFunc        = D3D12_COMPARISON_FUNC_NEVER;
-        depth_desc.BackFace.StencilFailOp       = D3D12_STENCIL_OP_KEEP;
-        depth_desc.BackFace.StencilDepthFailOp  = D3D12_STENCIL_OP_KEEP;
-        depth_desc.BackFace.StencilPassOp       = D3D12_STENCIL_OP_KEEP;
-        depth_desc.BackFace.StencilFunc         = D3D12_COMPARISON_FUNC_NEVER;
-
-        D3D12_INPUT_ELEMENT_DESC *ieds = PushToTA(D3D12_INPUT_ELEMENT_DESC, engine->memory, shader_args_count);
-        for (u32 i = 0; i < shader_args_count; ++i)
-        {
-            ieds[i].SemanticName         = shader_args[i].semantic_name;
-            ieds[i].SemanticIndex        = shader_args[i].semantic_index;
-            ieds[i].Format               = shader_args[i].format;
-            ieds[i].InputSlot            = shader_args[i].input_slot;
-            ieds[i].AlignedByteOffset    = i > 0 ? D3D12_APPEND_ALIGNED_ELEMENT : 0;
-            ieds[i].InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-            ieds[i].InstanceDataStepRate = 0;
-        }
-
-        D3D12_INPUT_LAYOUT_DESC input_layout;
-        input_layout.NumElements        = shader_args_count;
-        input_layout.pInputElementDescs = ieds;
-
-        // @TODO(Roman): Cached pipeline state
-        D3D12_CACHED_PIPELINE_STATE cached_pipeline_state;
-        cached_pipeline_state.pCachedBlob           = 0;
-        cached_pipeline_state.CachedBlobSizeInBytes = 0;
-
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC gpsd;
-        gpsd.pRootSignature        = pipeline_state->shaders_resources->root_signature;
-        gpsd.VS                    = vertex_shader->bytecode;
-        gpsd.PS                    = pixel_shader->bytecode;
-        gpsd.DS                    = domain_shader   ? domain_shader->bytecode   : (D3D12_SHADER_BYTECODE){0};
-        gpsd.HS                    = hull_shader     ? hull_shader->bytecode     : (D3D12_SHADER_BYTECODE){0};
-        gpsd.GS                    = geometry_shader ? geometry_shader->bytecode : (D3D12_SHADER_BYTECODE){0};
-        gpsd.StreamOutput          = sod;
-        gpsd.BlendState            = blend_desc;
-        gpsd.SampleMask            = UINT_MAX;
-        gpsd.RasterizerState       = rasterizer_desc;
-        gpsd.DepthStencilState     = depth_desc;
-        gpsd.InputLayout           = input_layout;
-        gpsd.IBStripCutValue       = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED; // @TODO(Roman): support triangle strips
-        gpsd.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        gpsd.NumRenderTargets      = 1;
-        for (u32 i = 0; i < gpsd.NumRenderTargets; ++i)
-        {
-            gpsd.RTVFormats[i] = DXGI_FORMAT_R8G8B8A8_UNORM;
-        }
-        for (u32 i = gpsd.NumRenderTargets; i < ArrayCount(gpsd.RTVFormats); ++i)
-        {
-            gpsd.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
-        }
-        gpsd.DSVFormat             = DXGI_FORMAT_D32_FLOAT;
-        gpsd.SampleDesc.Count      = 1;
-        gpsd.SampleDesc.Quality    = 0;
-        gpsd.NodeMask              = 0;
-        gpsd.CachedPSO             = cached_pipeline_state;
-        gpsd.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-        engine->renderer.error = engine->renderer.device->lpVtbl->CreateGraphicsPipelineState(engine->renderer.device,
-                                                                                              &gpsd,
-                                                                                              &IID_ID3D12PipelineState,
-                                                                                              &pipeline_state->pipeline_state);
-        Check(SUCCEEDED(engine->renderer.error));
-    }
 
     void CreateComputePipelineState(
         IN  Engine           *engine,
@@ -724,37 +550,6 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
                                                                                              &IID_ID3D12PipelineState,
                                                                                              &pipeline_state->pipeline_state);
         Check(SUCCEEDED(engine->renderer.error));
-    }
-
-    void DestroyPipelineState(PipelineState *pipeline_state)
-    {
-        Check(pipeline_state);
-        SafeRelease(pipeline_state->pipeline_state);
-        pipeline_state->shaders_resources = 0;
-    }
-
-    void SetPipelineState(Engine *engine, PipelineState *pipeline_state)
-    {
-        Check(engine);
-        Check(pipeline_state);
-
-        switch (pipeline_state->kind)
-        {
-            case PIPELINE_STATE_KIND_GRAPHICS:
-            {
-                ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
-
-                graphics_list->lpVtbl->IASetPrimitiveTopology(graphics_list, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-                graphics_list->lpVtbl->SetPipelineState(graphics_list, pipeline_state->pipeline_state);
-            } break;
-
-            case PIPELINE_STATE_KIND_COMPUTE:
-            {
-                ID3D12GraphicsCommandList *compute_list = engine->renderer.compute_lists[engine->renderer.current_buffer];
-
-                compute_list->lpVtbl->SetPipelineState(compute_list, pipeline_state->pipeline_state);
-            } break;
-        }
     }
 
     void ExecuteComputePipelineState(Engine *engine, PipelineState *pipeline_state, u32 grids, u32 blocks, u32 threads)

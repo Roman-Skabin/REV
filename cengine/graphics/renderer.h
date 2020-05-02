@@ -92,7 +92,6 @@ CENGINE_FUN void        DrawIndices(Engine *engine, IndexBuffer *buffer);
 // GraphicsProgram
 //
 
-// @CleanUp(Roman): maybe it's useless
 typedef enum SHADER_KIND
 {
     SHADER_KIND_VERTEX,
@@ -100,44 +99,61 @@ typedef enum SHADER_KIND
     SHADER_KIND_DOMAIN,
     SHADER_KIND_GEOMETRY,
     SHADER_KIND_PIXEL,
+
+    MAX_GRAPHICS_SHADERS,
+
     SHADER_KIND_COMPUTE,
 } SHADER_KIND;
 
-typedef struct ShaderPipelineArg
-{
-    const char  *semantic_name;
-    u32          semantic_index;
-    DXGI_FORMAT  format;
-} ShaderPipelineArg;
-
 typedef struct Shader
 {
-    const char *target;
-    char       *name;
-    const char *entry_point;
-
-    D3D_SHADER_MACRO *defines;
-    ID3DInclude      *include;
-
+    ID3DInclude           *include;
     ID3DBlob              *blob;
     D3D12_SHADER_BYTECODE  bytecode;
 } Shader;
 
+typedef struct ShaderDesc
+{
+    const char *target;
+    const char *name;
+    const char *entry_point;
+    const char *code_start;
+    const char *code_end;
+} ShaderDesc;
+
+typedef struct GraphicsProgramDesc
+{
+    struct
+    {
+        u32 count;
+        ShaderDesc descs[MAX_GRAPHICS_SHADERS];
+    } sd;
+
+    struct
+    {
+        D3D12_INPUT_LAYOUT_DESC input_layout;
+        b32 blending_enabled;
+        b32 depth_test_enabled;
+    } psd;
+
+    struct
+    {
+        D3D12_ROOT_SIGNATURE_DESC desc;
+    } rsd;
+} GraphicsProgramDesc;
+
 typedef struct GraphicsProgram
 {
-    ID3DBlob            *grahpics_signature;
-    ID3D12RootSignature *graphics_root_signature;
+    ID3DBlob            *signature;
+    ID3D12RootSignature *root_signature;
 
-    ID3D12PipelineState *graphics_pipeline_state;
+    ID3D12PipelineState *pipeline_state;
 
-    ShaderPipelineArg *args;
-    u32                args_count;
-
-    u32    shaders_count;
-    Shader shaders[5];
+    u32                  shaders_count;
+    Shader               shaders[MAX_GRAPHICS_SHADERS];
 } GraphicsProgram;
 
-CENGINE_FUN void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, GraphicsProgram *graphics_program);
+CENGINE_FUN void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_SHADER_MACRO *predefines, GraphicsProgram *graphics_program);
 CENGINE_FUN void GraphicsProgram_Destroy(GraphicsProgram *graphics_program);
 CENGINE_FUN void GraphicsProgram_Bind(Engine *engine, GraphicsProgram *graphics_program);
 CENGINE_FUN void GraphicsProgram_SetConstants(Engine *engine, GraphicsProgram *graphics_program, void *constants, u32 slot_index, u32 count);

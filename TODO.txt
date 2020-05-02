@@ -1,8 +1,9 @@
 - Architecture
     - ...
 
-- Build system
+- Build
     - Make a production build
+    - Try to enable precompiled header (core/pch.h)
 
 - Core
     - Make engine's user pointer and sandbox thread safety
@@ -18,8 +19,11 @@
     - Adapt m4 for AVX-512
 
 - Graphics
-    - Custom graphics shaders parser and GraphicsProgram generation // I'm going to break everything and it gonna be awesome :)
-    - Custom compute shader parser and ComputeProgram generation    // Continue breaking everything
+    - Custom graphics shaders' parser and GraphicsProgram generation // I'm going to break everything and it gonna be awesome :)
+        - Shaders' includes
+        - Root Signature stuff
+        - Stream output
+    - Custom compute shader's parser and ComputeProgram generation   // Continue breaking everything
     - Custom blenging (I have no idea how to implement it)
     - User-side GPU command lists and bundles
     - Support triangle strips (define topology in shaders?)

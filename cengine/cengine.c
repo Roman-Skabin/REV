@@ -1153,7 +1153,7 @@ int EngineRun(
     void *base_address = PushToPermanentArea(engine->memory, allocator_cap);
     CreateAllocator(&engine->allocator, base_address, allocator_cap, false);
 
-    CreateLogger(&engine->logger, "Engine logger", "log/cengine.log", LOG_TO_FILE);
+    CreateLogger(&engine->logger, "Engine logger", "../log/cengine.log", LOG_TO_FILE);
     WindowCreate(engine, "CEngine", v2s_1(960, 540), instance);
     InputCreate(engine);
     TimerCreate(engine);

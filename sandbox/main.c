@@ -4,13 +4,13 @@
 
 typedef struct Sandbox
 {
-    Logger        logger;
-    AudioBuffer   audio;
+    Logger       logger;
+    AudioBuffer  audio;
 
-    VertexBuffer     vertex_buffer;
-    IndexBuffer      index_buffer;
-    Shader           vertex_shader;
-    Shader           pixel_shader;
+    VertexBuffer vertex_buffer;
+    IndexBuffer  index_buffer;
+
+    GraphicsProgram program;
 } Sandbox;
 
 typedef struct Vertex
@@ -24,13 +24,13 @@ USER_CALLBACK(OnInit)
     Sandbox *sandbox    = PushToPA(Sandbox, engine->memory, 1);
     engine->user_ponter = sandbox;
 
-    CreateLogger(&sandbox->logger, "Sandbox Logger", "log/sandbox.log", LOG_TO_FILE);
+    CreateLogger(&sandbox->logger, "Sandbox Logger", "../log/sandbox.log", LOG_TO_FILE);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
 #if RELEASE
     SetFullscreen(engine, true);
 #endif
 
-    sandbox->audio = LoadAudioFile(engine, "assets/audio/audio.wav");
+    sandbox->audio = LoadAudioFile(engine, "../assets/audio/audio.wav");
 #if RELEASE
     SoundPlay(&engine->sound);
 #endif
@@ -50,11 +50,14 @@ USER_CALLBACK(OnInit)
         0, 2, 3
     };
     sandbox->index_buffer = CreateIndexBuffer(engine, indices, ArrayCount(indices));
+
+    GraphicsProgram_Create(engine, "../assets/shaders/shader.hlsl", 0, &sandbox->program);
 }
 
 USER_CALLBACK(OnDestroy)
 {
     Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
+    GraphicsProgram_Destroy(&sandbox->program);
     DestroyIndexBuffer(&sandbox->index_buffer);
     DestroyVertexBuffer(&sandbox->vertex_buffer);
     DestroyLogger(&sandbox->logger);
@@ -92,10 +95,11 @@ USER_CALLBACK(OnRender)
 {
     Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
 
+    GraphicsProgram_Bind(engine, &sandbox->program);
     SetVertexBuffer(engine, &sandbox->vertex_buffer);
     SetIndexBuffer(engine, &sandbox->index_buffer);
-    // ...
-    // DrawIndices(engine, &sandbox->index_buffer);
+    // Set Root Signature stuff
+    DrawIndices(engine, &sandbox->index_buffer);
 }
 
 SOUND_CALLBACK(OnSound)
@@ -103,13 +107,16 @@ SOUND_CALLBACK(OnSound)
     Sandbox     *sandbox = cast(Sandbox *, engine->user_ponter);
     AudioBuffer *audio   = &sandbox->audio;
 
-    for (u32 i = 0; i < buffer->samples_count; ++i)
+    if (audio)
     {
-        if (audio->samples_index >= audio->samples_count)
-            audio->samples_index = 0;
+        for (u32 i = 0; i < buffer->samples_count; ++i)
+        {
+            if (audio->samples_index >= audio->samples_count)
+                audio->samples_index = 0;
 
-        buffer->samples[i * buffer->channels_count    ] = audio->samples[audio->samples_index++];
-        buffer->samples[i * buffer->channels_count + 1] = audio->samples[audio->samples_index++];
+            buffer->samples[i * buffer->channels_count    ] = audio->samples[audio->samples_index++];
+            buffer->samples[i * buffer->channels_count + 1] = audio->samples[audio->samples_index++];
+        }
     }
 }
 

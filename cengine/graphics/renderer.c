@@ -4,6 +4,7 @@
 
 #include "core/pch.h"
 #include "graphics/renderer.h"
+#include "graphics/core/shader_parser.h"
 #include "cengine.h"
 
 #define SafeRelease(directx_interface)                           \
@@ -232,8 +233,6 @@ internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3
 // GraphicsProgram
 //
 
-CEXTERN void ParseShaders(Engine *engine, const char *file_with_shaders, GraphicsProgramDesc *gpd);
-
 void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_SHADER_MACRO *predefines, GraphicsProgram *graphics_program)
 {
     Check(engine);
@@ -241,7 +240,7 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     Check(graphics_program);
 
     GraphicsProgramDesc gpd = {0};
-    ParseShaders(engine, file_with_shaders, &gpd);
+    ParseGraphicsShaders(engine, file_with_shaders, &gpd);
 
     graphics_program->shaders_count = gpd.sd.count;
 

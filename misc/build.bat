@@ -36,7 +36,7 @@ if !COMPILE_CENGINE! == 1 (
     set IMPORT_LIBS= User32.lib Ole32.lib
     set LINKER= -link
     set LINKING=
-    set INPUT_FILES= cengine\*.c cengine\core\*.c cengine\graphics\*.c cengine\math\*.c cengine\sound\*.c cengine\tools\*.c
+    set INPUT_FILES= cengine\*.c cengine\core\*.c cengine\graphics\core\*.c cengine\graphics\*.c cengine\math\*.c cengine\sound\*.c cengine\tools\*.c
     set PREPROCESSOR= -Icengine -D_CENGINE_DEV
     set MISCELLANEOUS= -MP -TC
     set OUTPUT_FILES= -Fo:bin\obj\cengine\ -Fe:bin\cengine.dll

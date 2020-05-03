@@ -92,18 +92,10 @@ CENGINE_FUN void        DrawIndices(Engine *engine, IndexBuffer *buffer);
 // GraphicsProgram
 //
 
-typedef enum SHADER_KIND
+enum
 {
-    SHADER_KIND_VERTEX,
-    SHADER_KIND_HULL,
-    SHADER_KIND_DOMAIN,
-    SHADER_KIND_GEOMETRY,
-    SHADER_KIND_PIXEL,
-
-    MAX_GRAPHICS_SHADERS,
-
-    SHADER_KIND_COMPUTE,
-} SHADER_KIND;
+    MAX_GRAPHICS_SHADERS = 5,
+};
 
 typedef struct Shader
 {

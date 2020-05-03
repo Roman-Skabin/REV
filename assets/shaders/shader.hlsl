@@ -2,8 +2,8 @@
 // Pipeline state settings
 //
 #cengine blending(disable)  // default: disable
-#cengine depth_test(enable) // default: enable
-
+/* #cengine depth_test(enable) // default: enable
+*/
 //
 // Vertex Shader settings (must be before hlsl shader code)
 //

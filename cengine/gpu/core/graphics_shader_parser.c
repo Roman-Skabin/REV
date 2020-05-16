@@ -279,6 +279,34 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
             GetNextGraphicsShaderToken(&parser->lexer);
             CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
         }
+        else if (TokenEqualsCSTR(parser->lexer.token, "cull_mode"))
+        {
+            GetNextGraphicsShaderToken(&parser->lexer);
+            CheckToken(&parser->lexer, TOKEN_KIND_LPAREN);
+
+            GetNextGraphicsShaderToken(&parser->lexer);
+            CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
+
+            if (TokenEqualsCSTR(parser->lexer.token, "none"))
+            {
+                gpd->psd.cull_mode = D3D12_CULL_MODE_NONE;
+            }
+            else if (TokenEqualsCSTR(parser->lexer.token, "front"))
+            {
+                gpd->psd.cull_mode = D3D12_CULL_MODE_FRONT;
+            }
+            else if (TokenEqualsCSTR(parser->lexer.token, "back"))
+            {
+                gpd->psd.cull_mode = D3D12_CULL_MODE_BACK;
+            }
+            else
+            {
+                SyntaxError(parser->lexer, "undefined cull mode option: %s", parser->lexer.token.name);
+            }
+
+            GetNextGraphicsShaderToken(&parser->lexer);
+            CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
+        }
         else if (TokenEqualsCSTR(parser->lexer.token, "shader"))
         {
             ShaderDesc *shader_desc = gpd->sd.descs + gpd->sd.count;

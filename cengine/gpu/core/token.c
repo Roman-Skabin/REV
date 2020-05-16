@@ -8,7 +8,12 @@
 #define TokenEquals(token, str, len) (((token).end - (token).start == (len)) && !memcmp((token).start, str, len))
 #define TokenEqualsCSTR(token, cstr) TokenEquals(token, cstr, CSTRLEN(cstr))
 
-#define SyntaxError(format, ...) MessageF(MESSAGE_TYPE_ERROR, CSTRCAT("Shader syntax error: ", format), __VA_ARGS__)
+#define SyntaxError(lexer, format, ...)                                \
+{                                                                      \
+    MessageF(MESSAGE_TYPE_ERROR,                                       \
+             CSTRCAT("Shader syntax error (%I32u:%I32u): ", format),   \
+             (lexer)->token.pos.r, (lexer)->token.pos.c, __VA_ARGS__); \
+}
 
 const char *TokenKindName(ShaderLexer *lexer, TOKEN_KIND kind)
 {
@@ -40,7 +45,7 @@ void CheckToken(ShaderLexer *lexer, TOKEN_KIND kind)
 {
     if (lexer->token.kind != kind)
     {
-        SyntaxError("expected '%s', got '%s'.",
+        SyntaxError(lexer, "expected '%s', got '%s'.",
                     TokenKindName(lexer, kind),
                     TokenInfo(lexer));
     }

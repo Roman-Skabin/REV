@@ -1,8 +1,9 @@
 //
 // Pipeline state settings
 //
-#cengine blending(disable)  // default: disable
-#cengine depth_test(enable) // default: enable
+#cengine blending(disable)   // default: disable. options: enable, disable.
+#cengine depth_test(enable)  // default: enable.  options: enable, disable.
+// #cengine cull_mode(front) // default: none.    options: none, front, back.
 
 //
 // Vertex Shader settings (must be before hlsl shader code)
@@ -130,46 +131,6 @@ float4x4 CameraToWorld(float3 camera : POSITION, float3 center : POSITION)
                         0.0f,     0.0f,     0.0f,        1.0f);
 }
 
-// row major multiplication
-float4x4 m4_mul(float4x4 l, float4x4 r)
-{
-    float4x4 res = float4x4(0.0f, 0.0f, 0.0f, 0.0f,
-                            0.0f, 0.0f, 0.0f, 0.0f,
-                            0.0f, 0.0f, 0.0f, 0.0f,
-                            0.0f, 0.0f, 0.0f, 0.0f);
-
-    res[0][0] = l[0][0] * r[0][0] + l[0][1] * r[1][0] + l[0][2] * r[2][0] + l[0][3] * r[3][0];
-    res[0][1] = l[0][0] * r[0][1] + l[0][1] * r[1][1] + l[0][2] * r[2][1] + l[0][3] * r[3][1];
-    res[0][2] = l[0][0] * r[0][2] + l[0][1] * r[1][2] + l[0][2] * r[2][2] + l[0][3] * r[3][2];
-    res[0][3] = l[0][0] * r[0][3] + l[0][1] * r[1][3] + l[0][2] * r[2][3] + l[0][3] * r[3][3];
-
-    res[1][0] = l[1][0] * r[0][0] + l[1][1] * r[1][0] + l[1][2] * r[2][0] + l[1][3] * r[3][0];
-    res[1][1] = l[1][0] * r[0][1] + l[1][1] * r[1][1] + l[1][2] * r[2][1] + l[1][3] * r[3][1];
-    res[1][2] = l[1][0] * r[0][2] + l[1][1] * r[1][2] + l[1][2] * r[2][2] + l[1][3] * r[3][2];
-    res[1][3] = l[1][0] * r[0][3] + l[1][1] * r[1][3] + l[1][2] * r[2][3] + l[1][3] * r[3][3];
-
-    res[2][0] = l[2][0] * r[0][0] + l[2][1] * r[1][0] + l[2][2] * r[2][0] + l[2][3] * r[3][0];
-    res[2][1] = l[2][0] * r[0][1] + l[2][1] * r[1][1] + l[2][2] * r[2][1] + l[2][3] * r[3][1];
-    res[2][2] = l[2][0] * r[0][2] + l[2][1] * r[1][2] + l[2][2] * r[2][2] + l[2][3] * r[3][2];
-    res[2][3] = l[2][0] * r[0][3] + l[2][1] * r[1][3] + l[2][2] * r[2][3] + l[2][3] * r[3][3];
-
-    res[3][0] = l[3][0] * r[0][0] + l[3][1] * r[1][0] + l[3][2] * r[2][0] + l[3][3] * r[3][0];
-    res[3][1] = l[3][0] * r[0][1] + l[3][1] * r[1][1] + l[3][2] * r[2][1] + l[3][3] * r[3][1];
-    res[3][2] = l[3][0] * r[0][2] + l[3][1] * r[1][2] + l[3][2] * r[2][2] + l[3][3] * r[3][2];
-    res[3][3] = l[3][0] * r[0][3] + l[3][1] * r[1][3] + l[3][2] * r[2][3] + l[3][3] * r[3][3];
-
-    return res;
-}
-
-// row major multiplication
-float4 m4_mul(float4x4 l, float4 r)
-{
-    return float4(l[0][0] * r.x + l[0][1] * r.y + l[0][2] * r.z + l[0][3] * r.w,
-                  l[1][0] * r.x + l[1][1] * r.y + l[1][2] * r.z + l[1][3] * r.w,
-                  l[2][0] * r.x + l[2][1] * r.y + l[2][2] * r.z + l[2][3] * r.w,
-                  l[3][0] * r.x + l[3][1] * r.y + l[3][2] * r.z + l[3][3] * r.w);
-}
-
 // @CleanUp(Roman): remove most of stuff when we'll be able to use SRVs and CBVs
 struct VSOutput
 {
@@ -191,15 +152,15 @@ VSOutput CustomVSEntryPoint(float4 pos : POSITION, float4 col : COLOR)
     float4x4 view  = CameraToWorld(camera.xyz, center);
     float4x4 model = m4_identity();
 
-    float4x4 MVP  = m4_mul(proj, m4_mul(view, model));
+    float4x4 MVP  = mul(proj, mul(view, model));
 
     VSOutput output;
-    output.pos    = m4_mul(MVP, pos);
+    output.pos    = mul(MVP, pos);
     output.col    = col;
     output.tex    = output.pos;
     output.camera = camera;
     output.light  = light;
-    output.sphere = m4_mul(MVP, float4(center, 0.5f));
+    output.sphere = mul(MVP, float4(center, 0.5f));
     return output;
 }
 

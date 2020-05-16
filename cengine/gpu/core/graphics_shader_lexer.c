@@ -32,11 +32,16 @@ global const char *keywords[] =
 
     "blending",
     "depth_test",
+    "cull_mode",
     "shader",
     "entry_point",
 
     "enable",
     "disable",
+
+    "none",
+    "front",
+    "back",
 
     "vertex",
     "hull",
@@ -63,7 +68,6 @@ global const char *keywords[] =
 void CreateGraphicsShaderLexer(Engine *engine, const char *stream, ShaderLexer *lexer)
 {
     lexer->token.pos.r = 1;
-    lexer->token.pos.c = 1;
 
     lexer->token_kind_names       = token_kind_names;
     lexer->token_kind_names_count = ArrayCount(token_kind_names);
@@ -261,7 +265,7 @@ tokenize_again:
     }
 
     lexer->token.end   = lexer->stream;
-    lexer->token.pos.c = cast(u32, lexer->token.start - lexer->line_start);
+    lexer->token.pos.c = cast(u32, lexer->token.start - lexer->line_start + 1);
 }
 
 #undef ELSE_IF_CHAR

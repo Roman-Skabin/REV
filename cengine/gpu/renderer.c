@@ -240,6 +240,11 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     Check(graphics_program);
 
     GraphicsProgramDesc gpd = {0};
+    // default values:
+    gpd.psd.blending_enabled   = false;
+    gpd.psd.depth_test_enabled = true;
+    gpd.psd.cull_mode          = D3D12_CULL_MODE_NONE;
+
     ParseGraphicsShaders(engine, file_with_shaders, &gpd);
 
     graphics_program->shaders_count = gpd.sd.count;
@@ -318,7 +323,7 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
 
     D3D12_RASTERIZER_DESC rasterizer_desc;
     rasterizer_desc.FillMode              = D3D12_FILL_MODE_SOLID;
-    rasterizer_desc.CullMode              = D3D12_CULL_MODE_NONE;
+    rasterizer_desc.CullMode              = gpd.psd.cull_mode;
     rasterizer_desc.FrontCounterClockwise = false;
     rasterizer_desc.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;
     rasterizer_desc.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;

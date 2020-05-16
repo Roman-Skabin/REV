@@ -127,6 +127,7 @@ typedef struct GraphicsProgramDesc
         D3D12_INPUT_LAYOUT_DESC input_layout;
         b32 blending_enabled;
         b32 depth_test_enabled;
+        D3D12_CULL_MODE cull_mode;
     } psd;
 
     struct

@@ -3,4 +3,4 @@
 *.pdf
 log/
 bin/obj/
-bin/audio/
+assets/audio/

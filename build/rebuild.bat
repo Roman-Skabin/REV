@@ -2,5 +2,5 @@
 
 rem use: rebuild [release]
 
-call clear
+call clean
 call build %1

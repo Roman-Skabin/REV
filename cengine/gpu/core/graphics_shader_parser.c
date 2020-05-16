@@ -16,6 +16,23 @@
              (lexer).token.pos.r, (lexer).token.pos.c, __VA_ARGS__); \
 }
 
+#define PassModifiers(_parser)                                        \
+{                                                                     \
+    while (TokenEqualsCSTR((_parser)->lexer.token, "linear")          \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "centroid")        \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "nointerpolation") \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "noperspective")   \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "sample")          \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "const")           \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "in")              \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "out")             \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "inout")           \
+       ||  TokenEqualsCSTR((_parser)->lexer.token, "uniform"))        \
+    {                                                                 \
+        GetNextGraphicsShaderToken(&(_parser)->lexer);                \
+    }                                                                 \
+}
+
 internal char *ReadEntireShaderFile(Engine *engine, const char *filename, u32 *size)
 {
     if (filename)
@@ -220,8 +237,6 @@ internal void InitBuiltinTypes(Engine *engine, ShaderParser *parser)
     InitBuilinMatrixType("double4x3", DXGI_FORMAT_UNKNOWN, AST_TYPE_FLAG_NONE, 8*4*3, 4, 3);
     InitBuilinMatrixType("double4x4", DXGI_FORMAT_UNKNOWN, AST_TYPE_FLAG_NONE, 8*4*4, 4, 4);
 }
-
-#define IsBuiltinType(_parser, _type) ((_parser)->first_builtin_type <= (_type) && (_type) <= (parser)->last_builtin_type)
 
 internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
 {
@@ -511,6 +526,54 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
     }
 }
 
+internal u32 CountTypesInStructRecursively(ASTType *struct_type)
+{
+    u32 count = 0;
+    for (u64 i = 0; i < struct_type->_struct->fields_count; ++i)
+    {
+        ASTStructField *field = struct_type->_struct->fields + i;
+        if (field->type->kind == AST_TYPE_KIND_STRUCT)
+        {
+            count += CountTypesInStructRecursively(field->type);
+        }
+        else
+        {
+            ++count;
+        }
+    }
+    return count;
+}
+
+internal u32 CollectStructFiedlsRecursively(ShaderParser *parser, ASTType *struct_type, u32 outer_index, D3D12_INPUT_ELEMENT_DESC *desc)
+{
+    for (u64 i = 0; i < struct_type->_struct->fields_count; ++i)
+    {
+        ASTStructField *field = struct_type->_struct->fields + i;
+
+        if (field->type->kind == AST_TYPE_KIND_STRUCT)
+        {
+            outer_index  = CollectStructFiedlsRecursively(parser, field->type, outer_index, desc);
+            desc        += outer_index;
+        }
+        else
+        {
+            desc->InputSlot            = 0;
+            desc->AlignedByteOffset    = outer_index > 0 ? D3D12_APPEND_ALIGNED_ELEMENT : 0;
+            desc->InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+            desc->InstanceDataStepRate = 0;
+
+            desc->SemanticName         = field->semantic_name;
+            desc->SemanticIndex        = field->semantic_index;
+            desc->Format               = field->type->format;
+
+            ++desc;
+            ++outer_index;
+        }
+    }
+
+    return outer_index;
+}
+
 internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc *shader_desc, GraphicsProgramDesc *gpd)
 {
     GetNextGraphicsShaderToken(&parser->lexer);
@@ -523,25 +586,33 @@ internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc 
         return;
     }
 
-    const char *stream_first_arg = parser->lexer.stream;
-    Token       token_first_arg  = parser->lexer.token;
+    PassModifiers(parser);
+
+    const char *stream_first_arg     = parser->lexer.stream;
+    Token       token_first_arg      = parser->lexer.token;
+    const char *line_start_first_arg = parser->lexer.line_start;
 
     // Count args
     while (parser->lexer.token.kind != TOKEN_KIND_RPAREN
        &&  parser->lexer.token.kind != TOKEN_KIND_EOF)
     {
+        PassModifiers(parser);
+
         b32 found_in_types = false;
 
         for (ASTType *it = parser->types; it; it = it->next)
         {
             if (it->name == parser->lexer.token.name)
             {
-                u32 increment = 1;
-                // @TODO(Roman): if we have struct as function arg
-                //               then increment have to be equals to
-                //               number of fields in struct recursively
-                //               (may be struct in struct)
-                gpd->psd.input_layout.NumElements += increment;
+                if (it->kind == AST_TYPE_KIND_STRUCT)
+                {
+                    gpd->psd.input_layout.NumElements += CountTypesInStructRecursively(it);
+                }
+                else
+                {
+                    // @TODO(Roman): what if we have an array in args?
+                    ++gpd->psd.input_layout.NumElements;
+                }
 
                 found_in_types = true;
                 break;
@@ -572,19 +643,19 @@ internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc 
         SyntaxError(parser->lexer, "unexpected end of file in vertex shader's entry point's arguments");
     }
 
+    parser->lexer.stream     = stream_first_arg;
+    parser->lexer.token      = token_first_arg;
+    parser->lexer.line_start = line_start_first_arg;
+
     // D3D12_INPUT_LAYOUT_DESC filling
-    parser->lexer.stream                     = stream_first_arg;
-    parser->lexer.token                      = token_first_arg;
     gpd->psd.input_layout.pInputElementDescs = PushToTA(D3D12_INPUT_ELEMENT_DESC, engine->memory, gpd->psd.input_layout.NumElements);
 
     for (u32 i = 0; i < gpd->psd.input_layout.NumElements; ++i)
     {
+        PassModifiers(parser);
+
         #pragma warning(suppress: 4090)
         D3D12_INPUT_ELEMENT_DESC *desc = gpd->psd.input_layout.pInputElementDescs + i;
-        desc->InputSlot            = 0;
-        desc->AlignedByteOffset    = i > 0 ? D3D12_APPEND_ALIGNED_ELEMENT : 0;
-        desc->InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-        desc->InstanceDataStepRate = 0;
 
         ASTType *type = 0;
         for (ASTType *it = parser->types; it; it = it->next)
@@ -595,18 +666,35 @@ internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc 
                 break;
             }
         }
-        Check(type);
+        if (!type)
+        {
+            SyntaxError(parser->lexer, "undefined type: '%s'", parser->lexer.token.name);
+        }
 
         if (type->kind == AST_TYPE_KIND_STRUCT)
         {
-            // @TODO(Roman): collect struct's fields recursively
+            // @NOTE(Roman): -1 cuz we have ++i in for loop;
+            i = CollectStructFiedlsRecursively(parser, type, i, desc) - 1;
+
+            GetNextGraphicsShaderToken(&parser->lexer);
+            CheckToken(&parser->lexer, TOKEN_KIND_NAME);
         }
         else
         {
+            desc->InputSlot            = 0;
+            desc->AlignedByteOffset    = i > 0 ? D3D12_APPEND_ALIGNED_ELEMENT : 0;
+            desc->InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+            desc->InstanceDataStepRate = 0;
+
             GetNextGraphicsShaderToken(&parser->lexer);
             CheckToken(&parser->lexer, TOKEN_KIND_NAME);
 
             GetNextGraphicsShaderToken(&parser->lexer);
+            if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
+            {
+                // @TODO(Roman): Array support
+                SyntaxError(parser->lexer, "Arrays in entry's point arguments are currently not supported. Make a typedef to be able to work with them.");
+            }
             CheckToken(&parser->lexer, TOKEN_KIND_COLON);
 
             GetNextGraphicsShaderToken(&parser->lexer);
@@ -624,6 +712,10 @@ internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc 
         if (parser->lexer.token.kind == TOKEN_KIND_COMMA)
         {
             GetNextGraphicsShaderToken(&parser->lexer);
+        }
+        else
+        {
+            CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
         }
     }
 }
@@ -648,8 +740,9 @@ internal void ParseStruct(Engine *engine, ShaderParser *parser)
     GetNextGraphicsShaderToken(&parser->lexer);
     CheckToken(&parser->lexer, TOKEN_KIND_LBRACE);
 
-    const char *lbrace_stream = parser->lexer.stream;
-    Token       lbrace_token  = parser->lexer.token;
+    const char *stream_lbrace     = parser->lexer.stream;
+    Token       token_lbrace      = parser->lexer.token;
+    const char *line_start_lbrace = parser->lexer.line_start;
 
     // Count, how many fields we have.
     while (parser->lexer.token.kind != TOKEN_KIND_RBRACE
@@ -676,8 +769,9 @@ internal void ParseStruct(Engine *engine, ShaderParser *parser)
         }
     }
 
-    parser->lexer.stream = lbrace_stream;
-    parser->lexer.token  = lbrace_token;
+    parser->lexer.stream     = stream_lbrace;
+    parser->lexer.token      = token_lbrace;
+    parser->lexer.line_start = line_start_lbrace;
 
     GetNextGraphicsShaderToken(&parser->lexer);
     CheckToken(&parser->lexer, TOKEN_KIND_NAME);
@@ -685,15 +779,7 @@ internal void ParseStruct(Engine *engine, ShaderParser *parser)
     for (ASTStructField *field = _struct->fields; field; field = field->next)
     {
         // [modifiers...]
-        while (TokenEqualsCSTR(parser->lexer.token, "linear")
-           ||  TokenEqualsCSTR(parser->lexer.token, "centroid")
-           ||  TokenEqualsCSTR(parser->lexer.token, "nointerpolation")
-           ||  TokenEqualsCSTR(parser->lexer.token, "noperspective")
-           ||  TokenEqualsCSTR(parser->lexer.token, "sample")
-           ||  TokenEqualsCSTR(parser->lexer.token, "const"))
-        {
-            GetNextGraphicsShaderToken(&parser->lexer);
-        }
+        PassModifiers(parser);
 
         // Type[RxC]
         CheckToken(&parser->lexer, TOKEN_KIND_NAME);
@@ -711,20 +797,29 @@ internal void ParseStruct(Engine *engine, ShaderParser *parser)
         }
 
         GetNextGraphicsShaderToken(&parser->lexer);
+        CheckToken(&parser->lexer, TOKEN_KIND_NAME);
+
+        GetNextGraphicsShaderToken(&parser->lexer);
 
         // Array
         if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
         {
-            // @TODO(Roman): what should we gonna do if
-            //               we have aray in struct?
+            // @TODO(Roman): Array support
+            SyntaxError(parser->lexer, "Arrays in structs are currently not supported. Make a typedef to be able to work with them.");
 
             GetNextGraphicsShaderToken(&parser->lexer);
             CheckToken(&parser->lexer, TOKEN_KIND_INT);
+
+            struct_size += field->type->size_in_bytes * parser->lexer.token.u64_val;
 
             GetNextGraphicsShaderToken(&parser->lexer);
             CheckToken(&parser->lexer, TOKEN_KIND_RBRACKET);
 
             GetNextGraphicsShaderToken(&parser->lexer);
+        }
+        else
+        {
+            struct_size += field->type->size_in_bytes;
         }
 
         // Semantic

@@ -1,9 +1,9 @@
 //
 // Pipeline state settings
 //
-#cengine blending(disable)   // default: disable. options: enable, disable.
-#cengine depth_test(enable)  // default: enable.  options: enable, disable.
-// #cengine cull_mode(front) // default: none.    options: none, front, back.
+#cengine blending(disable)  // default: disable. options: enable, disable.
+#cengine depth_test(enable) // default: enable.  options: enable, disable.
+#cengine cull_mode(none)    // default: none.    options: none, front, back.
 
 //
 // Vertex Shader settings (must be before hlsl shader code)

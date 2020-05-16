@@ -89,8 +89,8 @@ INLINE m2 MATH_CALL m2_mul(m2 l, m2 r)
     // c1[2] + c1[3]     c2[2] + c2[3]
 
 #if 1
-    __m128 r1 = _mm_shuffle_ps(r.mm, r.mm, 0x88);
-    __m128 r2 = _mm_shuffle_ps(r.mm, r.mm, 0xDD);
+    __m128 r1 = _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_XZXZ);
+    __m128 r2 = _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_YWYW);
 #else
     __m128 r1 = _mm_setr_ps(r.e00, r.e10, r.e00, r.e10);
     __m128 r2 = _mm_setr_ps(r.e01, r.e11, r.e01, r.e11);
@@ -130,8 +130,8 @@ INLINE v2 MATH_CALL m2_mul_v(m2 l, v2 r)
     mm = _mm_hadd_ps(mm, mm);
 
     v2 res;
-    res.x = mm.m128_f32[0];
-    res.y = mm.m128_f32[1];
+    mm_extract_ps(res.x, mm, 0);
+    mm_extract_ps(res.y, mm, 1);
     return res;
 }
 
@@ -142,7 +142,7 @@ INLINE f32 MATH_CALL m2_det(m2 m)
 
 INLINE m2 MATH_CALL m2_inverse(m2 m)
 {
-#if 1
+#if 0
     __m128 det = _mm_set_ps1(m.e00 * m.e11 - m.e01 * m.e10);
 #else
     __m128 _1 = _mm_set_ps1(m.e00);
@@ -151,11 +151,11 @@ INLINE m2 MATH_CALL m2_inverse(m2 m)
     __m128 _4 = _mm_set_ps1(m.e10);
 
     __m128 det = _mm_sub_ps(_mm_mul_ps(_1, _2),
-                            _mm_mul_ps(_3, _4))
+                            _mm_mul_ps(_3, _4));
 #endif
 
     m2 res;
-    res.mm = _mm_div_ps(_mm_shuffle_ps(m.mm, m.mm, 0x27), det);
+    res.mm = _mm_div_ps(_mm_shuffle_ps(m.mm, m.mm, MM_SHUFFLE_XZYW), det);
     res.e01 *= -1;
     res.e10 *= -1;
     return res;
@@ -164,7 +164,7 @@ INLINE m2 MATH_CALL m2_inverse(m2 m)
 INLINE m2 MATH_CALL m2_transpose(m2 m)
 {
     m2 res;
-    res.mm = _mm_shuffle_ps(m.mm, m.mm, 0xD8);
+    res.mm = _mm_shuffle_ps(m.mm, m.mm, MM_SHUFFLE_XZYW);
     return res;
 }
 
@@ -414,7 +414,7 @@ INLINE f32 MATH_CALL m3_det(m3 m)
     __m128 lowsub = _mm_hsub_ps(c, c);
     __m128 res    = _mm_add_ps(lowsub, c);
 
-    return res.m128_f32[2];
+    return MMf(res, 2);
 }
 
 INLINE m3 MATH_CALL m3_inverse(m3 m)
@@ -451,10 +451,10 @@ INLINE m3 MATH_CALL m3_inverse(m3 m)
 
     m3 res;
     res.mm0 = _mm256_setr_ps(
-        col_1.m128_f32[0], col_2.m128_f32[0], col_3.m128_f32[0], 0.0f,
-        col_1.m128_f32[1], col_2.m128_f32[1], col_3.m128_f32[1], 0.0f);
+        MMf(col_1, 0), MMf(col_2, 0), MMf(col_3, 0), 0.0f,
+        MMf(col_1, 1), MMf(col_2, 1), MMf(col_3, 1), 0.0f);
     res.mm1 = _mm_setr_ps(
-        col_1.m128_f32[2], col_2.m128_f32[2], col_3.m128_f32[2], 0.0f);
+        MMf(col_1, 2), MMf(col_2, 2), MMf(col_3, 2), 0.0f);
     return res;
 }
 
@@ -763,9 +763,9 @@ INLINE f32 MATH_CALL m4_det(m4 m)
     __m256 subres_1 = _mm256_mul_ps(fifth_1, _mm256_sub_ps(_mm256_mul_ps(first_1, second_1), _mm256_mul_ps(third_1, forth_1)));
     __m128 subres_2 = _mm_mul_ps(fifth_2, _mm_sub_ps(_mm_mul_ps(first_2, second_2), _mm_mul_ps(third_2, forth_2)));
 
-    __m128 right_1 = _mm_setr_ps(subres_1.m256_f32[0], subres_1.m256_f32[3], subres_1.m256_f32[6], subres_2.m128_f32[1]);
-    __m128 right_2 = _mm_setr_ps(subres_1.m256_f32[1], subres_1.m256_f32[4], subres_1.m256_f32[7], subres_2.m128_f32[2]);
-    __m128 right_3 = _mm_setr_ps(subres_1.m256_f32[2], subres_1.m256_f32[5], subres_2.m128_f32[0], subres_2.m128_f32[3]);
+    __m128 right_1 = _mm_setr_ps(MM256f(subres_1, 0), MM256f(subres_1, 3), MM256f(subres_1, 6), MMf(subres_2, 1));
+    __m128 right_2 = _mm_setr_ps(MM256f(subres_1, 1), MM256f(subres_1, 4), MM256f(subres_1, 7), MMf(subres_2, 2));
+    __m128 right_3 = _mm_setr_ps(MM256f(subres_1, 2), MM256f(subres_1, 5), MM128f(subres_2, 0), MMf(subres_2, 3));
 
     __m128 left  = _mm_setr_ps(m.e00, m.e01, m.e02, m.e03);
     __m128 right = _mm_add_ps(_mm_sub_ps(right_1, right_2), right_3);
@@ -774,7 +774,7 @@ INLINE f32 MATH_CALL m4_det(m4 m)
     res = _mm_hsub_ps(res, res);
     res = _mm_add_ps(_mm_moveldup_ps(res), res);
 
-    return res.m128_f32[1];
+    return MMf(res, 1);
 }
 
 INLINE m4 MATH_CALL m4_inverse(m4 m)
@@ -919,7 +919,7 @@ INLINE m4 MATH_CALL m4_rotation(v4 v, rad angle)
     col3 = _mm_mul_ps(col3, _mm_set_ps(v.z, v.z, v.z, 0.0f));
 
     __m128 invc = _mm_set_ps1(1.0f - c);
-    invc.m128_f32[3] = 0.0f;
+    mm_insert_f32(invc, invc, 0.0f, 3);
 
     col1 = _mm_mul_ps(col1, invc);
     col2 = _mm_mul_ps(col2, invc);
@@ -938,10 +938,10 @@ INLINE m4 MATH_CALL m4_rotation(v4 v, rad angle)
     col3 = _mm_add_ps(col3, m3);
 
     m4 res;
-    res.mm0 = _mm256_setr_ps(col1.m128_f32[0], col2.m128_f32[0], col3.m128_f32[0], 0.0f,
-                             col1.m128_f32[1], col2.m128_f32[1], col3.m128_f32[1], 0.0f);
-    res.mm1 = _mm256_setr_ps(col1.m128_f32[2], col2.m128_f32[2], col3.m128_f32[2], 0.0f,
-                             col1.m128_f32[3], col2.m128_f32[3], col3.m128_f32[3], 1.0f);
+    res.mm0 = _mm256_setr_ps(MMf(col1, 0), MMf(col2, 0), MMf(col3, 0), 0.0f,
+                             MMf(col1, 1), MMf(col2, 1), MMf(col3, 1), 0.0f);
+    res.mm1 = _mm256_setr_ps(MMf(col1, 2), MMf(col2, 2), MMf(col3, 2), 0.0f,
+                             MMf(col1, 3), MMf(col2, 3), MMf(col3, 3), 1.0f);
     return res;
 }
 
@@ -1075,7 +1075,7 @@ INLINE m4 MATH_CALL m4_translation_v(v4 dv)
     return res;
 }
 
-INLINE m4 MATH_CALL m4_ortho_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // => z = [-1; 1]
+INLINE m4 MATH_CALL m4_ortho_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
 {
     m4 res;
     res.mm0 = _mm256_setr_ps(2.0f/(right-left),              0.0f,            0.0f, (-right-left)/(right-left),
@@ -1085,7 +1085,7 @@ INLINE m4 MATH_CALL m4_ortho_lh(f32 left, f32 right, f32 bottom, f32 top, f32 ne
     return res;
 }
 
-INLINE m4 MATH_CALL m4_ortho_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
+INLINE m4 MATH_CALL m4_ortho_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
 {
     m4 res;
     res.mm0 = _mm256_setr_ps(2.0f/(right-left),              0.0f,             0.0f, (-right-left)/(right-left),
@@ -1095,7 +1095,7 @@ INLINE m4 MATH_CALL m4_ortho_rh(f32 left, f32 right, f32 bottom, f32 top, f32 ne
     return res;
 }
 
-INLINE m4 MATH_CALL m4_persp_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
+INLINE m4 MATH_CALL m4_persp_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
 {
     m4 res;
     res.mm0 = _mm256_setr_ps(2.0f*near/(right-left),                   0.0f,                  0.0f,                        0.0f,
@@ -1105,7 +1105,7 @@ INLINE m4 MATH_CALL m4_persp_lh(f32 left, f32 right, f32 bottom, f32 top, f32 ne
     return res;
 }
 
-INLINE m4 MATH_CALL m4_persp_lh_fov(f32 aspect, deg fov, f32 near, f32 far)
+INLINE m4 MATH_CALL m4_persp_lh_fov(f32 aspect, deg fov, f32 near, f32 far) // returns z = [-1; 1]
 {
     f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
 
@@ -1117,7 +1117,7 @@ INLINE m4 MATH_CALL m4_persp_lh_fov(f32 aspect, deg fov, f32 near, f32 far)
     return res;
 }
 
-INLINE m4 MATH_CALL m4_persp_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far)
+INLINE m4 MATH_CALL m4_persp_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
 {
     m4 res;
     res.mm0 = _mm256_setr_ps(2.0f*near/(right-left),                   0.0f,                  0.0f,                       0.0f,
@@ -1127,7 +1127,7 @@ INLINE m4 MATH_CALL m4_persp_rh(f32 left, f32 right, f32 bottom, f32 top, f32 ne
     return res;
 }
 
-INLINE m4 MATH_CALL m4_persp_rh_fov(f32 aspect, deg fov, f32 near, f32 far)
+INLINE m4 MATH_CALL m4_persp_rh_fov(f32 aspect, deg fov, f32 near, f32 far) // returns z = [-1; 1]
 {
     f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
     
@@ -1136,5 +1136,77 @@ INLINE m4 MATH_CALL m4_persp_rh_fov(f32 aspect, deg fov, f32 near, f32 far)
                                               0.0f, 1.0f/tanfov2,                  0.0f,                       0.0f);
     res.mm1 = _mm256_setr_ps(                 0.0f,         0.0f, (far+near)/(far-near), (2.0f*near*far)/(far-near),
                                               0.0f,         0.0f,                 -1.0f,                       0.0f);
+    return res;
+}
+
+// @TODO(Roman): Debug. It's seems like we're dividing by zero
+INLINE m4 MATH_CALL CameraToWorld_lh(v4 camera, v4 center, v4 up)
+{
+    __m128 z_axis     = _mm_sub_ps(center.mm, camera.mm);
+    __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x77));
+           z_axis     = _mm_div_ps(z_axis, z_axis_len);
+
+    // @TODO(Roman): incorrect cross product.
+    __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_YZXW),
+                                              _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW)),
+                                   _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_ZXYW),
+                                              _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW)));
+    __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x77));
+           x_axis     = _mm_div_ps(x_axis, x_axis_len);
+
+    // @TODO(Roman): incorrect cross product.
+    __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW),
+                                              _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_ZXYW)),
+                                   _mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW),
+                                              _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_YZXW)));
+    __m128 y_axis_len = _mm_sqrt_ps(_mm_dp_ps(y_axis, y_axis, 0x77));
+           y_axis     = _mm_div_ps(y_axis, y_axis_len);
+
+    __m128 translate  = _mm_setr_ps(-_mm_cvtss_f32(_mm_dp_ps(x_axis, camera.mm, 0x71)),
+                                    -_mm_cvtss_f32(_mm_dp_ps(y_axis, camera.mm, 0x71)),
+                                    -_mm_cvtss_f32(_mm_dp_ps(z_axis, camera.mm, 0x71)),
+                                     1.0f);
+
+    m4 res;
+    res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(y_axis, 0), MMf(z_axis, 0), MMf(translate, 0),
+                             MMf(x_axis, 1), MMf(y_axis, 1), MMf(z_axis, 1), MMf(translate, 1));
+    res.mm1 = _mm256_setr_ps(MMf(x_axis, 2), MMf(y_axis, 2), MMf(z_axis, 2), MMf(translate, 2),
+                                       0.0f,           0.0f,           0.0f,              1.0f);
+    return res;
+}
+
+// @TODO(Roman): Debug. It's seems like we're dividing by zero
+INLINE m4 MATH_CALL CameraToWorld_rh(v4 camera, v4 target, v4 up)
+{
+    __m128 z_axis     = _mm_sub_ps(target.mm, camera.mm);
+    __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x77));
+           z_axis     = _mm_div_ps(z_axis, z_axis_len);
+
+    // @TODO(Roman): incorrect cross product.
+    __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_YZXW),
+                                              _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW)),
+                                   _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_ZXYW),
+                                              _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW)));
+    __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x77));
+           x_axis     = _mm_div_ps(x_axis, x_axis_len);
+
+    // @TODO(Roman): incorrect cross product.
+    __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW),
+                                              _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_ZXYW)),
+                                   _mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW),
+                                              _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_YZXW)));
+    __m128 y_axis_len = _mm_sqrt_ps(_mm_dp_ps(y_axis, y_axis, 0x77));
+           y_axis     = _mm_div_ps(y_axis, y_axis_len);
+
+    __m128 translate  = _mm_setr_ps(-_mm_cvtss_f32(_mm_dp_ps(x_axis, camera.mm, 0x71)),
+                                    -_mm_cvtss_f32(_mm_dp_ps(y_axis, camera.mm, 0x71)),
+                                     _mm_cvtss_f32(_mm_dp_ps(z_axis, camera.mm, 0x71)),
+                                     1.0f);
+
+    m4 res;
+    res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(y_axis, 0), -MMf(z_axis, 0), MMf(translate, 0),
+                             MMf(x_axis, 1), MMf(y_axis, 1), -MMf(z_axis, 1), MMf(translate, 1));
+    res.mm1 = _mm256_setr_ps(MMf(x_axis, 2), MMf(y_axis, 2), -MMf(z_axis, 2), MMf(translate, 2),
+                                       0.0f,           0.0f,            0.0f,              1.0f);
     return res;
 }

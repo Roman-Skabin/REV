@@ -3,8 +3,8 @@
 //
 
 #include "core/pch.h"
-#include "graphics/renderer.h"
-#include "graphics/core/shader_parser.h"
+#include "gpu/renderer.h"
+#include "gpu/core/shader_parser.h"
 #include "cengine.h"
 
 #define SafeRelease(directx_interface)                           \
@@ -196,7 +196,7 @@ void DrawIndices(Engine *engine, IndexBuffer *buffer)
 
 internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3D_SHADER_MACRO *predefines)
 {
-    u32 compile_flags = 0; // D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR ?
+    u32 compile_flags = D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
 #if DEBUG
     compile_flags |= D3DCOMPILE_DEBUG
                   |  D3DCOMPILE_SKIP_OPTIMIZATION;
@@ -318,7 +318,7 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
 
     D3D12_RASTERIZER_DESC rasterizer_desc;
     rasterizer_desc.FillMode              = D3D12_FILL_MODE_SOLID;
-    rasterizer_desc.CullMode              = D3D12_CULL_MODE_BACK;
+    rasterizer_desc.CullMode              = D3D12_CULL_MODE_NONE;
     rasterizer_desc.FrontCounterClockwise = false;
     rasterizer_desc.DepthBias             = D3D12_DEFAULT_DEPTH_BIAS;
     rasterizer_desc.DepthBiasClamp        = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;

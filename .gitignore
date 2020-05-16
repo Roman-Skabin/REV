@@ -1,3 +1,6 @@
 .vs/
 .vscode/
 *.pdf
+log/
+bin/obj/
+bin/audio/

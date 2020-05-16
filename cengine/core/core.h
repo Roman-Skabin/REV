@@ -46,7 +46,9 @@
     #define CENGINE_IMPEXP __declspec(dllimport)
 #endif
 
-#define CENGINE_FUN CENGINE_IMPEXP CEXTERN
+#define CENGINE_FUN  CENGINE_IMPEXP CEXTERN
+#define CENGINE_DATA CENGINE_IMPEXP CEXTERN
+
 #define MATH_CALL __vectorcall
 
 #if DEVDEBUG

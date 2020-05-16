@@ -8,7 +8,7 @@
 #include "tools/logger.h"
 #include "math/mat.h"
 #include "input.h"
-#include "graphics/renderer.h"
+#include "gpu/renderer.h"
 #include "tools/work_queue.h"
 #include "core/memory.h"
 #include "core/allocator.h"

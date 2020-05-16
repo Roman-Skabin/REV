@@ -7,28 +7,40 @@
 
 - Core
     - Make engine's user pointer and sandbox thread safety
+    - Remove user_callbacks struct from engine. There is
+      no sense to store 'em in engine struct cuz we're calling
+      'em from EngineRun. Though, then we have to move
+      SoundProc/OnSound callback to the SoundBuffer or
+      stay storing it in tge engine struct cuz we're calling it
+      from SoundThreadProc (from another thread).
 
 - Tools
-    - ...
+    - gpu/core/interns to the tools?
 
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
 
 - Math
+    - Incorrect cross product
+    - Prevent division by zero in CameraToWorld_* functions
     - Clean up vec.h
     - Adapt m4 for AVX-512
 
-- Graphics
-    - Custom graphics shaders' parser and GraphicsProgram generation // I'm going to break everything and it gonna be awesome :)
-        - Shaders' includes
+- GPU | Graphics
+    - Create GPU buffers, heaps etc or just wrap existing // do some higher-level shit for the user-side
+      (for Root Signature and not only)
+    - Custom graphics shader's parser and GraphicsProgram generation // I'm going to break everything and it gonna be awesome :)
         - Root Signature stuff
+        - Includes
+        - Template shit (Buffer<type> name; vector<type, dim> name; ...)
         - Stream output
-    - Custom compute shader's parser and ComputeProgram generation   // Continue breaking everything
-    - Custom blenging (I have no idea how to implement it)
+    - Custom compute shader's parser and ComputeProgram generation // Continue breaking everything
+    - Custom blenging (Honestly I have no idea how to implement it)
     - User-side GPU command lists and bundles
     - Support triangle strips (define topology in shaders?)
     - Support stream output (in shaders too?)
-    - Textures
+    - Textures. Make some load functions or abstract abstractions? (p.1)
+    - SubTextures
     - Entity system
     - Particle system
 

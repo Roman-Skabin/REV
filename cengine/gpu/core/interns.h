@@ -12,20 +12,22 @@
     typedef struct Engine Engine;
 #endif
 
-typedef struct Intern
+typedef struct Intern Intern;
+
+struct Intern
 {
+    Intern     *next;
     const char *str;
-    u64 len;
-} Intern;
+    u64         len;
+};
 
 typedef struct Interns
 {
-    BUF Intern *interns;
-    Memory     *memory;
+    Intern *interns;
+    Memory *memory;
 } Interns;
 
 CENGINE_FUN void CreateInterns(Engine *engine, Interns *interns);
-CENGINE_FUN void DestroyInterns(Interns *interns);
 
 CENGINE_FUN const char *InternStringRange(Interns *interns, const char *start, const char *end);
 #define InternString(interns, string, length) InternStringRange(interns, string, (string) + (length))

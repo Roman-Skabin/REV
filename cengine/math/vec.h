@@ -5,6 +5,7 @@
 #pragma once
 
 #include "math/math.h"
+#include "math/intrinsics.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4244)
@@ -65,6 +66,7 @@ typedef union v2u
 {
     struct { u32 x, y; };
     struct { u32 w, h; };
+    struct { u32 r, c; };
 } v2u;
 
 INLINE v2u MATH_CALL v2u_0(u32 val     ) { return (v2u){ val, val }; }
@@ -151,11 +153,7 @@ INLINE s32 MATH_CALL v3s_dot(v3s l, v3s r)
     __m128i m = _mm_mul_epi32(l.mm, r.mm);
     __m128i h = _mm_hadd_epi32(m, m);
     __m128i d = _mm_hadd_epi32(h, h);
-#if 0
-    return d.m128i_i32[0];
-#else
     return _mm_cvtsi128_si32(d);
-#endif
 }
 
 INLINE v3s MATH_CALL v3s_round(v3 v) { v3s r; r.mm = _mm_cvtps_epi32(v.mm); return r; }
@@ -189,11 +187,7 @@ INLINE u32 MATH_CALL v3u_dot(v3u l, v3u r)
     __m128i m = _mm_mul_epi32(l.mm, r.mm);
     __m128i h = _mm_hadd_epi32(m, m);
     __m128i d = _mm_hadd_epi32(h, h);
-#if 0
-    return d.m128i_i32[0];
-#else
     return _mm_cvtsi128_si32(d);
-#endif
 }
 
 INLINE v3u MATH_CALL v3u_round(v3 v) { v3u r; r.mm = _mm_cvtps_epi32(v.mm); return r; }
@@ -262,24 +256,20 @@ INLINE v4 MATH_CALL v4_normalize_w(v4 v)
 
 INLINE v4 MATH_CALL v4_normalize(v4 v)
 {
-    v = v4_div_s(v, v4_length(v));
-    v.w = 1.0f;
+    __m128 v_len = _mm_sqrt_ps(_mm_dp_ps(v.mm, v.mm, 0x77));
+    v.mm = _mm_div_ps(v.mm, v_len);
+    v.w  = 1.0f;
     return v;
 }
 
+// @TODO(Roman): incorrect cross product.
 INLINE v4 MATH_CALL v4_cross(v4 l, v4 r)
 {
     v4 v;
-    v.mm = _mm_sub_ps(
-        _mm_mul_ps(
-            _mm_shuffle_ps(l.mm, l.mm, _MM_SHUFFLE(3, 0, 2, 1)),
-            _mm_shuffle_ps(r.mm, r.mm, _MM_SHUFFLE(3, 1, 0, 2))
-        ),
-        _mm_mul_ps(
-            _mm_shuffle_ps(l.mm, l.mm, _MM_SHUFFLE(3, 1, 0, 2)),
-            _mm_shuffle_ps(r.mm, r.mm, _MM_SHUFFLE(3, 0, 2, 1))
-        )
-    );
+    v.mm = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(l.mm, l.mm, MM_SHUFFLE_YZXW),
+                                 _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_ZXYW)),
+                      _mm_mul_ps(_mm_shuffle_ps(l.mm, l.mm, MM_SHUFFLE_ZXYW),
+                                 _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_YZXW)));
     return v;
 }
 
@@ -330,11 +320,7 @@ INLINE s32 MATH_CALL v4s_dot(v4s l, v4s r)
     __m128i m = _mm_mul_epi32(l.mm, r.mm);
     __m128i h = _mm_hadd_epi32(m, m);
     __m128i d = _mm_hadd_epi32(h, h);
-#if 0
-    return d.m128i_i32[0];
-#else
     return _mm_cvtsi128_si32(d);
-#endif
 }
 
 INLINE v4s MATH_CALL v4s_round(v4 v) { v4s r; r.mm = _mm_cvtps_epi32(v.mm); return r; }
@@ -352,20 +338,15 @@ INLINE v4s MATH_CALL v4s_sub_s(v4s l, s32 r) { v4s v; v.mm = _mm_sub_epi32(l.mm,
 INLINE v4s MATH_CALL v4s_mul_s(v4s l, s32 r) { v4s v; v.mm = _mm_mul_epi32(l.mm, _mm_set1_epi32(r)); return v; }
 INLINE v4s MATH_CALL v4s_div_s(v4s l, s32 r) { return v4s_round(v4_div_s(v4_1(l.x, l.y, l.z, l.w), cast(f32, r))); }
 
+// @TODO(Roman): incorrect cross product.
 INLINE v4s MATH_CALL v4s_cross(v4s l, v4s r)
 {
-    v4s v;
-    v.mm = _mm_sub_epi32(
-        _mm_mul_epi32(
-            _mm_shuffle_epi32(l.mm, _MM_SHUFFLE(3, 0, 2, 1)),
-            _mm_shuffle_epi32(r.mm, _MM_SHUFFLE(3, 1, 0, 2))
-        ),
-        _mm_mul_epi32(
-            _mm_shuffle_epi32(l.mm, _MM_SHUFFLE(3, 1, 0, 2)),
-            _mm_shuffle_epi32(r.mm, _MM_SHUFFLE(3, 0, 2, 1))
-        )
-    );
-    return v;
+    v4s res;
+    res.mm = _mm_sub_epi32(_mm_mul_epi32(_mm_shuffle_epi32(l.mm, MM_SHUFFLE_YZXW),
+                                         _mm_shuffle_epi32(r.mm, MM_SHUFFLE_ZXYW)),
+                           _mm_mul_epi32(_mm_shuffle_epi32(l.mm, MM_SHUFFLE_ZXYW),
+                                         _mm_shuffle_epi32(r.mm, MM_SHUFFLE_YZXW)));
+    return res;
 }
 
 typedef union v4u
@@ -387,11 +368,7 @@ INLINE u32 MATH_CALL v4u_dot(v4u l, v4u r)
     __m128i m = _mm_mul_epi32(l.mm, r.mm);
     __m128i h = _mm_hadd_epi32(m, m);
     __m128i d = _mm_hadd_epi32(h, h);
-#if 0
-    return d.m128i_i32[0];
-#else
     return _mm_cvtsi128_si32(d);
-#endif
 }
 
 INLINE v4u MATH_CALL v4u_round(v4 v) { v4u r; r.mm = _mm_cvtps_epi32(v.mm); return r; }
@@ -409,22 +386,16 @@ INLINE v4u MATH_CALL v4u_sub_s(v4u l, u32 r) { v4u v; v.mm = _mm_sub_epi32(l.mm,
 INLINE v4u MATH_CALL v4u_mul_s(v4u l, u32 r) { v4u v; v.mm = _mm_mul_epi32(l.mm, _mm_set1_epi32(r)); return v; }
 INLINE v4u MATH_CALL v4u_div_s(v4u l, u32 r) { return v4u_round(v4_div_s(v4_1(l.x, l.y, l.z, l.w), cast(f32, r))); }
 
+// @TODO(Roman): incorrect cross product.
 INLINE v4u MATH_CALL v4u_cross(v4u l, v4u r)
 {
-    v4u v;
-    v.mm = _mm_sub_epi32(
-        _mm_mul_epi32(
-            _mm_shuffle_epi32(l.mm, _MM_SHUFFLE(3, 0, 2, 1)),
-            _mm_shuffle_epi32(r.mm, _MM_SHUFFLE(3, 1, 0, 2))
-        ),
-        _mm_mul_epi32(
-            _mm_shuffle_epi32(l.mm, _MM_SHUFFLE(3, 1, 0, 2)),
-            _mm_shuffle_epi32(r.mm, _MM_SHUFFLE(3, 0, 2, 1))
-        )
-    );
-    return v;
+    v4u res;
+    res.mm = _mm_sub_epi32(_mm_mul_epi32(_mm_shuffle_epi32(l.mm, MM_SHUFFLE_YZXW),
+                                         _mm_shuffle_epi32(r.mm, MM_SHUFFLE_ZXYW)),
+                           _mm_mul_epi32(_mm_shuffle_epi32(l.mm, MM_SHUFFLE_ZXYW),
+                                         _mm_shuffle_epi32(r.mm, MM_SHUFFLE_YZXW)));
+    return res;
 }
-
 
 INLINE v4s MATH_CALL v4_to_v4s (v4  v) { v4s r; r.mm = _mm_cvtps_epi32(v.mm); return r; }
 INLINE v4u MATH_CALL v4_to_v4u (v4  v) { v4u r; r.mm = _mm_cvtps_epi32(v.mm); return r; }

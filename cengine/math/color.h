@@ -6,6 +6,27 @@
 
 #include "math/vec.h"
 
+CENGINE_DATA const v4 gBlackA0;
+CENGINE_DATA const v4 gRedA0;
+CENGINE_DATA const v4 gGreenA0;
+CENGINE_DATA const v4 gBlueA0;
+CENGINE_DATA const v4 gYellowA0;
+CENGINE_DATA const v4 gMagentaA0;
+CENGINE_DATA const v4 gCyanA0;
+CENGINE_DATA const v4 gWhiteA0;
+
+CENGINE_DATA const v4 gBlackA1;
+CENGINE_DATA const v4 gRedA1;
+CENGINE_DATA const v4 gGreenA1;
+CENGINE_DATA const v4 gBlueA1;
+CENGINE_DATA const v4 gYellowA1;
+CENGINE_DATA const v4 gMagentaA1;
+CENGINE_DATA const v4 gCyanA1;
+CENGINE_DATA const v4 gWhiteA1;
+
+// @NOTE(Roamn): Everything below is legacy from software rendering times.
+//               Btw it's not deprecated so you can use it as well.
+
 //
 // norm_to_*
 //
@@ -20,10 +41,10 @@ INLINE u32 MATH_CALL norm_to_hex(v4 color)
                              _mm_min_ps(
                                  _mm_set_ps1(1.0f),
                                  color.mm))));
-    return (MM(mm, u32, 3) << 24)
-         | (MM(mm, u32, 0) << 16)
-         | (MM(mm, u32, 1) <<  8)
-         | (MM(mm, u32, 2)      );
+    return (MMu(mm, 3) << 24)
+         | (MMu(mm, 0) << 16)
+         | (MMu(mm, 1) <<  8)
+         | (MMu(mm, 2)      );
 }
 
 INLINE v4 MATH_CALL norm_to_v4(v4 color)
@@ -72,10 +93,10 @@ INLINE v4 MATH_CALL v4_to_norm(v4 color)
 INLINE u32 MATH_CALL v4_to_hex(v4 color)
 {
     __m128i mm = _mm_cvtps_epi32(color.mm);
-    return (MM(mm, u32, 3) << 24)
-         | (MM(mm, u32, 0) << 16)
-         | (MM(mm, u32, 1) <<  8)
-         | (MM(mm, u32, 2)      );
+    return (MMu(mm, 3) << 24)
+         | (MMu(mm, 0) << 16)
+         | (MMu(mm, 1) <<  8)
+         | (MMu(mm, 2)      );
 }
 
 //
@@ -131,8 +152,8 @@ INLINE v4 MATH_CALL v4u_to_norm(v4u color)
 
 INLINE u32 MATH_CALL v4u_to_hex(v4u color)
 {
-    return (MM(color.mm, u32, 3) << 24)
-         | (MM(color.mm, u32, 0) << 16)
-         | (MM(color.mm, u32, 1) <<  8)
-         | (MM(color.mm, u32, 2)      );
+    return (MMu(color.mm, 3) << 24)
+         | (MMu(color.mm, 0) << 16)
+         | (MMu(color.mm, 1) <<  8)
+         | (MMu(color.mm, 2)      );
 }

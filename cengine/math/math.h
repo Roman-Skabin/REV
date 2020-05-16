@@ -35,12 +35,6 @@
 #define f32_SQRT2    CSTRCAT(f64_SQRT2, f)
 #define f32_1_SQRT_2 CSTRCAT(f64_1_SQRT_2, f)
 
-#define MM(mm, Type, i) (cast(Type *, &(mm))[i])
-
-#define MMf(mm, n)  (mm).m128_f32[n]
-#define MMs(mm, n) (mm).m128i_i32[n]
-#define MMu(mm, n) (mm).m128i_u32[n]
-
 INLINE f32 MATH_CALL lerp(f32 start, f32 end, f32 percent)
 {
     percent = __max(0.0f, __min(1.0f, percent));

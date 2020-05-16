@@ -13,6 +13,14 @@ if /I "!PROJECT!" == "release" (
     set PROJECT=
 )
 
+REM must have folders
+if not exist ..\assets          mkdir ..\assets
+if not exist ..\bin             mkdir ..\bin
+if not exist ..\bin\obj         mkdir ..\bin\obj
+if not exist ..\bin\obj\cengine mkdir ..\bin\obj\cengine
+if not exist ..\bin\obj\sandbox mkdir ..\bin\obj\sandbox
+if not exist ..\log             mkdir ..\log
+
 set /A COMPILE_SANDBOX = 0
 set /A COMPILE_CENGINE = 0
 
@@ -36,7 +44,7 @@ if !COMPILE_CENGINE! == 1 (
     set IMPORT_LIBS= User32.lib Ole32.lib
     set LINKER= -link
     set LINKING=
-    set INPUT_FILES= cengine\*.c cengine\core\*.c cengine\graphics\core\*.c cengine\graphics\*.c cengine\math\*.c cengine\sound\*.c cengine\tools\*.c
+    set INPUT_FILES= cengine\*.c cengine\core\*.c cengine\gpu\core\*.c cengine\gpu\*.c cengine\math\*.c cengine\sound\*.c cengine\tools\*.c
     set PREPROCESSOR= -Icengine -D_CENGINE_DEV
     set MISCELLANEOUS= -MP -TC
     set OUTPUT_FILES= -Fo:bin\obj\cengine\ -Fe:bin\cengine.dll

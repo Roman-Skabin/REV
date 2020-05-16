@@ -109,6 +109,7 @@ typedef struct ShaderDesc
     const char *target;
     const char *name;
     const char *entry_point;
+    u64         entry_point_len;
     const char *code_start;
     const char *code_end;
 } ShaderDesc;

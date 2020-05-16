@@ -3,7 +3,10 @@
 //
 
 #include "core/pch.h"
-#include "graphics/core/shader_parser.h"
+#include "gpu/core/shader_parser.h"
+
+#define TokenEquals(token, str, len) (((token).end - (token).start == (len)) && !memcmp((token).start, str, len))
+#define TokenEqualsCSTR(token, cstr) TokenEquals(token, cstr, CSTRLEN(cstr))
 
 #define SyntaxError(format, ...) MessageF(MESSAGE_TYPE_ERROR, CSTRCAT("Shader syntax error: ", format), __VA_ARGS__)
 

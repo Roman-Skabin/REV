@@ -1,4 +1,5 @@
 #include "cengine.h"
+#include "math/color.h"
 
 #define WINDOW_TITLE "Sandbox"
 
@@ -30,26 +31,62 @@ USER_CALLBACK(OnInit)
     SetFullscreen(engine, true);
 #endif
 
-    sandbox->audio = LoadAudioFile(engine, "../assets/audio/audio.wav");
 #if RELEASE
+    sandbox->audio = LoadAudioFile(engine, "../assets/audio/audio.wav");
     SoundPlay(&engine->sound);
 #endif
 
     Vertex vertices[] =
     {
-        { v4_1(-0.5f, -0.5f, 0.0f, 1.0f), v4_1(1.0f, 0.0f, 0.0f, 1.0f) },
-        { v4_1(-0.5f,  0.5f, 0.0f, 1.0f), v4_1(0.0f, 1.0f, 0.0f, 1.0f) },
-        { v4_1( 0.5f,  0.5f, 0.0f, 1.0f), v4_1(0.0f, 0.0f, 1.0f, 1.0f) },
-        { v4_1( 0.5f, -0.5f, 0.0f, 1.0f), v4_1(0.0f, 0.0f, 0.0f, 1.0f) }
+        // bottom
+        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gRedA1 },
+        { v4_1(-0.5f, -0.5f, 1.2f, 1.0f), gRedA1 },
+        { v4_1( 0.5f, -0.5f, 1.2f, 1.0f), gRedA1 },
+        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gRedA1 },
+        { v4_1( 0.5f, -0.5f, 1.2f, 1.0f), gRedA1 },
+        { v4_1( 0.5f, -0.5f, 0.2f, 1.0f), gRedA1 },
+
+        // top
+        { v4_1(-0.5f,  0.5f, 0.2f, 1.0f), gGreenA1 },
+        { v4_1(-0.5f,  0.5f, 1.2f, 1.0f), gGreenA1 },
+        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gGreenA1 },
+        { v4_1(-0.5f,  0.5f, 0.2f, 1.0f), gGreenA1 },
+        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gGreenA1 },
+        { v4_1( 0.5f,  0.5f, 0.2f, 1.0f), gGreenA1 },
+
+        // left
+        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gBlueA1 },
+        { v4_1(-0.5f,  0.5f, 0.2f, 1.0f), gBlueA1 },
+        { v4_1(-0.5f,  0.5f, 1.2f, 1.0f), gBlueA1 },
+        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gBlueA1 },
+        { v4_1(-0.5f,  0.5f, 1.2f, 1.0f), gBlueA1 },
+        { v4_1(-0.5f, -0.5f, 1.2f, 1.0f), gBlueA1 },
+
+        // right
+        { v4_1( 0.5f, -0.5f, 0.2f, 1.0f), gYellowA1 },
+        { v4_1( 0.5f,  0.5f, 0.2f, 1.0f), gYellowA1 },
+        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gYellowA1 },
+        { v4_1( 0.5f, -0.5f, 0.2f, 1.0f), gYellowA1 },
+        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gYellowA1 },
+        { v4_1( 0.5f, -0.5f, 1.2f, 1.0f), gYellowA1 },
+
+        // front
+        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gMagentaA1 },
+        { v4_1(-0.5f,  0.5f, 0.2f, 1.0f), gMagentaA1 },
+        { v4_1( 0.5f,  0.5f, 0.2f, 1.0f), gMagentaA1 },
+        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gMagentaA1 },
+        { v4_1( 0.5f,  0.5f, 0.2f, 1.0f), gMagentaA1 },
+        { v4_1( 0.5f, -0.5f, 0.2f, 1.0f), gMagentaA1 },
+
+        // rear
+        { v4_1(-0.5f, -0.5f, 1.2f, 1.0f), gCyanA1 },
+        { v4_1(-0.5f,  0.5f, 1.2f, 1.0f), gCyanA1 },
+        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gCyanA1 },
+        { v4_1(-0.5f, -0.5f, 1.2f, 1.0f), gCyanA1 },
+        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gCyanA1 },
+        { v4_1( 0.5f, -0.5f, 1.2f, 1.0f), gCyanA1 },
     };
     sandbox->vertex_buffer = CreateVertexBuffer(engine, vertices, ArrayCount(vertices), sizeof(Vertex));
-
-    u32 indices[] =
-    {
-        0, 1, 2,
-        0, 2, 3
-    };
-    sandbox->index_buffer = CreateIndexBuffer(engine, indices, ArrayCount(indices));
 
     GraphicsProgram_Create(engine, "../assets/shaders/shader.hlsl", 0, &sandbox->program);
 }
@@ -95,11 +132,10 @@ USER_CALLBACK(OnRender)
 {
     Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
 
-    GraphicsProgram_Bind(engine, &sandbox->program);
     SetVertexBuffer(engine, &sandbox->vertex_buffer);
-    SetIndexBuffer(engine, &sandbox->index_buffer);
+    GraphicsProgram_Bind(engine, &sandbox->program);
     // Set Root Signature stuff
-    DrawIndices(engine, &sandbox->index_buffer);
+    DrawVertices(engine, &sandbox->vertex_buffer);
 }
 
 SOUND_CALLBACK(OnSound)

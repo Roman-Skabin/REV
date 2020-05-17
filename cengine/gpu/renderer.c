@@ -196,7 +196,7 @@ void DrawIndices(Engine *engine, IndexBuffer *buffer)
 
 internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3D_SHADER_MACRO *predefines)
 {
-    u32 compile_flags = D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
+    u32 compile_flags = D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR;
 #if DEBUG
     compile_flags |= D3DCOMPILE_DEBUG
                   |  D3DCOMPILE_SKIP_OPTIMIZATION;

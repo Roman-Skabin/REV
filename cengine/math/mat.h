@@ -1140,13 +1140,12 @@ INLINE m4 MATH_CALL m4_persp_rh_fov(f32 aspect, deg fov, f32 near, f32 far) // r
 }
 
 // @TODO(Roman): Debug. It's seems like we're dividing by zero
-INLINE m4 MATH_CALL CameraToWorld_lh(v4 camera, v4 center, v4 up)
+INLINE m4 MATH_CALL WorldToCameraLH(v4 camera, v4 target, v4 up)
 {
-    __m128 z_axis     = _mm_sub_ps(center.mm, camera.mm);
+    __m128 z_axis     = _mm_sub_ps(target.mm, camera.mm);
     __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x77));
            z_axis     = _mm_div_ps(z_axis, z_axis_len);
 
-    // @TODO(Roman): incorrect cross product.
     __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_YZXW),
                                               _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW)),
                                    _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_ZXYW),
@@ -1154,18 +1153,15 @@ INLINE m4 MATH_CALL CameraToWorld_lh(v4 camera, v4 center, v4 up)
     __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x77));
            x_axis     = _mm_div_ps(x_axis, x_axis_len);
 
-    // @TODO(Roman): incorrect cross product.
     __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW),
                                               _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_ZXYW)),
                                    _mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW),
                                               _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_YZXW)));
-    __m128 y_axis_len = _mm_sqrt_ps(_mm_dp_ps(y_axis, y_axis, 0x77));
-           y_axis     = _mm_div_ps(y_axis, y_axis_len);
 
     __m128 translate  = _mm_setr_ps(-_mm_cvtss_f32(_mm_dp_ps(x_axis, camera.mm, 0x71)),
                                     -_mm_cvtss_f32(_mm_dp_ps(y_axis, camera.mm, 0x71)),
                                     -_mm_cvtss_f32(_mm_dp_ps(z_axis, camera.mm, 0x71)),
-                                     1.0f);
+                                     0.0f);
 
     m4 res;
     res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(y_axis, 0), MMf(z_axis, 0), MMf(translate, 0),
@@ -1176,13 +1172,12 @@ INLINE m4 MATH_CALL CameraToWorld_lh(v4 camera, v4 center, v4 up)
 }
 
 // @TODO(Roman): Debug. It's seems like we're dividing by zero
-INLINE m4 MATH_CALL CameraToWorld_rh(v4 camera, v4 target, v4 up)
+INLINE m4 MATH_CALL WorldToCameraRH(v4 camera, v4 target, v4 up)
 {
-    __m128 z_axis     = _mm_sub_ps(target.mm, camera.mm);
+    __m128 z_axis     = _mm_sub_ps(camera.mm, target.mm);
     __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x77));
            z_axis     = _mm_div_ps(z_axis, z_axis_len);
 
-    // @TODO(Roman): incorrect cross product.
     __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_YZXW),
                                               _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW)),
                                    _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_ZXYW),
@@ -1190,23 +1185,20 @@ INLINE m4 MATH_CALL CameraToWorld_rh(v4 camera, v4 target, v4 up)
     __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x77));
            x_axis     = _mm_div_ps(x_axis, x_axis_len);
 
-    // @TODO(Roman): incorrect cross product.
     __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW),
                                               _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_ZXYW)),
                                    _mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW),
                                               _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_YZXW)));
-    __m128 y_axis_len = _mm_sqrt_ps(_mm_dp_ps(y_axis, y_axis, 0x77));
-           y_axis     = _mm_div_ps(y_axis, y_axis_len);
 
     __m128 translate  = _mm_setr_ps(-_mm_cvtss_f32(_mm_dp_ps(x_axis, camera.mm, 0x71)),
                                     -_mm_cvtss_f32(_mm_dp_ps(y_axis, camera.mm, 0x71)),
-                                     _mm_cvtss_f32(_mm_dp_ps(z_axis, camera.mm, 0x71)),
-                                     1.0f);
+                                    -_mm_cvtss_f32(_mm_dp_ps(z_axis, camera.mm, 0x71)),
+                                     0.0f);
 
     m4 res;
-    res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(y_axis, 0), -MMf(z_axis, 0), MMf(translate, 0),
-                             MMf(x_axis, 1), MMf(y_axis, 1), -MMf(z_axis, 1), MMf(translate, 1));
-    res.mm1 = _mm256_setr_ps(MMf(x_axis, 2), MMf(y_axis, 2), -MMf(z_axis, 2), MMf(translate, 2),
-                                       0.0f,           0.0f,            0.0f,              1.0f);
+    res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(y_axis, 0), MMf(z_axis, 0), MMf(translate, 0),
+                             MMf(x_axis, 1), MMf(y_axis, 1), MMf(z_axis, 1), MMf(translate, 1));
+    res.mm1 = _mm256_setr_ps(MMf(x_axis, 2), MMf(y_axis, 2), MMf(z_axis, 2), MMf(translate, 2),
+                                       0.0f,           0.0f,           0.0f,              1.0f);
     return res;
 }

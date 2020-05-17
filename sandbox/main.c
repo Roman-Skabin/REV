@@ -36,55 +36,64 @@ USER_CALLBACK(OnInit)
     SoundPlay(&engine->sound);
 #endif
 
+    v4 cube_v0 = v4_1(-0.5, -0.5f, 0.2f, 1.0f);
+    v4 cube_v1 = v4_1(-0.5, -0.5f, 1.2f, 1.0f);
+    v4 cube_v2 = v4_1( 0.5, -0.5f, 1.2f, 1.0f);
+    v4 cube_v3 = v4_1( 0.5, -0.5f, 0.2f, 1.0f);
+    v4 cube_v4 = v4_1(-0.5,  0.5f, 0.2f, 1.0f);
+    v4 cube_v5 = v4_1(-0.5,  0.5f, 1.2f, 1.0f);
+    v4 cube_v6 = v4_1( 0.5,  0.5f, 1.2f, 1.0f);
+    v4 cube_v7 = v4_1( 0.5,  0.5f, 0.2f, 1.0f);
+
     Vertex vertices[] =
     {
         // bottom
-        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gRedA1 },
-        { v4_1(-0.5f, -0.5f, 1.2f, 1.0f), gRedA1 },
-        { v4_1( 0.5f, -0.5f, 1.2f, 1.0f), gRedA1 },
-        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gRedA1 },
-        { v4_1( 0.5f, -0.5f, 1.2f, 1.0f), gRedA1 },
-        { v4_1( 0.5f, -0.5f, 0.2f, 1.0f), gRedA1 },
+        { cube_v0, gYellowA1 },
+        { cube_v1, gYellowA1 },
+        { cube_v2, gYellowA1 },
+        { cube_v0, gYellowA1 },
+        { cube_v2, gYellowA1 },
+        { cube_v3, gYellowA1 },
 
         // top
-        { v4_1(-0.5f,  0.5f, 0.2f, 1.0f), gGreenA1 },
-        { v4_1(-0.5f,  0.5f, 1.2f, 1.0f), gGreenA1 },
-        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gGreenA1 },
-        { v4_1(-0.5f,  0.5f, 0.2f, 1.0f), gGreenA1 },
-        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gGreenA1 },
-        { v4_1( 0.5f,  0.5f, 0.2f, 1.0f), gGreenA1 },
+        { cube_v4, gGreenA1 },
+        { cube_v5, gGreenA1 },
+        { cube_v6, gGreenA1 },
+        { cube_v4, gGreenA1 },
+        { cube_v6, gGreenA1 },
+        { cube_v7, gGreenA1 },
 
         // left
-        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gBlueA1 },
-        { v4_1(-0.5f,  0.5f, 0.2f, 1.0f), gBlueA1 },
-        { v4_1(-0.5f,  0.5f, 1.2f, 1.0f), gBlueA1 },
-        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gBlueA1 },
-        { v4_1(-0.5f,  0.5f, 1.2f, 1.0f), gBlueA1 },
-        { v4_1(-0.5f, -0.5f, 1.2f, 1.0f), gBlueA1 },
+        { cube_v0, gRedA1 },
+        { cube_v4, gRedA1 },
+        { cube_v5, gRedA1 },
+        { cube_v0, gRedA1 },
+        { cube_v5, gRedA1 },
+        { cube_v1, gRedA1 },
 
         // right
-        { v4_1( 0.5f, -0.5f, 0.2f, 1.0f), gYellowA1 },
-        { v4_1( 0.5f,  0.5f, 0.2f, 1.0f), gYellowA1 },
-        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gYellowA1 },
-        { v4_1( 0.5f, -0.5f, 0.2f, 1.0f), gYellowA1 },
-        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gYellowA1 },
-        { v4_1( 0.5f, -0.5f, 1.2f, 1.0f), gYellowA1 },
+        { cube_v3, gMagentaA1 },
+        { cube_v7, gMagentaA1 },
+        { cube_v6, gMagentaA1 },
+        { cube_v3, gMagentaA1 },
+        { cube_v6, gMagentaA1 },
+        { cube_v2, gMagentaA1 },
 
         // front
-        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gMagentaA1 },
-        { v4_1(-0.5f,  0.5f, 0.2f, 1.0f), gMagentaA1 },
-        { v4_1( 0.5f,  0.5f, 0.2f, 1.0f), gMagentaA1 },
-        { v4_1(-0.5f, -0.5f, 0.2f, 1.0f), gMagentaA1 },
-        { v4_1( 0.5f,  0.5f, 0.2f, 1.0f), gMagentaA1 },
-        { v4_1( 0.5f, -0.5f, 0.2f, 1.0f), gMagentaA1 },
+        { cube_v0, gBlueA1 },
+        { cube_v4, gBlueA1 },
+        { cube_v7, gBlueA1 },
+        { cube_v0, gBlueA1 },
+        { cube_v7, gBlueA1 },
+        { cube_v3, gBlueA1 },
 
         // rear
-        { v4_1(-0.5f, -0.5f, 1.2f, 1.0f), gCyanA1 },
-        { v4_1(-0.5f,  0.5f, 1.2f, 1.0f), gCyanA1 },
-        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gCyanA1 },
-        { v4_1(-0.5f, -0.5f, 1.2f, 1.0f), gCyanA1 },
-        { v4_1( 0.5f,  0.5f, 1.2f, 1.0f), gCyanA1 },
-        { v4_1( 0.5f, -0.5f, 1.2f, 1.0f), gCyanA1 },
+        { cube_v1, gCyanA1 },
+        { cube_v5, gCyanA1 },
+        { cube_v6, gCyanA1 },
+        { cube_v1, gCyanA1 },
+        { cube_v6, gCyanA1 },
+        { cube_v2, gCyanA1 },
     };
     sandbox->vertex_buffer = CreateVertexBuffer(engine, vertices, ArrayCount(vertices), sizeof(Vertex));
 

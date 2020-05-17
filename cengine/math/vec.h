@@ -262,15 +262,19 @@ INLINE v4 MATH_CALL v4_normalize(v4 v)
     return v;
 }
 
-// @TODO(Roman): incorrect cross product.
 INLINE v4 MATH_CALL v4_cross(v4 l, v4 r)
 {
-    v4 v;
-    v.mm = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(l.mm, l.mm, MM_SHUFFLE_YZXW),
-                                 _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_ZXYW)),
-                      _mm_mul_ps(_mm_shuffle_ps(l.mm, l.mm, MM_SHUFFLE_ZXYW),
-                                 _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_YZXW)));
-    return v;
+    //  [l.x]   [r.x]   [ (l.y * r.z - l.z * r.y)]   [l.y * r.z - l.z * r.y]
+    //  [l.y] x [r.y] = [-(l.x * r.z - l.z * r.x)] = [l.z * r.x - l.x * r.z];
+    //  [l.z]   [r.z]   [ (l.x * r.y - l.y * r.x)]   [l.x * r.y - l.y * r.x]
+    //  [l.w]   [r.w]   [ (l.w * r.w - l.w * r.w)]   [          0          ]
+
+    v4 res;
+    res.mm = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(l.mm, l.mm, MM_SHUFFLE_YZXW),
+                                   _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_ZXYW)),
+                        _mm_mul_ps(_mm_shuffle_ps(l.mm, l.mm, MM_SHUFFLE_ZXYW),
+                                   _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_YZXW)));
+    return res;
 }
 
 INLINE v4 MATH_CALL v4_lerp(v4 start, v4 end, v4 percent)
@@ -338,9 +342,13 @@ INLINE v4s MATH_CALL v4s_sub_s(v4s l, s32 r) { v4s v; v.mm = _mm_sub_epi32(l.mm,
 INLINE v4s MATH_CALL v4s_mul_s(v4s l, s32 r) { v4s v; v.mm = _mm_mul_epi32(l.mm, _mm_set1_epi32(r)); return v; }
 INLINE v4s MATH_CALL v4s_div_s(v4s l, s32 r) { return v4s_round(v4_div_s(v4_1(l.x, l.y, l.z, l.w), cast(f32, r))); }
 
-// @TODO(Roman): incorrect cross product.
 INLINE v4s MATH_CALL v4s_cross(v4s l, v4s r)
 {
+    //  [l.x]   [r.x]   [ (l.y * r.z - l.z * r.y)]   [l.y * r.z - l.z * r.y]
+    //  [l.y] x [r.y] = [-(l.x * r.z - l.z * r.x)] = [l.z * r.x - l.x * r.z];
+    //  [l.z]   [r.z]   [ (l.x * r.y - l.y * r.x)]   [l.x * r.y - l.y * r.x]
+    //  [l.w]   [r.w]   [ (l.w * r.w - l.w * r.w)]   [          0          ]
+
     v4s res;
     res.mm = _mm_sub_epi32(_mm_mul_epi32(_mm_shuffle_epi32(l.mm, MM_SHUFFLE_YZXW),
                                          _mm_shuffle_epi32(r.mm, MM_SHUFFLE_ZXYW)),
@@ -386,9 +394,13 @@ INLINE v4u MATH_CALL v4u_sub_s(v4u l, u32 r) { v4u v; v.mm = _mm_sub_epi32(l.mm,
 INLINE v4u MATH_CALL v4u_mul_s(v4u l, u32 r) { v4u v; v.mm = _mm_mul_epi32(l.mm, _mm_set1_epi32(r)); return v; }
 INLINE v4u MATH_CALL v4u_div_s(v4u l, u32 r) { return v4u_round(v4_div_s(v4_1(l.x, l.y, l.z, l.w), cast(f32, r))); }
 
-// @TODO(Roman): incorrect cross product.
 INLINE v4u MATH_CALL v4u_cross(v4u l, v4u r)
 {
+    //  [l.x]   [r.x]   [ (l.y * r.z - l.z * r.y)]   [l.y * r.z - l.z * r.y]
+    //  [l.y] x [r.y] = [-(l.x * r.z - l.z * r.x)] = [l.z * r.x - l.x * r.z];
+    //  [l.z]   [r.z]   [ (l.x * r.y - l.y * r.x)]   [l.x * r.y - l.y * r.x]
+    //  [l.w]   [r.w]   [ (l.w * r.w - l.w * r.w)]   [          0          ]
+
     v4u res;
     res.mm = _mm_sub_epi32(_mm_mul_epi32(_mm_shuffle_epi32(l.mm, MM_SHUFFLE_YZXW),
                                          _mm_shuffle_epi32(r.mm, MM_SHUFFLE_ZXYW)),

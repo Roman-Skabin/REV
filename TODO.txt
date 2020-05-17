@@ -21,7 +21,6 @@
     - Switch to DPI stuff for monitor and window adjustment?
 
 - Math
-    - Incorrect cross product
     - Prevent division by zero in CameraToWorld_* functions
     - Clean up vec.h
     - Adapt m4 for AVX-512

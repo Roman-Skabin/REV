@@ -6,8 +6,8 @@
 
 #include "math/vec.h"
 
-#ifndef __AVX__ 
-#error Compile with -arch:AVX or higher
+#if ISA < AVX
+    #error Compile with -arch:AVX or higher
 #endif
 
 //

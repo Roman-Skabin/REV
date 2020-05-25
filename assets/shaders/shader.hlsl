@@ -39,7 +39,6 @@ float4x4 WorldToCameraLH(float3 camera, float3 target, float3 up)
                        0.0f,     0.0f,      0.0f,        1.0f);
 }
 
-// @CleanUp(Roman): remove most of stuff when we'll be able to use SRVs and CBVs
 struct VSOutput
 {
     float4 pos : SV_Position;

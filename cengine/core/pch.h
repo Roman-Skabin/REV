@@ -18,7 +18,6 @@
 #define CINTERFACE              1
 
 #include <Windows.h>
-#include <immintrin.h> // AVX
 #include <Xinput.h>
 #include <audiopolicy.h>
 #include <mmdeviceapi.h>

@@ -9,15 +9,15 @@
 #include "core/pch.h"
 
 #ifndef _WIN64
-#error Only for 64-bit systems
+    #error Only for 64-bit systems
 #endif
 
 #ifdef DEBUG
-#undef DEBUG
+    #undef DEBUG
 #endif
 
 #ifdef RELEASE
-#undef RELEASE
+    #undef RELEASE
 #endif
 
 #ifdef _DEBUG
@@ -32,6 +32,33 @@
     #define DEVDEBUG 1
 #else
     #define DEVDEBUG 0
+#endif
+
+#define MMX    0
+#define SSE    1
+#define AVX    2
+#define AVX2   3
+#define AVX512 4
+
+#if __AVX512BW__ || __AVX512CD__ || __AVX512DQ__ || __AVX512F__ || __AVX512VL__
+    #define ISA AVX512
+    #include <zmmintrin.h>
+    #include <immintrin.h>
+    #include <ammintrin.h>
+#elif __AVX2__
+    #define ISA AVX2
+    #include <immintrin.h>
+    #include <ammintrin.h>
+#elif __AVX__
+    #define ISA AVX
+    #include <immintrin.h>
+    #include <ammintrin.h>
+#elif _M_IX86_FP > 0
+    #define ISA SSE
+    #include <wmmintrin.h>
+#else
+    #define ISA MMX
+    #include <mmintrin.h>
 #endif
 
 #ifdef __cplusplus

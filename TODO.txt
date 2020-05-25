@@ -21,9 +21,8 @@
     - Switch to DPI stuff for monitor and window adjustment?
 
 - Math
-    - Prevent division by zero in CameraToWorld_* functions
-    - Clean up vec.h
-    - Adapt m4 for AVX-512
+    - Adapt to different ISA vec.h and mat.h
+    - Prevent division by zero in WorldToCamera* functions
 
 - GPU | Graphics
     - Create GPU buffers, heaps etc or just wrap existing // do some higher-level shit for the user-side

@@ -26,17 +26,17 @@ float4x4 m4_persp_lh_fov(float aspect, float fov, float near, float far)
 // @CleanUp(Roman): remove when we'll be able to use SRVs and CBVs
 float4x4 WorldToCameraLH(float3 camera, float3 target, float3 up)
 {
-    float3 forward   = normalize(target - camera);
-    float3 right     = normalize(cross(up, forward));
-    float3 y_axis    = cross(forward, right);
-    float3 translate = -float3(dot(right, camera),
+    float3 z_axis    = normalize(target - camera);
+    float3 x_axis    = normalize(cross(up, z_axis));
+    float3 y_axis    = cross(z_axis, x_axis);
+    float3 translate = -float3(dot(x_axis, camera),
                                dot(y_axis, camera),
-                               dot(forward, camera));
+                               dot(z_axis, camera));
 
-    return float4x4(right.x, y_axis.x, forward.x, translate.x,
-                    right.y, y_axis.y, forward.y, translate.y,
-                    right.z, y_axis.z, forward.z, translate.z,
-                       0.0f,     0.0f,      0.0f,        1.0f);
+    return float4x4(x_axis.x, y_axis.x, z_axis.x, translate.x,
+                    x_axis.y, y_axis.y, z_axis.y, translate.y,
+                    x_axis.z, y_axis.z, z_axis.z, translate.z,
+                        0.0f,     0.0f,     0.0f,        1.0f);
 }
 
 struct VSOutput

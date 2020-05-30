@@ -11,7 +11,7 @@
       no sense to store 'em in engine struct cuz we're calling
       'em from EngineRun. Though, then we have to move
       SoundProc/OnSound callback to the SoundBuffer or
-      stay storing it in tge engine struct cuz we're calling it
+      stay storing it in the engine struct cuz we're calling it
       from SoundThreadProc (from another thread).
 
 - Tools
@@ -22,7 +22,6 @@
 
 - Math
     - Adapt to different ISA vec.h and mat.h
-    - Prevent division by zero in WorldToCamera* functions
 
 - GPU | Graphics
     - Create GPU buffers, heaps etc or just wrap existing // do some higher-level shit for the user-side

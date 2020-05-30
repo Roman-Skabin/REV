@@ -1139,18 +1139,17 @@ INLINE m4 MATH_CALL m4_persp_rh_fov(f32 aspect, deg fov, f32 near, f32 far) // r
     return res;
 }
 
-// @TODO(Roman): Debug. It's seems like we're dividing by zero
 INLINE m4 MATH_CALL WorldToCameraLH(v4 camera, v4 target, v4 up)
 {
     __m128 z_axis     = _mm_sub_ps(target.mm, camera.mm);
-    __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x77));
+    __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x7F));
            z_axis     = _mm_div_ps(z_axis, z_axis_len);
 
     __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_YZXW),
                                               _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW)),
                                    _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_ZXYW),
                                               _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW)));
-    __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x77));
+    __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x7F));
            x_axis     = _mm_div_ps(x_axis, x_axis_len);
 
     __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW),
@@ -1171,18 +1170,17 @@ INLINE m4 MATH_CALL WorldToCameraLH(v4 camera, v4 target, v4 up)
     return res;
 }
 
-// @TODO(Roman): Debug. It's seems like we're dividing by zero
 INLINE m4 MATH_CALL WorldToCameraRH(v4 camera, v4 target, v4 up)
 {
     __m128 z_axis     = _mm_sub_ps(camera.mm, target.mm);
-    __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x77));
+    __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x7F));
            z_axis     = _mm_div_ps(z_axis, z_axis_len);
 
     __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_YZXW),
                                               _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW)),
                                    _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_ZXYW),
                                               _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW)));
-    __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x77));
+    __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x7F));
            x_axis     = _mm_div_ps(x_axis, x_axis_len);
 
     __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW),

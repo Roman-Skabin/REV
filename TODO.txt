@@ -26,19 +26,20 @@
 - GPU | Graphics
     - Create GPU buffers, heaps etc or just wrap existing // do some higher-level shit for the user-side
       (for Root Signature and not only)
-    - Custom graphics shader's parser and GraphicsProgram generation // I'm going to break everything and it gonna be awesome :)
+    - Custom graphics shader's parser and GraphicsProgram generation
+        - Deal with arrays
         - More informative errors + there is something weird with the shaders' names.
         - Root Signature stuff
         - Includes
         - Template shit (Buffer<type> name; vector<type, dim> name; ...)
         - Stream output
-    - Cleanup shader after we can parse SRVs and CBVs
-    - Custom compute shader's parser and ComputeProgram generation // Continue breaking everything
-    - Custom blenging (Honestly I have no idea how to implement it)
+    - Cleanup shader after we can parse SRVs, UAVs and CBVs
+    - Weighted Blended OIT
+    - Custom compute shader's parser and ComputeProgram generation
     - User-side GPU command lists and bundles
     - Support triangle strips (define topology in shaders?)
     - Support stream output (define it in shaders too?)
-    - Textures. Make some load functions or abstract abstractions (p.1)?
+    - Textures
     - SubTextures
     - Entity system
     - Particle system

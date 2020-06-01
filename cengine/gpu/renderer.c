@@ -301,13 +301,41 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     sod.NumStrides       = 0;
     sod.RasterizedStream = 0;
 
+    // Texture2D<float4> rgba_buffer;
+    // Texture2D<float>  mul_buffer;
+    //
+    // pixel_shader for object (maybe this won't be in a pixel shader)
+    // float4 PSMain(..., float4 tex : TEXCOORD, ...) : SV_Target
+    // {
+    //     ...
+    //     float4 color;
+    //     ...
+    //     rgba_buffer[tex.x + width * tex.y].rgb = color.rgb * color.a * (1.0f - tex.z);
+    //     rgba_buffer[tex.x + width * tex.y].a   =             color.a * (1.0f - tex.z);
+    //     mul_buffer[tex.x + width * tex.y]      = 1.0f - color.a;
+    //     discard; // We do not want to write anything to a framebuffer
+    //              // when we're rendering translucent objects.
+    //              // We'll do it right before present.
+    //     return 0;
+    // }
+    //
+    // pixel_shader before present
+    // float4 PSMain(..., float4 tex : TEXCOORD, ...) : SV_Target
+    // {
+    //     float4 rgba = rgba_buffer[tex.x + width * tex.y];
+    //     float  mul  = mul_buffer[tex.x + width * tex.y];
+    //     return float4(rgba.rgb / rgba.a, mul);
+    // }
+    //
+    // dst.rgb = src.rgb * (1.0f - src.a) + dst.rgb * src.a
+    // dst.a   = do not care
     D3D12_RENDER_TARGET_BLEND_DESC rtbd;
-    rtbd.BlendEnable           = false;
+    rtbd.BlendEnable           = gpd.psd.blending_enabled;
     rtbd.LogicOpEnable         = false;
-    rtbd.SrcBlend              = D3D12_BLEND_ONE;
-    rtbd.DestBlend             = D3D12_BLEND_ZERO;
+    rtbd.SrcBlend              = D3D12_BLEND_INV_SRC_ALPHA;
+    rtbd.DestBlend             = D3D12_BLEND_SRC_ALPHA;
     rtbd.BlendOp               = D3D12_BLEND_OP_ADD;
-    rtbd.SrcBlendAlpha         = D3D12_BLEND_ONE;
+    rtbd.SrcBlendAlpha         = D3D12_BLEND_ZERO;
     rtbd.DestBlendAlpha        = D3D12_BLEND_ZERO;
     rtbd.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
     rtbd.LogicOp               = D3D12_LOGIC_OP_NOOP;

@@ -310,9 +310,9 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     //     ...
     //     float4 color;
     //     ...
-    //     rgba_buffer[tex.x + width * tex.y].rgb = color.rgb * color.a * (1.0f - tex.z);
-    //     rgba_buffer[tex.x + width * tex.y].a   =             color.a * (1.0f - tex.z);
-    //     mul_buffer[tex.x + width * tex.y]      = 1.0f - color.a;
+    //     rgba_buffer[tex.x + width * tex.y].rgb += color.rgb * color.a * (1.0f - tex.z);
+    //     rgba_buffer[tex.x + width * tex.y].a   +=             color.a * (1.0f - tex.z);
+    //     mul_buffer[tex.x + width * tex.y]      *= 1.0f - color.a;
     //     discard; // We do not want to write anything to a framebuffer
     //              // when we're rendering translucent objects.
     //              // We'll do it right before present.

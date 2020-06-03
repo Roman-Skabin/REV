@@ -301,52 +301,64 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     sod.NumStrides       = 0;
     sod.RasterizedStream = 0;
 
-    // Texture2D<float4> rgba_buffer;
-    // Texture2D<float>  mul_buffer;
-    //
-    // pixel_shader for object (maybe this won't be in a pixel shader)
-    // float4 PSMain(..., float4 tex : TEXCOORD, ...) : SV_Target
-    // {
-    //     ...
-    //     float4 color;
-    //     ...
-    //     rgba_buffer[tex.x + width * tex.y].rgb += color.rgb * color.a * (1.0f - tex.z);
-    //     rgba_buffer[tex.x + width * tex.y].a   +=             color.a * (1.0f - tex.z);
-    //     mul_buffer[tex.x + width * tex.y]      *= 1.0f - color.a;
-    //     discard; // We do not want to write anything to a framebuffer
-    //              // when we're rendering translucent objects.
-    //              // We'll do it right before present.
-    //     return 0;
-    // }
-    //
-    // pixel_shader before present
-    // float4 PSMain(..., float4 tex : TEXCOORD, ...) : SV_Target
-    // {
-    //     float4 rgba = rgba_buffer[tex.x + width * tex.y];
-    //     float  mul  = mul_buffer[tex.x + width * tex.y];
-    //     return float4(rgba.rgb / rgba.a, mul);
-    // }
-    //
-    // dst.rgb = src.rgb * (1.0f - src.a) + dst.rgb * src.a
-    // dst.a   = do not care
-    D3D12_RENDER_TARGET_BLEND_DESC rtbd;
-    rtbd.BlendEnable           = gpd.psd.blending_enabled;
-    rtbd.LogicOpEnable         = false;
-    rtbd.SrcBlend              = D3D12_BLEND_INV_SRC_ALPHA;
-    rtbd.DestBlend             = D3D12_BLEND_SRC_ALPHA;
-    rtbd.BlendOp               = D3D12_BLEND_OP_ADD;
-    rtbd.SrcBlendAlpha         = D3D12_BLEND_ZERO;
-    rtbd.DestBlendAlpha        = D3D12_BLEND_ZERO;
-    rtbd.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
-    rtbd.LogicOp               = D3D12_LOGIC_OP_NOOP;
-    rtbd.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-    D3D12_BLEND_DESC blend_desc;
-    blend_desc.AlphaToCoverageEnable  = false;
-    blend_desc.IndependentBlendEnable = false;
-    for (u32 i = 0; i < ArrayCount(blend_desc.RenderTarget); ++i)
+    D3D12_BLEND_DESC blend_desc = {0};
+    if (gpd.psd.blending_enabled)
     {
-        blend_desc.RenderTarget[i] = rtbd;
+        D3D12_RENDER_TARGET_BLEND_DESC rtbd_main;
+        rtbd_main.BlendEnable           = false;
+        rtbd_main.LogicOpEnable         = false;
+        rtbd_main.SrcBlend              = D3D12_BLEND_ONE;
+        rtbd_main.DestBlend             = D3D12_BLEND_ONE;
+        rtbd_main.BlendOp               = D3D12_BLEND_OP_ADD;
+        rtbd_main.SrcBlendAlpha         = D3D12_BLEND_ONE;
+        rtbd_main.DestBlendAlpha        = D3D12_BLEND_ONE;
+        rtbd_main.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
+        rtbd_main.LogicOp               = D3D12_LOGIC_OP_NOOP;
+        rtbd_main.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+        D3D12_RENDER_TARGET_BLEND_DESC rtbd_sum;
+        rtbd_sum.BlendEnable           = true;
+        rtbd_sum.LogicOpEnable         = false;
+        rtbd_sum.SrcBlend              = D3D12_BLEND_ONE;
+        rtbd_sum.DestBlend             = D3D12_BLEND_ONE;
+        rtbd_sum.BlendOp               = D3D12_BLEND_OP_ADD;
+        rtbd_sum.SrcBlendAlpha         = D3D12_BLEND_ONE;
+        rtbd_sum.DestBlendAlpha        = D3D12_BLEND_ONE;
+        rtbd_sum.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
+        rtbd_sum.LogicOp               = D3D12_LOGIC_OP_NOOP;
+        rtbd_sum.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+        D3D12_RENDER_TARGET_BLEND_DESC rtbd_mul;
+        rtbd_mul.BlendEnable           = true;
+        rtbd_mul.LogicOpEnable         = false;
+        rtbd_mul.SrcBlend              = D3D12_BLEND_ZERO;
+        rtbd_mul.DestBlend             = D3D12_BLEND_INV_SRC_ALPHA;
+        rtbd_mul.BlendOp               = D3D12_BLEND_OP_ADD;
+        rtbd_mul.SrcBlendAlpha         = D3D12_BLEND_ZERO;
+        rtbd_mul.DestBlendAlpha        = D3D12_BLEND_INV_SRC_ALPHA;
+        rtbd_mul.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
+        rtbd_mul.LogicOp               = D3D12_LOGIC_OP_NOOP;
+        rtbd_mul.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+        blend_desc.RenderTarget[0] = rtbd_main;
+        blend_desc.RenderTarget[1] = rtbd_sum;
+        blend_desc.RenderTarget[2] = rtbd_mul;
+    }
+    else
+    {
+        D3D12_RENDER_TARGET_BLEND_DESC rtbd;
+        rtbd.BlendEnable           = false;
+        rtbd.LogicOpEnable         = false;
+        rtbd.SrcBlend              = D3D12_BLEND_ONE;
+        rtbd.DestBlend             = D3D12_BLEND_ONE;
+        rtbd.BlendOp               = D3D12_BLEND_OP_ADD;
+        rtbd.SrcBlendAlpha         = D3D12_BLEND_ONE;
+        rtbd.DestBlendAlpha        = D3D12_BLEND_ONE;
+        rtbd.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
+        rtbd.LogicOp               = D3D12_LOGIC_OP_NOOP;
+        rtbd.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+        blend_desc.RenderTarget[0] = rtbd;
     }
 
     D3D12_RASTERIZER_DESC rasterizer_desc;
@@ -430,14 +442,25 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     gpsd.InputLayout           = gpd.psd.input_layout;
     gpsd.IBStripCutValue       = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED; // @TODO(Roman): support triangle strips
     gpsd.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    gpsd.NumRenderTargets      = 1;
-    for (u32 i = 0; i < gpsd.NumRenderTargets; ++i)
+    if (gpd.psd.blending_enabled)
     {
-        gpsd.RTVFormats[i] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        gpsd.NumRenderTargets = 3;
+        gpsd.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        gpsd.RTVFormats[1] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+        gpsd.RTVFormats[2] = DXGI_FORMAT_R32_FLOAT;
+        for (u32 i = gpsd.NumRenderTargets; i < ArrayCount(gpsd.RTVFormats); ++i)
+        {
+            gpsd.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+        }
     }
-    for (u32 i = gpsd.NumRenderTargets; i < ArrayCount(gpsd.RTVFormats); ++i)
+    else
     {
-        gpsd.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+        gpsd.NumRenderTargets = 1;
+        gpsd.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+        for (u32 i = gpsd.NumRenderTargets; i < ArrayCount(gpsd.RTVFormats); ++i)
+        {
+            gpsd.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
+        }
     }
     gpsd.DSVFormat             = DXGI_FORMAT_D32_FLOAT;
     gpsd.SampleDesc.Count      = 1;

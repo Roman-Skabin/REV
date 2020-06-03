@@ -1,9 +1,9 @@
 //
 // Pipeline state settings
 //
-#cengine blending(disable)  // default: disable. options: enable, disable.
-#cengine depth_test(enable) // default: enable.  options: enable, disable.
-#cengine cull_mode(none)    // default: none.    options: none, front, back.
+#cengine pipeline(blending, disabled)  // default: disabled. options: enabled, disabled.
+#cengine pipeline(depth_test, enabled) // default: enabled.  options: enabled, disabled.
+#cengine pipeline(cull_mode, none)     // default: none.     options: none, front, back.
 
 //
 // Vertex Shader settings (must be before hlsl shader code)
@@ -68,7 +68,7 @@ VSOutput CustomVSEntryPoint(float4 pos : POSITION, float4 col : COLOR)
 #cengine shader(pixel) // means pixel shader below (must be first)
                        // name is optional
 
-float4 PSMain(float4 pos : SV_Position, float4 col : COLOR) : SV_Target
+float4 PSMain(float4 pos : SV_Position, float4 col : COLOR) : SV_Target0
 {
     return col;
 }

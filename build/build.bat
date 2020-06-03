@@ -15,6 +15,8 @@ if /I "!PROJECT!" == "release" (
 
 REM must have folders
 if not exist ..\assets          mkdir ..\assets
+if not exist ..\assets\audio    mkdir ..\assets\audio
+if not exist ..\assets\shaders  mkdir ..\assets\shaders
 if not exist ..\bin             mkdir ..\bin
 if not exist ..\bin\obj         mkdir ..\bin\obj
 if not exist ..\bin\obj\cengine mkdir ..\bin\obj\cengine
@@ -35,9 +37,11 @@ if /I "!PROJECT!" == "sandbox" (
     set /A COMPILE_CENGINE = 1
 )
 
+ctime.exe -begin full.time
+
 REM cengine
 if !COMPILE_CENGINE! == 1 (
-    set OPTIMIZATION= -Ob2 -Oi -favor:INTEL64
+    set OPTIMIZATION= -Ob2 -Oi -favor:blend
     set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
     set LANGUAGE= -Zc:wchar_t- -Zc:inline
     set DIAGNOSTICS= -W3
@@ -61,17 +65,22 @@ if !COMPILE_CENGINE! == 1 (
         set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\cengine.pdb
         set LANGUAGE= !LANGUAGE! -ZI
     )
+    
+    ctime.exe -begin cengine.time
 
     pushd ..
         echo ==========================    Compiling cengine...    ==========================
         cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! !LINKING! !DIAGNOSTICS! !OUTPUT_FILES! !INPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
-        echo =======================    Cengine has been compiled    ========================
     popd
+
+    ctime.exe -end cengine.time
+
+    echo.
 )
 
 REM sandbox
 if !COMPILE_SANDBOX! == 1 (
-    set OPTIMIZATION= -Ob2 -Oi -favor:INTEL64
+    set OPTIMIZATION= -Ob2 -Oi -favor:blend
     set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
     set LANGUAGE= -Zc:wchar_t- -Zc:inline
     set DIAGNOSTICS= -W3
@@ -95,10 +104,18 @@ if !COMPILE_SANDBOX! == 1 (
         set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\sandbox.pdb
         set LANGUAGE= !LANGUAGE! -ZI
     )
+    
+    ctime.exe -begin sandbox.time
 
     pushd ..
         echo ==========================    Compiling sandbox...    ==========================
         cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! !DIAGNOSTICS! !LINKING! !INPUT_FILES! !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
-        echo =======================    Sandbox has been compiled    ========================
     popd
+
+    ctime.exe -end sandbox.time
+
+    echo.
 )
+
+ctime.exe -end full.time
+endlocal

@@ -16,9 +16,9 @@ typedef struct ASTStructField ASTStructField;
 typedef enum AST_TYPE_KIND
 {
     AST_TYPE_KIND_SCALAR,
-    AST_TYPE_KIND_ARRAY,
     AST_TYPE_KIND_VECTOR,
     AST_TYPE_KIND_MATRIX,
+    AST_TYPE_KIND_ARRAY,
     AST_TYPE_KIND_STRUCT,
 } AST_TYPE_KIND;
 
@@ -43,8 +43,8 @@ struct ASTType
     u64            size_in_bytes;
     union
     {
-        u32 dimension;      // = [1;4]
-        v2u mat_size;       // r = [1;4], c = [1;4]
+        u32 dimension;
+        v2u mat_size;
         ASTStruct *_struct;
     };
 };

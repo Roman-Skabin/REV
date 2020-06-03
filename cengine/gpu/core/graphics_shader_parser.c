@@ -245,8 +245,8 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
     {
         GetNextGraphicsShaderToken(&parser->lexer);
         CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
-
-        if (TokenEqualsCSTR(parser->lexer.token, "blending"))
+        
+        if (TokenEqualsCSTR(parser->lexer.token, "pipeline"))
         {
             GetNextGraphicsShaderToken(&parser->lexer);
             CheckToken(&parser->lexer, TOKEN_KIND_LPAREN);
@@ -254,69 +254,76 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
             GetNextGraphicsShaderToken(&parser->lexer);
             CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
 
-            if (TokenEqualsCSTR(parser->lexer.token, "enable"))
+            if (TokenEqualsCSTR(parser->lexer.token, "blending"))
             {
-                gpd->psd.blending_enabled = true;
+                GetNextGraphicsShaderToken(&parser->lexer);
+                CheckToken(&parser->lexer, TOKEN_KIND_COMMA);
+
+                GetNextGraphicsShaderToken(&parser->lexer);
+                CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
+
+                if (TokenEqualsCSTR(parser->lexer.token, "enabled"))
+                {
+                    gpd->psd.blending_enabled = true;
+                }
+                else if (TokenEqualsCSTR(parser->lexer.token, "disabled"))
+                {
+                    gpd->psd.blending_enabled = false;
+                }
+                else
+                {
+                    SyntaxError(parser->lexer, "undefined blending option: %s, expected: 'enabled' or 'disabled'", parser->lexer.token.name);
+                }
             }
-            else if (TokenEqualsCSTR(parser->lexer.token, "disable"))
+            else if (TokenEqualsCSTR(parser->lexer.token, "depth_test"))
             {
-                gpd->psd.blending_enabled = false;
+                GetNextGraphicsShaderToken(&parser->lexer);
+                CheckToken(&parser->lexer, TOKEN_KIND_COMMA);
+
+                GetNextGraphicsShaderToken(&parser->lexer);
+                CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
+
+                if (TokenEqualsCSTR(parser->lexer.token, "enabled"))
+                {
+                    gpd->psd.depth_test_enabled = true;
+                }
+                else if (TokenEqualsCSTR(parser->lexer.token, "disabled"))
+                {
+                    gpd->psd.depth_test_enabled = false;
+                }
+                else
+                {
+                    SyntaxError(parser->lexer, "undefined depth test option: %s, expected: 'enabled' or 'disabled'", parser->lexer.token.name);
+                }
+            }
+            else if (TokenEqualsCSTR(parser->lexer.token, "cull_mode"))
+            {
+                GetNextGraphicsShaderToken(&parser->lexer);
+                CheckToken(&parser->lexer, TOKEN_KIND_COMMA);
+
+                GetNextGraphicsShaderToken(&parser->lexer);
+                CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
+
+                if (TokenEqualsCSTR(parser->lexer.token, "none"))
+                {
+                    gpd->psd.cull_mode = D3D12_CULL_MODE_NONE;
+                }
+                else if (TokenEqualsCSTR(parser->lexer.token, "front"))
+                {
+                    gpd->psd.cull_mode = D3D12_CULL_MODE_FRONT;
+                }
+                else if (TokenEqualsCSTR(parser->lexer.token, "back"))
+                {
+                    gpd->psd.cull_mode = D3D12_CULL_MODE_BACK;
+                }
+                else
+                {
+                    SyntaxError(parser->lexer, "undefined cull mode option: %s, expected: 'none' or 'front' or 'back'", parser->lexer.token.name);
+                }
             }
             else
             {
-                SyntaxError(parser->lexer, "undefined blending option: %s", parser->lexer.token.name);
-            }
-
-            GetNextGraphicsShaderToken(&parser->lexer);
-            CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
-        }
-        else if (TokenEqualsCSTR(parser->lexer.token, "depth_test"))
-        {
-            GetNextGraphicsShaderToken(&parser->lexer);
-            CheckToken(&parser->lexer, TOKEN_KIND_LPAREN);
-
-            GetNextGraphicsShaderToken(&parser->lexer);
-            CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
-
-            if (TokenEqualsCSTR(parser->lexer.token, "enable"))
-            {
-                gpd->psd.depth_test_enabled = true;
-            }
-            else if (TokenEqualsCSTR(parser->lexer.token, "disable"))
-            {
-                gpd->psd.depth_test_enabled = false;
-            }
-            else
-            {
-                SyntaxError(parser->lexer, "undefined depth test option: %s", parser->lexer.token.name);
-            }
-
-            GetNextGraphicsShaderToken(&parser->lexer);
-            CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
-        }
-        else if (TokenEqualsCSTR(parser->lexer.token, "cull_mode"))
-        {
-            GetNextGraphicsShaderToken(&parser->lexer);
-            CheckToken(&parser->lexer, TOKEN_KIND_LPAREN);
-
-            GetNextGraphicsShaderToken(&parser->lexer);
-            CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
-
-            if (TokenEqualsCSTR(parser->lexer.token, "none"))
-            {
-                gpd->psd.cull_mode = D3D12_CULL_MODE_NONE;
-            }
-            else if (TokenEqualsCSTR(parser->lexer.token, "front"))
-            {
-                gpd->psd.cull_mode = D3D12_CULL_MODE_FRONT;
-            }
-            else if (TokenEqualsCSTR(parser->lexer.token, "back"))
-            {
-                gpd->psd.cull_mode = D3D12_CULL_MODE_BACK;
-            }
-            else
-            {
-                SyntaxError(parser->lexer, "undefined cull mode option: %s", parser->lexer.token.name);
+                SyntaxError(parser->lexer, "undefined pipeline setting: %s, expected: 'blending' or 'depth_test' or 'cull_mode'", parser->lexer.token.name);
             }
 
             GetNextGraphicsShaderToken(&parser->lexer);
@@ -606,12 +613,33 @@ internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc 
             {
                 if (it->kind == AST_TYPE_KIND_STRUCT)
                 {
-                    gpd->psd.input_layout.NumElements += CountTypesInStructRecursively(it);
+                    GetNextGraphicsShaderToken(&parser->lexer);
+                    CheckToken(&parser->lexer, TOKEN_KIND_NAME);
+
+                    GetNextGraphicsShaderToken(&parser->lexer);
+                    if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
+                    {
+                        SyntaxError(parser->lexer, "arrays are not supported in vertex shader's entry point's args");
+                    }
+                    else
+                    {
+                        gpd->psd.input_layout.NumElements += CountTypesInStructRecursively(it);
+                    }
                 }
                 else
                 {
-                    // @TODO(Roman): what if we have an array in args?
-                    ++gpd->psd.input_layout.NumElements;
+                    GetNextGraphicsShaderToken(&parser->lexer);
+                    CheckToken(&parser->lexer, TOKEN_KIND_NAME);
+
+                    GetNextGraphicsShaderToken(&parser->lexer);
+                    if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
+                    {
+                        SyntaxError(parser->lexer, "arrays are not supported in vertex shader's entry point's args");
+                    }
+                    else
+                    {
+                        ++gpd->psd.input_layout.NumElements;
+                    }
                 }
 
                 found_in_types = true;
@@ -690,11 +718,6 @@ internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc 
             CheckToken(&parser->lexer, TOKEN_KIND_NAME);
 
             GetNextGraphicsShaderToken(&parser->lexer);
-            if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
-            {
-                // @TODO(Roman): Array support
-                SyntaxError(parser->lexer, "Arrays in entry's point arguments are currently not supported. Make a typedef to be able to work with them.");
-            }
             CheckToken(&parser->lexer, TOKEN_KIND_COLON);
 
             GetNextGraphicsShaderToken(&parser->lexer);
@@ -761,11 +784,11 @@ internal void ParseStruct(Engine *engine, ShaderParser *parser)
 
     _struct->fields = PushToTA(ASTStructField, engine->memory, _struct->fields_count);
     {
-        ASTStructField *temp_it = _struct->fields;
+        ASTStructField *it = _struct->fields;
         for (u64 i = 1; i < _struct->fields_count; ++i)
         {
-            temp_it->next = _struct->fields + i;
-            temp_it       = temp_it->next;
+            it->next = _struct->fields + i;
+            it       = it->next;
         }
     }
 
@@ -804,9 +827,6 @@ internal void ParseStruct(Engine *engine, ShaderParser *parser)
         // Array
         if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
         {
-            // @TODO(Roman): Array support
-            SyntaxError(parser->lexer, "Arrays in structs are currently not supported. Make a typedef to be able to work with them.");
-
             GetNextGraphicsShaderToken(&parser->lexer);
             CheckToken(&parser->lexer, TOKEN_KIND_INT);
 
@@ -816,6 +836,10 @@ internal void ParseStruct(Engine *engine, ShaderParser *parser)
             CheckToken(&parser->lexer, TOKEN_KIND_RBRACKET);
 
             GetNextGraphicsShaderToken(&parser->lexer);
+            if (parser->lexer.token.kind == TOKEN_KIND_COLON)
+            {
+                SyntaxError(parser->lexer, "arrays with semantics are not supported");
+            }
         }
         else
         {

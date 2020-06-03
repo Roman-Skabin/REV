@@ -30,14 +30,16 @@ global const char *keywords[] =
 {
     "cengine",
 
+    "pipeline",
+    "shader",
+
     "blending",
     "depth_test",
     "cull_mode",
-    "shader",
     "entry_point",
 
-    "enable",
-    "disable",
+    "enabled",
+    "disabled",
 
     "none",
     "front",

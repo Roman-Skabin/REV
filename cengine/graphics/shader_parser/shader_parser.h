@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "gpu/core/interns.h"
-#include "gpu/core/ast.h"
-#include "gpu/renderer.h"
+#include "graphics/shader_parser/interns.h"
+#include "graphics/shader_parser/ast.h"
+#include "graphics/core/core_renderer.h"
 #include "math/vec.h"
 
 typedef enum TOKEN_KIND

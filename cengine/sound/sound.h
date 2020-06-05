@@ -6,11 +6,6 @@
 
 #include "core/core.h"
 
-#ifndef ENGINE_DEFINED
-#define ENGINE_DEFINED
-    typedef struct Engine Engine;
-#endif
-
 typedef struct SoundBuffer
 {
     f32 *samples;

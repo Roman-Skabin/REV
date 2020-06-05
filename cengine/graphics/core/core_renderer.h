@@ -7,53 +7,50 @@
 #include "core/core.h"
 #include "math/vec.h"
 
-#ifndef ENGINE_DEFINED
-#define ENGINE_DEFINED
-    typedef struct Engine Engine;
-#endif
-
-enum
+enum _CORE_RENDERER_CONSTANTS
 {
-    BUFFERS_COUNT = 2,
+    SWAP_CHAIN_BUFFERS_COUNT = 2,
 };
 
-typedef struct Renderer
+typedef struct CoreRenderer
 {
 #if DEBUG
-    ID3D12Debug                     *debug;
+    ID3D12Debug                 *debug;
+    ID3D12DebugCommandQueue     *deubg_queue;
+    ID3D12DebugCommandList      *debug_list;
 #endif
-    IDXGIFactory2                   *factory;
-    IDXGIAdapter1                   *adapter;
-    ID3D12Device                    *device;
+    IDXGIFactory2               *factory;
+    IDXGIAdapter1               *adapter;
+    ID3D12Device                *device;
 
-    ID3D12CommandQueue              *queue;
-    ID3D12CommandAllocator          *graphics_allocators[BUFFERS_COUNT];
-    ID3D12GraphicsCommandList       *graphics_lists[BUFFERS_COUNT];
-    IDXGISwapChain4                 *swap_chain;
+    ID3D12CommandQueue          *queue;
+    ID3D12CommandAllocator      *graphics_allocators[SWAP_CHAIN_BUFFERS_COUNT];
+    ID3D12GraphicsCommandList   *graphics_lists[SWAP_CHAIN_BUFFERS_COUNT];
+    IDXGISwapChain4             *swap_chain;
 
-    ID3D12CommandAllocator          *compute_allocators[BUFFERS_COUNT];
-    ID3D12GraphicsCommandList       *compute_lists[BUFFERS_COUNT];
+    ID3D12CommandAllocator      *compute_allocators[SWAP_CHAIN_BUFFERS_COUNT];
+    ID3D12GraphicsCommandList   *compute_lists[SWAP_CHAIN_BUFFERS_COUNT];
 
-    ID3D12DescriptorHeap            *rtv_heap_desc;
-    ID3D12Resource                  *rt_buffers[BUFFERS_COUNT];
-    D3D12_CPU_DESCRIPTOR_HANDLE      rtv_cpu_desc_handle;
-    u32                              rtv_desc_size;
-    u32                              current_buffer;
+    ID3D12DescriptorHeap        *rtv_heap_desc;
+    ID3D12Resource              *rt_buffers[SWAP_CHAIN_BUFFERS_COUNT];
+    D3D12_CPU_DESCRIPTOR_HANDLE  rtv_cpu_desc_handle;
+    u32                          rtv_desc_size;
+    u32                          current_buffer;
 
-    ID3D12DescriptorHeap            *ds_heap_desc;
-    ID3D12Resource                  *ds_buffer;
-    D3D12_CPU_DESCRIPTOR_HANDLE      dsv_cpu_desc_handle;
+    ID3D12DescriptorHeap        *ds_heap_desc;
+    ID3D12Resource              *ds_buffer;
+    D3D12_CPU_DESCRIPTOR_HANDLE  dsv_cpu_desc_handle;
 
-    ID3D12Fence                     *fences[BUFFERS_COUNT];
-    u64                              fences_values[BUFFERS_COUNT];
-    HANDLE                           fence_event;
+    ID3D12Fence                 *fences[SWAP_CHAIN_BUFFERS_COUNT];
+    u64                          fences_values[SWAP_CHAIN_BUFFERS_COUNT];
+    HANDLE                       fence_event;
 
-    b32                              vsync;
-    b32                              first_frame;
-    b32                              tearing_supported;
+    b32                          vsync;
+    b32                          first_frame;
+    b32                          tearing_supported;
 
-    HRESULT error;
-} Renderer;
+    HRESULT                      error;
+} CoreRenderer;
 
 CENGINE_FUN void SetVSync(Engine *engine, b32 enable);
 
@@ -94,7 +91,7 @@ CENGINE_FUN void        DrawIndices(Engine *engine, IndexBuffer *buffer);
 
 enum
 {
-    MAX_GRAPHICS_SHADERS = 5,
+    MAX_GRAPHICS_SHADERS = 5, // max various graphics shaders for one pipeline
 };
 
 typedef struct Shader
@@ -110,6 +107,7 @@ typedef struct ShaderDesc
     const char *name;
     const char *entry_point;
     u64         entry_point_len;
+    // @TODO(Roman): target?
     const char *code_start;
     const char *code_end;
 } ShaderDesc;

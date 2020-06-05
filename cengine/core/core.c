@@ -9,28 +9,32 @@
 // Debuging
 //
 
-void __cdecl DebugF(const char *format, ...)
+global HANDLE gConsole;
+
+void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...)
 {
-#if DEBUG
+    if (!gConsole)
+    {
+        gConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    }
+
     va_list args;
     va_start(args, format);
 
-    if (args)
-    {
-        char buffer[BUFSIZ] = {'\0'};
-        int len             = vsprintf(buffer, format, args);
-        buffer[len]         = '\n';
+    char buffer[BUFSIZ] = {'\0'};
+    int len             = vsprintf(buffer, format, args);
+    buffer[len]         = '\n';
 
-        OutputDebugStringA(buffer);
-    }
-    else
+    if (debug_in & DEBUG_IN_CONSOLE)
     {
-        OutputDebugStringA(format);
-        OutputDebugStringA("\n");
+        WriteConsoleA(gConsole, buffer, len, 0, 0);
+    }
+    if (debug_in & DEBUG_IN_DEBUG)
+    {
+        OutputDebugStringA(buffer);
     }
 
     va_end(args);
-#endif
 }
 
 void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...)
@@ -43,15 +47,15 @@ void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...)
         {
             title = "Error";
         } break;
+        
+        case MESSAGE_TYPE_WARNING:
+        {
+            title = "Warning";
+        } break;
 
         case MESSAGE_TYPE_INFO:
         {
             title = "Info";
-        } break;
-
-        case MESSAGE_TYPE_WARNING:
-        {
-            title = "Warning";
         } break;
     }
 

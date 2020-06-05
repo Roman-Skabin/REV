@@ -194,14 +194,20 @@ typedef u8 byte;
 // Debuging
 //
 
+typedef enum DEBUG_IN
+{
+    DEBUG_IN_CONSOLE = 0x1,
+    DEBUG_IN_DEBUG   = 0x2,
+} DEBUG_IN;
+
 typedef enum MESSAGE_TYPE
 {
     MESSAGE_TYPE_ERROR   = MB_ICONERROR,
-    MESSAGE_TYPE_INFO    = MB_ICONINFORMATION,
     MESSAGE_TYPE_WARNING = MB_ICONWARNING,
+    MESSAGE_TYPE_INFO    = MB_ICONINFORMATION,
 } MESSAGE_TYPE;
 
-CENGINE_FUN void __cdecl DebugF(const char *format, ...);
+CENGINE_FUN void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
 CENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
 
 #if DEVDEBUG
@@ -262,3 +268,9 @@ CENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
     #define DebugResultM(expr, message) expr
 
 #endif
+
+//
+// Global Defines
+//
+
+typedef struct Engine Engine;

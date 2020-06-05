@@ -3,7 +3,7 @@
 //
 
 #include "core/pch.h"
-#include "gpu/core/shader_parser.h"
+#include "graphics/shader_parser/shader_parser.h"
 #include "cengine.h"
 
 #define TokenEquals(token, str, len) (((token).end - (token).start == (len)) && RtlEqualMemory((token).start, str, len))

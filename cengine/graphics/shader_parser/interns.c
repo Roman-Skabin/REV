@@ -3,7 +3,7 @@
 //
 
 #include "core/pch.h"
-#include "gpu/core/interns.h"
+#include "graphics/shader_parser/interns.h"
 #include "cengine.h"
 
 void CreateInterns(Engine *engine, Interns *interns)

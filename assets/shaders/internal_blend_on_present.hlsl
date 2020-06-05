@@ -19,11 +19,11 @@ VSOutput VSMain(float4 pos : POSITION, float4 tex : TEXCOORD)
 #cengine shader(pixel, "Internal_WeightedBlendedOIT_OnPresent_PS")
 
 Texture2D<float4> tSumRT : register(t0);
-Texture2D<float>  tMulRT : register(t1);
+Texture2D<float4> tMulRT : register(t1);
 
 float4 PSMain(float4 pos : SV_Position, float4 tex : TEXCOORD) : SV_Target0
 {
     float4 sum = tSumRT.Load(tex.x, tex.y);
-    float  mul = tMulRT.Load(tex.x, tex.y);
-    return float4(sum.rgb / sum.a, mul);
+    float4 mul = tMulRT.Load(tex.x, tex.y);
+    return float4(sum.rgb / sum.a, mul.a);
 }

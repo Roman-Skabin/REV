@@ -1,11 +1,8 @@
 - Architecture
-    - Reorginize solution
-        - Renderer to CoreRenderer or to something that means core-ish gpu stuff.
-        - Separate 'gpu' and 'graphics' folders.
+    - ...
 
 - Build
-    - Make a production build
-    - Try to enable precompiled header (core/pch.h)
+    - ...
 
 - Core
     - Make engine's user pointer and sandbox thread safety
@@ -15,6 +12,7 @@
       SoundProc/OnSound callback to the SoundBuffer or
       stay storing it in the engine struct cuz we're calling it
       from SoundThreadProc (from another thread).
+    - Improve timer: public, name, segmented profiling, output result to... somewhere
 
 - Tools
     - gpu/core/interns to the tools?
@@ -25,10 +23,11 @@
 - Math
     - Adapt to different ISA vec.h and mat.h
 
-- GPU | Graphics
+- Graphics
+    - Init DebugQueue and DebugList. Add InfoQueue
     - Create GPU buffers, heaps etc or just wrap existing // do some higher-level shit for the user-side
       (for Root Signature and not only)
-    - Switch from 1 to 3 Render Target (OIT needs 2 additional).
+    - Switch from 1 to 3 Render Targets (OIT needs 2 additional).
     - Custom graphics shader's parser and GraphicsProgram generation
         - More informative errors + there is something weird with the shaders' names.
         - Root Signature stuff

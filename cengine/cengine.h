@@ -8,16 +8,11 @@
 #include "tools/logger.h"
 #include "math/mat.h"
 #include "input.h"
-#include "gpu/renderer.h"
+#include "graphics/core/core_renderer.h"
 #include "tools/work_queue.h"
 #include "core/memory.h"
 #include "core/allocator.h"
 #include "sound/sound.h"
-
-#ifndef ENGINE_DEFINED
-#define ENGINE_DEFINED
-    typedef struct Engine Engine;
-#endif
 
 #define USER_CALLBACK(name) void name(Engine *engine)
 typedef USER_CALLBACK(UserCallback);
@@ -83,7 +78,7 @@ struct Engine
     } user_callbacks;
 
     SoundStream  sound;
-    Renderer     renderer;
+    CoreRenderer core_renderer;
     Logger       logger;
     WorkQueue   *queue;
     Memory      *memory;

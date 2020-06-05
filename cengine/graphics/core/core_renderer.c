@@ -3,8 +3,8 @@
 //
 
 #include "core/pch.h"
-#include "gpu/renderer.h"
-#include "gpu/core/shader_parser.h"
+#include "graphics/core/core_renderer.h"
+#include "graphics/shader_parser/shader_parser.h"
 #include "cengine.h"
 
 #define SafeRelease(directx_interface)                           \
@@ -22,8 +22,8 @@
 
 void SetVSync(Engine *engine, b32 enable)
 {
-    if (engine->renderer.vsync != enable)
-        engine->renderer.vsync = enable;
+    if (engine->core_renderer.vsync != enable)
+        engine->core_renderer.vsync = enable;
 }
 
 //
@@ -58,24 +58,24 @@ VertexBuffer CreateVertexBuffer(Engine *engine, void *vertices, u32 count, u32 s
     rd.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     // @Optimize(Roman): Make em placed?
-    engine->renderer.error = engine->renderer.device->lpVtbl->CreateCommittedResource(engine->renderer.device,
-                                                                                      &hp,
-                                                                                      D3D12_HEAP_FLAG_NONE,
-                                                                                      &rd,
-                                                                                      D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
-                                                                                    | D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                                                      0,
-                                                                                      &IID_ID3D12Resource,
-                                                                                      &buffer.res);
-    Check(SUCCEEDED(engine->renderer.error));
+    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommittedResource(engine->core_renderer.device,
+                                                                                                &hp,
+                                                                                                D3D12_HEAP_FLAG_NONE,
+                                                                                                &rd,
+                                                                                                D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+                                                                                              | D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                                                                0,
+                                                                                                &IID_ID3D12Resource,
+                                                                                                &buffer.res);
+    Check(SUCCEEDED(engine->core_renderer.error));
 
     D3D12_RANGE read_range;
     read_range.Begin = 0;
     read_range.End   = 0;
 
     byte *vertex_data = 0;
-    engine->renderer.error = buffer.res->lpVtbl->Map(buffer.res, 0, &read_range, &vertex_data);
-    Check(SUCCEEDED(engine->renderer.error));
+    engine->core_renderer.error = buffer.res->lpVtbl->Map(buffer.res, 0, &read_range, &vertex_data);
+    Check(SUCCEEDED(engine->core_renderer.error));
 
     CopyMemory(vertex_data, vertices, buffer.count * buffer.stride);
 
@@ -93,7 +93,7 @@ void DestroyVertexBuffer(VertexBuffer *buffer)
 
 void SetVertexBuffer(Engine *engine, VertexBuffer *buffer)
 {
-    ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
+    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
 
     D3D12_VERTEX_BUFFER_VIEW vbv;
     vbv.BufferLocation = buffer->res->lpVtbl->GetGPUVirtualAddress(buffer->res);
@@ -105,7 +105,7 @@ void SetVertexBuffer(Engine *engine, VertexBuffer *buffer)
 
 void DrawVertices(Engine *engine, VertexBuffer *buffer)
 {
-    ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
+    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
     graphics_list->lpVtbl->DrawInstanced(graphics_list, buffer->count, 1, 0, 0);
 }
 
@@ -140,24 +140,24 @@ IndexBuffer CreateIndexBuffer(Engine *engine, u32 *indices, u32 count)
     rd.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     // @Optimize(Roman): Make em placed?
-    engine->renderer.error = engine->renderer.device->lpVtbl->CreateCommittedResource(engine->renderer.device,
-                                                                                      &hp,
-                                                                                      D3D12_HEAP_FLAG_NONE,
-                                                                                      &rd,
-                                                                                      D3D12_RESOURCE_STATE_INDEX_BUFFER
-                                                                                    | D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                                                      0,
-                                                                                      &IID_ID3D12Resource,
-                                                                                      &buffer.res);
-    Check(SUCCEEDED(engine->renderer.error));
+    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommittedResource(engine->core_renderer.device,
+                                                                                                &hp,
+                                                                                                D3D12_HEAP_FLAG_NONE,
+                                                                                                &rd,
+                                                                                                D3D12_RESOURCE_STATE_INDEX_BUFFER
+                                                                                              | D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                                                                0,
+                                                                                                &IID_ID3D12Resource,
+                                                                                                &buffer.res);
+    Check(SUCCEEDED(engine->core_renderer.error));
 
     D3D12_RANGE read_range;
     read_range.Begin = 0;
     read_range.End   = 0;
 
     byte *index_data = 0;
-    engine->renderer.error = buffer.res->lpVtbl->Map(buffer.res, 0, &read_range, &index_data);
-    Check(SUCCEEDED(engine->renderer.error));
+    engine->core_renderer.error = buffer.res->lpVtbl->Map(buffer.res, 0, &read_range, &index_data);
+    Check(SUCCEEDED(engine->core_renderer.error));
 
     CopyMemory(index_data, indices, buffer.count * sizeof(u32));
 
@@ -174,7 +174,7 @@ void DestroyIndexBuffer(IndexBuffer *buffer)
 
 void SetIndexBuffer(Engine *engine, IndexBuffer *buffer)
 {
-    ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
+    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
 
     D3D12_INDEX_BUFFER_VIEW ibv;
     ibv.BufferLocation = buffer->res->lpVtbl->GetGPUVirtualAddress(buffer->res);
@@ -186,7 +186,7 @@ void SetIndexBuffer(Engine *engine, IndexBuffer *buffer)
 
 void DrawIndices(Engine *engine, IndexBuffer *buffer)
 {
-    ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
+    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
     graphics_list->lpVtbl->DrawIndexedInstanced(graphics_list, buffer->count, 1, 0, 0, 0);
 }
 
@@ -207,18 +207,18 @@ internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3
 #endif
 
     ID3DBlob *errors = 0;
-    engine->renderer.error = D3DCompile(desc->code_start,
-                                        desc->code_end - desc->code_start,
-                                        desc->name,
-                                        predefines,
-                                        shader->include,
-                                        desc->entry_point,
-                                        desc->target,
-                                        compile_flags,
-                                        0,
-                                        &shader->blob,
-                                        &errors);
-    if (FAILED(engine->renderer.error))
+    engine->core_renderer.error = D3DCompile(desc->code_start,
+                                            desc->code_end - desc->code_start,
+                                            desc->name,
+                                            predefines,
+                                            shader->include,
+                                            desc->entry_point,
+                                            desc->target,
+                                            compile_flags,
+                                            0,
+                                            &shader->blob,
+                                            &errors);
+    if (FAILED(engine->core_renderer.error))
     {
         MessageBoxA(0, errors->lpVtbl->GetBufferPointer(errors), "Shader compilation failure", MB_OK | MB_ICONERROR);
         ExitProcess(1);
@@ -268,30 +268,30 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
                         /*| D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT*/;
 
     ID3DBlob *error = 0;
-    engine->renderer.error = D3D12SerializeRootSignature(&rsd,
-                                                         D3D_ROOT_SIGNATURE_VERSION_1_0,
-                                                         &graphics_program->signature,
-                                                         &error);
+    engine->core_renderer.error = D3D12SerializeRootSignature(&rsd,
+                                                              D3D_ROOT_SIGNATURE_VERSION_1_0,
+                                                              &graphics_program->signature,
+                                                              &error);
 #if DEVDEBUG
-    if (FAILED(engine->renderer.error))
+    if (FAILED(engine->core_renderer.error))
     {
         MessageBoxA(0, error->lpVtbl->GetBufferPointer(error), "Debug Error!", MB_OK | MB_ICONERROR);
         __debugbreak();
         ExitProcess(1);
     }
 #else
-    Check(SUCCEEDED(engine->renderer.error));
+    Check(SUCCEEDED(engine->core_renderer.error));
 #endif
 
     SafeRelease(error);
 
-    engine->renderer.error = engine->renderer.device->lpVtbl->CreateRootSignature(engine->renderer.device,
-                                                                                  0,
-                                                                                  graphics_program->signature->lpVtbl->GetBufferPointer(graphics_program->signature),
-                                                                                  graphics_program->signature->lpVtbl->GetBufferSize(graphics_program->signature),
-                                                                                  &IID_ID3D12RootSignature,
-                                                                                  &graphics_program->root_signature);
-    Check(SUCCEEDED(engine->renderer.error));
+    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateRootSignature(engine->core_renderer.device,
+                                                                                            0,
+                                                                                            graphics_program->signature->lpVtbl->GetBufferPointer(graphics_program->signature),
+                                                                                            graphics_program->signature->lpVtbl->GetBufferSize(graphics_program->signature),
+                                                                                            &IID_ID3D12RootSignature,
+                                                                                            &graphics_program->root_signature);
+    Check(SUCCEEDED(engine->core_renderer.error));
 
     // @TODO(Roman): support stream output
     D3D12_STREAM_OUTPUT_DESC sod;
@@ -305,7 +305,7 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     if (gpd.psd.blending_enabled)
     {
         D3D12_RENDER_TARGET_BLEND_DESC rtbd_main;
-        rtbd_main.BlendEnable           = false;
+        rtbd_main.BlendEnable           = true;
         rtbd_main.LogicOpEnable         = false;
         rtbd_main.SrcBlend              = D3D12_BLEND_ONE;
         rtbd_main.DestBlend             = D3D12_BLEND_ONE;
@@ -396,7 +396,7 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     cached_pipeline_state.CachedBlobSizeInBytes = 0;
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC gpsd = {0};
-    gpsd.pRootSignature        = graphics_program->root_signature;
+    gpsd.pRootSignature = graphics_program->root_signature;
     for (u32 i = 0; i < graphics_program->shaders_count; ++i)
     {
         Shader *shader = graphics_program->shaders + i;
@@ -447,7 +447,7 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
         gpsd.NumRenderTargets = 3;
         gpsd.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
         gpsd.RTVFormats[1] = DXGI_FORMAT_R32G32B32A32_FLOAT;
-        gpsd.RTVFormats[2] = DXGI_FORMAT_R32_FLOAT;
+        gpsd.RTVFormats[2] = DXGI_FORMAT_R32G32B32A32_FLOAT;
         for (u32 i = gpsd.NumRenderTargets; i < ArrayCount(gpsd.RTVFormats); ++i)
         {
             gpsd.RTVFormats[i] = DXGI_FORMAT_UNKNOWN;
@@ -469,11 +469,11 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     gpsd.CachedPSO             = cached_pipeline_state;
     gpsd.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-    engine->renderer.error = engine->renderer.device->lpVtbl->CreateGraphicsPipelineState(engine->renderer.device,
-                                                                                          &gpsd,
-                                                                                          &IID_ID3D12PipelineState,
-                                                                                          &graphics_program->pipeline_state);
-    Check(SUCCEEDED(engine->renderer.error));
+    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateGraphicsPipelineState(engine->core_renderer.device,
+                                                                                                    &gpsd,
+                                                                                                    &IID_ID3D12PipelineState,
+                                                                                                    &graphics_program->pipeline_state);
+    Check(SUCCEEDED(engine->core_renderer.error));
 }
 
 void GraphicsProgram_Destroy(GraphicsProgram *graphics_program)
@@ -489,7 +489,7 @@ void GraphicsProgram_Destroy(GraphicsProgram *graphics_program)
 
 void GraphicsProgram_Bind(Engine *engine, GraphicsProgram *graphics_program)
 {
-    ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
+    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
 
     graphics_list->lpVtbl->SetGraphicsRootSignature(graphics_list, graphics_program->root_signature);
 
@@ -527,13 +527,13 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
             {
                 case SHADER_RESOURCES_KIND_GRAPHICS:
                 {
-                    ID3D12GraphicsCommandList *graphics_list = engine->renderer.graphics_lists[engine->renderer.current_buffer];
+                    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
                     graphics_list->lpVtbl->SetGraphicsRoot32BitConstants(graphics_list, index, count, constants, start_offset);
                 } break;
 
                 case SHADER_RESOURCES_KIND_COMPUTE:
                 {
-                    ID3D12GraphicsCommandList *compute_list = engine->renderer.compute_lists[engine->renderer.current_buffer];
+                    ID3D12GraphicsCommandList *compute_list = engine->core_renderer.compute_lists[engine->core_renderer.current_buffer];
                     compute_list->lpVtbl->SetComputeRoot32BitConstants(compute_list, index, count, constants, start_offset);
                 } break;
             }
@@ -600,11 +600,11 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
         cpsd.CachedPSO      = cached_pipeline_state;
         cpsd.Flags          = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-        engine->renderer.error = engine->renderer.device->lpVtbl->CreateComputePipelineState(engine->renderer.device,
+        engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateComputePipelineState(engine->core_renderer.device,
                                                                                              &cpsd,
                                                                                              &IID_ID3D12PipelineState,
                                                                                              &pipeline_state->pipeline_state);
-        Check(SUCCEEDED(engine->renderer.error));
+        Check(SUCCEEDED(engine->core_renderer.error));
     }
 
     void ExecuteComputePipelineState(Engine *engine, PipelineState *pipeline_state, u32 grids, u32 blocks, u32 threads)
@@ -613,7 +613,7 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
         Check(pipeline_state);
         Check(pipeline_state->kind == PIPELINE_STATE_KIND_COMPUTE);
 
-        ID3D12GraphicsCommandList *compute_list = engine->renderer.compute_lists[engine->renderer.current_buffer];
+        ID3D12GraphicsCommandList *compute_list = engine->core_renderer.compute_lists[engine->core_renderer.current_buffer];
         compute_list->lpVtbl->Dispatch(compute_list, threads, blocks, grids);
     }
 #endif

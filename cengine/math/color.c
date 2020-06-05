@@ -2,6 +2,7 @@
 // Copyright 2020 Roman Skabin
 //
 
+#include "core/pch.h"
 #include "math/color.h"
 
 const v4 gBlackA0   = { 0.0f, 0.0f, 0.0f, 0.0f };

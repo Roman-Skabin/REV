@@ -7,11 +7,6 @@
 #include "tools/buffer.h"
 #include "core/memory.h"
 
-#ifndef ENGINE_DEFINED
-#define ENGINE_DEFINED
-    typedef struct Engine Engine;
-#endif
-
 typedef struct Intern Intern;
 
 struct Intern

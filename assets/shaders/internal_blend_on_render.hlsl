@@ -26,7 +26,7 @@ cbuffer Constants : register(b0)
 struct PSOutput
 {
     float4 sum : SV_Target1;
-    float  mul : SV_Target2;
+    float4 mul : SV_Target2;
 };
 
 PSOutput PSMain(float4 pos : SV_Position, float4 tex : TEXCOORD)
@@ -36,6 +36,6 @@ PSOutput PSMain(float4 pos : SV_Position, float4 tex : TEXCOORD)
 
     PSOutput output;
     output.sum = color * (cFar - tex.z);
-    output.mul = color.a;
+    output.mul = float4(0.0f, 0.0f, 0.0f, color.a);
     return output;
 }

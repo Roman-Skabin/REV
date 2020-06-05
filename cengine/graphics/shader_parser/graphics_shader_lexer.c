@@ -3,7 +3,7 @@
 //
 
 #include "core/pch.h"
-#include "gpu/core/shader_parser.h"
+#include "graphics/shader_parser/shader_parser.h"
 
 global const char *token_kind_names[] =
 {

@@ -3,7 +3,7 @@
 //
 
 #include "core/pch.h"
-#include "gpu/core/shader_parser.h"
+#include "graphics/shader_parser/shader_parser.h"
 
 #define TokenEquals(token, str, len) (((token).end - (token).start == (len)) && !memcmp((token).start, str, len))
 #define TokenEqualsCSTR(token, cstr) TokenEquals(token, cstr, CSTRLEN(cstr))

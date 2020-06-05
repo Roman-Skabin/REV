@@ -208,16 +208,16 @@ internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3
 
     ID3DBlob *errors = 0;
     engine->core_renderer.error = D3DCompile(desc->code_start,
-                                            desc->code_end - desc->code_start,
-                                            desc->name,
-                                            predefines,
-                                            shader->include,
-                                            desc->entry_point,
-                                            desc->target,
-                                            compile_flags,
-                                            0,
-                                            &shader->blob,
-                                            &errors);
+                                             desc->code_end - desc->code_start,
+                                             desc->name,
+                                             predefines,
+                                             shader->include,
+                                             desc->entry_point,
+                                             desc->target,
+                                             compile_flags,
+                                             0,
+                                             &shader->blob,
+                                             &errors);
     if (FAILED(engine->core_renderer.error))
     {
         MessageBoxA(0, errors->lpVtbl->GetBufferPointer(errors), "Shader compilation failure", MB_OK | MB_ICONERROR);

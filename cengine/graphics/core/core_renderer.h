@@ -103,11 +103,10 @@ typedef struct Shader
 
 typedef struct ShaderDesc
 {
-    const char *target;
+    char        target[8];
     const char *name;
     const char *entry_point;
     u64         entry_point_len;
-    // @TODO(Roman): target?
     const char *code_start;
     const char *code_end;
 } ShaderDesc;
@@ -116,6 +115,7 @@ typedef struct GraphicsProgramDesc
 {
     struct
     {
+        const char *filename;
         u32 count;
         ShaderDesc descs[MAX_GRAPHICS_SHADERS];
     } sd;

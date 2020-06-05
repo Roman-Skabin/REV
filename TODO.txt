@@ -29,7 +29,6 @@
       (for Root Signature and not only)
     - Switch from 1 to 3 Render Targets (OIT needs 2 additional).
     - Custom graphics shader's parser and GraphicsProgram generation
-        - More informative errors + there is something weird with the shaders' names.
         - Root Signature stuff
         - Includes
         - Template shit (Buffer<type> name; vector<type, dim> name; ...)

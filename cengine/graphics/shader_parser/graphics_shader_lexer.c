@@ -237,16 +237,6 @@ tokenize_again:
         while (*lexer->stream && *lexer->stream != '"')
         {
             ++lexer->stream;
-            #if 0
-            if (*lexer->stream == '\n')
-            {
-                SyntaxError(lexer, "no new lines in shader names");
-            }
-            else if (*lexer->stream == '\\')
-            {
-                SyntaxError(lexer, "no escape characters in shader names");
-            }
-            #endif
         }
         if (*lexer->stream)
         {

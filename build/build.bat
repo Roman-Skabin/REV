@@ -51,6 +51,7 @@ if !COMPILE_CENGINE! == 1 (
     set MISCELLANEOUS= -TC
     set OUTPUT_FILES= -Fo:bin\obj\cengine\ -Fe:bin\cengine.dll -Fp:bin\obj\cengine\cengine.pch
 
+    REM first 'for' needs just for getting full filename
     for /F %%i in ('dir /A-D /S /B ..\cengine\core\pch.c') do (
         set PCH_FILE=%%i
     )
@@ -101,7 +102,9 @@ if !COMPILE_SANDBOX! == 1 (
     set MISCELLANEOUS= -MP -TC
     set OUTPUT_FILES= -Fo:bin\obj\sandbox\ -Fe:bin\sandbox.exe
 
-    FOR /F %%i IN ('dir /A-D /S /B ..\sandbox\*.c') DO set INPUT_FILES=!INPUT_FILES! %%i
+    for /F %%i in ('dir /A-D /S /B ..\sandbox\*.c') do (
+        set INPUT_FILES=!INPUT_FILES! %%i
+    )
 
     if /I "!BUILD_TYPE!" == "release" (
         set OPTIMIZATION= !OPTIMIZATION! -O2 -Ot

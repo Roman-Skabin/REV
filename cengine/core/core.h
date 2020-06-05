@@ -270,7 +270,7 @@ CENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
 #endif
 
 //
-// Global Defines
+// Global typedefs
 //
 
 typedef struct Engine Engine;

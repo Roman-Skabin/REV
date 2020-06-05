@@ -803,7 +803,7 @@ internal void Present(Engine *engine)
     // Swap buffers
     engine->core_renderer.current_buffer = engine->core_renderer.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->core_renderer.swap_chain);
 
-    #pragma warning(suppress: 4020)
+    #pragma warning(suppress: 4020) // I know what I'm doing.
     engine->core_renderer.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->core_renderer.rtv_heap_desc, &engine->core_renderer.rtv_cpu_desc_handle);
     engine->core_renderer.rtv_cpu_desc_handle.ptr += engine->core_renderer.current_buffer * engine->core_renderer.rtv_desc_size;
 }

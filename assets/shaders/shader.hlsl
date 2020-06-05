@@ -8,8 +8,7 @@
 //
 // Vertex Shader settings (must be before hlsl shader code)
 //
-#cengine shader(vertex, "Rect_VS")               // means vertex shader below (must be first)
-                                                 // name is optional
+#cengine shader(vertex, 5.1)                     // means vertex shader below (must be first), default target is 5.0
 #cengine shader(entry_point, CustomVSEntryPoint) // optional. default: VSMain
 
 // @CleanUp(Roman): remove when we'll be able to use SRVs and CBVs
@@ -51,10 +50,10 @@ VSOutput CustomVSEntryPoint(float4 pos : POSITION, float4 col : COLOR)
     float3 target = float3(-0.80f,  0.2f,  0.0f);
     float3 up     = float3(-0.51f,  1.0f,  0.0f);
 
-    float4x4 proj  = m4_persp_lh_fov(16.0f / 9.0f, 90.0f, 0.1f, 10.0f);
-    float4x4 view  = WorldToCameraLH(camera, target, up);
+    float4x4 proj = m4_persp_lh_fov(16.0f / 9.0f, 90.0f, 0.1f, 10.0f);
+    float4x4 view = WorldToCameraLH(camera, target, up);
 
-    float4x4 VP  = mul(proj, view);
+    float4x4 VP = mul(proj, view);
 
     VSOutput output;
     output.pos = mul(VP, pos);
@@ -65,8 +64,7 @@ VSOutput CustomVSEntryPoint(float4 pos : POSITION, float4 col : COLOR)
 //
 // Pixel Shader settings (must be before hlsl shader code)
 //
-#cengine shader(pixel) // means pixel shader below (must be first)
-                       // name is optional
+#cengine shader(pixel) // means pixel shader below (must be first), default target is 5.0
 
 float4 PSMain(float4 pos : SV_Position, float4 col : COLOR) : SV_Target0
 {

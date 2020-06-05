@@ -353,7 +353,7 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
                     shader_desc = gpd->sd.descs + gpd->sd.count;
                 }
 
-                shader_desc->target          = "vs_5_0";
+                shader_desc->name            = gpd->sd.filename;
                 shader_desc->entry_point     = "VSMain";
                 shader_desc->entry_point_len = CSTRLEN("VSMain");
 
@@ -362,32 +362,41 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
                 if (parser->lexer.token.kind == TOKEN_KIND_COMMA)
                 {
                     GetNextGraphicsShaderToken(&parser->lexer);
-                    CheckToken(&parser->lexer, TOKEN_KIND_STRING);
+                    CheckToken(&parser->lexer, TOKEN_KIND_FLOAT);
 
-                    shader_desc->name = parser->lexer.token.str_val;
+                    int len = sprintf(shader_desc->target, "vs_%1.1f", parser->lexer.token.f64_val);
+                    char *target_end = shader_desc->target + len;
+                    for (char *it = shader_desc->target; it != target_end; ++it)
+                    {
+                        if (*it == '.')
+                        {
+                            *it = '_';
+                            break;
+                        }
+                    }
 
                     GetNextGraphicsShaderToken(&parser->lexer);
                 }
-
-                CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
-
-                shader_desc->code_start = parser->lexer.stream + 1;
+                else
+                {
+                    CopyMemory(shader_desc->target, "vs_5_0", CSTRLEN("vs_5_0"));
+                }
             }
             else if (TokenEqualsCSTR(parser->lexer.token, "hull"))
             {
                 if (shader_desc->code_start)
                 {
                     ++gpd->sd.count;
-    
+
                     const char *shader_code_end = parser->lexer.stream;
                     while (*shader_code_end != '#') --shader_code_end;
-    
+
                     shader_desc->code_end = shader_code_end;
-    
+
                     shader_desc = gpd->sd.descs + gpd->sd.count;
                 }
 
-                shader_desc->target          = "hs_5_0";
+                shader_desc->name            = gpd->sd.filename;
                 shader_desc->entry_point     = "HSMain";
                 shader_desc->entry_point_len = CSTRLEN("HSMain");
 
@@ -396,32 +405,41 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
                 if (parser->lexer.token.kind == TOKEN_KIND_COMMA)
                 {
                     GetNextGraphicsShaderToken(&parser->lexer);
-                    CheckToken(&parser->lexer, TOKEN_KIND_STRING);
+                    CheckToken(&parser->lexer, TOKEN_KIND_FLOAT);
 
-                    shader_desc->name = parser->lexer.token.str_val;
+                    int len = sprintf(shader_desc->target, "hs_%1.1f", parser->lexer.token.f64_val);
+                    char *target_end = shader_desc->target + len;
+                    for (char *it = shader_desc->target; it != target_end; ++it)
+                    {
+                        if (*it == '.')
+                        {
+                            *it = '_';
+                            break;
+                        }
+                    }
 
                     GetNextGraphicsShaderToken(&parser->lexer);
                 }
-
-                CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
-
-                shader_desc->code_start = parser->lexer.stream + 1;
+                else
+                {
+                    CopyMemory(shader_desc->target, "hs_5_0", CSTRLEN("hs_5_0"));
+                }
             }
             else if (TokenEqualsCSTR(parser->lexer.token, "domain"))
             {
                 if (shader_desc->code_start)
                 {
                     ++gpd->sd.count;
-    
+
                     const char *shader_code_end = parser->lexer.stream;
                     while (*shader_code_end != '#') --shader_code_end;
-    
+
                     shader_desc->code_end = shader_code_end;
-    
+
                     shader_desc = gpd->sd.descs + gpd->sd.count;
                 }
 
-                shader_desc->target          = "ds_5_0";
+                shader_desc->name            = gpd->sd.filename;
                 shader_desc->entry_point     = "DSMain";
                 shader_desc->entry_point_len = CSTRLEN("DSMain");
 
@@ -430,32 +448,41 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
                 if (parser->lexer.token.kind == TOKEN_KIND_COMMA)
                 {
                     GetNextGraphicsShaderToken(&parser->lexer);
-                    CheckToken(&parser->lexer, TOKEN_KIND_STRING);
+                    CheckToken(&parser->lexer, TOKEN_KIND_FLOAT);
 
-                    shader_desc->name = parser->lexer.token.str_val;
+                    int len = sprintf(shader_desc->target, "ds_%1.1f", parser->lexer.token.f64_val);
+                    char *target_end = shader_desc->target + len;
+                    for (char *it = shader_desc->target; it != target_end; ++it)
+                    {
+                        if (*it == '.')
+                        {
+                            *it = '_';
+                            break;
+                        }
+                    }
 
                     GetNextGraphicsShaderToken(&parser->lexer);
                 }
-
-                CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
-
-                shader_desc->code_start = parser->lexer.stream + 1;
+                else
+                {
+                    CopyMemory(shader_desc->target, "ds_5_0", CSTRLEN("ds_5_0"));
+                }
             }
             else if (TokenEqualsCSTR(parser->lexer.token, "geometry"))
             {
                 if (shader_desc->code_start)
                 {
                     ++gpd->sd.count;
-    
+
                     const char *shader_code_end = parser->lexer.stream;
                     while (*shader_code_end != '#') --shader_code_end;
-    
+
                     shader_desc->code_end = shader_code_end;
-    
+
                     shader_desc = gpd->sd.descs + gpd->sd.count;
                 }
 
-                shader_desc->target          = "gs_5_0";
+                shader_desc->name            = gpd->sd.filename;
                 shader_desc->entry_point     = "GSMain";
                 shader_desc->entry_point_len = CSTRLEN("GSMain");
 
@@ -464,32 +491,41 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
                 if (parser->lexer.token.kind == TOKEN_KIND_COMMA)
                 {
                     GetNextGraphicsShaderToken(&parser->lexer);
-                    CheckToken(&parser->lexer, TOKEN_KIND_STRING);
+                    CheckToken(&parser->lexer, TOKEN_KIND_FLOAT);
 
-                    shader_desc->name = parser->lexer.token.str_val;
+                    int len = sprintf(shader_desc->target, "gs_%1.1f", parser->lexer.token.f64_val);
+                    char *target_end = shader_desc->target + len;
+                    for (char *it = shader_desc->target; it != target_end; ++it)
+                    {
+                        if (*it == '.')
+                        {
+                            *it = '_';
+                            break;
+                        }
+                    }
 
                     GetNextGraphicsShaderToken(&parser->lexer);
                 }
-
-                CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
-
-                shader_desc->code_start = parser->lexer.stream + 1;
+                else
+                {
+                    CopyMemory(shader_desc->target, "gs_5_0", CSTRLEN("gs_5_0"));
+                }
             }
             else if (TokenEqualsCSTR(parser->lexer.token, "pixel"))
             {
                 if (shader_desc->code_start)
                 {
                     ++gpd->sd.count;
-    
+
                     const char *shader_code_end = parser->lexer.stream;
                     while (*shader_code_end != '#') --shader_code_end;
-    
+
                     shader_desc->code_end = shader_code_end;
 
                     shader_desc = gpd->sd.descs + gpd->sd.count;
                 }
 
-                shader_desc->target          = "ps_5_0";
+                shader_desc->name            = gpd->sd.filename;
                 shader_desc->entry_point     = "PSMain";
                 shader_desc->entry_point_len = CSTRLEN("PSMain");
 
@@ -498,16 +534,25 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
                 if (parser->lexer.token.kind == TOKEN_KIND_COMMA)
                 {
                     GetNextGraphicsShaderToken(&parser->lexer);
-                    CheckToken(&parser->lexer, TOKEN_KIND_STRING);
+                    CheckToken(&parser->lexer, TOKEN_KIND_FLOAT);
 
-                    shader_desc->name = parser->lexer.token.str_val;
+                    int len = sprintf(shader_desc->target, "ps_%1.1f", parser->lexer.token.f64_val);
+                    char *target_end = shader_desc->target + len;
+                    for (char *it = shader_desc->target; it != target_end; ++it)
+                    {
+                        if (*it == '.')
+                        {
+                            *it = '_';
+                            break;
+                        }
+                    }
 
                     GetNextGraphicsShaderToken(&parser->lexer);
                 }
-
-                CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
-
-                shader_desc->code_start = parser->lexer.stream + 1;
+                else
+                {
+                    CopyMemory(shader_desc->target, "ps_5_0", CSTRLEN("ps_5_0"));
+                }
             }
             else if (TokenEqualsCSTR(parser->lexer.token, "entry_point"))
             {
@@ -521,14 +566,15 @@ internal void ParsePreprocessor(ShaderParser *parser, GraphicsProgramDesc *gpd)
                 shader_desc->entry_point_len = parser->lexer.token.end - parser->lexer.token.start;
 
                 GetNextGraphicsShaderToken(&parser->lexer);
-                CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
-
-                shader_desc->code_start = parser->lexer.stream + 1;
             }
             else
             {
-                SyntaxError(parser->lexer, "undefined shader type: %s", parser->lexer.token.name);
+                SyntaxError(parser->lexer, "undefined shader type: %s, expected 'vertex' or 'hull' or 'domain' or 'geometry' or 'pixel'", parser->lexer.token.name);
             }
+
+            CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
+
+            shader_desc->code_start = parser->lexer.stream + 1;
         }
     }
 }
@@ -611,35 +657,22 @@ internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc 
         {
             if (it->name == parser->lexer.token.name)
             {
+                GetNextGraphicsShaderToken(&parser->lexer);
+                CheckToken(&parser->lexer, TOKEN_KIND_NAME);
+
+                GetNextGraphicsShaderToken(&parser->lexer);
+                if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
+                {
+                    SyntaxError(parser->lexer, "arrays are not supported in vertex shader's entry point's args");
+                }
+
                 if (it->kind == AST_TYPE_KIND_STRUCT)
                 {
-                    GetNextGraphicsShaderToken(&parser->lexer);
-                    CheckToken(&parser->lexer, TOKEN_KIND_NAME);
-
-                    GetNextGraphicsShaderToken(&parser->lexer);
-                    if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
-                    {
-                        SyntaxError(parser->lexer, "arrays are not supported in vertex shader's entry point's args");
-                    }
-                    else
-                    {
-                        gpd->psd.input_layout.NumElements += CountTypesInStructRecursively(it);
-                    }
+                    gpd->psd.input_layout.NumElements += CountTypesInStructRecursively(it);
                 }
                 else
                 {
-                    GetNextGraphicsShaderToken(&parser->lexer);
-                    CheckToken(&parser->lexer, TOKEN_KIND_NAME);
-
-                    GetNextGraphicsShaderToken(&parser->lexer);
-                    if (parser->lexer.token.kind == TOKEN_KIND_LBRACKET)
-                    {
-                        SyntaxError(parser->lexer, "arrays are not supported in vertex shader's entry point's args");
-                    }
-                    else
-                    {
-                        ++gpd->psd.input_layout.NumElements;
-                    }
+                    ++gpd->psd.input_layout.NumElements;
                 }
 
                 found_in_types = true;
@@ -682,7 +715,7 @@ internal void ParseInputLayout(Engine *engine, ShaderParser *parser, ShaderDesc 
     {
         PassModifiers(parser);
 
-        #pragma warning(suppress: 4090)
+        #pragma warning(suppress: 4090) // different const qualifiers
         D3D12_INPUT_ELEMENT_DESC *desc = gpd->psd.input_layout.pInputElementDescs + i;
 
         ASTType *type = 0;
@@ -1028,6 +1061,7 @@ internal void ParseTypedef(Engine *engine, ShaderParser *parser)
 void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, GraphicsProgramDesc *gpd)
 {
     char *shader_code = ReadEntireShaderFile(engine, file_with_shaders, 0);
+    gpd->sd.filename = file_with_shaders;
 
     ShaderParser parser = {0};
     CreateGraphicsShaderLexer(engine, shader_code, &parser.lexer);

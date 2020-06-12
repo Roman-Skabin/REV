@@ -18,6 +18,9 @@
 #define CINTERFACE              1
 
 #include <Windows.h>
+
+#undef GetMessage
+
 #include <Xinput.h>
 #include <audiopolicy.h>
 #include <mmdeviceapi.h>
@@ -27,6 +30,7 @@
 #include <mfreadwrite.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
+#include <dxgidebug.h>
 #include <d3dcompiler.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -12,6 +12,7 @@
 typedef struct ASTType        ASTType;
 typedef struct ASTStruct      ASTStruct;
 typedef struct ASTStructField ASTStructField;
+typedef struct ASTCBuffer     ASTCBuffer;
 
 typedef enum AST_TYPE_KIND
 {
@@ -63,4 +64,11 @@ struct ASTStruct
     const char     *name;
     ASTStructField *fields;
     u64             fields_count;
+};
+
+struct ASTCBuffer
+{
+    ExtendsList(ASTCBuffer)
+    u32 _register;
+    u32 space;
 };

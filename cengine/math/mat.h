@@ -10,6 +10,8 @@
     #error Compile with -arch:AVX or higher
 #endif
 
+#pragma pack(push, 1)
+
 //
 // m2
 //
@@ -1139,7 +1141,7 @@ INLINE m4 MATH_CALL m4_persp_rh_fov(f32 aspect, deg fov, f32 near, f32 far) // r
     return res;
 }
 
-INLINE m4 MATH_CALL WorldToCameraLH(v4 camera, v4 target, v4 up)
+INLINE m4 MATH_CALL CameraToWorldLH(v4 camera, v4 target, v4 up)
 {
     __m128 z_axis     = _mm_sub_ps(target.mm, camera.mm);
     __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x7F));
@@ -1163,14 +1165,14 @@ INLINE m4 MATH_CALL WorldToCameraLH(v4 camera, v4 target, v4 up)
                                      0.0f);
 
     m4 res;
-    res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(y_axis, 0), MMf(z_axis, 0), MMf(translate, 0),
-                             MMf(x_axis, 1), MMf(y_axis, 1), MMf(z_axis, 1), MMf(translate, 1));
-    res.mm1 = _mm256_setr_ps(MMf(x_axis, 2), MMf(y_axis, 2), MMf(z_axis, 2), MMf(translate, 2),
+    res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(x_axis, 1), MMf(x_axis, 2), MMf(translate, 0),
+                             MMf(y_axis, 0), MMf(y_axis, 1), MMf(y_axis, 2), MMf(translate, 1));
+    res.mm1 = _mm256_setr_ps(MMf(z_axis, 0), MMf(z_axis, 1), MMf(z_axis, 2), MMf(translate, 2),
                                        0.0f,           0.0f,           0.0f,              1.0f);
     return res;
 }
 
-INLINE m4 MATH_CALL WorldToCameraRH(v4 camera, v4 target, v4 up)
+INLINE m4 MATH_CALL CameraToWorldRH(v4 camera, v4 target, v4 up)
 {
     __m128 z_axis     = _mm_sub_ps(camera.mm, target.mm);
     __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x7F));
@@ -1194,9 +1196,11 @@ INLINE m4 MATH_CALL WorldToCameraRH(v4 camera, v4 target, v4 up)
                                      0.0f);
 
     m4 res;
-    res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(y_axis, 0), MMf(z_axis, 0), MMf(translate, 0),
-                             MMf(x_axis, 1), MMf(y_axis, 1), MMf(z_axis, 1), MMf(translate, 1));
-    res.mm1 = _mm256_setr_ps(MMf(x_axis, 2), MMf(y_axis, 2), MMf(z_axis, 2), MMf(translate, 2),
+    res.mm0 = _mm256_setr_ps(MMf(x_axis, 0), MMf(x_axis, 1), MMf(x_axis, 2), MMf(translate, 0),
+                             MMf(y_axis, 0), MMf(y_axis, 1), MMf(y_axis, 2), MMf(translate, 1));
+    res.mm1 = _mm256_setr_ps(MMf(z_axis, 0), MMf(z_axis, 1), MMf(z_axis, 2), MMf(translate, 2),
                                        0.0f,           0.0f,           0.0f,              1.0f);
     return res;
 }
+
+#pragma pack(pop)

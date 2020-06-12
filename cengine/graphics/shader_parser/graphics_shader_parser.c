@@ -1058,7 +1058,135 @@ internal void ParseTypedef(Engine *engine, ShaderParser *parser)
     *last_type->next = type;
 }
 
-void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, GraphicsProgramDesc *gpd)
+internal void ParseCBuffer(Engine *engine, ShaderParser *parser, GraphicsProgram *program, GraphicsProgramDesc *gpd)
+{
+    // cbuffer name [: register(b# [, space#])]
+    // {
+    //     ...
+    // };
+
+    ASTCBuffer *cbuffer = PushToTA(ASTCBuffer, engine->memory, 1);
+
+    GetNextGraphicsShaderToken(&parser->lexer);
+    CheckToken(&parser->lexer, TOKEN_KIND_NAME);
+    {
+        // @Optimize(Roman): Move CBV_SRV_UAV_Buffer to allocator stuff.
+        //                   If we will have many programs with many buffers
+        //                   they will take too much memory that we can't release.
+        CBV_SRV_UAV_Buffer *program_buffer = PushToPA(CBV_SRV_UAV_Buffer, engine->memory, 1);
+        program_buffer->name_len = parser->lexer.token.end - parser->lexer.token.start;
+        program_buffer->name     = PushToPA(const char, engine->memory, program_buffer->name_len);
+        #pragma warning(suppress: 4090) // different const qualifiers
+        CopyMemory(program_buffer->name, parser->lexer.token.start, program_buffer->name_len);
+        program_buffer->type     = D3D12_ROOT_PARAMETER_TYPE_CBV;
+
+        if (!program->buffers)
+        {
+            program->buffers = program_buffer;
+        }
+        else
+        {
+            CBV_SRV_UAV_Buffer *last_program_buffer = program->buffers;
+            while (last_program_buffer->next) last_program_buffer = last_program_buffer->next;
+            last_program_buffer->next = program_buffer;
+        }
+    }
+
+    GetNextGraphicsShaderToken(&parser->lexer);
+
+    // [: register(b# [, space#])]
+    if (parser->lexer.token.kind == TOKEN_KIND_COLON)
+    {
+        GetNextGraphicsShaderToken(&parser->lexer);
+        CheckToken(&parser->lexer, TOKEN_KIND_KEYWORD);
+
+        GetNextGraphicsShaderToken(&parser->lexer);
+        CheckToken(&parser->lexer, TOKEN_KIND_LPAREN);
+
+        GetNextGraphicsShaderToken(&parser->lexer);
+        CheckToken(&parser->lexer, TOKEN_KIND_NAME);
+        {
+            const char *register_str = parser->lexer.token.start;
+            if (*register_str != 'b')
+            {
+                SyntaxError(parser->lexer, "invaid register: the only valid register for cbuffer is b#");
+            }
+            ++register_str;
+
+            #pragma warning(suppress: 4090) // different const qualifiers
+            char *register_str_end = parser->lexer.token.end;
+            cbuffer->_register     = strtoul(register_str, &register_str_end, 10);
+        }
+
+        GetNextGraphicsShaderToken(&parser->lexer);
+        if (parser->lexer.token.kind == TOKEN_KIND_COMMA)
+        {
+            GetNextGraphicsShaderToken(&parser->lexer);
+            CheckToken(&parser->lexer, TOKEN_KIND_NAME);
+
+            const char *space_str = parser->lexer.token.start + CSTRLEN("space");
+
+            #pragma warning(suppress: 4090) // different const qualifiers
+            char *space_str_end = parser->lexer.token.end;
+            cbuffer->space      = strtoul(space_str, &space_str_end, 10);
+
+            GetNextGraphicsShaderToken(&parser->lexer);
+        }
+        CheckToken(&parser->lexer, TOKEN_KIND_RPAREN);
+
+        GetNextGraphicsShaderToken(&parser->lexer);
+    }
+    CheckToken(&parser->lexer, TOKEN_KIND_LBRACE);
+
+    while (parser->lexer.token.kind != TOKEN_KIND_RBRACE
+       &&  parser->lexer.token.kind != TOKEN_KIND_EOF)
+    {
+        GetNextGraphicsShaderToken(&parser->lexer);
+    }
+    if (parser->lexer.token.kind == TOKEN_KIND_EOF)
+    {
+        SyntaxError(parser->lexer, "unexpected end of file");
+    }
+
+    GetNextGraphicsShaderToken(&parser->lexer);
+    CheckToken(&parser->lexer, TOKEN_KIND_SEMICOLON);
+
+    // done
+    if (!parser->cbuffers)
+    {
+        parser->cbuffers = cbuffer;
+    }
+    else
+    {
+        ASTCBuffer *last_cbuffer = parser->cbuffers;
+        while (last_cbuffer->next) last_cbuffer = last_cbuffer->next;
+        last_cbuffer = cbuffer;
+    }
+
+    ++gpd->rsd.desc.NumParameters;
+}
+
+internal void InitRootSignatureParameters(Engine *engine, ShaderParser *parser, GraphicsProgramDesc *gpd)
+{
+    gpd->rsd.desc.pParameters = PushToTA(D3D12_ROOT_PARAMETER, engine->memory, gpd->rsd.desc.NumParameters);
+
+    #pragma warning(suppress: 4090) // different const qualifiers    
+    D3D12_ROOT_PARAMETER *parameter = gpd->rsd.desc.pParameters;
+
+    for (ASTCBuffer *cbuffer = parser->cbuffers; cbuffer; cbuffer = cbuffer->next)
+    {
+        parameter->ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
+        parameter->Descriptor.ShaderRegister = cbuffer->_register;
+        parameter->Descriptor.RegisterSpace  = cbuffer->space;
+        parameter->ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
+
+        ++parameter;
+    }
+    
+    // @TODO(Roman): Init SRVs and UAVs
+}
+
+void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, GraphicsProgram *program, GraphicsProgramDesc *gpd)
 {
     char *shader_code = ReadEntireShaderFile(engine, file_with_shaders, 0);
     gpd->sd.filename = file_with_shaders;
@@ -1089,7 +1217,6 @@ void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, Graphic
 
             case TOKEN_KIND_KEYWORD:
             {
-                // @TODO(Roman): parse CBV, SRV, UAV, ...
                 if (TokenEqualsCSTR(parser.lexer.token, "struct"))
                 {
                     ParseStruct(engine, &parser);
@@ -1098,6 +1225,11 @@ void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, Graphic
                 {
                     ParseTypedef(engine, &parser);
                 }
+                else if (TokenEqualsCSTR(parser.lexer.token, "cbuffer"))
+                {
+                    ParseCBuffer(engine, &parser, program, gpd);
+                }
+                // @TODO(Roman): parse SRV, UAV, ...
             } break;
         };
 
@@ -1113,4 +1245,6 @@ void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, Graphic
         }
         ++gpd->sd.count;
     }
+
+    InitRootSignatureParameters(engine, &parser, gpd);
 }

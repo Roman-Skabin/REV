@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include "core/core.h"
-#include "tools/logger.h"
-#include "math/mat.h"
+#include "math/vec.h"
 #include "input.h"
-#include "graphics/core/core_renderer.h"
 #include "tools/work_queue.h"
 #include "core/memory.h"
 #include "core/allocator.h"
+#include "tools/logger.h"
 #include "sound/sound.h"
+#include "gpu/gpu_manager.h"
+#include "gpu/gpu_memory_manager.h"
 
 #define USER_CALLBACK(name) void name(Engine *engine)
 typedef USER_CALLBACK(UserCallback);
@@ -72,17 +72,19 @@ struct Engine
     {
         UserCallback  *OnInit;
         UserCallback  *OnDestroy;
-        UserCallback  *OnUpdate;
+        UserCallback  *OnUpdateAndRender;
         UserCallback  *OnRender;
         SoundCallback *OnSound;
     } user_callbacks;
 
-    SoundStream  sound;
-    CoreRenderer core_renderer;
-    Logger       logger;
-    WorkQueue   *queue;
+    WorkQueue   *work_queue;
     Memory      *memory;
     Allocator    allocator;
+    Logger       logger;
+    SoundStream  sound;
+
+    GPUManager       gpu_manager;
+    GPUMemoryManager gpu_memory_manager;
 
     void *user_ponter;
 };
@@ -91,8 +93,7 @@ CENGINE_FUN int EngineRun(
     OPTIONAL HINSTANCE      instance,
     IN       UserCallback  *OnInit,
     IN       UserCallback  *OnDestroy,
-    IN       UserCallback  *OnUpdate,
-    IN       UserCallback  *OnRender,
+    IN       UserCallback  *OnUpdateAndRender,
     IN       SoundCallback *OnSound
 );
 

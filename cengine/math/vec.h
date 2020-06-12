@@ -115,8 +115,9 @@ INLINE v2s MATH_CALL v2u_to_v2s(v2u v) { return (v2s){ cast(s32,        v.x ), c
 //
 
 #if ISA >= SSE
+#pragma pack(push, 1)
 
-typedef union v3
+typedef union __intrin_type __align(16) v3
 {
     struct { f32 x, y, z; };
     struct { f32 r, g, b; };
@@ -260,7 +261,7 @@ INLINE v3 MATH_CALL v3_lerp(v3 start, v3 end, v3 percent)
     return res;
 }
 
-typedef union v3s
+typedef union __intrin_type __align(16) v3s
 {
     struct { s32 x, y, z; };
     struct { s32 r, g, b; };
@@ -396,7 +397,7 @@ INLINE v3s MATH_CALL v3s_cross(v3s l, v3s r)
     return res;
 }
 
-typedef union v3u
+typedef union __intrin_type __align(16) v3u
 {
     struct { u32 x, y, z; };
     struct { u32 r, g, b; };
@@ -544,7 +545,7 @@ INLINE v3s MATH_CALL v3u_to_v3s(v3u v) { v3s res; res.mm =                 v.mm 
 // v4
 //
 
-typedef union v4
+typedef union __intrin_type __align(16) v4
 {
     struct { f32 x, y, z, w; };
     struct { f32 r, g, b, a; };
@@ -710,7 +711,7 @@ INLINE v4 MATH_CALL v4_lerp(v4 start, v4 end, v4 percent)
     return res;
 }
 
-typedef union v4s
+typedef union __intrin_type __align(16) v4s
 {
     struct { s32 x, y, z, w; };
     struct { s32 r, g, b, a; };
@@ -857,7 +858,7 @@ INLINE v4s MATH_CALL v4s_cross(v4s l, v4s r)
     return res;
 }
 
-typedef union v4u
+typedef union __intrin_type __align(16) v4u
 {
     struct { u32 x, y, z, w; };
     struct { u32 r, g, b, a; };
@@ -1012,4 +1013,5 @@ INLINE v4u MATH_CALL v4s_to_v4u(v4s v) { v4u r; r.mm =                 v.mm ; re
 INLINE v4  MATH_CALL v4u_to_v4 (v4u v) { v4  r; r.mm = _mm_cvtepi32_ps(v.mm); return r; }
 INLINE v4s MATH_CALL v4u_to_v4s(v4u v) { v4s r; r.mm =                 v.mm ; return r; }
 
+#pragma pack(pop)
 #endif

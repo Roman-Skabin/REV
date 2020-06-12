@@ -252,7 +252,7 @@ void TimerStop(Engine *engine)
 }
 
 //
-// CoreRenderer
+// GPUManager
 //
 
 #define SafeRelease(directx_interface)                           \
@@ -272,15 +272,15 @@ internal void CreateAdapterAndDevice(Engine *engine)
     UINT           adapter_index = 0;
 
     for (UINT i = 0;
-         engine->core_renderer.factory->lpVtbl->EnumAdapters1(engine->core_renderer.factory, i, &test_adapter) != DXGI_ERROR_NOT_FOUND;
+         engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, i, &test_adapter) != DXGI_ERROR_NOT_FOUND;
          ++i)
     {
-        engine->core_renderer.error = D3D12CreateDevice(test_adapter, D3D_FEATURE_LEVEL_12_1, &IID_ID3D12Device, &test_device);
-        if (SUCCEEDED(engine->core_renderer.error))
+        engine->gpu_manager.error = D3D12CreateDevice(test_adapter, D3D_FEATURE_LEVEL_12_1, &IID_ID3D12Device, &test_device);
+        if (SUCCEEDED(engine->gpu_manager.error))
         {
             DXGI_ADAPTER_DESC1 ad1;
-            engine->core_renderer.error = test_adapter->lpVtbl->GetDesc1(test_adapter, &ad1);
-            if (SUCCEEDED(engine->core_renderer.error) && max_vram < ad1.DedicatedVideoMemory)
+            engine->gpu_manager.error = test_adapter->lpVtbl->GetDesc1(test_adapter, &ad1);
+            if (SUCCEEDED(engine->gpu_manager.error) && max_vram < ad1.DedicatedVideoMemory)
             {
                 max_vram      = ad1.DedicatedVideoMemory;
                 adapter_index = i;
@@ -294,24 +294,24 @@ internal void CreateAdapterAndDevice(Engine *engine)
 
     if (max_vram)
     {
-        engine->core_renderer.error = engine->core_renderer.factory->lpVtbl->EnumAdapters1(engine->core_renderer.factory, adapter_index, &engine->core_renderer.adapter);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, adapter_index, &engine->gpu_manager.adapter);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.error = D3D12CreateDevice(engine->core_renderer.adapter, D3D_FEATURE_LEVEL_12_1, &IID_ID3D12Device, &engine->core_renderer.device);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = D3D12CreateDevice(engine->gpu_manager.adapter, D3D_FEATURE_LEVEL_12_1, &IID_ID3D12Device, &engine->gpu_manager.device);
+        Check(SUCCEEDED(engine->gpu_manager.error));
     }
     else
     {
         for (UINT i = 0;
-             engine->core_renderer.factory->lpVtbl->EnumAdapters1(engine->core_renderer.factory, i, &test_adapter) != D3D12_ERROR_ADAPTER_NOT_FOUND;
+             engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, i, &test_adapter) != D3D12_ERROR_ADAPTER_NOT_FOUND;
              ++i)
         {
-            engine->core_renderer.error = D3D12CreateDevice(test_adapter, D3D_FEATURE_LEVEL_12_0, &IID_ID3D12Device, &test_device);
-            if (SUCCEEDED(engine->core_renderer.error))
+            engine->gpu_manager.error = D3D12CreateDevice(test_adapter, D3D_FEATURE_LEVEL_12_0, &IID_ID3D12Device, &test_device);
+            if (SUCCEEDED(engine->gpu_manager.error))
             {
                 DXGI_ADAPTER_DESC1 ad1;
-                engine->core_renderer.error = test_adapter->lpVtbl->GetDesc1(test_adapter, &ad1);
-                if (SUCCEEDED(engine->core_renderer.error) && max_vram < ad1.DedicatedVideoMemory)
+                engine->gpu_manager.error = test_adapter->lpVtbl->GetDesc1(test_adapter, &ad1);
+                if (SUCCEEDED(engine->gpu_manager.error) && max_vram < ad1.DedicatedVideoMemory)
                 {
                     max_vram      = ad1.DedicatedVideoMemory;
                     adapter_index = i;
@@ -325,21 +325,26 @@ internal void CreateAdapterAndDevice(Engine *engine)
 
         CheckM(max_vram, "Direct3D 12 is not supported by your hardware");
 
-        engine->core_renderer.error = engine->core_renderer.factory->lpVtbl->EnumAdapters1(engine->core_renderer.factory, adapter_index, &engine->core_renderer.adapter);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, adapter_index, &engine->gpu_manager.adapter);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.error = D3D12CreateDevice(engine->core_renderer.adapter, D3D_FEATURE_LEVEL_12_0, &IID_ID3D12Device, &engine->core_renderer.device);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = D3D12CreateDevice(engine->gpu_manager.adapter, D3D_FEATURE_LEVEL_12_0, &IID_ID3D12Device, &engine->gpu_manager.device);
+        Check(SUCCEEDED(engine->gpu_manager.error));
     }
 }
 
-internal void CreateCoreRenderer(Engine *engine)
+internal void CreateGPUManager(Engine *engine)
 {
 #if DEBUG
-    engine->core_renderer.error = D3D12GetDebugInterface(&IID_ID3D12Debug, &engine->core_renderer.debug);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = D3D12GetDebugInterface(&IID_ID3D12Debug, &engine->gpu_manager.debug);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
-    engine->core_renderer.debug->lpVtbl->EnableDebugLayer(engine->core_renderer.debug);
+    engine->gpu_manager.debug->lpVtbl->EnableDebugLayer(engine->gpu_manager.debug);
+
+    engine->gpu_manager.error = DXGIGetDebugInterface1(0, &IID_IDXGIDebug1, &engine->gpu_manager.dxgi_debug);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+
+    engine->gpu_manager.dxgi_debug->lpVtbl->EnableLeakTrackingForThread(engine->gpu_manager.dxgi_debug);
 #endif
 
     UINT factory_create_flags = 0;
@@ -347,465 +352,683 @@ internal void CreateCoreRenderer(Engine *engine)
     factory_create_flags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
-    engine->core_renderer.error = CreateDXGIFactory2(factory_create_flags, &IID_IDXGIFactory, &engine->core_renderer.factory);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = CreateDXGIFactory2(factory_create_flags, &IID_IDXGIFactory, &engine->gpu_manager.factory);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
     CreateAdapterAndDevice(engine);
 
-    D3D12_COMMAND_QUEUE_DESC cqd;
-    cqd.Type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    cqd.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-    cqd.Flags    = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    cqd.NodeMask = 0;
+    D3D12_COMMAND_QUEUE_DESC graphics_queue_desc;
+    graphics_queue_desc.Type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    graphics_queue_desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL; // D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME ?
+    graphics_queue_desc.Flags    = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    graphics_queue_desc.NodeMask = 1;
 
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommandQueue(engine->core_renderer.device,
-                                                                                           &cqd,
-                                                                                           &IID_ID3D12CommandQueue,
-                                                                                           &engine->core_renderer.queue);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommandQueue(engine->gpu_manager.device,
+                                                                                       &graphics_queue_desc,
+                                                                                       &IID_ID3D12CommandQueue,
+                                                                                       &engine->gpu_manager.graphics_queue);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+
+    D3D12_COMMAND_QUEUE_DESC compute_queue_desc;
+    compute_queue_desc.Type     = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+    compute_queue_desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL; // D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME ?
+    compute_queue_desc.Flags    = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    compute_queue_desc.NodeMask = 1; // @TODO(Roman): Set to 2 if we have 2 adapters
+
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommandQueue(engine->gpu_manager.device,
+                                                                                       &compute_queue_desc,
+                                                                                       &IID_ID3D12CommandQueue,
+                                                                                       &engine->gpu_manager.compute_queue);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
-        engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommandAllocator(engine->core_renderer.device,
-                                                                                                   cqd.Type,
-                                                                                                   &IID_ID3D12CommandAllocator,
-                                                                                                   engine->core_renderer.graphics_allocators + i);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommandAllocator(engine->gpu_manager.device,
+                                                                                               graphics_queue_desc.Type,
+                                                                                               &IID_ID3D12CommandAllocator,
+                                                                                               engine->gpu_manager.graphics_allocators + i);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommandList(engine->core_renderer.device,
-                                                                                              cqd.NodeMask,
-                                                                                              cqd.Type,
-                                                                                              engine->core_renderer.graphics_allocators[i],
-                                                                                              0,
-                                                                                              &IID_ID3D12GraphicsCommandList,
-                                                                                              engine->core_renderer.graphics_lists + i);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommandList(engine->gpu_manager.device,
+                                                                                          graphics_queue_desc.NodeMask,
+                                                                                          graphics_queue_desc.Type,
+                                                                                          engine->gpu_manager.graphics_allocators[i],
+                                                                                          0,
+                                                                                          &IID_ID3D12GraphicsCommandList,
+                                                                                          engine->gpu_manager.graphics_lists + i);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.error = engine->core_renderer.graphics_lists[i]->lpVtbl->Close(engine->core_renderer.graphics_lists[i]);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.graphics_lists[i]->lpVtbl->Close(engine->gpu_manager.graphics_lists[i]);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommandAllocator(engine->core_renderer.device,
-                                                                                                   cqd.Type,
-                                                                                                   &IID_ID3D12CommandAllocator,
-                                                                                                   engine->core_renderer.compute_allocators + i);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommandAllocator(engine->gpu_manager.device,
+                                                                                               compute_queue_desc.Type,
+                                                                                               &IID_ID3D12CommandAllocator,
+                                                                                               engine->gpu_manager.compute_allocators + i);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommandList(engine->core_renderer.device,
-                                                                                              cqd.NodeMask,
-                                                                                              cqd.Type,
-                                                                                              engine->core_renderer.compute_allocators[i],
-                                                                                              0,
-                                                                                              &IID_ID3D12GraphicsCommandList,
-                                                                                              engine->core_renderer.compute_lists + i);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommandList(engine->gpu_manager.device,
+                                                                                          compute_queue_desc.NodeMask,
+                                                                                          compute_queue_desc.Type,
+                                                                                          engine->gpu_manager.compute_allocators[i],
+                                                                                          0,
+                                                                                          &IID_ID3D12GraphicsCommandList,
+                                                                                          engine->gpu_manager.compute_lists + i);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.error = engine->core_renderer.compute_lists[i]->lpVtbl->Close(engine->core_renderer.compute_lists[i]);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.compute_lists[i]->lpVtbl->Close(engine->gpu_manager.compute_lists[i]);
+        Check(SUCCEEDED(engine->gpu_manager.error));
     }
 
     IDXGIFactory5 *factory5 = 0;
-    engine->core_renderer.error = engine->core_renderer.factory->lpVtbl->QueryInterface(engine->core_renderer.factory,
-                                                                                        &IID_IDXGIFactory5,
-                                                                                        &factory5);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->QueryInterface(engine->gpu_manager.factory,
+                                                                                    &IID_IDXGIFactory5,
+                                                                                    &factory5);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
-    engine->core_renderer.error = factory5->lpVtbl->CheckFeatureSupport(factory5, DXGI_FEATURE_PRESENT_ALLOW_TEARING, &engine->core_renderer.tearing_supported, sizeof(b32));
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = factory5->lpVtbl->CheckFeatureSupport(factory5,
+                                                                      DXGI_FEATURE_PRESENT_ALLOW_TEARING,
+                                                                      &engine->gpu_manager.tearing_supported,
+                                                                      sizeof(b32));
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
     SafeRelease(factory5);
 
-    DXGI_SWAP_CHAIN_DESC1 scd1;
-    scd1.Width              = engine->window.size.w;
-    scd1.Height             = engine->window.size.h;
-    scd1.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
-    scd1.Stereo             = false;
-    scd1.SampleDesc.Count   = 1;
-    scd1.SampleDesc.Quality = 0;
-    scd1.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT; // DXGI_USAGE_SHARED ?
-    scd1.BufferCount        = SWAP_CHAIN_BUFFERS_COUNT;
-    scd1.Scaling            = DXGI_SCALING_STRETCH;
-    scd1.SwapEffect         = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    scd1.AlphaMode          = DXGI_ALPHA_MODE_UNSPECIFIED;
-    scd1.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // DXGI_SWAP_CHAIN_FLAG_RESTRICT_SHARED_RESOURCE_DRIVER ?
+    DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1;
+    swap_chain_desc1.Width              = engine->window.size.w;
+    swap_chain_desc1.Height             = engine->window.size.h;
+    swap_chain_desc1.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swap_chain_desc1.Stereo             = false;
+    swap_chain_desc1.SampleDesc.Count   = 1;
+    swap_chain_desc1.SampleDesc.Quality = 0;
+    swap_chain_desc1.BufferUsage        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swap_chain_desc1.BufferCount        = SWAP_CHAIN_BUFFERS_COUNT;
+    swap_chain_desc1.Scaling            = DXGI_SCALING_STRETCH;
+    swap_chain_desc1.SwapEffect         = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    swap_chain_desc1.AlphaMode          = DXGI_ALPHA_MODE_UNSPECIFIED;
+    swap_chain_desc1.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+    if (engine->gpu_manager.tearing_supported)
+    {
+        swap_chain_desc1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    }
 
-    if (engine->core_renderer.tearing_supported) scd1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-
-    DXGI_SWAP_CHAIN_FULLSCREEN_DESC scfd;
-    scfd.RefreshRate.Numerator   = 0;
-    scfd.RefreshRate.Denominator = 1;
-    scfd.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_PROGRESSIVE;
-    scfd.Scaling                 = DXGI_MODE_SCALING_STRETCHED;
-    scfd.Windowed                = true;
+    DXGI_SWAP_CHAIN_FULLSCREEN_DESC swap_chain_fullscreen_desc;
+    swap_chain_fullscreen_desc.RefreshRate.Numerator   = 0;
+    swap_chain_fullscreen_desc.RefreshRate.Denominator = 1;
+    swap_chain_fullscreen_desc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+    swap_chain_fullscreen_desc.Scaling                 = DXGI_MODE_SCALING_STRETCHED;
+    swap_chain_fullscreen_desc.Windowed                = true;
 
     IDXGISwapChain1 *swap_chain1 = 0;
-    engine->core_renderer.error = engine->core_renderer.factory->lpVtbl->CreateSwapChainForHwnd(engine->core_renderer.factory,
-                                                                                                engine->core_renderer.queue,
-                                                                                                engine->window.handle,
-                                                                                                &scd1,
-                                                                                                &scfd,
-                                                                                                0,
-                                                                                                &swap_chain1);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->CreateSwapChainForHwnd(engine->gpu_manager.factory,
+                                                                                            engine->gpu_manager.graphics_queue,
+                                                                                            engine->window.handle,
+                                                                                            &swap_chain_desc1,
+                                                                                            &swap_chain_fullscreen_desc,
+                                                                                            0,
+                                                                                            &swap_chain1);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
-    engine->core_renderer.error = swap_chain1->lpVtbl->QueryInterface(swap_chain1,
-                                                                      &IID_IDXGISwapChain4,
-                                                                      &engine->core_renderer.swap_chain);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = swap_chain1->lpVtbl->QueryInterface(swap_chain1,
+                                                                    &IID_IDXGISwapChain4,
+                                                                    &engine->gpu_manager.swap_chain);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
-    engine->core_renderer.error = engine->core_renderer.factory->lpVtbl->MakeWindowAssociation(engine->core_renderer.factory,
-                                                                                               engine->window.handle,
-                                                                                               DXGI_MWA_NO_ALT_ENTER);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->MakeWindowAssociation(engine->gpu_manager.factory,
+                                                                                           engine->window.handle,
+                                                                                           DXGI_MWA_NO_ALT_ENTER);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
-    D3D12_DESCRIPTOR_HEAP_DESC rtv_dhd;
-    rtv_dhd.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    rtv_dhd.NumDescriptors = SWAP_CHAIN_BUFFERS_COUNT;
-    rtv_dhd.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    rtv_dhd.NodeMask       = 0;
+    D3D12_DESCRIPTOR_HEAP_DESC rtv_desc_heap_desc;
+    rtv_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    rtv_desc_heap_desc.NumDescriptors = SWAP_CHAIN_BUFFERS_COUNT;
+    rtv_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    rtv_desc_heap_desc.NodeMask       = 1;
 
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateDescriptorHeap(engine->core_renderer.device,
-                                                                                             &rtv_dhd,
-                                                                                             &IID_ID3D12DescriptorHeap,
-                                                                                             &engine->core_renderer.rtv_heap_desc);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateDescriptorHeap(engine->gpu_manager.device,
+                                                                                         &rtv_desc_heap_desc,
+                                                                                         &IID_ID3D12DescriptorHeap,
+                                                                                         &engine->gpu_manager.rtv_heap_desc);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
-    engine->core_renderer.rtv_desc_size = engine->core_renderer.device->lpVtbl->GetDescriptorHandleIncrementSize(engine->core_renderer.device, rtv_dhd.Type);
+    engine->gpu_manager.rtv_desc_size = engine->gpu_manager.device->lpVtbl->GetDescriptorHandleIncrementSize(engine->gpu_manager.device,
+                                                                                                             rtv_desc_heap_desc.Type);
 
     #pragma warning(suppress: 4020) // I know what I'm doing.
-    engine->core_renderer.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->core_renderer.rtv_heap_desc, &engine->core_renderer.rtv_cpu_desc_handle);
+    engine->gpu_manager.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.rtv_heap_desc, &engine->gpu_manager.rtv_cpu_desc_handle);
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
-        engine->core_renderer.error = engine->core_renderer.swap_chain->lpVtbl->GetBuffer(engine->core_renderer.swap_chain,
-                                                                                          i,
-                                                                                          &IID_ID3D12Resource,
-                                                                                          engine->core_renderer.rt_buffers + i);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.swap_chain->lpVtbl->GetBuffer(engine->gpu_manager.swap_chain,
+                                                                                      i,
+                                                                                      &IID_ID3D12Resource,
+                                                                                      engine->gpu_manager.rt_buffers + i);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.device->lpVtbl->CreateRenderTargetView(engine->core_renderer.device,
-                                                                     engine->core_renderer.rt_buffers[i],
-                                                                     0,
-                                                                     engine->core_renderer.rtv_cpu_desc_handle);
+        engine->gpu_manager.device->lpVtbl->CreateRenderTargetView(engine->gpu_manager.device,
+                                                                   engine->gpu_manager.rt_buffers[i],
+                                                                   0,
+                                                                   engine->gpu_manager.rtv_cpu_desc_handle);
 
-        engine->core_renderer.rtv_cpu_desc_handle.ptr += engine->core_renderer.rtv_desc_size;
+        engine->gpu_manager.rtv_cpu_desc_handle.ptr += engine->gpu_manager.rtv_desc_size;
     }
 
-    engine->core_renderer.rtv_cpu_desc_handle.ptr -= SWAP_CHAIN_BUFFERS_COUNT * engine->core_renderer.rtv_desc_size;
-    engine->core_renderer.current_buffer = engine->core_renderer.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->core_renderer.swap_chain);
+    engine->gpu_manager.rtv_cpu_desc_handle.ptr -= SWAP_CHAIN_BUFFERS_COUNT * engine->gpu_manager.rtv_desc_size;
+    engine->gpu_manager.current_buffer           = engine->gpu_manager.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->gpu_manager.swap_chain);
 
-    D3D12_DESCRIPTOR_HEAP_DESC dsv_dhd;
-    dsv_dhd.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-    dsv_dhd.NumDescriptors = 1;
-    dsv_dhd.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    dsv_dhd.NodeMask       = 0;
+    D3D12_DESCRIPTOR_HEAP_DESC dsv_desc_heap_desc;
+    dsv_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    dsv_desc_heap_desc.NumDescriptors = 1;
+    dsv_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    dsv_desc_heap_desc.NodeMask       = 1;
 
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateDescriptorHeap(engine->core_renderer.device,
-                                                                                             &dsv_dhd,
-                                                                                             &IID_ID3D12DescriptorHeap,
-                                                                                             &engine->core_renderer.ds_heap_desc);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateDescriptorHeap(engine->gpu_manager.device,
+                                                                                         &dsv_desc_heap_desc,
+                                                                                         &IID_ID3D12DescriptorHeap,
+                                                                                         &engine->gpu_manager.ds_heap_desc);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
-    D3D12_HEAP_PROPERTIES ds_hp;
-    ds_hp.Type                 = D3D12_HEAP_TYPE_DEFAULT;
-    ds_hp.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    ds_hp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    ds_hp.CreationNodeMask     = 0;
-    ds_hp.VisibleNodeMask      = 0;
+    D3D12_HEAP_PROPERTIES ds_heap_properties;
+    ds_heap_properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    ds_heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    ds_heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    ds_heap_properties.CreationNodeMask     = 1;
+    ds_heap_properties.VisibleNodeMask      = 1;
 
-    D3D12_RESOURCE_DESC ds_rd;
-    ds_rd.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    ds_rd.Alignment          = 0;
-    ds_rd.Width              = engine->window.size.w;
-    ds_rd.Height             = engine->window.size.h;
-    ds_rd.DepthOrArraySize   = 1;
-    ds_rd.MipLevels          = 0;
-    ds_rd.Format             = DXGI_FORMAT_D32_FLOAT;
-    ds_rd.SampleDesc.Count   = 1;
-    ds_rd.SampleDesc.Quality = 0;
-    ds_rd.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    ds_rd.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    D3D12_RESOURCE_DESC ds_resource_desc;
+    ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    ds_resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    ds_resource_desc.Width              = engine->window.size.w;
+    ds_resource_desc.Height             = engine->window.size.h;
+    ds_resource_desc.DepthOrArraySize   = 1;
+    ds_resource_desc.MipLevels          = 1;
+    ds_resource_desc.Format             = DXGI_FORMAT_D32_FLOAT;
+    ds_resource_desc.SampleDesc.Count   = 1;
+    ds_resource_desc.SampleDesc.Quality = 0;
+    ds_resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    ds_resource_desc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
-    D3D12_CLEAR_VALUE ds_cv;
-    ds_cv.Format               = DXGI_FORMAT_D32_FLOAT;
-    ds_cv.DepthStencil.Depth   = 1.0f;
-    ds_cv.DepthStencil.Stencil = 0;
+    D3D12_CLEAR_VALUE ds_clear_value;
+    ds_clear_value.Format               = DXGI_FORMAT_D32_FLOAT;
+    ds_clear_value.DepthStencil.Depth   = 1.0f;
+    ds_clear_value.DepthStencil.Stencil = 0;
 
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommittedResource(engine->core_renderer.device,
-                                                                                                &ds_hp,
-                                                                                                D3D12_HEAP_FLAG_SHARED,
-                                                                                                &ds_rd,
-                                                                                                D3D12_RESOURCE_STATE_DEPTH_WRITE,
-                                                                                                &ds_cv,
-                                                                                                &IID_ID3D12Resource,
-                                                                                                &engine->core_renderer.ds_buffer);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommittedResource(engine->gpu_manager.device,
+                                                                                            &ds_heap_properties,
+                                                                                            D3D12_HEAP_FLAG_NONE,
+                                                                                            &ds_resource_desc,
+                                                                                            D3D12_RESOURCE_STATE_PRESENT,
+                                                                                            &ds_clear_value,
+                                                                                            &IID_ID3D12Resource,
+                                                                                            &engine->gpu_manager.ds_buffer);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
     #pragma warning(suppress: 4020) // I know what I'm doing.
-    engine->core_renderer.ds_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->core_renderer.ds_heap_desc, &engine->core_renderer.dsv_cpu_desc_handle);
+    engine->gpu_manager.ds_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.ds_heap_desc, &engine->gpu_manager.dsv_cpu_desc_handle);
 
-    D3D12_DEPTH_STENCIL_VIEW_DESC dsvd = {0};
-    dsvd.Format        = DXGI_FORMAT_D32_FLOAT;
-    dsvd.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    D3D12_DEPTH_STENCIL_VIEW_DESC ds_view_desc = {0};
+    ds_view_desc.Format        = DXGI_FORMAT_D32_FLOAT;
+    ds_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 
-    engine->core_renderer.device->lpVtbl->CreateDepthStencilView(engine->core_renderer.device,
-                                                                 engine->core_renderer.ds_buffer,
-                                                                 &dsvd,
-                                                                 engine->core_renderer.dsv_cpu_desc_handle);
+    engine->gpu_manager.device->lpVtbl->CreateDepthStencilView(engine->gpu_manager.device,
+                                                               engine->gpu_manager.ds_buffer,
+                                                               &ds_view_desc,
+                                                               engine->gpu_manager.dsv_cpu_desc_handle);
 
     for (u64 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
-        engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateFence(engine->core_renderer.device,
-                                                                                        engine->core_renderer.fences_values[i],
-                                                                                        D3D12_FENCE_FLAG_NONE, // D3D12_FENCE_FLAG_SHARED ?
-                                                                                        &IID_ID3D12Fence,
-                                                                                        engine->core_renderer.fences + i);
-        Check(SUCCEEDED(engine->core_renderer.error));
-        ++engine->core_renderer.fences_values[i];
+        engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateFence(engine->gpu_manager.device,
+                                                                                    engine->gpu_manager.graphics_fences_values[i],
+                                                                                    D3D12_FENCE_FLAG_SHARED,
+                                                                                    &IID_ID3D12Fence,
+                                                                                    engine->gpu_manager.graphics_fences + i);
+        Check(SUCCEEDED(engine->gpu_manager.error));
+        ++engine->gpu_manager.graphics_fences_values[i];
+
+        engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateFence(engine->gpu_manager.device,
+                                                                                    engine->gpu_manager.compute_fences_values[i],
+                                                                                    D3D12_FENCE_FLAG_SHARED,
+                                                                                    &IID_ID3D12Fence,
+                                                                                    engine->gpu_manager.compute_fences + i);
+        Check(SUCCEEDED(engine->gpu_manager.error));
+        ++engine->gpu_manager.graphics_fences_values[i];
     }
 
-    engine->core_renderer.fence_event = CreateEventExA(0, "Fence Event", 0, EVENT_ALL_ACCESS);
-    Check(engine->core_renderer.fence_event);
+    engine->gpu_manager.graphics_fence_event = CreateEventExA(0, "Graphics Fence Event", 0, EVENT_ALL_ACCESS);
+    Check(engine->gpu_manager.graphics_fence_event);
 
-    engine->core_renderer.first_frame = true;
+    engine->gpu_manager.compute_fence_event = CreateEventExA(0, "Compute Fence Event", 0, EVENT_ALL_ACCESS);
+    Check(engine->gpu_manager.compute_fence_event);
+
+    engine->gpu_manager.first_frame = true;
 
     Success(&engine->logger, "Renderer was created");
 }
 
-internal void WaitForGPU(Engine *engine)
+internal WORK_QUEUE_ENTRY_PROC(WaitForGraphicsWork)
 {
-    u64 current_fence_value = engine->core_renderer.fences_values[engine->core_renderer.current_buffer];
-    engine->core_renderer.queue->lpVtbl->Signal(engine->core_renderer.queue,
-                                                engine->core_renderer.fences[engine->core_renderer.current_buffer],
-                                                current_fence_value);
+    Engine *engine = cast(Engine *, arg);
 
-    u64 value = engine->core_renderer.fences[engine->core_renderer.current_buffer]->lpVtbl->GetCompletedValue(engine->core_renderer.fences[engine->core_renderer.current_buffer]);
-    if (value < engine->core_renderer.fences_values[engine->core_renderer.current_buffer])
+    ID3D12Fence *current_fence       = engine->gpu_manager.graphics_fences[engine->gpu_manager.current_buffer];
+    u64          current_fence_value = engine->gpu_manager.graphics_fences_values[engine->gpu_manager.current_buffer];
+
+    engine->gpu_manager.graphics_queue->lpVtbl->Signal(engine->gpu_manager.graphics_queue,
+                                                       current_fence,
+                                                       current_fence_value);
+
+    u64 value = current_fence->lpVtbl->GetCompletedValue(current_fence);
+    if (value < current_fence_value)
     {
-        engine->core_renderer.error = engine->core_renderer.fences[engine->core_renderer.current_buffer]->lpVtbl->SetEventOnCompletion(engine->core_renderer.fences[engine->core_renderer.current_buffer],
-                                                                                                                                       engine->core_renderer.fences_values[engine->core_renderer.current_buffer],
-                                                                                                                                       engine->core_renderer.fence_event);
-        Check(SUCCEEDED(engine->core_renderer.error));
-        while (WaitForSingleObjectEx(engine->core_renderer.fence_event, INFINITE, false) != WAIT_OBJECT_0)
+        engine->gpu_manager.error = current_fence->lpVtbl->SetEventOnCompletion(current_fence,
+                                                                                current_fence_value,
+                                                                                engine->gpu_manager.graphics_fence_event);
+        Check(SUCCEEDED(engine->gpu_manager.error));
+        while (WaitForSingleObjectEx(engine->gpu_manager.graphics_fence_event, INFINITE, false) != WAIT_OBJECT_0)
         {
         }
     }
 
-    engine->core_renderer.fences_values[engine->core_renderer.current_buffer] = current_fence_value + 1;
+    engine->gpu_manager.graphics_fences_values[engine->gpu_manager.current_buffer] = current_fence_value + 1;
 }
 
-internal void FlushGPU(Engine *engine)
+internal WORK_QUEUE_ENTRY_PROC(WaitForComputeWork)
 {
+    Engine *engine = cast(Engine *, arg);
+
+    ID3D12Fence *current_fence       = engine->gpu_manager.compute_fences[engine->gpu_manager.current_buffer];
+    u64          current_fence_value = engine->gpu_manager.compute_fences_values[engine->gpu_manager.current_buffer];
+
+    engine->gpu_manager.compute_queue->lpVtbl->Signal(engine->gpu_manager.compute_queue,
+                                                      current_fence,
+                                                      current_fence_value);
+
+    u64 value = current_fence->lpVtbl->GetCompletedValue(current_fence);
+    if (value < current_fence_value)
+    {
+        engine->gpu_manager.error = current_fence->lpVtbl->SetEventOnCompletion(current_fence,
+                                                                                current_fence_value,
+                                                                                engine->gpu_manager.compute_fence_event);
+        Check(SUCCEEDED(engine->gpu_manager.error));
+        while (WaitForSingleObjectEx(engine->gpu_manager.compute_fence_event, INFINITE, false) != WAIT_OBJECT_0)
+        {
+        }
+    }
+
+    engine->gpu_manager.compute_fences_values[engine->gpu_manager.current_buffer] = current_fence_value + 1;
+}
+
+internal INLINE void WaitForGPU(Engine *engine)
+{
+    // @TODO(Roman): Wait in several work threads
+    WaitForGraphicsWork(0, engine);
+    WaitForComputeWork(0, engine);
+}
+
+internal WORK_QUEUE_ENTRY_PROC(FlushGraphicsWork)
+{
+    Engine *engine = cast(Engine *, arg);
+
     for (u32 buffer_index = 0; buffer_index < SWAP_CHAIN_BUFFERS_COUNT; ++buffer_index)
     {
-        engine->core_renderer.queue->lpVtbl->Signal(engine->core_renderer.queue,
-                                                    engine->core_renderer.fences[buffer_index],
-                                                    engine->core_renderer.fences_values[buffer_index]);
+        ID3D12Fence *fence       = engine->gpu_manager.graphics_fences[buffer_index];
+        u64          fence_value = engine->gpu_manager.graphics_fences_values[buffer_index];
 
-        engine->core_renderer.error = engine->core_renderer.fences[buffer_index]->lpVtbl->SetEventOnCompletion(engine->core_renderer.fences[buffer_index],
-                                                                                                               engine->core_renderer.fences_values[buffer_index],
-                                                                                                               engine->core_renderer.fence_event);
-        Check(SUCCEEDED(engine->core_renderer.error));
-        while (WaitForSingleObjectEx(engine->core_renderer.fence_event, INFINITE, false) != WAIT_OBJECT_0)
+        engine->gpu_manager.graphics_queue->lpVtbl->Signal(engine->gpu_manager.graphics_queue,
+                                                           fence,
+                                                           fence_value);
+
+        engine->gpu_manager.error = fence->lpVtbl->SetEventOnCompletion(fence,
+                                                                        fence_value,
+                                                                        engine->gpu_manager.graphics_fence_event);
+        Check(SUCCEEDED(engine->gpu_manager.error));
+        while (WaitForSingleObjectEx(engine->gpu_manager.graphics_fence_event, INFINITE, false) != WAIT_OBJECT_0)
         {
         }
 
-        ++engine->core_renderer.fences_values[buffer_index];
+        ++engine->gpu_manager.graphics_fences_values[buffer_index];
     }
 }
 
-internal void DestroyCoreRenderer(Engine *engine)
+internal WORK_QUEUE_ENTRY_PROC(FlushComputeWork)
 {
-    SafeRelease(engine->core_renderer.ds_buffer);
-    SafeRelease(engine->core_renderer.ds_heap_desc);
-    DebugResult(CloseHandle(engine->core_renderer.fence_event));
+    Engine *engine = cast(Engine *, arg);
+
+    for (u32 buffer_index = 0; buffer_index < SWAP_CHAIN_BUFFERS_COUNT; ++buffer_index)
+    {
+        ID3D12Fence *fence       = engine->gpu_manager.compute_fences[buffer_index];
+        u64          fence_value = engine->gpu_manager.compute_fences_values[buffer_index];
+
+        engine->gpu_manager.compute_queue->lpVtbl->Signal(engine->gpu_manager.compute_queue,
+                                                          fence,
+                                                          fence_value);
+
+        engine->gpu_manager.error = fence->lpVtbl->SetEventOnCompletion(fence,
+                                                                        fence_value,
+                                                                        engine->gpu_manager.compute_fence_event);
+        Check(SUCCEEDED(engine->gpu_manager.error));
+        while (WaitForSingleObjectEx(engine->gpu_manager.compute_fence_event, INFINITE, false) != WAIT_OBJECT_0)
+        {
+        }
+
+        ++engine->gpu_manager.compute_fences_values[buffer_index];
+    }
+}
+
+internal INLINE void FlushGPU(Engine *engine)
+{
+    // @TODO(Roman): Flush in several work threads
+    FlushGraphicsWork(0, engine);
+    FlushComputeWork(0, engine);
+}
+
+internal void DestroyGPUManager(Engine *engine)
+{
+    SafeRelease(engine->gpu_manager.ds_buffer);
+    SafeRelease(engine->gpu_manager.ds_heap_desc);
+    DebugResult(CloseHandle(engine->gpu_manager.compute_fence_event));
+    DebugResult(CloseHandle(engine->gpu_manager.graphics_fence_event));
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
-        SafeRelease(engine->core_renderer.fences[i]);
-        SafeRelease(engine->core_renderer.rt_buffers[i]);
-        SafeRelease(engine->core_renderer.compute_lists[i]);
-        SafeRelease(engine->core_renderer.compute_allocators[i]);
-        SafeRelease(engine->core_renderer.graphics_lists[i]);
-        SafeRelease(engine->core_renderer.graphics_allocators[i]);
+        SafeRelease(engine->gpu_manager.compute_fences[i]);
+        SafeRelease(engine->gpu_manager.graphics_fences[i]);
+        SafeRelease(engine->gpu_manager.rt_buffers[i]);
+        SafeRelease(engine->gpu_manager.compute_lists[i]);
+        SafeRelease(engine->gpu_manager.compute_allocators[i]);
+        SafeRelease(engine->gpu_manager.graphics_lists[i]);
+        SafeRelease(engine->gpu_manager.graphics_allocators[i]);
     }
-    SafeRelease(engine->core_renderer.rtv_heap_desc);
-    SafeRelease(engine->core_renderer.swap_chain);
-    SafeRelease(engine->core_renderer.queue);
-    SafeRelease(engine->core_renderer.device);
-    SafeRelease(engine->core_renderer.adapter);
-    SafeRelease(engine->core_renderer.factory);
+    SafeRelease(engine->gpu_manager.rtv_heap_desc);
+    SafeRelease(engine->gpu_manager.swap_chain);
+    SafeRelease(engine->gpu_manager.compute_queue);
+    SafeRelease(engine->gpu_manager.graphics_queue);
+    SafeRelease(engine->gpu_manager.device);
+    SafeRelease(engine->gpu_manager.adapter);
+    SafeRelease(engine->gpu_manager.factory);
 #if DEBUG
-    SafeRelease(engine->core_renderer.debug);
+    SafeRelease(engine->gpu_manager.debug_list);
+    SafeRelease(engine->gpu_manager.debug_queue);
+    SafeRelease(engine->gpu_manager.debug);
+
+    engine->gpu_manager.error = engine->gpu_manager.dxgi_debug->lpVtbl->ReportLiveObjects(engine->gpu_manager.dxgi_debug,
+                                                                                          DXGI_DEBUG_DX,
+                                                                                          DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+    engine->gpu_manager.error = engine->gpu_manager.dxgi_debug->lpVtbl->ReportLiveObjects(engine->gpu_manager.dxgi_debug,
+                                                                                          DXGI_DEBUG_DXGI,
+                                                                                          DXGI_DEBUG_RLO_SUMMARY | DXGI_DEBUG_RLO_IGNORE_INTERNAL);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+    engine->gpu_manager.dxgi_debug->lpVtbl->DisableLeakTrackingForThread(engine->gpu_manager.dxgi_debug);
+    SafeRelease(engine->gpu_manager.dxgi_debug);
 #endif
 }
 
-internal void ResizeBuffers(Engine *engine)
+internal void ResizeGPUBuffers(Engine *engine)
 {
-    // Wait for the GPU, reset memory and release buffers
+    // Wait for the GPU, release swap chain buffers buffers
+    FlushGPU(engine);
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
-        engine->core_renderer.queue->lpVtbl->Signal(engine->core_renderer.queue,
-                                                    engine->core_renderer.fences[i],
-                                                    engine->core_renderer.fences_values[i]);
-
-        engine->core_renderer.error = engine->core_renderer.fences[i]->lpVtbl->SetEventOnCompletion(engine->core_renderer.fences[i],
-                                                                                                    engine->core_renderer.fences_values[i],
-                                                                                                    engine->core_renderer.fence_event);
-        Check(SUCCEEDED(engine->core_renderer.error));
-        while (WaitForSingleObjectEx(engine->core_renderer.fence_event, INFINITE, false) != WAIT_OBJECT_0)
-        {
-        }
-
-        ++engine->core_renderer.fences_values[i];
-
-        SafeRelease(engine->core_renderer.rt_buffers[i]);
+        SafeRelease(engine->gpu_manager.rt_buffers[i]);
     }
-
-    SafeRelease(engine->core_renderer.ds_buffer);
+    SafeRelease(engine->gpu_manager.ds_buffer);
 
     // Resize buffers
-    u32 flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH; // DXGI_SWAP_CHAIN_FLAG_RESTRICT_SHARED_RESOURCE_DRIVER ?
-    if (engine->core_renderer.tearing_supported) flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    u32 flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+    if (engine->gpu_manager.tearing_supported)
+    {
+        flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    }
 
-    engine->core_renderer.error = engine->core_renderer.swap_chain->lpVtbl->ResizeBuffers(engine->core_renderer.swap_chain,
-                                                                                          SWAP_CHAIN_BUFFERS_COUNT,
-                                                                                          engine->window.size.w,
-                                                                                          engine->window.size.h,
-                                                                                          DXGI_FORMAT_R8G8B8A8_UNORM,
-                                                                                          flags);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    u32                 node_masks[]     = { 1, 1 };
+    ID3D12CommandQueue *present_queues[] = { engine->gpu_manager.graphics_queue, engine->gpu_manager.graphics_queue };
+
+    engine->gpu_manager.error = engine->gpu_manager.swap_chain->lpVtbl->ResizeBuffers1(engine->gpu_manager.swap_chain,
+                                                                                       SWAP_CHAIN_BUFFERS_COUNT,
+                                                                                       engine->window.size.w,
+                                                                                       engine->window.size.h,
+                                                                                       DXGI_FORMAT_R8G8B8A8_UNORM,
+                                                                                       flags,
+                                                                                       node_masks,
+                                                                                       present_queues);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
     // Recreate buffers
     #pragma warning(suppress: 4020) // I know what I'm doing.
-    engine->core_renderer.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->core_renderer.rtv_heap_desc, &engine->core_renderer.rtv_cpu_desc_handle);
+    engine->gpu_manager.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.rtv_heap_desc, &engine->gpu_manager.rtv_cpu_desc_handle);
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
-        engine->core_renderer.error = engine->core_renderer.swap_chain->lpVtbl->GetBuffer(engine->core_renderer.swap_chain,
-                                                                                          i,
-                                                                                          &IID_ID3D12Resource,
-                                                                                          engine->core_renderer.rt_buffers + i);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        engine->gpu_manager.error = engine->gpu_manager.swap_chain->lpVtbl->GetBuffer(engine->gpu_manager.swap_chain,
+                                                                                      i,
+                                                                                      &IID_ID3D12Resource,
+                                                                                      engine->gpu_manager.rt_buffers + i);
+        Check(SUCCEEDED(engine->gpu_manager.error));
 
-        engine->core_renderer.device->lpVtbl->CreateRenderTargetView(engine->core_renderer.device,
-                                                                     engine->core_renderer.rt_buffers[i],
-                                                                     0,
-                                                                     engine->core_renderer.rtv_cpu_desc_handle);
+        engine->gpu_manager.device->lpVtbl->CreateRenderTargetView(engine->gpu_manager.device,
+                                                                   engine->gpu_manager.rt_buffers[i],
+                                                                   0,
+                                                                   engine->gpu_manager.rtv_cpu_desc_handle);
 
-        engine->core_renderer.rtv_cpu_desc_handle.ptr += engine->core_renderer.rtv_desc_size;
+        engine->gpu_manager.rtv_cpu_desc_handle.ptr += engine->gpu_manager.rtv_desc_size;
     }
 
-    engine->core_renderer.rtv_cpu_desc_handle.ptr -= SWAP_CHAIN_BUFFERS_COUNT * engine->core_renderer.rtv_desc_size;
-    engine->core_renderer.current_buffer           = engine->core_renderer.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->core_renderer.swap_chain);
-    engine->core_renderer.rtv_cpu_desc_handle.ptr += engine->core_renderer.current_buffer * engine->core_renderer.rtv_desc_size;
+    engine->gpu_manager.rtv_cpu_desc_handle.ptr -= SWAP_CHAIN_BUFFERS_COUNT * engine->gpu_manager.rtv_desc_size;
+    engine->gpu_manager.current_buffer           = engine->gpu_manager.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->gpu_manager.swap_chain);
+    engine->gpu_manager.rtv_cpu_desc_handle.ptr += engine->gpu_manager.current_buffer * engine->gpu_manager.rtv_desc_size;
 
     // Recreate DS buffer & DSV
-    D3D12_HEAP_PROPERTIES ds_hp;
-    ds_hp.Type                 = D3D12_HEAP_TYPE_DEFAULT;
-    ds_hp.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    ds_hp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    ds_hp.CreationNodeMask     = 0;
-    ds_hp.VisibleNodeMask      = 0;
+    D3D12_HEAP_PROPERTIES ds_heap_properties;
+    ds_heap_properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    ds_heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    ds_heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    ds_heap_properties.CreationNodeMask     = 1;
+    ds_heap_properties.VisibleNodeMask      = 1;
 
-    D3D12_RESOURCE_DESC ds_rd;
-    ds_rd.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    ds_rd.Alignment          = 0;
-    ds_rd.Width              = engine->window.size.w;
-    ds_rd.Height             = engine->window.size.h;
-    ds_rd.DepthOrArraySize   = 1;
-    ds_rd.MipLevels          = 0;
-    ds_rd.Format             = DXGI_FORMAT_D32_FLOAT;
-    ds_rd.SampleDesc.Count   = 1;
-    ds_rd.SampleDesc.Quality = 0;
-    ds_rd.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    ds_rd.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    D3D12_RESOURCE_DESC ds_resource_desc;
+    ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    ds_resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    ds_resource_desc.Width              = engine->window.size.w;
+    ds_resource_desc.Height             = engine->window.size.h;
+    ds_resource_desc.DepthOrArraySize   = 1;
+    ds_resource_desc.MipLevels          = 1;
+    ds_resource_desc.Format             = DXGI_FORMAT_D32_FLOAT;
+    ds_resource_desc.SampleDesc.Count   = 1;
+    ds_resource_desc.SampleDesc.Quality = 0;
+    ds_resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    ds_resource_desc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
-    D3D12_CLEAR_VALUE ds_cv;
-    ds_cv.Format               = DXGI_FORMAT_D32_FLOAT;
-    ds_cv.DepthStencil.Depth   = 1.0f;
-    ds_cv.DepthStencil.Stencil = 0;
+    D3D12_CLEAR_VALUE ds_clear_value;
+    ds_clear_value.Format               = DXGI_FORMAT_D32_FLOAT;
+    ds_clear_value.DepthStencil.Depth   = 1.0f;
+    ds_clear_value.DepthStencil.Stencil = 0;
 
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommittedResource(engine->core_renderer.device,
-                                                                                                &ds_hp,
-                                                                                                D3D12_HEAP_FLAG_SHARED,
-                                                                                                &ds_rd,
-                                                                                                D3D12_RESOURCE_STATE_DEPTH_WRITE,
-                                                                                                &ds_cv,
-                                                                                                &IID_ID3D12Resource,
-                                                                                                &engine->core_renderer.ds_buffer);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommittedResource(engine->gpu_manager.device,
+                                                                                            &ds_heap_properties,
+                                                                                            D3D12_HEAP_FLAG_NONE,
+                                                                                            &ds_resource_desc,
+                                                                                            D3D12_RESOURCE_STATE_PRESENT,
+                                                                                            &ds_clear_value,
+                                                                                            &IID_ID3D12Resource,
+                                                                                            &engine->gpu_manager.ds_buffer);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
-    D3D12_DEPTH_STENCIL_VIEW_DESC dsvd = {0};
-    dsvd.Format        = DXGI_FORMAT_D32_FLOAT;
-    dsvd.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    D3D12_DEPTH_STENCIL_VIEW_DESC ds_view_desc = {0};
+    ds_view_desc.Format        = DXGI_FORMAT_D32_FLOAT;
+    ds_view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 
-    engine->core_renderer.device->lpVtbl->CreateDepthStencilView(engine->core_renderer.device,
-                                                                 engine->core_renderer.ds_buffer,
-                                                                 &dsvd,
-                                                                 engine->core_renderer.dsv_cpu_desc_handle);
+    engine->gpu_manager.device->lpVtbl->CreateDepthStencilView(engine->gpu_manager.device,
+                                                               engine->gpu_manager.ds_buffer,
+                                                               &ds_view_desc,
+                                                               engine->gpu_manager.dsv_cpu_desc_handle);
 
-    engine->core_renderer.first_frame = true;
+    engine->gpu_manager.first_frame = true;
 }
 
-internal void Present(Engine *engine)
+internal void StartFrame(Engine *engine)
 {
-    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
-    ID3D12GraphicsCommandList *compute_list  = engine->core_renderer.compute_lists[engine->core_renderer.current_buffer];
+    ID3D12CommandAllocator    *graphics_allocator = engine->gpu_manager.graphics_allocators[engine->gpu_manager.current_buffer];
+    ID3D12GraphicsCommandList *graphics_list      = engine->gpu_manager.graphics_lists[engine->gpu_manager.current_buffer];
+    ID3D12CommandAllocator    *compute_allocator  = engine->gpu_manager.compute_allocators[engine->gpu_manager.current_buffer];
+    ID3D12GraphicsCommandList *compute_list       = engine->gpu_manager.compute_lists[engine->gpu_manager.current_buffer];
 
-    // Complete stage
-    D3D12_RESOURCE_BARRIER barrier;
-    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource   = engine->core_renderer.rt_buffers[engine->core_renderer.current_buffer];
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
+    // Reinitialize all stuff was allocated on transient memory
+    // ...
 
-    graphics_list->lpVtbl->ResourceBarrier(graphics_list, 1, &barrier);
+    // Pull
+    InputPull(engine);
+    TimerPull(engine);
 
-    engine->core_renderer.error = graphics_list->lpVtbl->Close(graphics_list);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    // Delayed SetFullscreen if we need to.
+    SetFullscreen(engine, engine->window.fullscreened);
 
-    engine->core_renderer.error = compute_list->lpVtbl->Close(compute_list);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    WaitForGPU(engine);
+    ClearGPUMemory(engine, GPU_MEMORY_COPY);
 
-    ID3D12CommandList *lists[] =
-    {
-        graphics_list,
-        compute_list
-    };
-    engine->core_renderer.queue->lpVtbl->ExecuteCommandLists(engine->core_renderer.queue, ArrayCount(lists), lists);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = graphics_allocator->lpVtbl->Reset(graphics_allocator);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+    engine->gpu_manager.error = graphics_list->lpVtbl->Reset(graphics_list, graphics_allocator, 0);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+
+    engine->gpu_manager.error = compute_allocator->lpVtbl->Reset(compute_allocator);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+    engine->gpu_manager.error = compute_list->lpVtbl->Reset(compute_list, compute_allocator, 0);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+
+    // Set viewport
+    D3D12_VIEWPORT viewport;
+    viewport.TopLeftX = 0.0f;
+    viewport.TopLeftY = 0.0f;
+    viewport.Width    = cast(f32, engine->window.size.w);
+    viewport.Height   = cast(f32, engine->window.size.h);
+    viewport.MinDepth = -1.0f;
+    viewport.MaxDepth =  1.0f;
+
+    graphics_list->lpVtbl->RSSetViewports(graphics_list, 1, &viewport);
+
+    // Set scissor rect (optimization)
+    D3D12_RECT scissor_rect;
+    scissor_rect.left   = 0;
+    scissor_rect.top    = 0;
+    scissor_rect.right  = engine->window.size.w;
+    scissor_rect.bottom = engine->window.size.h;
+
+    graphics_list->lpVtbl->RSSetScissorRects(graphics_list, 1, &scissor_rect);
+
+    // Set RTV And DSV
+    graphics_list->lpVtbl->OMSetRenderTargets(graphics_list,
+                                              1,
+                                              &engine->gpu_manager.rtv_cpu_desc_handle,
+                                              false,
+                                              &engine->gpu_manager.dsv_cpu_desc_handle);
+
+    // Set Resource Barriers
+    D3D12_RESOURCE_BARRIER rt_barrier;
+    rt_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    rt_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    rt_barrier.Transition.pResource   = engine->gpu_manager.rt_buffers[engine->gpu_manager.current_buffer];
+    rt_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    rt_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+    rt_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+    D3D12_RESOURCE_BARRIER ds_barrier;
+    ds_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    ds_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    ds_barrier.Transition.pResource   = engine->gpu_manager.ds_buffer;
+    ds_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    ds_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+    ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+    D3D12_RESOURCE_BARRIER begin_barriers[] = { rt_barrier, ds_barrier };
+    graphics_list->lpVtbl->ResourceBarrier(graphics_list, ArrayCount(begin_barriers), begin_barriers);
+
+    // Clear
+    f32 clear_color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    graphics_list->lpVtbl->ClearRenderTargetView(graphics_list,
+                                                 engine->gpu_manager.rtv_cpu_desc_handle,
+                                                 clear_color,
+                                                 0, 0);
+    graphics_list->lpVtbl->ClearDepthStencilView(graphics_list,
+                                                 engine->gpu_manager.dsv_cpu_desc_handle,
+                                                 D3D12_CLEAR_FLAG_DEPTH,
+                                                 1.0f, 0,
+                                                 0, 0);
+}
+
+// @TODO(Roman): EndFrame in several work threads
+internal void EndFrame(Engine *engine)
+{
+    ID3D12GraphicsCommandList *compute_list  = engine->gpu_manager.compute_lists[engine->gpu_manager.current_buffer];
+    ID3D12GraphicsCommandList *graphics_list = engine->gpu_manager.graphics_lists[engine->gpu_manager.current_buffer];
+
+    // Set Resource Barriers
+    D3D12_RESOURCE_BARRIER rt_barrier;
+    rt_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    rt_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    rt_barrier.Transition.pResource   = engine->gpu_manager.rt_buffers[engine->gpu_manager.current_buffer];
+    rt_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    rt_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    rt_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
+
+    D3D12_RESOURCE_BARRIER ds_barrier;
+    ds_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    ds_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    ds_barrier.Transition.pResource   = engine->gpu_manager.ds_buffer;
+    ds_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    ds_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
+
+    D3D12_RESOURCE_BARRIER end_barriers[] = { rt_barrier, ds_barrier };
+    graphics_list->lpVtbl->ResourceBarrier(graphics_list, ArrayCount(end_barriers), end_barriers);
+
+    // Close and execute lists
+    engine->gpu_manager.error = compute_list->lpVtbl->Close(compute_list);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+
+    engine->gpu_manager.error = graphics_list->lpVtbl->Close(graphics_list);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+
+    ID3D12CommandList *compute_lists[] = { compute_list };
+    engine->gpu_manager.compute_queue->lpVtbl->ExecuteCommandLists(engine->gpu_manager.compute_queue,
+                                                                   ArrayCount(compute_lists),
+                                                                   compute_lists);
+    Check(SUCCEEDED(engine->gpu_manager.error));
+
+    ID3D12CommandList *graphics_lists[] = { graphics_list };
+    engine->gpu_manager.graphics_queue->lpVtbl->ExecuteCommandLists(engine->gpu_manager.graphics_queue,
+                                                                    ArrayCount(graphics_lists),
+                                                                    graphics_lists);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
     // Present
     u32 present_flags = 0;
-    if (!engine->core_renderer.vsync)
+    if (!engine->gpu_manager.vsync)
     {
         present_flags |= DXGI_PRESENT_DO_NOT_WAIT;
-        if (engine->core_renderer.tearing_supported)
+        if (engine->gpu_manager.tearing_supported)
         {
             present_flags |= DXGI_PRESENT_ALLOW_TEARING;
         }
     }
-    if (engine->core_renderer.first_frame)
+    if (engine->gpu_manager.first_frame)
     {
-        engine->core_renderer.first_frame = false;
+        engine->gpu_manager.first_frame = false;
     }
     else
     {
         present_flags |= DXGI_PRESENT_DO_NOT_SEQUENCE;
     }
 
-    engine->core_renderer.error = engine->core_renderer.swap_chain->lpVtbl->Present(engine->core_renderer.swap_chain,
-                                                                                    engine->core_renderer.vsync,
-                                                                                    present_flags);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.swap_chain->lpVtbl->Present(engine->gpu_manager.swap_chain,
+                                                                                engine->gpu_manager.vsync,
+                                                                                present_flags);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
     // Swap buffers
-    engine->core_renderer.current_buffer = engine->core_renderer.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->core_renderer.swap_chain);
+    engine->gpu_manager.current_buffer = engine->gpu_manager.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->gpu_manager.swap_chain);
 
     #pragma warning(suppress: 4020) // I know what I'm doing.
-    engine->core_renderer.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->core_renderer.rtv_heap_desc, &engine->core_renderer.rtv_cpu_desc_handle);
-    engine->core_renderer.rtv_cpu_desc_handle.ptr += engine->core_renderer.current_buffer * engine->core_renderer.rtv_desc_size;
+    engine->gpu_manager.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.rtv_heap_desc, &engine->gpu_manager.rtv_cpu_desc_handle);
+    engine->gpu_manager.rtv_cpu_desc_handle.ptr += engine->gpu_manager.current_buffer * engine->gpu_manager.rtv_desc_size;
 }
 
 //
@@ -1017,6 +1240,226 @@ internal void DestroySound(Engine *engine)
 }
 
 //
+// GPUMemoryManager
+//
+
+internal void CreateGPUMemoryManager(
+    Engine *engine,
+    u64     vb_memory_capacity,
+    u64     ib_memory_capacity,
+    u64     cbv_memory_capacity,
+    u64     srv_memory_capacity,
+    u64     uav_memory_capacity,
+    u64     sampler_memory_capacity,
+    u64     copy_memory_capacity)
+{
+    Check(engine);
+    CheckM(vb_memory_capacity, "VB memory capacity can't be 0");
+    CheckM(ib_memory_capacity, "IB memory capacity can't be 0");
+    CheckM(cbv_memory_capacity, "CBV memory capacity can't be 0");
+    CheckM(srv_memory_capacity, "SRV memory capacity can't be 0");
+    CheckM(uav_memory_capacity, "UAV memory capacity can't be 0");
+    CheckM(sampler_memory_capacity, "Sampler memory capacity can't be 0");
+    CheckM(copy_memory_capacity, "Copy memory capacity can't be 0");
+
+    {
+        engine->gpu_memory_manager.vb_memory.capacity = ALIGN_UP(vb_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+        D3D12_HEAP_DESC heap_desc;
+        heap_desc.SizeInBytes                     = engine->gpu_memory_manager.vb_memory.capacity;
+        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_desc.Properties.CreationNodeMask     = 1;
+        heap_desc.Properties.VisibleNodeMask      = 1;
+        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+
+        engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                          &heap_desc,
+                                                                                          &IID_ID3D12Heap,
+                                                                                          &engine->gpu_memory_manager.vb_memory.heap);
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Vertex Buffer Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+        engine->gpu_memory_manager.error = engine->gpu_memory_manager.vb_memory.heap->lpVtbl->SetName(engine->gpu_memory_manager.vb_memory.heap, L"Vertex Buffer Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+    }
+
+    {
+        engine->gpu_memory_manager.ib_memory.capacity = ALIGN_UP(ib_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+        D3D12_HEAP_DESC heap_desc;
+        heap_desc.SizeInBytes                     = engine->gpu_memory_manager.ib_memory.capacity;
+        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_desc.Properties.CreationNodeMask     = 1;
+        heap_desc.Properties.VisibleNodeMask      = 1;
+        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+
+        engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                          &heap_desc,
+                                                                                          &IID_ID3D12Heap,
+                                                                                          &engine->gpu_memory_manager.ib_memory.heap);
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Index Buffer Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+        engine->gpu_memory_manager.error = engine->gpu_memory_manager.ib_memory.heap->lpVtbl->SetName(engine->gpu_memory_manager.ib_memory.heap, L"Index Buffer Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+    }
+
+    {
+        engine->gpu_memory_manager.cbv_memory.capacity = ALIGN_UP(cbv_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+        D3D12_HEAP_DESC heap_desc;
+        heap_desc.SizeInBytes                     = engine->gpu_memory_manager.cbv_memory.capacity;
+        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_desc.Properties.CreationNodeMask     = 1;
+        heap_desc.Properties.VisibleNodeMask      = 1;
+        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS; // D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES ?
+
+        engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                          &heap_desc,
+                                                                                          &IID_ID3D12Heap,
+                                                                                          &engine->gpu_memory_manager.cbv_memory.heap);
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Constant Buffer Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+        engine->gpu_memory_manager.error = engine->gpu_memory_manager.cbv_memory.heap->lpVtbl->SetName(engine->gpu_memory_manager.cbv_memory.heap, L"Constant Buffer Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+    }
+
+    {
+        engine->gpu_memory_manager.srv_memory.capacity = ALIGN_UP(srv_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+        D3D12_HEAP_DESC heap_desc;
+        heap_desc.SizeInBytes                     = engine->gpu_memory_manager.srv_memory.capacity;
+        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_desc.Properties.CreationNodeMask     = 1;
+        heap_desc.Properties.VisibleNodeMask      = 1;
+        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+
+        engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                          &heap_desc,
+                                                                                          &IID_ID3D12Heap,
+                                                                                          &engine->gpu_memory_manager.srv_memory.heap);
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Shader Resource Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+        engine->gpu_memory_manager.error = engine->gpu_memory_manager.srv_memory.heap->lpVtbl->SetName(engine->gpu_memory_manager.srv_memory.heap, L"Shader Resource Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+    }
+
+    {
+        engine->gpu_memory_manager.uav_memory.capacity = ALIGN_UP(uav_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+        D3D12_HEAP_DESC heap_desc;
+        heap_desc.SizeInBytes                     = engine->gpu_memory_manager.uav_memory.capacity;
+        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_desc.Properties.CreationNodeMask     = 1;
+        heap_desc.Properties.VisibleNodeMask      = 1;
+        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+
+        engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                          &heap_desc,
+                                                                                          &IID_ID3D12Heap,
+                                                                                          &engine->gpu_memory_manager.uav_memory.heap);
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Unordered Access Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+        engine->gpu_memory_manager.error = engine->gpu_memory_manager.uav_memory.heap->lpVtbl->SetName(engine->gpu_memory_manager.uav_memory.heap, L"Unordered Access Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+    }
+
+    {
+        engine->gpu_memory_manager.sampler_memory.capacity = ALIGN_UP(sampler_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+        D3D12_HEAP_DESC heap_desc;
+        heap_desc.SizeInBytes                     = engine->gpu_memory_manager.sampler_memory.capacity;
+        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_desc.Properties.CreationNodeMask     = 1;
+        heap_desc.Properties.VisibleNodeMask      = 1;
+        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+
+        engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                          &heap_desc,
+                                                                                          &IID_ID3D12Heap,
+                                                                                          &engine->gpu_memory_manager.sampler_memory.heap);
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Sampler Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+        engine->gpu_memory_manager.error = engine->gpu_memory_manager.sampler_memory.heap->lpVtbl->SetName(engine->gpu_memory_manager.sampler_memory.heap, L"Sampler Memory");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
+    }
+
+    {
+        copy_memory_capacity = ALIGN_UP(copy_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+        D3D12_HEAP_DESC heap_desc;
+        heap_desc.SizeInBytes                     = copy_memory_capacity;
+        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_CUSTOM;
+        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE;
+        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
+        heap_desc.Properties.CreationNodeMask     = 1;
+        heap_desc.Properties.VisibleNodeMask      = 1;
+        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
+
+        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+        {
+            GPUMemory *current_copy_memory = engine->gpu_memory_manager.copy_memory + i;
+
+            current_copy_memory->capacity = copy_memory_capacity;
+
+            engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                              &heap_desc,
+                                                                                              &IID_ID3D12Heap,
+                                                                                              &current_copy_memory->heap);
+            CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Copy Memory");
+            Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+            wchar_t heap_name[32];
+            _swprintf(heap_name, L"Copy Memory%I32u", i);
+
+            engine->gpu_memory_manager.error = current_copy_memory->heap->lpVtbl->SetName(current_copy_memory->heap, heap_name);
+            Check(SUCCEEDED(engine->gpu_memory_manager.error));
+        }
+    }
+}
+
+internal void DestroyGPUMemoryManager(Engine *engine)
+{
+    Check(engine);
+
+    ClearGPUMemory(engine, GPU_MEMORY_ALL);
+
+    SafeRelease(engine->gpu_memory_manager.vb_memory.heap);
+    SafeRelease(engine->gpu_memory_manager.ib_memory.heap);
+    SafeRelease(engine->gpu_memory_manager.cbv_memory.heap);
+    SafeRelease(engine->gpu_memory_manager.srv_memory.heap);
+    SafeRelease(engine->gpu_memory_manager.uav_memory.heap);
+    SafeRelease(engine->gpu_memory_manager.sampler_memory.heap);
+    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+    {
+        SafeRelease(engine->gpu_memory_manager.copy_memory[i].heap);
+    }
+}
+
+//
 // Main
 //
 
@@ -1036,9 +1479,22 @@ internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPA
         {
             v2s saved_size      = engine->window.size;
             engine->window.size = v2s_1(cast(s32, lparam & 0xFFFF), cast(s32, lparam >> 16));
-            if ((engine->window.size.x != saved_size.x || engine->window.size.y != saved_size.y) && wparam != SIZE_MINIMIZED)
+            if ((engine->window.size.w != saved_size.w || engine->window.size.h != saved_size.h) && wparam != SIZE_MINIMIZED)
             {
-                ResizeBuffers(engine);
+            #if 0
+                ResizeGPUBuffers(engine);
+            #else
+                DXGI_MODE_DESC mode_desc;
+                mode_desc.Width                   = engine->window.size.w;
+                mode_desc.Height                  = engine->window.size.h;
+                mode_desc.RefreshRate.Numerator   = 0;
+                mode_desc.RefreshRate.Denominator = 1;
+                mode_desc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
+                mode_desc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+                mode_desc.Scaling                 = DXGI_MODE_SCALING_STRETCHED;
+                engine->gpu_manager.error = engine->gpu_manager.swap_chain->lpVtbl->ResizeTarget(engine->gpu_manager.swap_chain, &mode_desc);
+                Check(SUCCEEDED(engine->gpu_manager.error));
+            #endif
                 engine->window.resized = true;
                 Log(&engine->logger, "Window was resized");
             }
@@ -1130,8 +1586,7 @@ int EngineRun(
     OPTIONAL HINSTANCE      instance,
     IN       UserCallback  *OnInit,
     IN       UserCallback  *OnDestroy,
-    IN       UserCallback  *OnUpdate,
-    IN       UserCallback  *OnRender,
+    IN       UserCallback  *OnUpdateAndRender,
     IN       SoundCallback *OnSound)
 {
     DebugResult(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
@@ -1142,11 +1597,10 @@ int EngineRun(
     Engine *engine = PushToPA(Engine, &engine_memory, 1);
     engine->memory = &engine_memory;
 
-    DebugResult(engine->user_callbacks.OnInit    = OnInit);
-    DebugResult(engine->user_callbacks.OnDestroy = OnDestroy);
-    DebugResult(engine->user_callbacks.OnUpdate  = OnUpdate);
-    DebugResult(engine->user_callbacks.OnRender  = OnRender);
-    DebugResult(engine->user_callbacks.OnSound   = OnSound);
+    DebugResult(engine->user_callbacks.OnInit            = OnInit);
+    DebugResult(engine->user_callbacks.OnDestroy         = OnDestroy);
+    DebugResult(engine->user_callbacks.OnUpdateAndRender = OnUpdateAndRender);
+    DebugResult(engine->user_callbacks.OnSound           = OnSound);
 
     u64 allocator_cap  = GB(1ui64);
     void *base_address = PushToPermanentArea(engine->memory, allocator_cap);
@@ -1156,23 +1610,16 @@ int EngineRun(
     WindowCreate(engine, "CEngine", v2s_1(960, 540), instance);
     InputCreate(engine);
     TimerCreate(engine);
-    CreateCoreRenderer(engine);
+    CreateGPUManager(engine);
+    CreateGPUMemoryManager(engine, MB(64ui64), MB(64ui64), MB(256ui64), MB(256ui64), MB(128ui64), MB(128ui64), MB(64ui64));
     CreateSound(engine);
-    // engine->queue = CreateWorkQueue(engine);
+    engine->work_queue = CreateWorkQueue(engine);
 
+    StartFrame(engine);
     engine->user_callbacks.OnInit(engine);
+    EndFrame(engine);
 
     TimerStart(engine);
-
-    D3D12_RESOURCE_BARRIER rtv_barrier;
-    rtv_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    rtv_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    rtv_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-    D3D12_RESOURCE_BARRIER dsv_barrier;
-    dsv_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    dsv_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    dsv_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
     MSG msg = {0};
     ShowWindow(engine->window.handle, SW_SHOW);
@@ -1196,103 +1643,9 @@ int EngineRun(
 
         if (!engine->window.closed)
         {
-            // Reinitialize all stuff was allocated on transient memory
-            // ...
-
-            // Pull
-            InputPull(engine);
-            TimerPull(engine);
-
-            // Delayed SetFullscreen if we need to.
-            SetFullscreen(engine, engine->window.fullscreened);
-
-            // Frame start
-            WaitForGPU(engine);
-
-            ID3D12CommandAllocator    *graphics_allocator = engine->core_renderer.graphics_allocators[engine->core_renderer.current_buffer];
-            ID3D12GraphicsCommandList *graphics_list      = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
-            ID3D12CommandAllocator    *compute_allocator  = engine->core_renderer.compute_allocators[engine->core_renderer.current_buffer];
-            ID3D12GraphicsCommandList *compute_list       = engine->core_renderer.compute_lists[engine->core_renderer.current_buffer];
-
-            engine->core_renderer.error = graphics_allocator->lpVtbl->Reset(graphics_allocator);
-            Check(SUCCEEDED(engine->core_renderer.error));
-            engine->core_renderer.error = graphics_list->lpVtbl->Reset(graphics_list, graphics_allocator, 0);
-            Check(SUCCEEDED(engine->core_renderer.error));
-
-            engine->core_renderer.error = compute_allocator->lpVtbl->Reset(compute_allocator);
-            Check(SUCCEEDED(engine->core_renderer.error));
-            engine->core_renderer.error = compute_list->lpVtbl->Reset(compute_list, compute_allocator, 0);
-            Check(SUCCEEDED(engine->core_renderer.error));
-
-            // Set viewport
-            D3D12_VIEWPORT viewport;
-            viewport.TopLeftX = 0.0f;
-            viewport.TopLeftY = 0.0f;
-            viewport.Width    = cast(f32, engine->window.size.w);
-            viewport.Height   = cast(f32, engine->window.size.h);
-            viewport.MinDepth = -1.0f;
-            viewport.MaxDepth =  1.0f;
-
-            graphics_list->lpVtbl->RSSetViewports(graphics_list, 1, &viewport);
-
-            // Set scissor rect (optimization)
-            D3D12_RECT scissor_rect;
-            scissor_rect.left   = 0;
-            scissor_rect.top    = 0;
-            scissor_rect.right  = engine->window.size.w;
-            scissor_rect.bottom = engine->window.size.h;
-
-            graphics_list->lpVtbl->RSSetScissorRects(graphics_list, 1, &scissor_rect);
-
-            // Set RTV And DSV
-            graphics_list->lpVtbl->OMSetRenderTargets(graphics_list,
-                                                      1,
-                                                      &engine->core_renderer.rtv_cpu_desc_handle,
-                                                      false,
-                                                      &engine->core_renderer.dsv_cpu_desc_handle);
-
-            // Set Resource Barrier
-            rtv_barrier.Transition.pResource   = engine->core_renderer.rt_buffers[engine->core_renderer.current_buffer];
-            rtv_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-            rtv_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
-
-            graphics_list->lpVtbl->ResourceBarrier(graphics_list, 1, &rtv_barrier);
-
-            if (!engine->core_renderer.first_frame)
-            {
-                dsv_barrier.Transition.pResource   = engine->core_renderer.ds_buffer;
-                dsv_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-                dsv_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-
-                graphics_list->lpVtbl->ResourceBarrier(graphics_list, 1, &dsv_barrier);
-            }
-
-            // Update
-            engine->user_callbacks.OnUpdate(engine);
-
-            // Clear
-            f32 clear_color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-            graphics_list->lpVtbl->ClearRenderTargetView(graphics_list,
-                                                         engine->core_renderer.rtv_cpu_desc_handle,
-                                                         clear_color,
-                                                         0, 0);
-            graphics_list->lpVtbl->ClearDepthStencilView(graphics_list,
-                                                         engine->core_renderer.dsv_cpu_desc_handle,
-                                                         D3D12_CLEAR_FLAG_DEPTH,
-                                                         1.0f, 0,
-                                                         0, 0);
-
-            // Render
-            engine->user_callbacks.OnRender(engine);
-
-            dsv_barrier.Transition.pResource   = engine->core_renderer.ds_buffer;
-            dsv_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-            dsv_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-            graphics_list->lpVtbl->ResourceBarrier(graphics_list, 1, &dsv_barrier);
-
-            // Present
-            Present(engine);
+            StartFrame(engine);
+            engine->user_callbacks.OnUpdateAndRender(engine);
+            EndFrame(engine);
         }
     }
 
@@ -1302,7 +1655,8 @@ int EngineRun(
 
     engine->user_callbacks.OnDestroy(engine);
 
-    DestroyCoreRenderer(engine);
+    DestroyGPUMemoryManager(engine);
+    DestroyGPUManager(engine);
     InputDestroy(engine);
     WindowDestroy(engine, instance);
     DestroyLogger(&engine->logger);

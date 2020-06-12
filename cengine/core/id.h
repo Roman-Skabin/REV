@@ -17,7 +17,7 @@ typedef struct // *ID
 } IID, GUID, CLSID;
 #endif
 
-#define DECLARE_ID(Type, name) CENGINE_FUN const Type __declspec(selectany) name
+#define DECLARE_ID(Type, name) CENGINE_DATA const Type __declspec(selectany) name
 
 #define DECLARE_IID(name)   DECLARE_ID(IID, IID_ ## name)
 #define DECLARE_GUID(name)  DECLARE_ID(GUID, GUID_ ## name)

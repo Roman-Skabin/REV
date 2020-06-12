@@ -5,7 +5,18 @@
 #include "core/pch.h"
 #include "graphics/core/core_renderer.h"
 #include "graphics/shader_parser/shader_parser.h"
+#include "gpu/gpu_memory_manager.h"
 #include "cengine.h"
+
+enum GPU_MEMORY_BLOCK_KIND
+{
+    GPU_MEMORY_BLOCK_KIND_VB  = 1,
+    GPU_MEMORY_BLOCK_KIND_IB,
+    GPU_MEMORY_BLOCK_KIND_CBV,
+    GPU_MEMORY_BLOCK_KIND_SRV,
+    GPU_MEMORY_BLOCK_KIND_UAV,
+    GPU_MEMORY_BLOCK_KIND_SAMPLER,
+};
 
 #define SafeRelease(directx_interface)                           \
 {                                                                \
@@ -17,186 +28,12 @@
 }
 
 //
-// Renderer
-//
-
-void SetVSync(Engine *engine, b32 enable)
-{
-    if (engine->core_renderer.vsync != enable)
-        engine->core_renderer.vsync = enable;
-}
-
-//
-// VertexBuffer
-//
-
-VertexBuffer CreateVertexBuffer(Engine *engine, void *vertices, u32 count, u32 stride)
-{
-    VertexBuffer buffer;
-    buffer.res    = 0;
-    buffer.count  = count;
-    buffer.stride = stride;
-
-    D3D12_HEAP_PROPERTIES hp;
-    hp.Type                 = D3D12_HEAP_TYPE_UPLOAD;
-    hp.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    hp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    hp.CreationNodeMask     = 0;
-    hp.VisibleNodeMask      = 0;
-
-    D3D12_RESOURCE_DESC rd;
-    rd.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
-    rd.Alignment          = 0;
-    rd.Width              = buffer.count * buffer.stride;
-    rd.Height             = 1;
-    rd.DepthOrArraySize   = 1;
-    rd.MipLevels          = 1;
-    rd.Format             = DXGI_FORMAT_UNKNOWN;
-    rd.SampleDesc.Count   = 1;
-    rd.SampleDesc.Quality = 0;
-    rd.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    rd.Flags              = D3D12_RESOURCE_FLAG_NONE;
-
-    // @Optimize(Roman): Make em placed?
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommittedResource(engine->core_renderer.device,
-                                                                                                &hp,
-                                                                                                D3D12_HEAP_FLAG_NONE,
-                                                                                                &rd,
-                                                                                                D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
-                                                                                              | D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                                                                0,
-                                                                                                &IID_ID3D12Resource,
-                                                                                                &buffer.res);
-    Check(SUCCEEDED(engine->core_renderer.error));
-
-    D3D12_RANGE read_range;
-    read_range.Begin = 0;
-    read_range.End   = 0;
-
-    byte *vertex_data = 0;
-    engine->core_renderer.error = buffer.res->lpVtbl->Map(buffer.res, 0, &read_range, &vertex_data);
-    Check(SUCCEEDED(engine->core_renderer.error));
-
-    CopyMemory(vertex_data, vertices, buffer.count * buffer.stride);
-
-    buffer.res->lpVtbl->Unmap(buffer.res, 0, 0);
-
-    return buffer;
-}
-
-void DestroyVertexBuffer(VertexBuffer *buffer)
-{
-    SafeRelease(buffer->res);
-    buffer->count  = 0;
-    buffer->stride = 0;
-}
-
-void SetVertexBuffer(Engine *engine, VertexBuffer *buffer)
-{
-    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
-
-    D3D12_VERTEX_BUFFER_VIEW vbv;
-    vbv.BufferLocation = buffer->res->lpVtbl->GetGPUVirtualAddress(buffer->res);
-    vbv.SizeInBytes    = buffer->count * buffer->stride;
-    vbv.StrideInBytes  = buffer->stride;
-
-    graphics_list->lpVtbl->IASetVertexBuffers(graphics_list, 0, 1, &vbv);
-}
-
-void DrawVertices(Engine *engine, VertexBuffer *buffer)
-{
-    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
-    graphics_list->lpVtbl->DrawInstanced(graphics_list, buffer->count, 1, 0, 0);
-}
-
-//
-// IndexBuffer
-//
-
-IndexBuffer CreateIndexBuffer(Engine *engine, u32 *indices, u32 count)
-{
-    IndexBuffer buffer;
-    buffer.res   = 0;
-    buffer.count = count;
-
-    D3D12_HEAP_PROPERTIES hp;
-    hp.Type                 = D3D12_HEAP_TYPE_UPLOAD;
-    hp.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    hp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    hp.CreationNodeMask     = 0;
-    hp.VisibleNodeMask      = 0;
-
-    D3D12_RESOURCE_DESC rd;
-    rd.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
-    rd.Alignment          = 0;
-    rd.Width              = buffer.count * sizeof(u32);
-    rd.Height             = 1;
-    rd.DepthOrArraySize   = 1;
-    rd.MipLevels          = 1;
-    rd.Format             = DXGI_FORMAT_UNKNOWN;
-    rd.SampleDesc.Count   = 1;
-    rd.SampleDesc.Quality = 0;
-    rd.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    rd.Flags              = D3D12_RESOURCE_FLAG_NONE;
-
-    // @Optimize(Roman): Make em placed?
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateCommittedResource(engine->core_renderer.device,
-                                                                                                &hp,
-                                                                                                D3D12_HEAP_FLAG_NONE,
-                                                                                                &rd,
-                                                                                                D3D12_RESOURCE_STATE_INDEX_BUFFER
-                                                                                              | D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                                                                0,
-                                                                                                &IID_ID3D12Resource,
-                                                                                                &buffer.res);
-    Check(SUCCEEDED(engine->core_renderer.error));
-
-    D3D12_RANGE read_range;
-    read_range.Begin = 0;
-    read_range.End   = 0;
-
-    byte *index_data = 0;
-    engine->core_renderer.error = buffer.res->lpVtbl->Map(buffer.res, 0, &read_range, &index_data);
-    Check(SUCCEEDED(engine->core_renderer.error));
-
-    CopyMemory(index_data, indices, buffer.count * sizeof(u32));
-
-    buffer.res->lpVtbl->Unmap(buffer.res, 0, 0);
-
-    return buffer;
-}
-
-void DestroyIndexBuffer(IndexBuffer *buffer)
-{
-    SafeRelease(buffer->res);
-    buffer->count = 0;   
-}
-
-void SetIndexBuffer(Engine *engine, IndexBuffer *buffer)
-{
-    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
-
-    D3D12_INDEX_BUFFER_VIEW ibv;
-    ibv.BufferLocation = buffer->res->lpVtbl->GetGPUVirtualAddress(buffer->res);
-    ibv.SizeInBytes    = buffer->count * sizeof(u32);
-    ibv.Format         = DXGI_FORMAT_R32_UINT;
-
-    graphics_list->lpVtbl->IASetIndexBuffer(graphics_list, &ibv);
-}
-
-void DrawIndices(Engine *engine, IndexBuffer *buffer)
-{
-    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
-    graphics_list->lpVtbl->DrawIndexedInstanced(graphics_list, buffer->count, 1, 0, 0, 0);
-}
-
-//
 // Shader
 //
 
 internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3D_SHADER_MACRO *predefines)
 {
-    u32 compile_flags = D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR;
+    u32 compile_flags = D3DCOMPILE_PACK_MATRIX_ROW_MAJOR;
 #if DEBUG
     compile_flags |= D3DCOMPILE_DEBUG
                   |  D3DCOMPILE_SKIP_OPTIMIZATION;
@@ -207,18 +44,18 @@ internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3
 #endif
 
     ID3DBlob *errors = 0;
-    engine->core_renderer.error = D3DCompile(desc->code_start,
-                                             desc->code_end - desc->code_start,
-                                             desc->name,
-                                             predefines,
-                                             shader->include,
-                                             desc->entry_point,
-                                             desc->target,
-                                             compile_flags,
-                                             0,
-                                             &shader->blob,
-                                             &errors);
-    if (FAILED(engine->core_renderer.error))
+    engine->gpu_manager.error = D3DCompile(desc->code_start,
+                                           desc->code_end - desc->code_start,
+                                           desc->name,
+                                           predefines,
+                                           shader->include,
+                                           desc->entry_point,
+                                           desc->target,
+                                           compile_flags,
+                                           0,
+                                           &shader->blob,
+                                           &errors);
+    if (FAILED(engine->gpu_manager.error))
     {
         MessageBoxA(0, errors->lpVtbl->GetBufferPointer(errors), "Shader compilation failure", MB_OK | MB_ICONERROR);
         ExitProcess(1);
@@ -233,7 +70,11 @@ internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3
 // GraphicsProgram
 //
 
-void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_SHADER_MACRO *predefines, GraphicsProgram *graphics_program)
+void CreateGraphicsProgram(
+    IN       Engine           *engine,
+    IN       const char       *file_with_shaders,
+    OPTIONAL D3D_SHADER_MACRO *predefines,
+    OUT      GraphicsProgram  *graphics_program)
 {
     Check(engine);
     Check(file_with_shaders);
@@ -244,8 +85,11 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     gpd.psd.blending_enabled   = false;
     gpd.psd.depth_test_enabled = true;
     gpd.psd.cull_mode          = D3D12_CULL_MODE_NONE;
+    gpd.rsd.desc.Flags         = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+                             // @TODO(Roman): support stream output
+                             /*| D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT*/;
 
-    ParseGraphicsShaders(engine, file_with_shaders, &gpd);
+    ParseGraphicsShaders(engine, file_with_shaders, graphics_program, &gpd);
 
     graphics_program->shaders_count = gpd.sd.count;
 
@@ -257,41 +101,31 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
                       predefines);
     }
 
-    // @TODO(Roman): Parse root signature stuff from shaders
-    D3D12_ROOT_SIGNATURE_DESC rsd;
-    rsd.NumParameters     = 0;
-    rsd.pParameters       = 0;
-    rsd.NumStaticSamplers = 0;
-    rsd.pStaticSamplers   = 0;
-    rsd.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-                        // @TODO(Roman): support stream output
-                        /*| D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT*/;
-
     ID3DBlob *error = 0;
-    engine->core_renderer.error = D3D12SerializeRootSignature(&rsd,
-                                                              D3D_ROOT_SIGNATURE_VERSION_1_0,
-                                                              &graphics_program->signature,
-                                                              &error);
+    engine->gpu_manager.error = D3D12SerializeRootSignature(&gpd.rsd.desc,
+                                                            D3D_ROOT_SIGNATURE_VERSION_1_0,
+                                                            &graphics_program->signature,
+                                                            &error);
 #if DEVDEBUG
-    if (FAILED(engine->core_renderer.error))
+    if (FAILED(engine->gpu_manager.error))
     {
         MessageBoxA(0, error->lpVtbl->GetBufferPointer(error), "Debug Error!", MB_OK | MB_ICONERROR);
         __debugbreak();
         ExitProcess(1);
     }
 #else
-    Check(SUCCEEDED(engine->core_renderer.error));
+    Check(SUCCEEDED(engine->gpu_manager.error));
 #endif
 
     SafeRelease(error);
 
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateRootSignature(engine->core_renderer.device,
-                                                                                            0,
-                                                                                            graphics_program->signature->lpVtbl->GetBufferPointer(graphics_program->signature),
-                                                                                            graphics_program->signature->lpVtbl->GetBufferSize(graphics_program->signature),
-                                                                                            &IID_ID3D12RootSignature,
-                                                                                            &graphics_program->root_signature);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateRootSignature(engine->gpu_manager.device,
+                                                                                        1,
+                                                                                        graphics_program->signature->lpVtbl->GetBufferPointer(graphics_program->signature),
+                                                                                        graphics_program->signature->lpVtbl->GetBufferSize(graphics_program->signature),
+                                                                                        &IID_ID3D12RootSignature,
+                                                                                        &graphics_program->root_signature);
+    Check(SUCCEEDED(engine->gpu_manager.error));
 
     // @TODO(Roman): support stream output
     D3D12_STREAM_OUTPUT_DESC sod;
@@ -465,18 +299,19 @@ void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_S
     gpsd.DSVFormat             = DXGI_FORMAT_D32_FLOAT;
     gpsd.SampleDesc.Count      = 1;
     gpsd.SampleDesc.Quality    = 0;
-    gpsd.NodeMask              = 0;
+    gpsd.NodeMask              = 1;
     gpsd.CachedPSO             = cached_pipeline_state;
     gpsd.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-    engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateGraphicsPipelineState(engine->core_renderer.device,
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateGraphicsPipelineState(engine->gpu_manager.device,
                                                                                                     &gpsd,
                                                                                                     &IID_ID3D12PipelineState,
                                                                                                     &graphics_program->pipeline_state);
-    Check(SUCCEEDED(engine->core_renderer.error));
+    Check(SUCCEEDED(engine->gpu_manager.error));
 }
 
-void GraphicsProgram_Destroy(GraphicsProgram *graphics_program)
+void DestroyGraphicsProgram(
+    IN GraphicsProgram *graphics_program)
 {
     for (u32 i = 0; i < graphics_program->shaders_count; ++i)
     {
@@ -487,9 +322,11 @@ void GraphicsProgram_Destroy(GraphicsProgram *graphics_program)
     SafeRelease(graphics_program->signature);
 }
 
-void GraphicsProgram_Bind(Engine *engine, GraphicsProgram *graphics_program)
+void BindGraphicsProgram(
+    IN Engine          *engine,
+    IN GraphicsProgram *graphics_program)
 {
-    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
+    ID3D12GraphicsCommandList *graphics_list = engine->gpu_manager.graphics_lists[engine->gpu_manager.current_buffer];
 
     graphics_list->lpVtbl->SetGraphicsRootSignature(graphics_list, graphics_program->root_signature);
 
@@ -497,16 +334,91 @@ void GraphicsProgram_Bind(Engine *engine, GraphicsProgram *graphics_program)
     graphics_list->lpVtbl->SetPipelineState(graphics_list, graphics_program->pipeline_state);
 }
 
-void GraphicsProgram_SetConstants(Engine *engine, GraphicsProgram *graphics_program, void *constants, u32 slot_index, u32 count)
+#if 0
+void SetGraphicsProgramConstants(
+    IN Engine          *engine,
+    IN GraphicsProgram *graphics_program,
+    IN void            *constants,
+    IN u32              slot_index,
+    IN u32              count)
 {
+    Check(engine);
+    Check(graphics_program);
+
+    if (count)
+    {
+        ID3D12GraphicsCommandList *graphics_list = engine->gpu_manager.graphics_lists[engine->gpu_manager.current_buffer];
+        graphics_list->lpVtbl->SetGraphicsRoot32BitConstants(graphics_list, slot_index, count, constants, 0);
+    }
+}
+#endif
+
+void SetGraphicsProgramBuffer(
+    IN Engine          *engine,
+    IN GraphicsProgram *graphics_program,
+    IN const char      *name,
+    IN u64              name_len,
+    IN GPUMemoryBlock  *buffer)
+{
+    Check(engine);
+    Check(graphics_program);
+    Check(name);
+    Check(name_len);
+    Check(buffer);
+
+    ID3D12GraphicsCommandList *graphics_list = engine->gpu_manager.graphics_lists[engine->gpu_manager.current_buffer];
+
+    u32 index = 0;
+    for (CBV_SRV_UAV_Buffer *it = graphics_program->buffers; it; ++it)
+    {
+        if (it->name_len == name_len && RtlEqualMemory(it->name, name, name_len))
+        {
+            break;
+        }
+        ++index;
+    }
+
+    switch (graphics_program->buffers[index].type)
+    {
+        case D3D12_ROOT_PARAMETER_TYPE_CBV:
+        {
+            CheckM(buffer->kind == GPU_MEMORY_BLOCK_KIND_CBV, "The GPU memory block you're trying to bind to a pipeline constant buffer is not a constant buffer");
+            graphics_list->lpVtbl->SetGraphicsRootConstantBufferView(graphics_list, index, buffer->resource->lpVtbl->GetGPUVirtualAddress(buffer->resource));
+        } break;
+
+        case D3D12_ROOT_PARAMETER_TYPE_SRV:
+        {
+            CheckM(buffer->kind == GPU_MEMORY_BLOCK_KIND_SRV, "The GPU memory block you're trying to bind to a pipeline shader resource is not a shader resource");
+            graphics_list->lpVtbl->SetGraphicsRootShaderResourceView(graphics_list, index, buffer->resource->lpVtbl->GetGPUVirtualAddress(buffer->resource));
+        } break;
+
+        case D3D12_ROOT_PARAMETER_TYPE_UAV:
+        {
+            CheckM(buffer->kind == GPU_MEMORY_BLOCK_KIND_UAV, "The GPU memory block you're trying to bind to a pipeline unordered access resource is not an unordered access resource");
+            graphics_list->lpVtbl->SetGraphicsRootUnorderedAccessView(graphics_list, index, buffer->resource->lpVtbl->GetGPUVirtualAddress(buffer->resource));
+        } break;
+    }
 }
 
-void GraphicsProgram_SetBuffer(Engine *engine, GraphicsProgram *graphics_program, ID3D12Resource *buffers, u32 slot_index)
+void SetGraphicsProgramTables(
+    IN Engine                *engine,
+    IN GraphicsProgram       *graphics_program,
+    IN ID3D12DescriptorHeap **heap_desc,
+    IN u32                   *slot_indices,
+    IN u32                   *desc_sizes,
+    IN u32                    count)
 {
-}
-
-void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program, ID3D12DescriptorHeap **heap_desc, u32 *slot_indices, u32 *desc_sizes, u32 count)
-{
+    // case SHADERS_RESOURCE_TYPE_TABLE:
+    // {
+    //     graphics_list->lpVtbl->SetDescriptorHeaps(graphics_list, desc->tables.count, desc->tables.heap_descs);
+    //     for (u32 i = 0; i < desc->tables.heap_descs; ++i)
+    //     {
+    //         ID3D12DescriptorHeap *heap = desc->tables.heap_descs[i];
+    //         D3D12_GPU_DESCRIPTOR_HANDLE base_desc = heap->lpVtbl->GetGPUDescriptorHandleForHeapStart(heap);
+    //         base_desc.ptr += index * desc->tables.descs_sizes[i];
+    //         graphics_list->lpVtbl->SetGraphicsRootDescriptorTable(graphics_list, index, base_desc);
+    //     }
+    // } break;
 }
 
 //
@@ -514,61 +426,6 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
 //
 
 #if 0
-
-    void SetShaderConstants(Engine *engine, ShaderResources *shader_resources, u32 index, void *constants, u32 count, u32 start_offset)
-    {
-        Check(engine);
-        Check(shader_resources);
-        Check(constants);
-
-        if (count)
-        {
-            switch (shader_resources->kind)
-            {
-                case SHADER_RESOURCES_KIND_GRAPHICS:
-                {
-                    ID3D12GraphicsCommandList *graphics_list = engine->core_renderer.graphics_lists[engine->core_renderer.current_buffer];
-                    graphics_list->lpVtbl->SetGraphicsRoot32BitConstants(graphics_list, index, count, constants, start_offset);
-                } break;
-
-                case SHADER_RESOURCES_KIND_COMPUTE:
-                {
-                    ID3D12GraphicsCommandList *compute_list = engine->core_renderer.compute_lists[engine->core_renderer.current_buffer];
-                    compute_list->lpVtbl->SetComputeRoot32BitConstants(compute_list, index, count, constants, start_offset);
-                } break;
-            }
-        }
-    }
-
-    {
-        case SHADERS_RESOURCE_TYPE_BUFFER_CBV:
-        {
-            ID3D12Resource *resource = data;
-            graphics_list->lpVtbl->SetGraphicsRootConstantBufferView(graphics_list, index, resource->lpVtbl->GetGPUVirtualAddress(resource));
-        } break;
-        case SHADERS_RESOURCE_TYPE_BUFFER_SRV:
-        {
-            ID3D12Resource *resource = data;
-            graphics_list->lpVtbl->SetGraphicsRootShaderResourceView(graphics_list, index, resource->lpVtbl->GetGPUVirtualAddress(resource));
-        } break;
-        case SHADERS_RESOURCE_TYPE_BUFFER_UAV:
-        {
-            ID3D12Resource *resource = data;
-            graphics_list->lpVtbl->SetGraphicsRootUnorderedAccessView(graphics_list, index, resource->lpVtbl->GetGPUVirtualAddress(resource));
-        } break;
-        case SHADERS_RESOURCE_TYPE_TABLE:
-        {
-            graphics_list->lpVtbl->SetDescriptorHeaps(graphics_list, desc->tables.count, desc->tables.heap_descs);
-            for (u32 i = 0; i < desc->tables.heap_descs; ++i)
-            {
-                ID3D12DescriptorHeap *heap = desc->tables.heap_descs[i];
-                D3D12_GPU_DESCRIPTOR_HANDLE base_desc = heap->lpVtbl->GetGPUDescriptorHandleForHeapStart(heap);
-                base_desc.ptr += index * desc->tables.descs_sizes[i];
-                graphics_list->lpVtbl->SetGraphicsRootDescriptorTable(graphics_list, index, base_desc);
-            }
-        } break;
-    }
-
     //
     // Compute PipelineState
     //
@@ -596,15 +453,15 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
         D3D12_COMPUTE_PIPELINE_STATE_DESC cpsd;
         cpsd.pRootSignature = pipeline_state->shaders_resources->root_signature;
         cpsd.CS             = compute_shader->bytecode;
-        cpsd.NodeMask       = 0;
+        cpsd.NodeMask       = 1;
         cpsd.CachedPSO      = cached_pipeline_state;
         cpsd.Flags          = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-        engine->core_renderer.error = engine->core_renderer.device->lpVtbl->CreateComputePipelineState(engine->core_renderer.device,
+        engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateComputePipelineState(engine->gpu_manager.device,
                                                                                              &cpsd,
                                                                                              &IID_ID3D12PipelineState,
                                                                                              &pipeline_state->pipeline_state);
-        Check(SUCCEEDED(engine->core_renderer.error));
+        Check(SUCCEEDED(engine->gpu_manager.error));
     }
 
     void ExecuteComputePipelineState(Engine *engine, PipelineState *pipeline_state, u32 grids, u32 blocks, u32 threads)
@@ -613,7 +470,7 @@ void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program
         Check(pipeline_state);
         Check(pipeline_state->kind == PIPELINE_STATE_KIND_COMPUTE);
 
-        ID3D12GraphicsCommandList *compute_list = engine->core_renderer.compute_lists[engine->core_renderer.current_buffer];
+        ID3D12GraphicsCommandList *compute_list = engine->gpu_manager.compute_lists[engine->gpu_manager.current_buffer];
         compute_list->lpVtbl->Dispatch(compute_list, threads, blocks, grids);
     }
 #endif

@@ -1,93 +1,10 @@
 //
-// Copyright 2020 Roman Skabin
+// GraphicsProgram
 //
 
 #pragma once
 
 #include "core/core.h"
-#include "math/vec.h"
-
-enum _CORE_RENDERER_CONSTANTS
-{
-    SWAP_CHAIN_BUFFERS_COUNT = 2,
-};
-
-typedef struct CoreRenderer
-{
-#if DEBUG
-    ID3D12Debug                 *debug;
-    ID3D12DebugCommandQueue     *deubg_queue;
-    ID3D12DebugCommandList      *debug_list;
-#endif
-    IDXGIFactory2               *factory;
-    IDXGIAdapter1               *adapter;
-    ID3D12Device                *device;
-
-    ID3D12CommandQueue          *queue;
-    ID3D12CommandAllocator      *graphics_allocators[SWAP_CHAIN_BUFFERS_COUNT];
-    ID3D12GraphicsCommandList   *graphics_lists[SWAP_CHAIN_BUFFERS_COUNT];
-    IDXGISwapChain4             *swap_chain;
-
-    ID3D12CommandAllocator      *compute_allocators[SWAP_CHAIN_BUFFERS_COUNT];
-    ID3D12GraphicsCommandList   *compute_lists[SWAP_CHAIN_BUFFERS_COUNT];
-
-    ID3D12DescriptorHeap        *rtv_heap_desc;
-    ID3D12Resource              *rt_buffers[SWAP_CHAIN_BUFFERS_COUNT];
-    D3D12_CPU_DESCRIPTOR_HANDLE  rtv_cpu_desc_handle;
-    u32                          rtv_desc_size;
-    u32                          current_buffer;
-
-    ID3D12DescriptorHeap        *ds_heap_desc;
-    ID3D12Resource              *ds_buffer;
-    D3D12_CPU_DESCRIPTOR_HANDLE  dsv_cpu_desc_handle;
-
-    ID3D12Fence                 *fences[SWAP_CHAIN_BUFFERS_COUNT];
-    u64                          fences_values[SWAP_CHAIN_BUFFERS_COUNT];
-    HANDLE                       fence_event;
-
-    b32                          vsync;
-    b32                          first_frame;
-    b32                          tearing_supported;
-
-    HRESULT                      error;
-} CoreRenderer;
-
-CENGINE_FUN void SetVSync(Engine *engine, b32 enable);
-
-//
-// VertexBuffer
-//
-
-typedef struct VertexBuffer
-{
-    ID3D12Resource *res;
-    u32             count;
-    u32             stride;
-} VertexBuffer;
-
-CENGINE_FUN VertexBuffer CreateVertexBuffer(Engine *engine, void *vertices, u32 count, u32 stride);
-CENGINE_FUN void         DestroyVertexBuffer(VertexBuffer *buffer);
-CENGINE_FUN void         SetVertexBuffer(Engine *engine, VertexBuffer *buffer);
-CENGINE_FUN void         DrawVertices(Engine *engine, VertexBuffer *buffer);
-
-//
-// IndexBuffer
-//
-
-typedef struct IndexBuffer
-{
-    ID3D12Resource *res;
-    u32             count;
-} IndexBuffer;
-
-CENGINE_FUN IndexBuffer CreateIndexBuffer(Engine *engine, u32 *indices, u32 count);
-CENGINE_FUN void        DestroyIndexBuffer(IndexBuffer *buffer);
-CENGINE_FUN void        SetIndexBuffer(Engine *engine, IndexBuffer *buffer);
-CENGINE_FUN void        DrawIndices(Engine *engine, IndexBuffer *buffer);
-
-//
-// GraphicsProgram
-//
 
 enum
 {
@@ -134,6 +51,15 @@ typedef struct GraphicsProgramDesc
     } rsd;
 } GraphicsProgramDesc;
 
+typedef struct CBV_SRV_UAV_Buffer CBV_SRV_UAV_Buffer;
+struct CBV_SRV_UAV_Buffer
+{
+    CBV_SRV_UAV_Buffer        *next;
+    const char                *name;
+    u64                        name_len;
+    D3D12_ROOT_PARAMETER_TYPE  type;
+};
+
 typedef struct GraphicsProgram
 {
     ID3DBlob            *signature;
@@ -141,13 +67,51 @@ typedef struct GraphicsProgram
 
     ID3D12PipelineState *pipeline_state;
 
-    u32                  shaders_count;
-    Shader               shaders[MAX_GRAPHICS_SHADERS];
+    CBV_SRV_UAV_Buffer *buffers;
+
+    u32    shaders_count;
+    Shader shaders[MAX_GRAPHICS_SHADERS];
 } GraphicsProgram;
 
-CENGINE_FUN void GraphicsProgram_Create(Engine *engine, const char *file_with_shaders, D3D_SHADER_MACRO *predefines, GraphicsProgram *graphics_program);
-CENGINE_FUN void GraphicsProgram_Destroy(GraphicsProgram *graphics_program);
-CENGINE_FUN void GraphicsProgram_Bind(Engine *engine, GraphicsProgram *graphics_program);
-CENGINE_FUN void GraphicsProgram_SetConstants(Engine *engine, GraphicsProgram *graphics_program, void *constants, u32 slot_index, u32 count);
-CENGINE_FUN void GraphicsProgram_SetBuffer(Engine *engine, GraphicsProgram *graphics_program, ID3D12Resource *buffers, u32 slot_index);
-CENGINE_FUN void GraphicsProgram_SetTables(Engine *engine, GraphicsProgram *graphics_program, ID3D12DescriptorHeap **heap_desc, u32 *slot_indices, u32 *desc_sizes, u32 count);
+CENGINE_FUN void CreateGraphicsProgram(
+    IN       Engine           *engine,
+    IN       const char       *file_with_shaders,
+    OPTIONAL D3D_SHADER_MACRO *predefines,
+    OUT      GraphicsProgram  *graphics_program
+);
+
+CENGINE_FUN void DestroyGraphicsProgram(
+    IN GraphicsProgram *graphics_program
+);
+
+CENGINE_FUN void BindGraphicsProgram(
+    IN Engine          *engine,
+    IN GraphicsProgram *graphics_program
+);
+
+#if 0
+CENGINE_FUN void SetGraphicsProgramConstants(
+    IN Engine          *engine,
+    IN GraphicsProgram *graphics_program,
+    IN void            *constants,
+    IN u32              slot_index,
+    IN u32              count
+);
+#endif
+
+CENGINE_FUN void SetGraphicsProgramBuffer(
+    IN Engine          *engine,
+    IN GraphicsProgram *graphics_program,
+    IN const char      *name,
+    IN u64              name_len,
+    IN GPUMemoryBlock  *buffer
+);
+
+CENGINE_FUN void SetGraphicsProgramTables(
+    IN Engine                *engine,
+    IN GraphicsProgram       *graphics_program,
+    IN ID3D12DescriptorHeap **heap_desc,
+    IN u32                   *slot_indices,
+    IN u32                   *desc_sizes,
+    IN u32                    count
+);

@@ -74,6 +74,7 @@ typedef struct ShaderParser
 {
     ShaderLexer  lexer;
     ASTType     *types;
+    ASTCBuffer  *cbuffers;
 } ShaderParser;
 
-CENGINE_FUN void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, GraphicsProgramDesc *gpd);
+CENGINE_FUN void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, GraphicsProgram *program, GraphicsProgramDesc *gpd);

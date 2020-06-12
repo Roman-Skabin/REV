@@ -6,6 +6,8 @@
 
 #include "math/math.h"
 
+#pragma pack(push, 1)
+
 #if ISA >= SSE
     #define MM(Type, mm, index) (cast(Type *, mm)[index])
 
@@ -176,3 +178,5 @@
         (m256_dst) = mm_dst.f;                                            \
     }
 #endif
+
+#pragma pack(pop)

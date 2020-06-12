@@ -269,8 +269,19 @@ CENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
 
 #endif
 
+#ifdef SUCCEEDED
+    #undef SUCCEEDED
+    #define SUCCEEDED(hr) ((hr) >= 0)
+#endif
+
+#ifdef FAILED
+    #undef FAILED
+    #define FAILED(hr) ((hr) < 0)
+#endif
+
 //
 // Global typedefs
 //
 
 typedef struct Engine Engine;
+typedef struct GPUMemoryBlock GPUMemoryBlock;

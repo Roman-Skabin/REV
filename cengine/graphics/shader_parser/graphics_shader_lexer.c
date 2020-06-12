@@ -53,8 +53,11 @@ global const char *keywords[] =
 
     "typedef",
     "struct",
-    "cbuffer", // @TODO(Roman): constant buffer CBV
+    "cbuffer",
     "tbuffer", // @TODO(Roman): texture buffer  SRV/UAV
+
+    "register",
+    "packoffset",
 };
 
 #define IsKeyword(lexer, name) ((lexer)->first_keyword <= (name) && (name) <= (lexer)->last_keyword)

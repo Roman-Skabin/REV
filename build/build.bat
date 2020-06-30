@@ -35,7 +35,7 @@ if /I "!PROJECT!" == "sandbox" (
     set /A COMPILE_CENGINE = 1
 )
 
-ctime.exe -begin full.time
+ctime -begin full.time
 
 REM cengine
 if !COMPILE_CENGINE! == 1 (
@@ -47,7 +47,7 @@ if !COMPILE_CENGINE! == 1 (
     set LINKER= -link
     set LINKING=
     set INPUT_FILES=
-    set PREPROCESSOR= -Icengine -D_CENGINE_DEV
+    set PREPROCESSOR= -Icengine -I3rd_party -D_CENGINE_DEV
     set MISCELLANEOUS= -TC
     set OUTPUT_FILES= -Fo:bin\obj\cengine\ -Fe:bin\cengine.dll -Fp:bin\obj\cengine\cengine.pch
 
@@ -67,23 +67,25 @@ if !COMPILE_CENGINE! == 1 (
         set CODE_GENERATION= !CODE_GENERATION! -GL
         set LINKING= !LINKING! -MT -LD
         set LINKER= !LINKER! -incremental:no -opt:ref
-        set LANGUAGE= !LANGUAGE!
+        REM Temporary, added for debuging release build
+        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\cengine.pdb
+        set LANGUAGE= !LANGUAGE! -Zi
     ) else (
         set OPTIMIZATION= !OPTIMIZATION! -Od
         set LINKING= !LINKING! -MTd -LDd
         set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\cengine.pdb
-        set LANGUAGE= !LANGUAGE! -ZI
+        set LANGUAGE= !LANGUAGE! -Zi
     )
 
-    ctime.exe -begin cengine.time
+    ctime -begin cengine.time
 
     pushd ..
         echo ==========================    Compiling cengine...    ==========================
-        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yccore\pch.h !LINKING! !DIAGNOSTICS! !OUTPUT_FILES! cengine\core\pch.c !LINKER! !IMPORT_LIBS! -nologo
-        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yucore\pch.h !LINKING! !DIAGNOSTICS! !OUTPUT_FILES! !INPUT_FILES! !LINKER! bin\obj\cengine\pch.obj !IMPORT_LIBS! -nologo
+        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yccore\pch.h !LINKING! !DIAGNOSTICS! cengine\core\pch.c !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
+        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yucore\pch.h !LINKING! !DIAGNOSTICS! !INPUT_FILES! !OUTPUT_FILES! !LINKER! bin\obj\cengine\pch.obj !IMPORT_LIBS! -nologo
     popd
 
-    ctime.exe -end cengine.time
+    ctime -end cengine.time
 
     echo.
 )
@@ -98,7 +100,7 @@ if !COMPILE_SANDBOX! == 1 (
     set LINKING=
     set LINKER= -link
     set INPUT_FILES=
-    set PREPROCESSOR= -Icengine\
+    set PREPROCESSOR= -Icengine -I3rd_party
     set MISCELLANEOUS= -MP -TC
     set OUTPUT_FILES= -Fo:bin\obj\sandbox\ -Fe:bin\sandbox.exe
 
@@ -111,25 +113,27 @@ if !COMPILE_SANDBOX! == 1 (
         set CODE_GENERATION= !CODE_GENERATION! -GL
         set LINKING= !LINKING! -MT
         set LINKER= !LINKER! -incremental:no -opt:ref
-        set LANGUAGE= !LANGUAGE!
+        REM Temporary, added for debuging release build
+        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\sandbox.pdb
+        set LANGUAGE= !LANGUAGE! -Zi
     ) else (
         set OPTIMIZATION= !OPTIMIZATION! -Od
         set LINKING= !LINKING! -MTd
         set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\sandbox.pdb
-        set LANGUAGE= !LANGUAGE! -ZI
+        set LANGUAGE= !LANGUAGE! -Zi
     )
     
-    ctime.exe -begin sandbox.time
+    ctime -begin sandbox.time
 
     pushd ..
         echo ==========================    Compiling sandbox...    ==========================
         cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! !DIAGNOSTICS! !LINKING! !INPUT_FILES! !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
     popd
 
-    ctime.exe -end sandbox.time
+    ctime -end sandbox.time
 
     echo.
 )
 
-ctime.exe -end full.time
+ctime -end full.time
 endlocal

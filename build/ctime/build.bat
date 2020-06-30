@@ -1,22 +1,18 @@
 @echo off
-setlocal EnableDelayedExpansion
 
-rem use: build [release]
+rem use: build
 
-set COMMON_FLAGS= -Ob2 -Oi -favor:blend -fp:fast -Qpar -arch:AVX -Zc:inline -nologo
+set OPTIMIZATION= -Ob2 -Oi -favor:blend -O2 -Ot
+set CODE_GENERATION= -fp:fast -Qpar -arch:AVX -GL
+set LANGUAGE= -Zc:wchar_t- -Zc:inline
+set IMPORT_LIBS= winmm.lib
+set LINKER= -link -incremental:no -opt:ref
+set LINKING= -MT
+set INPUT_FILES= ctime.c
+set MISCELLANEOUS= -TC
 
-IF /I "%1" == "release" (
-    set COMPILER_FLAGS= -O2 -Ot -GL !COMMON_FLAGS!
-    cl !COMPILER_FLAGS! ctime.c -link -incremental:no -opt:ref winmm.lib
-    move /Y ctime.exe ..
-) ELSE (
-    set COMPILER_FLAGS= -Od -Zi -W3 !COMMON_FLAGS!
-    cl !COMPILER_FLAGS! ctime.c -link winmm.lib
-)
+echo ==========================    Compiling ctime...    ==========================
+cl %OPTIMIZATION% %CODE_GENERATION% %LANGUAGE% %MISCELLANEOUS% %LINKING% %INPUT_FILES% %LINKER% %IMPORT_LIBS% -nologo
 
-del ctime.obj
-
-set COMMON_FLAGS=
-set COMPILER_FLAGS=
-
-endlocal
+del /Q ctime.obj
+move /Y ctime.exe ..

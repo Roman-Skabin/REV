@@ -6,6 +6,10 @@
 - Tools
     - gpu/core/interns to the tools?
 
+- Build
+    - [Pre?]build system. Build only edited files
+      (source file change time > .obj file change time)
+
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
 
@@ -13,24 +17,25 @@
     - Adapt to different ISA vec.h and mat.h
 
 - GPU
-    - Clean up GPUMemoryManager stuff
-    - WaitForGPU, FlushGPU and EndFrame in several work threads
-    - Init DebugQueue and DebugList. Add InfoQueue
+    - FIX GPU RESOURCES!!! PRIMIRY TASK.
+    - TODOs in cengine/gpu/gpu_memory_manager.h
+    - Clean up GPUMemoryManager and GPUProgramManager
+    - Print D3D12/DXGI messages in separate "while true" thread
     - Do ResizeGPUBuffers when we choose another screen dimension
-    - Copmlete memory managment via GPUMemoryManager
-        - free list for descriptors
-        - free list for resources?
     - Custom compute shader's parser and ComputeProgram generation
-    - User-side GPU command lists and bundles
+    - User-side GPU command lists and bundles?
     - Several adapters support
 
 - Graphics
-    - Switch from 1 to 3 Render Targets (OIT needs 2 additional).
     - Custom graphics shader's parser and GraphicsProgram generation
-        - Root Signature stuff: SRVs, UAVs, static samplers, tables
+        - SRVs, UAVs, static samplers, tables (, constants?)
+        - Add Root Signature v1.1 specific settings.
         - Includes
         - Parse templates (Buffer<type> name; vector<type, dim> name; ...)
         - Stream output
+    - Save shaders bytecode in some files and compile only shaders that
+      source file change time > bytecode file change time?
+    - Switch from 1 to 3 Render Targets for OIT
     - Weighted Blended OIT
     - Support triangle strips (define topology in shaders?)
     - Support stream output (define it in shaders too?)
@@ -44,3 +49,6 @@
     - Create a common audio session for entire program
     - Allow to create more audio streams
     - Different callbacks for audios and sounds (fx)
+
+- Editor
+    - GUI (ImGUI or write my own?)

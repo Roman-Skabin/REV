@@ -19,7 +19,9 @@ typedef struct BufferHeader
 } BufferHeader;
 
 CENGINE_FUN void *CreateBuffer(Allocator *allocator, u64 alignment_in_bytes);
-CENGINE_FUN void  DestroyBuffer(void *buffer);
+CENGINE_FUN void  _DestroyBuffer(void **buffer);
+
+#define DestroyBuffer(_buffer) _DestroyBuffer(&(_buffer))
 
 CENGINE_FUN void *ExpandBuffer(BufferHeader *header, u64 element_bytes);
 

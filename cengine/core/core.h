@@ -4,12 +4,22 @@
 
 #pragma once
 
-#pragma pack(push, 8)
-
 #include "core/pch.h"
 
-#ifndef _WIN64
-    #error Only for 64-bit systems
+#if CENGINE_ISA >= CENGINE_ISA_AVX512
+    #define CENGINE_DEFAULT_ALIGNMENT sizeof(__m512)
+#elif CENGINE_ISA >= CENGINE_ISA_AVX
+    #define CENGINE_DEFAULT_ALIGNMENT sizeof(__m256)
+#elif CENGINE_ISA >= CENGINE_ISA_SSE
+    #define CENGINE_DEFAULT_ALIGNMENT sizeof(__m128)
+#else
+    #define CENGINE_DEFAULT_ALIGNMENT sizeof(void *)
+#endif
+
+#if CENGINE_ISA >= CENGINE_ISA_SSE
+    #pragma pack(push, 16)
+#else
+    #pragma pack(push, 8)
 #endif
 
 #ifdef DEBUG
@@ -34,58 +44,33 @@
     #define DEVDEBUG 0
 #endif
 
-#define MMX    0
-#define SSE    1
-#define AVX    2
-#define AVX2   3
-#define AVX512 4
-
-#if __AVX512BW__ || __AVX512CD__ || __AVX512DQ__ || __AVX512F__ || __AVX512VL__
-    #define ISA AVX512
-    #include <zmmintrin.h>
-    #include <immintrin.h>
-    #include <ammintrin.h>
-#elif __AVX2__
-    #define ISA AVX2
-    #include <immintrin.h>
-    #include <ammintrin.h>
-#elif __AVX__
-    #define ISA AVX
-    #include <immintrin.h>
-    #include <ammintrin.h>
-#elif _M_IX86_FP > 0
-    #define ISA SSE
-    #include <wmmintrin.h>
+#if _CENGINE_DEV
+    #define CENGINE_IMPEXP CENGINE_EXPORT
 #else
-    #define ISA MMX
-    #include <mmintrin.h>
+    #define CENGINE_IMPEXP CENGINE_IMPORT
 #endif
 
 #ifdef __cplusplus
-    #define CEXTERN extern "C"
+    #define CENGINE_EXTERN extern "C"
 #else
-    #define CEXTERN extern
+    #define CENGINE_EXTERN extern
 #endif
 
-#if _CENGINE_DEV
-    #define CENGINE_IMPEXP __declspec(dllexport)
+#define CENGINE_FUN   CENGINE_IMPEXP CENGINE_EXTERN
+#define CENGINE_DATA  CENGINE_IMPEXP CENGINE_EXTERN
+#define CENGINE_CLASS CENGINE_IMPEXP
+
+#if CENGINE_ISA >= CENGINE_ISA_SSE
+    #define MATH_CALL CENGINE_VECTOR_CALL
 #else
-    #define CENGINE_IMPEXP __declspec(dllimport)
+    #define MATH_CALL
 #endif
-
-#define CENGINE_FUN  CENGINE_IMPEXP CEXTERN
-#define CENGINE_DATA CENGINE_IMPEXP CEXTERN
-
-#define MATH_CALL __vectorcall
 
 #if DEVDEBUG
-    #define INLINE __declspec(noinline) inline
+    #define INLINE CENGINE_NOINLINE inline
 #else
-    #define INLINE __forceinline
+    #define INLINE CENGINE_INLINE
 #endif
-
-#define __align(bytes) __declspec(align(bytes))
-#define __intrin_type __declspec(intrin_type)
 
 #define global   static
 #define internal static
@@ -99,22 +84,21 @@
 
 #define CSTRLEN(cstr) (sizeof(cstr) - 1)
 
-// No OOP bullshit in this engine!!!
-#define class       "No OOP bullshit in this engine!!!"
-#define virtual     "No OOP bullshit in this engine!!!"
-#define private     "No OOP bullshit in this engine!!!"
-#define public      "No OOP bullshit in this engine!!!"
-#define protected   "No OOP bullshit in this engine!!!"
-#define this        "No OOP bullshit in this engine!!!"
-#define __interface "No OOP bullshit in this engine!!!"
-
 #ifdef NULL
     #undef  NULL
-    #define NULL 0
 #endif
-
+#define NULL 0
 #ifndef __cplusplus
     #define nullptr 0
+#endif
+#define null nullptr
+
+#ifndef interface
+    #ifdef __cplusplus
+        #define interface __interface
+    #else
+        #define interface struct
+    #endif
 #endif
 
 #define KB(x) (  (x) * 1024)
@@ -209,79 +193,75 @@ typedef enum MESSAGE_TYPE
 
 CENGINE_FUN void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
 CENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
+CENGINE_FUN void ShowDebugMessage(
+    IN       b32         message_is_expr,
+    IN       const char *file,
+    IN       u64         line,
+    IN       const char *function,
+    IN       const char *title,
+    IN       const char *format,
+    OPTIONAL ...
+);
 
 #if DEVDEBUG
 
-    #define DebugStringM(message)                                 \
-        CSTRCAT(CSTRCAT(CSTRCAT("MESSAGE:\n", message),           \
-                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
-                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
+    #define CheckM(expr, message, ...) if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); __debugbreak(); ExitProcess(1); }
+    #define Check(expr)                if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); __debugbreak(); ExitProcess(1); }
+    #define FailedM(message, ...)                   { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Failed",      message,   __VA_ARGS__); __debugbreak(); ExitProcess(1); }
 
-    #define DebugString(expr)                                     \
-        CSTRCAT(CSTRCAT(CSTRCAT("EXPRESSION:\n", CSTR(expr)),     \
-                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
-                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
-
-    #define CheckM(expr, message) if (!(expr)) { MessageBoxA(0, DebugStringM(message), "Debug Error!", MB_OK | MB_ICONERROR); __debugbreak(); ExitProcess(1); }
-    #define Check(expr)           if (!(expr)) { MessageBoxA(0, DebugString(expr),     "Debug Error!", MB_OK | MB_ICONERROR); __debugbreak(); ExitProcess(1); }
-    #define FailedM(message)                   { MessageBoxA(0, DebugStringM(message), "Failed!",      MB_OK | MB_ICONERROR); __debugbreak(); ExitProcess(1); }
-
-    #define DebugResult(expr)           Check(expr)
-    #define DebugResultM(expr, message) CheckM(expr, message)
+    #define DebugResult(expr)                Check(expr)
+    #define DebugResultM(expr, message, ...) CheckM(expr, message, __VA_ARGS__)
 
 #elif DEBUG
 
-    #define DebugStringM(message)                                 \
-        CSTRCAT(CSTRCAT(CSTRCAT("MESSAGE:\n", message),           \
-                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
-                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
+    #define CheckM(expr, message, ...) if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); ExitProcess(1); }
+    #define Check(expr)                if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); ExitProcess(1); }
+    #define FailedM(message, ...)                   { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Failed",      message,   __VA_ARGS__); ExitProcess(1); }
 
-    #define DebugString(expr)                                     \
-        CSTRCAT(CSTRCAT(CSTRCAT("EXPRESSION:\n", CSTR(expr)),     \
-                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
-                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
-
-    #define CheckM(expr, message) if (!(expr)) { MessageBoxA(0, DebugStringM(message), "Debug Error!", MB_OK | MB_ICONERROR); ExitProcess(1); }
-    #define Check(expr)           if (!(expr)) { MessageBoxA(0, DebugString(expr),     "Debug Error!", MB_OK | MB_ICONERROR); ExitProcess(1); }
-    #define FailedM(message)                   { MessageBoxA(0, DebugStringM(message), "Failed!",      MB_OK | MB_ICONERROR); ExitProcess(1); }
-
-    #define DebugResult(expr)           Check(expr)
-    #define DebugResultM(expr, message) CheckM(expr, message)
+    #define DebugResult(expr)                Check(expr)
+    #define DebugResultM(expr, message, ...) CheckM(expr, message, __VA_ARGS__)
 
 #else
 
-    #define DebugStringM(message)                                 \
-        CSTRCAT(CSTRCAT(CSTRCAT("MESSAGE:\n", message),           \
-                        CSTRCAT("\n\nFILE:\n", __FILE__)),        \
-                CSTRCAT(CSTRCAT("\n\nLINE:\n", CSTR(__LINE__)),   \
-                        CSTRCAT("\n\nFUNCTION:\n", __FUNCSIG__)))
-
-    #define CheckM(expr, message)
+    #define CheckM(expr, message, ...)
     #define Check(expr)
-    #define FailedM(message)      { MessageBoxA(0, DebugStringM(message), "Failed!", MB_OK | MB_ICONERROR); ExitProcess(1); }
+    #define FailedM(message, ...)      { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Failed", message, __VA_ARGS__); ExitProcess(1); }
 
-    #define DebugResult(expr)           expr
-    #define DebugResultM(expr, message) expr
+    #define DebugResult(expr)                expr
+    #define DebugResultM(expr, message, ...) expr
 
 #endif
 
 #ifdef SUCCEEDED
     #undef SUCCEEDED
-    #define SUCCEEDED(hr) ((hr) >= 0)
 #endif
+#define SUCCEEDED(hr) ((hr) >= 0)
 
 #ifdef FAILED
     #undef FAILED
-    #define FAILED(hr) ((hr) < 0)
 #endif
+#define FAILED(hr) ((hr) < 0)
 
 //
 // Global typedefs
 //
 
 typedef struct Engine Engine;
-typedef struct GPUMemoryBlock GPUMemoryBlock;
+
+//
+// Utils
+//
+
+// @NOTE(Roman): annotation for lists
+#define LIST
+
+// Declaration examples:
+//
+// typedef struct <struct_name> <struct_name>;
+// struct <struct_name>
+// {
+//     Extends[D]List(<struct_name>);
+//     ... // other fields
+// };
+#define ExtendsList(Type)              Type *next
+#define ExtendsDList(Type) Type *prev; Type *next

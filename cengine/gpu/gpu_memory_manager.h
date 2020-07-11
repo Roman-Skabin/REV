@@ -5,113 +5,158 @@
 #pragma once
 
 #include "gpu/gpu_manager.h"
+#include "core/allocator.h"
 
-// @Optimize(Roman): Free list for descriptors.
-//                   Free list for resources?
+// @TODO(Roman): Aliased (overlapped) resources
+// @TODO(Roman): Arrays as a single memory block
+// @TODO(Roman): Check memory capacity before pushing resources and descriptors
+// @TODO(Roman): Push ShaderResource [buffer|texture],
+//               Push UnorderedAccess [buffer|texture],
+//               Push Sampler
+// @TOOD(Roman): Move Draw (and Bind probably) stuff somewhere.
+//               This functionality doesn't belong to memory management.
+// @TODO(Roman): One common enum for resource and descriptor heap
+//               allocation states. Short name required.
 
-struct GPUMemoryBlock
+typedef enum GPU_RESOURCE_ALLOCATION_STATE
 {
-    // @TODO(Roman): Not safety: memory block can be created
-    //               on stack in some function => after function
-    //               completed <next> pointer will be invaild.
-    GPUMemoryBlock        *next;
-    ID3D12Resource        *resource;
-    ID3D12DescriptorHeap  *desc;
-    u32                    kind;
-    union
-    {
-        struct { u32 width, height; u16 depth; };
-        struct { u32 count, stride; };
-    };
-    D3D12_RESOURCE_BARRIER barrier;
-    D3D12_RESOURCE_STATES  state;
+    GPU_RESOURCE_ALLOCATION_STATE_NONE,
+    GPU_RESOURCE_ALLOCATION_STATE_ALLOCATED,
+    GPU_RESOURCE_ALLOCATION_STATE_IN_FREE_LIST,
+} GPU_RESOURCE_ALLOCATION_STATE;
+
+typedef enum GPU_RESOURCE_KIND
+{
+    GPU_RESOURCE_KIND_UNKNOWN,
+    GPU_RESOURCE_KIND_VB,
+    GPU_RESOURCE_KIND_IB,
+    GPU_RESOURCE_KIND_CB,
+    GPU_RESOURCE_KIND_SR,
+    GPU_RESOURCE_KIND_UA, // Gotta be OR'd with anothers?
+    GPU_RESOURCE_KIND_SAMPLER,
+} GPU_RESOURCE_KIND;
+
+typedef struct GPUResource GPUResource;
+typedef struct GPUDescHeap GPUDescHeap;
+
+struct GPUResource
+{
+    ExtendsList(GPUResource);
+    ID3D12Resource                *resource;
+    char                           name[64];
+    u64                            name_len;
+    GPUDescHeap                   *desc_heap;
+    GPU_RESOURCE_ALLOCATION_STATE  allocation_state;
+    GPU_RESOURCE_KIND              kind;
+    u32                            vi_count;
+    u32                            vi_stride;
+    D3D12_RESOURCE_STATES          initial_state;
+    D3D12_RESOURCE_DESC            resource_desc;
 };
 
-typedef enum GPU_MEMORY
+typedef enum GPU_DESC_HEAP_ALLOCATION_STATE
 {
-    GPU_MEMORY_VB = 1,
-    GPU_MEMORY_IB,
-    GPU_MEMORY_CBV,
-    GPU_MEMORY_SRV,
-    GPU_MEMORY_UAV,
-    GPU_MEMORY_SAMPLER,
-    GPU_MEMORY_COPY,
-    GPU_MEMORY_ALL,
-} GPU_MEMORY;
+    GPU_DESC_HEAP_ALLOCATION_STATE_NONE,
+    GPU_DESC_HEAP_ALLOCATION_STATE_ALLOCATED,
+    GPU_DESC_HEAP_ALLOCATION_STATE_IN_FREE_LIST,
+} GPU_DESC_HEAP_ALLOCATION_STATE;
 
-typedef struct GPUMemory
+struct GPUDescHeap
 {
-    ID3D12Heap     *heap;
-    u64             offset;
-    u64             capacity;
-    // @TODO(Roman): Not safety: memory block can be created
-    //               on stack in some function => after function
-    //               completed <first> pointer will be invaild.
-    GPUMemoryBlock *first;
-} GPUMemory;
+    ExtendsList(GPUDescHeap);
+    ID3D12DescriptorHeap           *desc_heap;
+    GPUResource                    *resource;
+    D3D12_DESCRIPTOR_HEAP_DESC      desc_heap_desc;
+    GPU_DESC_HEAP_ALLOCATION_STATE  allocation_state;
+};
+
+typedef struct GPUResourceMemory
+{
+    LIST GPUResource *resources;
+
+    ID3D12Heap  *gpu_heap;
+    u64          gpu_heap_offset;
+    u64          gpu_heap_capacity;
+} GPUResourceMemory;
+
+typedef struct GPUDescHeapMemory
+{
+    LIST GPUDescHeap *desc_heaps;
+} GPUDescHeapMemory;
 
 typedef struct GPUMemoryManager
 {
-    GPUMemory vb_memory;
-    GPUMemory ib_memory;
-    GPUMemory cbv_memory;
-    GPUMemory srv_memory;
-    GPUMemory uav_memory;
-    GPUMemory sampler_memory;
-
-    GPUMemory copy_memory[SWAP_CHAIN_BUFFERS_COUNT]; // being cleared every frame
-
-    HRESULT   error;
+    Allocator         *allocator;
+    GPUResourceMemory  permanent_memory;
+    GPUDescHeapMemory  desc_heap_memory;
+    GPUResourceMemory  transient_memory[SWAP_CHAIN_BUFFERS_COUNT];
+    HRESULT            error;
 } GPUMemoryManager;
 
-CENGINE_FUN void ClearGPUMemory(
+typedef enum GPU_MEMORY_TYPE
+{
+    GPU_MEMORY_TYPE_PERMANENT         = BIT(0),
+    GPU_MEMORY_TYPE_TRANSIENT_CURRENT = BIT(1), // Can't be OR'd with GPU_MEMORY_TYPE_TRANSIENT_ALL
+    GPU_MEMORY_TYPE_TRANSIENT_ALL     = BIT(2), // Can't be OR'd with GPU_MEMORY_TYPE_TRANSIENT_CURRENT
+} GPU_MEMORY_TYPE;
+
+CENGINE_FUN void ResetGPUMemory(
+    IN Engine          *engine,
+    IN GPU_MEMORY_TYPE  type
+);
+
+CENGINE_FUN void ReleaseGPUMemory(
+    IN Engine          *engine,
+    IN GPU_MEMORY_TYPE  type
+);
+
+CENGINE_FUN GPUResource *PushVertexBuffer(
+    IN Engine *engine,
+    IN u32     count,
+    IN u32     stride
+);
+
+CENGINE_FUN GPUResource *PushIndexBuffer(
+    IN Engine *engine,
+    IN u32     count
+);
+
+CENGINE_FUN GPUResource *PushConstantBuffer(
     IN Engine     *engine,
-    IN GPU_MEMORY  memory_kind
+    IN u32         size_in_bytes,
+    IN const char *name,
+    IN u64         name_len
 );
 
-CENGINE_FUN void PushVB(
-    IN  Engine         *engine,
-    IN  u32             count,
-    IN  u32             stride,
-    OUT GPUMemoryBlock *buffer
+CENGINE_FUN void SetGPUResourceData(
+    IN Engine      *engine,
+    IN GPUResource *resource,
+    IN void        *data
 );
 
-CENGINE_FUN void PushIB(
-    IN  Engine         *engine,
-    IN  u32             count,
-    OUT GPUMemoryBlock *buffer
+CENGINE_FUN void SetGPUResourceDataByName(
+    IN Engine      *engine,
+    IN const char  *name,
+    IN u64          name_len,
+    IN void        *data
 );
 
-CENGINE_FUN void PushCBV(
-    IN  Engine         *engine,
-    IN  u32             size_in_bytes,
-    OUT GPUMemoryBlock *buffer
+CENGINE_FUN void BindVertexBuffer(
+    IN Engine      *engine,
+    IN GPUResource *resource
 );
 
-// @TODO(Roman): PushSRV, PushUAV, PushSampler
-
-CENGINE_FUN void SetGPUMemoryBlockData(
-    IN Engine           *engine,
-    IN GPUMemoryBlock   *buffer,
-    IN void             *data
-);
-
-CENGINE_FUN void BindVB(
-    IN Engine         *engine,
-    IN GPUMemoryBlock *buffer
-);
-
-CENGINE_FUN void BindIB(
-    IN Engine         *engine,
-    IN GPUMemoryBlock *buffer
+CENGINE_FUN void BindIndxeBuffer(
+    IN Engine      *engine,
+    IN GPUResource *resource
 );
 
 CENGINE_FUN void DrawVertices(
-    IN Engine         *engine,
-    IN GPUMemoryBlock *buffer
+    IN Engine      *engine,
+    IN GPUResource *resource
 );
 
 CENGINE_FUN void DrawIndices(
-    IN Engine         *engine,
-    IN GPUMemoryBlock *buffer
+    IN Engine      *engine,
+    IN GPUResource *resource
 );

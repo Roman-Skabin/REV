@@ -43,11 +43,11 @@ if !COMPILE_CENGINE! == 1 (
     set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
     set LANGUAGE= -Zc:wchar_t- -Zc:inline
     set DIAGNOSTICS= -W3
-    set IMPORT_LIBS= User32.lib Ole32.lib
+    set IMPORT_LIBS=
     set LINKER= -link
     set LINKING=
     set INPUT_FILES=
-    set PREPROCESSOR= -Icengine -I3rd_party -D_CENGINE_DEV
+    set PREPROCESSOR= -Icengine -D_CENGINE_DEV
     set MISCELLANEOUS= -TC
     set OUTPUT_FILES= -Fo:bin\obj\cengine\ -Fe:bin\cengine.dll -Fp:bin\obj\cengine\cengine.pch
 
@@ -100,7 +100,7 @@ if !COMPILE_SANDBOX! == 1 (
     set LINKING=
     set LINKER= -link
     set INPUT_FILES=
-    set PREPROCESSOR= -Icengine -I3rd_party
+    set PREPROCESSOR= -Icengine
     set MISCELLANEOUS= -MP -TC
     set OUTPUT_FILES= -Fo:bin\obj\sandbox\ -Fe:bin\sandbox.exe
 

@@ -5,7 +5,7 @@
 #include "core/pch.h"
 #include "graphics/shader_parser/shader_parser.h"
 
-global const char *token_kind_names[] =
+global const char *gTokenKindNames[] =
 {
     [TOKEN_KIND_EOF]       = "EOF",
 
@@ -26,38 +26,44 @@ global const char *token_kind_names[] =
     [TOKEN_KIND_KEYWORD]   = "<keyword>",
 };
 
-global const char *keywords[] =
+typedef struct Keyword
 {
-    "cengine",
+    const char *name;
+    u64         name_len;
+} Keyword;
 
-    "pipeline",
-    "shader",
+global Keyword gKeywords[] =
+{
+    { "cengine",     CSTRLEN("cengine")     },
 
-    "blending",
-    "depth_test",
-    "cull_mode",
-    "entry_point",
+    { "pipeline",    CSTRLEN("pipeline")    },
+    { "shader",      CSTRLEN("shader")      },
 
-    "enabled",
-    "disabled",
+    { "blending",    CSTRLEN("blending")    },
+    { "depth_test",  CSTRLEN("depth_test")  },
+    { "cull_mode",   CSTRLEN("cull_mode")   },
+    { "entry_point", CSTRLEN("entry_point") },
 
-    "none",
-    "front",
-    "back",
+    { "enabled",     CSTRLEN("enabled")     },
+    { "disabled",    CSTRLEN("disabled")    },
 
-    "vertex",
-    "hull",
-    "domain",
-    "geometry",
-    "pixel",
+    { "none",        CSTRLEN("none")        },
+    { "front",       CSTRLEN("front")       },
+    { "back",        CSTRLEN("back")        },
 
-    "typedef",
-    "struct",
-    "cbuffer",
-    "tbuffer", // @TODO(Roman): texture buffer  SRV/UAV
+    { "vertex",      CSTRLEN("vertex")      },
+    { "hull",        CSTRLEN("hull")        },
+    { "domain",      CSTRLEN("domain")      },
+    { "geometry",    CSTRLEN("geometry")    },
+    { "pixel",       CSTRLEN("pixel")       },
 
-    "register",
-    "packoffset",
+    { "typedef",     CSTRLEN("typedef")     },
+    { "struct",      CSTRLEN("struct")      },
+    { "cbuffer",     CSTRLEN("cbuffer")     },
+    { "tbuffer",     CSTRLEN("tbuffer")     }, // @TODO(Roman): texture buffer  SRV/UAV
+
+    { "register",    CSTRLEN("register")    },
+    { "packoffset",  CSTRLEN("packoffset")  },
 };
 
 #define IsKeyword(lexer, name) ((lexer)->first_keyword <= (name) && (name) <= (lexer)->last_keyword)
@@ -74,20 +80,22 @@ void CreateGraphicsShaderLexer(Engine *engine, const char *stream, ShaderLexer *
 {
     lexer->token.pos.r = 1;
 
-    lexer->token_kind_names       = token_kind_names;
-    lexer->token_kind_names_count = ArrayCount(token_kind_names);
+    lexer->token_kind_names       = gTokenKindNames;
+    lexer->token_kind_names_count = ArrayCount(gTokenKindNames);
 
     // init interns
     CreateInterns(engine, &lexer->interns);
 
     // init keywords
-    lexer->first_keyword = InternString(&lexer->interns, *keywords, strlen(*keywords));
-    u32 last_keyword_index = ArrayCount(keywords) - 1;
+    lexer->first_keyword   = InternString(&lexer->interns, gKeywords->name, gKeywords->name_len);
+    u32 last_keyword_index = ArrayCount(gKeywords) - 1;
     for (u32 i = 1; i < last_keyword_index; ++i)
     {
-        InternString(&lexer->interns, keywords[i], strlen(keywords[i]));
+        Keyword *keyword = gKeywords + i;
+        InternString(&lexer->interns, keyword->name, keyword->name_len);
     }
-    lexer->last_keyword = InternString(&lexer->interns, keywords[last_keyword_index], strlen(keywords[last_keyword_index]));
+    Keyword *last_keyword = gKeywords + last_keyword_index;
+    lexer->last_keyword   = InternString(&lexer->interns, last_keyword->name, last_keyword->name_len);
 
     // init stream
     lexer->stream     = stream;
@@ -97,8 +105,24 @@ void CreateGraphicsShaderLexer(Engine *engine, const char *stream, ShaderLexer *
 
 internal void TokenizeFloat(ShaderLexer *lexer)
 {
-    // @NOTE(Roman): Minus, digits before a dot and dot itself have to be already passed.
+    // [whitespace][sign][digits][.digits][{e|E}[sign]digits]
+
+    // @NOTE(Roman): Sign, digits before a dot and dot itself have to be already passed.
+
     lexer->token.kind = TOKEN_KIND_FLOAT;
+
+#if 1
+    // @NotChecked(Roman)
+    lexer->token.f64_val = atof(lexer->token.start);
+
+    while (isdigit(*lexer->stream)) ++lexer->stream;
+    if (*lexer->stream == 'e' || *lexer->stream == 'E')
+    {
+        ++lexer->stream;
+        if (*lexer->stream == '+' || *lexer->stream == '-') ++lexer->stream;
+        while (isdigit(*lexer->stream)) ++lexer->stream;
+    }
+#else
     while (isdigit(*lexer->stream)) ++lexer->stream;
     if (*lexer->stream == 'e')
     {
@@ -121,12 +145,29 @@ internal void TokenizeFloat(ShaderLexer *lexer)
         _snscanf(lexer->token.start, lexer->stream - lexer->token.start, "%lf", &lexer->token.f64_val);
         if (*lexer->stream == 'f') ++lexer->stream;
     }
+#endif
 }
 
 internal void TokenizeInt(ShaderLexer *lexer)
 {
+    // [whitespace][sign][digits]
+
+    // @TODO(Roman): Adapt to various number bases
     // @NOTE(Roman): Minus and digits have to be already passed.
+
     lexer->token.kind = TOKEN_KIND_INT;
+
+#if 1
+    // @NotChecked(Roman)
+    if (*lexer->token.start == '-')
+    {
+        lexer->token.s64_val = strtoll(lexer->token.start, null, 10);
+    }
+    else
+    {
+        lexer->token.u64_val = strtoull(lexer->token.start, null, 10);
+    }
+#else
     if (*lexer->token.start == '-')
     {
         _snscanf(lexer->token.start + 1,
@@ -142,6 +183,7 @@ internal void TokenizeInt(ShaderLexer *lexer)
                  "%I64i",
                  &lexer->token.u64_val);
     }
+#endif
 }
 
 #define ELSE_IF_CHAR(c1, k1) else if (*lexer->stream == (c1)) { lexer->token.kind = (k1); ++lexer->stream; }

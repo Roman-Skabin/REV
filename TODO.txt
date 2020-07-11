@@ -1,10 +1,18 @@
 - Core
     - Make engine's user pointer and sandbox thread safety
     - Improve timer: public, name, segmented profiling, output result to... somewhere
-    - MORE SIGNIFICANT LOGS. HAVE TO BE ALMOST EVERYWHERE.
+    - More significant logs. Have to be almost everywhere, BUT DO NOT TRASH THE CODE!
+    - Include all slightly changes files in pch.h
+    - Complete core\platform.h
+    - BIG ISSUE: Do I really need all these Checks in my code,
+                 especially at the beginning of functions?
+                 Doesn't it stupid, huh?
+    - Edit all CheckM and FailedM calls (now they are able to get __VA_ARGS__)
+    - Move all STD includes in platform.h to pch.h?
 
 - Tools
-    - gpu/core/interns to the tools?
+    - Move improved timer to the tools?
+    - Overlapped I/O
 
 - Build
     - [Pre?]build system. Build only edited files
@@ -21,7 +29,9 @@
     - TODOs in cengine/gpu/gpu_memory_manager.h
     - Clean up GPUMemoryManager and GPUProgramManager
     - Print D3D12/DXGI messages in separate "while true" thread
-    - Do ResizeGPUBuffers when we choose another screen dimension
+    - Save shaders bytecode in some files and compile only shaders that
+      source file change time > bytecode file change time?
+    - Do ResizeGPUBuffers when we choose another screen dimension. (After UI will be implemented)
     - Custom compute shader's parser and ComputeProgram generation
     - User-side GPU command lists and bundles?
     - Several adapters support
@@ -33,13 +43,10 @@
         - Includes
         - Parse templates (Buffer<type> name; vector<type, dim> name; ...)
         - Stream output
-    - Save shaders bytecode in some files and compile only shaders that
-      source file change time > bytecode file change time?
     - Switch from 1 to 3 Render Targets for OIT
     - Weighted Blended OIT
     - Support triangle strips (define topology in shaders?)
     - Support stream output (define it in shaders too?)
-    - Textures
     - SubTextures
     - Entity system
     - Particle system
@@ -52,3 +59,5 @@
 
 - Editor
     - GUI (ImGUI or write my own?)
+    - Vertex and index buffer generation.
+    - Ability to choose render targets' (framebuffers') dimension.

@@ -29,7 +29,7 @@ typedef struct SoundStream
 } SoundStream;
 
 INLINE void SoundPlay(SoundStream *stream)  { stream->pause = false; }
-INLINE void SoundPause(SoundStream *stream) { stream->pause = true; }
+INLINE void SoundPause(SoundStream *stream) { stream->pause = true;  }
 
 typedef struct AudioBuffer
 {
@@ -39,4 +39,13 @@ typedef struct AudioBuffer
     u16  channels_count;
 } AudioBuffer;
 
-CENGINE_FUN AudioBuffer LoadAudioFile(Engine *engine, const char *filename);
+CENGINE_FUN void CreateAudioBuffer(
+    IN  Engine      *engine,
+    IN  const char  *filename,
+    OUT AudioBuffer *buffer
+);
+
+CENGINE_FUN void DestroyAudioBuffer(
+    IN Engine      *engine,
+    IN AudioBuffer *buffer
+);

@@ -6,8 +6,15 @@
 #include "sound/sound.h"
 #include "cengine.h"
 
-AudioBuffer LoadAudioFile(Engine *engine, const char *filename)
+void CreateAudioBuffer(
+    IN  Engine      *engine,
+    IN  const char  *filename,
+    OUT AudioBuffer *buffer)
 {
+    Check(engine);
+    Check(filename);
+    Check(buffer);
+
     wchar_t wfilename[MAX_PATH] = {0};
     DebugResult(MultiByteToWideChar(CP_ACP, 0, filename, cast(s32, strlen(filename)), wfilename, sizeof(wfilename)));
 
@@ -95,13 +102,27 @@ AudioBuffer LoadAudioFile(Engine *engine, const char *filename)
         sample->lpVtbl->Release(sample);
     }
     
-    AudioBuffer buffer    = {0};
-    buffer.samples        = cast(f32 *, sample_buffer);
-    buffer.samples_count  = sample_buffer_size / (engine->sound.wave_format.Format.wBitsPerSample / 8);
-    buffer.channels_count = engine->sound.wave_format.Format.nChannels;
+    buffer->samples        = cast(f32 *, sample_buffer);
+    buffer->samples_count  = sample_buffer_size / (engine->sound.wave_format.Format.wBitsPerSample / 8);
+    buffer->channels_count = engine->sound.wave_format.Format.nChannels;
 
     reader->lpVtbl->Release(reader);
     type->lpVtbl->Release(type);
 
-    return buffer;
+    LogSuccess(&engine->logger, "AudioBuffer was created");
+}
+
+void DestroyAudioBuffer(
+    IN Engine      *engine,
+    IN AudioBuffer *buffer)
+{
+    Check(engine);
+    Check(buffer);
+
+    DeAlloc(&engine->allocator, buffer->samples);
+    buffer->samples_count  = 0;
+    buffer->samples_index  = 0;
+    buffer->channels_count = 0;
+
+    LogInfo(&engine->logger, "AudioBuffer was destroyed");
 }

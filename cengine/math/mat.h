@@ -6,7 +6,7 @@
 
 #include "math/vec.h"
 
-#if ISA < AVX
+#if CENGINE_ISA < CENGINE_ISA_AVX
     #error Compile with -arch:AVX or higher
 #endif
 
@@ -16,7 +16,7 @@
 // m2
 //
 
-typedef union __intrin_type __align(16) m2
+typedef union CENGINE_INTRIN_TYPE CENGINE_ALIGN(16) m2
 {
     struct
     {
@@ -233,7 +233,7 @@ INLINE m2 MATH_CALL m2_shearing(f32 shx, f32 shy)
 // m3
 //
 
-typedef union __intrin_type m3
+typedef union CENGINE_INTRIN_TYPE m3
 {
     struct
     {
@@ -577,7 +577,7 @@ INLINE m3 MATH_CALL m3_ortho(f32 left, f32 right, f32 bottom, f32 top)
 // m4
 //
 
-typedef union __intrin_type __align(32) m4
+typedef union CENGINE_INTRIN_TYPE CENGINE_ALIGN(32) m4
 {
     struct
     {

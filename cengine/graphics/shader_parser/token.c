@@ -5,7 +5,7 @@
 #include "core/pch.h"
 #include "graphics/shader_parser/shader_parser.h"
 
-#define TokenEquals(token, str, len) (((token).end - (token).start == (len)) && !memcmp((token).start, str, len))
+#define TokenEquals(token, str, len) (((token).end - (token).start == (len)) && RtlEqualMemory((token).start, str, len))
 #define TokenEqualsCSTR(token, cstr) TokenEquals(token, cstr, CSTRLEN(cstr))
 
 #define SyntaxError(lexer, format, ...)                                \
@@ -15,7 +15,9 @@
              (lexer)->token.pos.r, (lexer)->token.pos.c, __VA_ARGS__); \
 }
 
-const char *TokenKindName(ShaderLexer *lexer, TOKEN_KIND kind)
+const char *TokenKindName(
+    IN ShaderLexer *lexer,
+    IN TOKEN_KIND   kind)
 {
     if (kind < lexer->token_kind_names_count)
     {
@@ -28,7 +30,8 @@ const char *TokenKindName(ShaderLexer *lexer, TOKEN_KIND kind)
     }
 }
 
-const char *TokenInfo(ShaderLexer *lexer)
+const char *TokenInfo(
+    IN ShaderLexer *lexer)
 {
     if (lexer->token.kind == TOKEN_KIND_NAME
     ||  lexer->token.kind == TOKEN_KIND_KEYWORD)
@@ -41,7 +44,9 @@ const char *TokenInfo(ShaderLexer *lexer)
     }
 }
 
-void CheckToken(ShaderLexer *lexer, TOKEN_KIND kind)
+void CheckToken(
+    IN ShaderLexer *lexer,
+    IN TOKEN_KIND   kind)
 {
     if (lexer->token.kind != kind)
     {

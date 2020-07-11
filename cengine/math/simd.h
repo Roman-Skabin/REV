@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "math/math.h"
+#include "core/core.h"
 
 #pragma pack(push, 1)
 
-#if ISA >= SSE
+#if CENGINE_ISA >= CENGINE_ISA_SSE
     #define MM(Type, mm, index) (cast(Type *, mm)[index])
 
     #define MMf(m128_src, index)  ((m128_src).m128_f32[index])
@@ -20,19 +20,19 @@
     #define MM128u(m128i_src, index) MMu(m128i_src, index)
 #endif
 
-#if ISA >= AVX
+#if CENGINE_ISA >= CENGINE_ISA_AVX
     #define MM256f(m256_src, index)  ((m256_src).m256_f32[index])
     #define MM256i(m256i_src, index) ((m256i_src).m256i_i32[index])
     #define MM256u(m256i_src, index) ((m256i_src).m256i_u32[index])
 #endif
 
-#if ISA >= AVX512
+#if CENGINE_ISA >= CENGINE_ISA_AVX512
     #define MM512f(m256_src, index)  ((m512_src).m512_f32[index])
     #define MM512i(m256i_src, index) ((m512i_src).m512i_i32[index])
     #define MM512u(m256i_src, index) ((m512i_src).m512i_u32[index])
 #endif
 
-#if ISA >= SSE
+#if CENGINE_ISA >= CENGINE_ISA_SSE
     #undef _MM_SHUFFLE
     typedef enum MM_SHUFFLE // for _mm_shuffle_*
     {
@@ -106,11 +106,112 @@
     } MM_SHUFFLE;
 #endif
 
-#if ISA >= SSE
+INLINE b32 MATH_CALL mm_equals(const void *a, const void *b)
+{
+#if CENGINE_ISA >= CENGINE_ISA_AVX512
+    return 0b11 == _mm_cmpeq_epi64_mask(*cast(__m256i *, a),
+                                        *cast(__m256i *, b));
+#elif CENGINE_ISA >= CENGINE_ISA_SSE
+    __m128i eq_mask = _mm_cmpeq_epi64(*cast(__m128i *, a),
+                                      *cast(__m128i *, b));
+    __m128i ones = _mm_cmpeq_epi64(eq_mask, eq_mask);
+    return _mm_testc_si128(eq_mask, ones);
+#else
+    u64 *mm_a = cast(u64 *, a);
+    u64 *mm_b = cast(u64 *, b);
+    return *(mm_a + 0) == *(mm_b + 0)
+        && *(mm_a + 1) == *(mm_b + 1);
+#endif
+}
+
+INLINE b32 MATH_CALL mm256_equals(void *a, void *b)
+{
+#if CENGINE_ISA >= CENGINE_ISA_AVX512
+    return 0x0F == _mm256_cmpeq_epi64_mask(*cast(__m256i *, a),
+                                           *cast(__m256i *, b));
+#elif CENGINE_ISA >= CENGINE_ISA_AVX2
+    __m256i eq_mask = _mm256_cmpeq_epi64(*cast(__m256i *, a),  
+                                         *cast(__m256i *, b));
+    __m256i ones    = _mm256_cmpeq_epi64(eq_mask, eq_mask);
+    return _mm256_testc_si256(eq_mask, ones);
+#elif CENGINE_ISA >= CENGINE_ISA_AVX
+    __m256d eq_mask = _mm256_cmp_pd(*cast(__m256d *, a),
+                                    *cast(__m256d *, b),
+                                    _CMP_EQ_OQ);
+    __m256d ones = _mm256_cmp_pd(eq_mask, eq_mask, _CMP_EQ_OQ);
+    return _mm256_testc_si256(_mm256_castpd_si256(eq_mask),
+                              _mm256_castpd_si256(ones));
+#elif CENGINE_ISA >= CENGINE_ISA_SSE
+    __m128i *mm_a      = cast(__m128i *, a);
+    __m128i *mm_b      = cast(__m128i *, b);
+    __m128i  eq_mask_l = _mm_cmpeq_epi64(*(mm_a    ), *(mm_b    ));
+    __m128i  eq_mask_h = _mm_cmpeq_epi64(*(mm_a + 1), *(mm_b + 1));
+    __m128i  mask      = _mm_and_si128(eq_mask_l, eq_mask_h);
+    __m128i  ones      = _mm_cmpeq_epi64(mask, mask);
+    return _mm_testc_si128(mask, ones);
+#else
+    u64 *mm_a = cast(u64 *, a);
+    u64 *mm_b = cast(u64 *, b);
+    return *(mm_a + 0) == *(mm_b + 0)
+        && *(mm_a + 1) == *(mm_b + 1)
+        && *(mm_a + 2) == *(mm_b + 2)
+        && *(mm_a + 3) == *(mm_b + 3);
+#endif
+}
+
+INLINE b32 MATH_CALL mm512_equals(void *a, void *b)
+{
+#if CENGINE_ISA >= CENGINE_ISA_AVX512
+    return 0xFF == _mm512_cmpeq_epi64_mask(*cast(__m512i *, a),
+                                           *cast(__m512i *, b));
+#elif CENGINE_ISA >= CENGINE_ISA_AVX2
+    __m256i *mm_a      = cast(__m256i *, a);
+    __m256i *mm_b      = cast(__m256i *, b);
+    __m256i  eq_mask_l = _mm256_cmpeq_epi64(*(mm_a    ), *(mm_b    ));
+    __m256i  eq_mask_h = _mm256_cmpeq_epi64(*(mm_a + 1), *(mm_b + 1));
+    __m256i  mask      = _mm256_and_si256(eq_mask_l, eq_mask_h);
+    __m256i  ones      = _mm256_cmpeq_epi64(mask, mask);
+    return _mm256_testc_si256(mask, ones);
+#elif CENGINE_ISA >= CENGINE_ISA_AVX
+    __m256d *mm_a      = cast(__m256d *, a);
+    __m256d *mm_b      = cast(__m256d *, b);
+    __m256d  eq_mask_l = _mm256_cmp_pd(*(mm_a    ), *(mm_b    ), _CMP_EQ_OQ);
+    __m256d  eq_mask_h = _mm256_cmp_pd(*(mm_a + 1), *(mm_b + 1), _CMP_EQ_OQ);
+    __m256d  mask      = _mm256_and_pd(eq_mask_l, eq_mask_h);
+    __m256d  ones      = _mm256_cmp_pd(mask, mask, _CMP_EQ_OQ);
+    return _mm256_testc_si256(_mm256_castpd_si256(mask),
+                              _mm256_castpd_si256(ones));
+#elif CENGINE_ISA >= CENGINE_ISA_SSE
+    __m128i *mm_a      = cast(__m128i *, a);
+    __m128i *mm_b      = cast(__m128i *, b);
+    __m128i  eq_mask_0 = _mm_cmpeq_epi64(*(mm_a    ), *(mm_b    ));
+    __m128i  eq_mask_1 = _mm_cmpeq_epi64(*(mm_a + 1), *(mm_b + 1));
+    __m128i  eq_mask_2 = _mm_cmpeq_epi64(*(mm_a + 2), *(mm_b + 2));
+    __m128i  eq_mask_3 = _mm_cmpeq_epi64(*(mm_a + 3), *(mm_b + 3));
+    __m128i  mask_l    = _mm_and_si128(eq_mask_0, eq_mask_1);
+    __m128i  mask_h    = _mm_and_si128(eq_mask_2, eq_mask_3);
+    __m128i  mask      = _mm_and_si128(mask_l, mask_h);
+    __m128i  ones      = _mm_cmpeq_epi64(mask, mask);
+    return _mm_testc_si128(mask, ones);
+#else
+    u64 *mm_a = cast(u64 *, a);
+    u64 *mm_b = cast(u64 *, b);
+    return *(mm_a + 0) == *(mm_b + 0)
+        && *(mm_a + 1) == *(mm_b + 1)
+        && *(mm_a + 2) == *(mm_b + 2)
+        && *(mm_a + 3) == *(mm_b + 3)
+        && *(mm_a + 4) == *(mm_b + 4)
+        && *(mm_a + 5) == *(mm_b + 5)
+        && *(mm_a + 6) == *(mm_b + 6)
+        && *(mm_a + 7) == *(mm_b + 7);
+#endif
+}
+
+#if CENGINE_ISA >= CENGINE_ISA_SSE
     #undef _MM_EXTRACT_FLOAT
     #define mm_extract_ps(f32_dst, m128_src, imm_index)  \
     {                                                    \
-        union __intrin_type __align(4)                   \
+        union CENGINE_INTRIN_TYPE CENGINE_ALIGN(4)                   \
         {                                                \
             f32 f;                                       \
             int i;                                       \
@@ -120,15 +221,15 @@
     }
 #endif
 
-#if ISA >= AVX
+#if CENGINE_ISA >= CENGINE_ISA_AVX
     #define mm256_extract_ps(f32_dst, m256_src, imm_index) \
     {                                                      \
-        union __intrin_type __align(32)                    \
+        union CENGINE_INTRIN_TYPE CENGINE_ALIGN(32)                    \
         {                                                  \
             __m256  f;                                     \
             __m256i i;                                     \
         } mm;                                              \
-        union __intrin_type __align(4)                     \
+        union CENGINE_INTRIN_TYPE CENGINE_ALIGN(4)                     \
         {                                                  \
             f32 f;                                         \
             int i;                                         \
@@ -139,15 +240,15 @@
     }
 #endif
 
-#if ISA >= SSE
+#if CENGINE_ISA >= CENGINE_ISA_SSE
     #define mm_insert_f32(m128_dst, m128_src, f32_val, imm_index)      \
     {                                                                  \
-        union __intrin_type __align(16)                                \
+        union CENGINE_INTRIN_TYPE CENGINE_ALIGN(16)                                \
         {                                                              \
             __m128  f;                                                 \
             __m128i i;                                                 \
         } mm_src, mm_dst;                                              \
-        union __intrin_type __align(4)                                 \
+        union CENGINE_INTRIN_TYPE CENGINE_ALIGN(4)                                 \
         {                                                              \
             f32 f;                                                     \
             int i;                                                     \
@@ -159,15 +260,15 @@
     }
 #endif
 
-#if ISA >= AVX
+#if CENGINE_ISA >= CENGINE_ISA_AVX
     #define mm256_insert_f32(m256_dst, m256_src, f32_val, imm_index)      \
     {                                                                     \
-        union __intrin_type __align(32)                                   \
+        union CENGINE_INTRIN_TYPE CENGINE_ALIGN(32)                                   \
         {                                                                 \
             __m256  f;                                                    \
             __m256i i;                                                    \
         } mm_src, mm_dst;                                                 \
-        union __intrin_type __align(4)                                    \
+        union CENGINE_INTRIN_TYPE CENGINE_ALIGN(4)                                    \
         {                                                                 \
             f32 f;                                                        \
             int i;                                                        \

@@ -1,6 +1,9 @@
+// @NOTE(Roman): Currently dummy shaders.
+//               Not used anywhere.
+
 #cengine pipeline(blending, enabled)
 
-#cengine shader(vertex, "Internal_WeightedBlendedOIT_OnPresent_VS")
+#cengine shader(vertex, 5.0)
 
 struct VSOutput
 {
@@ -16,7 +19,7 @@ VSOutput VSMain(float4 pos : POSITION, float4 tex : TEXCOORD)
     return output;
 }
 
-#cengine shader(pixel, "Internal_WeightedBlendedOIT_OnPresent_PS")
+#cengine shader(pixel, 5.0)
 
 Texture2D<float4> tSumRT : register(t0);
 Texture2D<float4> tMulRT : register(t1);

@@ -6,7 +6,7 @@
 #include "core/id.h"
 
 #define DEFINE_ID(Type, name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
-    const Type name = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+    CENGINE_SELECTANY const Type name = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
 
 #define DEFINE_IID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
     DEFINE_ID(IID, IID_ ## name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8)

@@ -6,7 +6,7 @@
 
 #include "graphics/shader_parser/interns.h"
 #include "graphics/shader_parser/ast.h"
-#include "graphics/core/core_renderer.h"
+#include "graphics/gpu_program_manager.h"
 #include "math/vec.h"
 
 typedef enum TOKEN_KIND
@@ -49,9 +49,19 @@ typedef struct Token
 
 typedef struct ShaderLexer ShaderLexer;
 
-CENGINE_FUN const char *TokenKindName(ShaderLexer *lexer, TOKEN_KIND kind);
-CENGINE_FUN const char *TokenInfo(ShaderLexer *lexer);
-CENGINE_FUN void CheckToken(ShaderLexer *lexer, TOKEN_KIND kind);
+CENGINE_FUN const char *TokenKindName(
+    IN ShaderLexer *lexer,
+    IN TOKEN_KIND   kind
+);
+
+CENGINE_FUN const char *TokenInfo(
+    IN ShaderLexer *lexer
+);
+
+CENGINE_FUN void CheckToken(
+    IN ShaderLexer *lexer,
+    IN TOKEN_KIND   kind
+);
 
 struct ShaderLexer
 {
@@ -67,14 +77,26 @@ struct ShaderLexer
     u64          token_kind_names_count;
 };
 
-CENGINE_FUN void CreateGraphicsShaderLexer(Engine *engine, const char *stream, ShaderLexer *lexer);
-CENGINE_FUN void GetNextGraphicsShaderToken(ShaderLexer *lexer);
+CENGINE_FUN void CreateGraphicsShaderLexer(
+    IN  Engine      *engine,
+    IN  const char  *stream,
+    OUT ShaderLexer *lexer
+);
+
+CENGINE_FUN void GetNextGraphicsShaderToken(
+    IN ShaderLexer *lexer
+);
 
 typedef struct ShaderParser
 {
-    ShaderLexer  lexer;
-    ASTType     *types;
-    ASTCBuffer  *cbuffers;
+    ShaderLexer      lexer;
+    LIST ASTType    *types;
+    LIST ASTCBuffer *cbuffers;
 } ShaderParser;
 
-CENGINE_FUN void ParseGraphicsShaders(Engine *engine, const char *file_with_shaders, GraphicsProgram *program, GraphicsProgramDesc *gpd);
+CENGINE_FUN void ParseGraphicsShaders(
+    IN  Engine              *engine,
+    IN  const char          *file_with_shaders,
+    IN  GraphicsProgram     *program,
+    OUT GraphicsProgramDesc *gpd
+);

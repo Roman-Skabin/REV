@@ -4,41 +4,24 @@
 
 #pragma once
 
-#pragma comment(lib, "mfplat.lib")
-#pragma comment(lib, "mfreadwrite.lib")
-#pragma comment(lib, "d3d12.lib")
-#pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "d3dcompiler.lib")
+//
+// Platform-identifying headers
+//
 
-#define WIN32_LEAN_AND_MEAN     1
-#define VC_EXTRALEAN            1
-#define NOMINMAX                1
-#define _CRT_SECURE_NO_WARNINGS 1
-#define INITGUID                1
-#define CINTERFACE              1
+#include "core/platform.h"
 
-#include <Windows.h>
+//
+// Platform independent includes
+//
 
-#undef GetMessage
-
-#include <Xinput.h>
-#include <audiopolicy.h>
-#include <mmdeviceapi.h>
-#include <AudioClient.h>
-#include <mfidl.h>
-#include <mfapi.h>
-#include <mfreadwrite.h>
-#include <d3d12.h>
-#include <dxgi1_6.h>
-#include <dxgidebug.h>
-#include <d3dcompiler.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 
-#undef near
-#undef far
+//
+// Platform independent intrinsics activation
+//
 
 #pragma intrinsic(abs)
 #pragma intrinsic(fabs)
@@ -86,3 +69,9 @@
 #pragma intrinsic(memcmp)
 #pragma intrinsic(memcpy)
 #pragma intrinsic(memset)
+
+//
+// CEngine includes
+//
+
+#include "core/core.h"

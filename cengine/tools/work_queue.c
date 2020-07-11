@@ -96,11 +96,11 @@ WorkQueue *CreateWorkQueue(Engine *engine)
         thread->id    = i + 1;
         thread->queue = queue;
         DebugResult(CloseHandle(CreateThread(0, 0, ThreadProc, thread, 0, 0)));
-        Log(&engine->logger, "Thread was created: id = %I32u, queue = 0x%p", thread->id, thread->queue);
+        LogInfo(&engine->logger, "Thread was created: id = %I32u, queue = 0x%p", thread->id, thread->queue);
     }
 
-    Success(&engine->logger, "Work queue was created");
-    Log(&engine->logger, "Additional threads count = %I32u", cpu_virtual_threads_count);
+    LogSuccess(&engine->logger, "Work queue was created");
+    LogInfo(&engine->logger, "Additional threads count = %I32u", cpu_virtual_threads_count);
     return queue;
 }
 

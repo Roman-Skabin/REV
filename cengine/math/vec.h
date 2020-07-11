@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "math/math.h"
 #include "math/simd.h"
 
 //
@@ -114,10 +115,10 @@ INLINE v2s MATH_CALL v2u_to_v2s(v2u v) { return (v2s){ cast(s32,        v.x ), c
 // v3
 //
 
-#if ISA >= SSE
+#if CENGINE_ISA >= CENGINE_ISA_SSE
 #pragma pack(push, 1)
 
-typedef union __intrin_type __align(16) v3
+typedef union CENGINE_INTRIN_TYPE CENGINE_ALIGN(16) v3
 {
     struct { f32 x, y, z; };
     struct { f32 r, g, b; };
@@ -261,7 +262,7 @@ INLINE v3 MATH_CALL v3_lerp(v3 start, v3 end, v3 percent)
     return res;
 }
 
-typedef union __intrin_type __align(16) v3s
+typedef union CENGINE_INTRIN_TYPE CENGINE_ALIGN(16) v3s
 {
     struct { s32 x, y, z; };
     struct { s32 r, g, b; };
@@ -397,7 +398,7 @@ INLINE v3s MATH_CALL v3s_cross(v3s l, v3s r)
     return res;
 }
 
-typedef union __intrin_type __align(16) v3u
+typedef union CENGINE_INTRIN_TYPE CENGINE_ALIGN(16) v3u
 {
     struct { u32 x, y, z; };
     struct { u32 r, g, b; };
@@ -545,7 +546,7 @@ INLINE v3s MATH_CALL v3u_to_v3s(v3u v) { v3s res; res.mm =                 v.mm 
 // v4
 //
 
-typedef union __intrin_type __align(16) v4
+typedef union CENGINE_INTRIN_TYPE CENGINE_ALIGN(16) v4
 {
     struct { f32 x, y, z, w; };
     struct { f32 r, g, b, a; };
@@ -711,7 +712,7 @@ INLINE v4 MATH_CALL v4_lerp(v4 start, v4 end, v4 percent)
     return res;
 }
 
-typedef union __intrin_type __align(16) v4s
+typedef union CENGINE_INTRIN_TYPE CENGINE_ALIGN(16) v4s
 {
     struct { s32 x, y, z, w; };
     struct { s32 r, g, b, a; };
@@ -858,7 +859,7 @@ INLINE v4s MATH_CALL v4s_cross(v4s l, v4s r)
     return res;
 }
 
-typedef union __intrin_type __align(16) v4u
+typedef union CENGINE_INTRIN_TYPE CENGINE_ALIGN(16) v4u
 {
     struct { u32 x, y, z, w; };
     struct { u32 r, g, b, a; };

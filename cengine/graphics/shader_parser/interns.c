@@ -6,7 +6,9 @@
 #include "graphics/shader_parser/interns.h"
 #include "cengine.h"
 
-void CreateInterns(Engine *engine, Interns *interns)
+void CreateInterns(
+    IN  Engine  *engine,
+    OUT Interns *interns)
 {
     Check(engine);
     Check(interns);
@@ -15,8 +17,14 @@ void CreateInterns(Engine *engine, Interns *interns)
     interns->interns = 0;
 }
 
-const char *InternStringRange(Interns *interns, const char *start, const char *end)
+const char *InternStringRange(
+    IN Interns    *interns,
+    IN const char *start,
+    IN const char *end)
 {
+    Check(interns);
+    Check(start < end);
+
     u64 len = end - start;
 
     if (!interns->interns)
@@ -57,4 +65,12 @@ const char *InternStringRange(Interns *interns, const char *start, const char *e
 	
 	    return new_str;
     }
+}
+
+const char *InternString(
+    IN Interns    *interns,
+    IN const char *string,
+    IN u64         length)
+{
+    return InternStringRange(interns, string, string + length);
 }

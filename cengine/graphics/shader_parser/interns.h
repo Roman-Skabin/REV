@@ -4,26 +4,39 @@
 
 #pragma once
 
-#include "tools/buffer.h"
 #include "core/memory.h"
 
 typedef struct Intern Intern;
 
 struct Intern
 {
-    Intern     *next;
+    ExtendsList(Intern);
     const char *str;
     u64         len;
 };
 
 typedef struct Interns
 {
-    Intern *interns;
+    LIST Intern *interns;
     Memory *memory;
 } Interns;
 
-CENGINE_FUN void CreateInterns(Engine *engine, Interns *interns);
+CENGINE_FUN void CreateInterns(
+    IN  Engine  *engine,
+    OUT Interns *interns
+);
 
-CENGINE_FUN const char *InternStringRange(Interns *interns, const char *start, const char *end);
-#define InternString(interns, string, length) InternStringRange(interns, string, (string) + (length))
-#define InternCSTR(interns, cstr)             InternString(interns, cstr, CSTRLEN(cstr))
+CENGINE_FUN const char *InternStringRange(
+    IN Interns    *interns,
+    IN const char *start,
+    IN const char *end
+);
+
+CENGINE_NOINLINE
+CENGINE_FUN const char *InternString(
+    IN Interns    *interns,
+    IN const char *string,
+    IN u64         length
+);
+
+#define InternCSTR(interns, cstr) InternString(interns, cstr, CSTRLEN(cstr))

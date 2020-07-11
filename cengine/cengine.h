@@ -13,14 +13,23 @@
 #include "sound/sound.h"
 #include "gpu/gpu_manager.h"
 #include "gpu/gpu_memory_manager.h"
+#include "graphics/gpu_program_manager.h"
 
 #define USER_CALLBACK(name) void name(Engine *engine)
 typedef USER_CALLBACK(UserCallback);
 
-#ifdef __cplusplus
-    #define USER_MAIN() int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int)
+#if DEBUG
+#define USER_MAIN(_OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound)                          \
+int __cdecl main(int args_count, char *args[])                                                \
+{                                                                                             \
+    return EngineRun(GetModuleHandleA(0), _OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound); \
+}
 #else
-    #define USER_MAIN() int WINAPI WinMain(HINSTANCE instance, HINSTANCE phi, LPSTR cl, int cs)
+#define USER_MAIN(_OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound)                                 \
+int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int show_window) \
+{                                                                                                    \
+    return EngineRun(instance, _OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound);                   \
+}
 #endif
 
 struct Engine
@@ -83,10 +92,11 @@ struct Engine
     Logger       logger;
     SoundStream  sound;
 
-    GPUManager       gpu_manager;
-    GPUMemoryManager gpu_memory_manager;
+    GPUManager        gpu_manager;
+    GPUMemoryManager  gpu_memory_manager;
+    GPUProgramManager gpu_program_manager;
 
-    void *user_ponter;
+    void *user_pointer;
 };
 
 CENGINE_FUN int EngineRun(

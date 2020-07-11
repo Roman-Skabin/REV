@@ -7,8 +7,6 @@
 #include "tools/buffer.h"
 #include "math/vec.h"
 
-#define ExtendsList(Type) Type *next;
-
 typedef struct ASTType        ASTType;
 typedef struct ASTStruct      ASTStruct;
 typedef struct ASTStructField ASTStructField;
@@ -34,7 +32,7 @@ typedef enum AST_TYPE_FLAG
 
 struct ASTType
 {
-    ExtendsList(ASTType)
+    ExtendsList(ASTType);
     ASTType       *base_type;
     const char    *name;
     AST_TYPE_KIND  kind;
@@ -44,15 +42,15 @@ struct ASTType
     u64            size_in_bytes;
     union
     {
-        u32 dimension;
-        v2u mat_size;
+        u32        dimension;
+        v2u        mat_size;
         ASTStruct *_struct;
     };
 };
 
 struct ASTStructField
 {
-    ExtendsList(ASTStructField)
+    ExtendsList(ASTStructField);
     ASTType    *type;
     const char *semantic_name;
     u32         semantic_index;
@@ -60,15 +58,20 @@ struct ASTStructField
 
 struct ASTStruct
 {
-    ExtendsList(ASTStruct)
-    const char     *name;
-    ASTStructField *fields;
-    u64             fields_count;
+    ExtendsList(ASTStruct);
+    const char          *name;
+    LIST ASTStructField *fields;
+    u64                  fields_count;
 };
 
 struct ASTCBuffer
 {
-    ExtendsList(ASTCBuffer)
-    u32 _register;
-    u32 space;
+    ExtendsList(ASTCBuffer);
+    const char *name;
+    u64         name_len;
+    u32         _register;
+    u32         space;
+    u32         size_in_bytes;
+    // @TODO(Roman): How to parse 'em?
+    D3D12_ROOT_DESCRIPTOR_FLAGS flags; // @NOTE(Roman): Only for Root Signature v1.1
 };

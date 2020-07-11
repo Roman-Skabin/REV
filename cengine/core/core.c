@@ -39,23 +39,23 @@ void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...)
 
 void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...)
 {
-    const char *title = 0;
+    char title[64] = {0};
 
     switch (type)
     {
         case MESSAGE_TYPE_ERROR:
         {
-            title = "Error";
+            sprintf(title, "Error: 0x%I32X!", GetLastError());
         } break;
         
         case MESSAGE_TYPE_WARNING:
         {
-            title = "Warning";
+            CopyMemory(title, "Warning", CSTRLEN("Warning"));
         } break;
 
         case MESSAGE_TYPE_INFO:
         {
-            title = "Info";
+            CopyMemory(title, "Info", CSTRLEN("Info"));
         } break;
     }
 
@@ -67,17 +67,79 @@ void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...)
         char buffer[BUFSIZ] = {'\0'};
         int  len            = vsprintf(buffer, format, args);
 
-        MessageBoxA(0, buffer, title, MB_OK | type);
+        MessageBoxA(null, buffer, title, MB_OK | type);
+
+        va_end(args);
     }
     else
     {
-        MessageBoxA(0, format, title, MB_OK | type);
+        MessageBoxA(null, format, title, MB_OK | type);
     }
-
-    va_end(args);
 
     if (type == MESSAGE_TYPE_ERROR)
     {
         ExitProcess(1);
+    }
+}
+
+void ShowDebugMessage(
+    IN       b32         message_is_expr,
+    IN       const char *file,
+    IN       u64         line,
+    IN       const char *function,
+    IN       const char *title,
+    IN       const char *format,
+    OPTIONAL ...)
+{
+    // @Important(Roman): last_error has to be placed
+    //                    before everything else.
+    u32 last_error = GetLastError();
+
+    char box_title[64];
+    sprintf(box_title, "%s: 0x%I32X!", title, last_error);
+
+    va_list args;
+    va_start(args, format);
+
+    if (!message_is_expr && args)
+    {
+        char message[1024];
+        vsprintf(message, format, args);
+
+        const char *box_message_format =
+        "MESSAGE: %s\n\n"
+        "FILE: %s(%I64u)\n\n"
+        "FUNCTION: %s";
+
+        char box_message[2048];
+        sprintf(box_message, box_message_format, message, file, line, function);
+
+        MessageBoxA(null, box_message, box_title, MB_OK | MB_ICONERROR);
+
+        va_end(args);
+    }
+    else if (!message_is_expr)
+    {
+        const char *box_message_format =
+        "MESSAGE: %s\n\n"
+        "FILE: %s(%I64u)\n\n"
+        "FUNCTION: %s";
+
+        char box_message[2048];
+        sprintf(box_message, box_message_format, format, file, line, function);
+
+        MessageBoxA(null, box_message, box_title, MB_OK | MB_ICONERROR);
+    }
+    else
+    {
+        const char *box_message_format =
+        "EXPRESSION: %s\n\n"
+        "FILE: %s(%I64u)\n\n"
+        "FUNCTION: %s";
+
+        char box_message[2048];
+        sprintf(box_message, box_message_format, format, file, line, function);
+
+        MessageBoxA(null, box_message, box_title, MB_OK | MB_ICONERROR);
     }
 }

@@ -12,7 +12,7 @@ void *CreateBuffer(Allocator *allocator, u64 alignment_in_bytes)
 {
     Check(allocator);
 
-    if (alignment_in_bytes < sizeof(void *)) alignment_in_bytes = sizeof(void *);
+    if (alignment_in_bytes < CENGINE_DEFAULT_ALIGNMENT) alignment_in_bytes = CENGINE_DEFAULT_ALIGNMENT;
     CheckM(alignment_in_bytes, "alignment must be power of two");
 
     BufferHeader *header       = Allocate(allocator, sizeof(BufferHeader));
@@ -22,12 +22,13 @@ void *CreateBuffer(Allocator *allocator, u64 alignment_in_bytes)
     return header->data;
 }
 
-void DestroyBuffer(void *buffer)
+void _DestroyBuffer(void **buffer)
 {
-    if (buffer)
+    if (buffer && *buffer)
     {
-        BufferHeader *header = cast(byte *, buffer) - sizeof(BufferHeader);
+        BufferHeader *header = cast(byte *, *buffer) - sizeof(BufferHeader);
         DeAlloc(header->allocator, header);
+        *buffer = null;
     }
 }
 
@@ -40,8 +41,7 @@ void *ExpandBuffer(BufferHeader *header, u64 element_bytes)
     }
     else if (header->count * element_bytes > header->cap_in_bytes)
     {
-        header->cap_in_bytes = 2 * header->cap_in_bytes;
-        header->cap_in_bytes = ALIGN_UP(header->cap_in_bytes, header->alignment_in_bytes);
+        header->cap_in_bytes = ALIGN_UP(2 * header->cap_in_bytes, header->alignment_in_bytes);
         header               = ReAllocate(header->allocator, &header, sizeof(BufferHeader) + header->cap_in_bytes);
     }
     return header->data;

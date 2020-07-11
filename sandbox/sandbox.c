@@ -1,7 +1,6 @@
 #include "cengine.h"
 #include "math/mat.h"
 #include "math/color.h"
-#include "graphics/core/core_renderer.h"
 
 #define WINDOW_TITLE "Sandbox"
 
@@ -15,22 +14,18 @@ typedef struct Camera
     m4 proj;
 } Camera;
 
-typedef struct __align(256) CBufferData
+typedef struct CENGINE_ALIGN(256) CBufferData
 {
     m4 MVP;
 } CBufferData;
 
 typedef struct Sandbox
 {
-    Logger       logger;
-    AudioBuffer  audio;
-
-    GPUMemoryBlock vertex_buffer;
-    GPUMemoryBlock cbuffer;
-
-    GraphicsProgram program;
-
-    Camera camera;
+    Logger           logger;
+    AudioBuffer      audio;
+    Camera           camera;
+    GraphicsProgram *graphics_program;
+    GPUResource     *vertex_buffer;
 } Sandbox;
 
 typedef struct Vertex
@@ -41,17 +36,17 @@ typedef struct Vertex
 
 internal USER_CALLBACK(OnInit)
 {
-    Sandbox *sandbox    = PushToPA(Sandbox, engine->memory, 1);
-    engine->user_ponter = sandbox;
+    Sandbox *sandbox     = PushToPA(Sandbox, engine->memory, 1);
+    engine->user_pointer = sandbox;
 
-    CreateLogger(&sandbox->logger, "Sandbox Logger", "../log/sandbox.log", LOG_TO_FILE);
+    CreateLogger("Sandbox Logger", "../log/sandbox.log", LOG_TO_FILE, &sandbox->logger);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
 #if RELEASE
     SetFullscreen(engine, true);
 #endif
 
 #if RELEASE
-    sandbox->audio = LoadAudioFile(engine, "../assets/audio/audio.wav");
+    CreateAudioBuffer(engine, "../assets/audio/audio.wav", &sandbox->audio);
     SoundPlay(&engine->sound);
 #endif
 
@@ -114,12 +109,12 @@ internal USER_CALLBACK(OnInit)
         { cube_v6, gCyanA1 },
         { cube_v2, gCyanA1 },
     };
-    PushVB(engine, ArrayCount(vertices), sizeof(Vertex), &sandbox->vertex_buffer);
-    SetGPUMemoryBlockData(engine, &sandbox->vertex_buffer, vertices);
+    sandbox->vertex_buffer = PushVertexBuffer(engine, ArrayCount(vertices), sizeof(Vertex));
+    SetGPUResourceData(engine, sandbox->vertex_buffer, vertices);
 
-    CreateGraphicsProgram(engine, "../assets/shaders/shader.hlsl", 0, &sandbox->program);
+    sandbox->graphics_program = AddGraphicsProgram(engine, "../assets/shaders/shader.hlsl", null);
 
-    sandbox->camera.pos    = v4_1(0.0f, 0.4f, -1.0f, 1.0f);
+    sandbox->camera.pos    = v4_1(0.0f, 0.0f, -1.0f, 1.0f);
     sandbox->camera.target = v4_1(0.0f, 0.0f,  0.7f, 1.0f);
     sandbox->camera.up     = v4_1(0.0f, 1.0f,  0.0f, 0.0f);
     sandbox->camera.view   = CameraToWorldLH(sandbox->camera.pos,
@@ -127,22 +122,24 @@ internal USER_CALLBACK(OnInit)
                                              sandbox->camera.up);
     sandbox->camera.proj   = m4_persp_lh_fov(16.0f / 9.0f, 90.0f, 0.1f, 10.0f);
 
-    PushCBV(engine, sizeof(CBufferData), &sandbox->cbuffer);
     CBufferData cbuffer_data;
     cbuffer_data.MVP = m4_mul(sandbox->camera.proj, sandbox->camera.view);
-    SetGPUMemoryBlockData(engine, &sandbox->cbuffer, &cbuffer_data);
+    SetGPUResourceDataByName(engine, "MVPMatrix", CSTRLEN("MVPMatrix"), &cbuffer_data);
 }
 
 internal USER_CALLBACK(OnDestroy)
 {
-    Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
-    DestroyGraphicsProgram(&sandbox->program);
+    Sandbox *sandbox = cast(Sandbox *, engine->user_pointer);
+    DestroyGraphicsProgram(sandbox->graphics_program);
+#if RELEASE
+    DestroyAudioBuffer(engine, &sandbox->audio);
+#endif
     DestroyLogger(&sandbox->logger);
 }
 
 internal USER_CALLBACK(OnUpdateAndRender)
 {
-    Sandbox *sandbox = cast(Sandbox *, engine->user_ponter);
+    Sandbox *sandbox = cast(Sandbox *, engine->user_pointer);
 
     local f32 last_print_time;
     if (engine->timer.seconds - last_print_time >= 0.1)
@@ -164,13 +161,13 @@ internal USER_CALLBACK(OnUpdateAndRender)
 
     if (engine->input.keys[KEY_LEFT].pressed)
     {
-        sandbox->camera.pos.x -= 0.1f;
+        sandbox->camera.pos.x += 100.0f * engine->timer.delta_seconds;
         sandbox->camera.view = CameraToWorldLH(sandbox->camera.pos,
                                                sandbox->camera.target,
                                                sandbox->camera.up);
         CBufferData cbuffer_data;
         cbuffer_data.MVP = m4_mul(sandbox->camera.proj, sandbox->camera.view);
-        SetGPUMemoryBlockData(engine, &sandbox->cbuffer, &cbuffer_data);
+        SetGPUResourceDataByName(engine, "MVPMatrix", CSTRLEN("MVPMatrix"), &cbuffer_data);
     }
     else if (engine->input.keys[KEY_RIGHT].down)
     {
@@ -180,7 +177,7 @@ internal USER_CALLBACK(OnUpdateAndRender)
                                                sandbox->camera.up);
         CBufferData cbuffer_data;
         cbuffer_data.MVP = m4_mul(sandbox->camera.proj, sandbox->camera.view);
-        SetGPUMemoryBlockData(engine, &sandbox->cbuffer, &cbuffer_data);
+        SetGPUResourceDataByName(engine, "MVPMatrix", CSTRLEN("MVPMatrix"), &cbuffer_data);
     }
     if (engine->input.keys[KEY_DOWN].down)
     {
@@ -190,7 +187,7 @@ internal USER_CALLBACK(OnUpdateAndRender)
                                                sandbox->camera.up);
         CBufferData cbuffer_data;
         cbuffer_data.MVP = m4_mul(sandbox->camera.proj, sandbox->camera.view);
-        SetGPUMemoryBlockData(engine, &sandbox->cbuffer, &cbuffer_data);
+        SetGPUResourceDataByName(engine, "MVPMatrix", CSTRLEN("MVPMatrix"), &cbuffer_data);
     }
     else if (engine->input.keys[KEY_UP].down)
     {
@@ -200,21 +197,18 @@ internal USER_CALLBACK(OnUpdateAndRender)
                                                sandbox->camera.up);
         CBufferData cbuffer_data;
         cbuffer_data.MVP = m4_mul(sandbox->camera.proj, sandbox->camera.view);
-        SetGPUMemoryBlockData(engine, &sandbox->cbuffer, &cbuffer_data);
+        SetGPUResourceDataByName(engine, "MVPMatrix", CSTRLEN("MVPMatrix"), &cbuffer_data);
     }
 
-    BindVB(engine, &sandbox->vertex_buffer);
-    BindGraphicsProgram(engine, &sandbox->program);
-    SetGraphicsProgramBuffer(engine,
-                             &sandbox->program,
-                             "MVPMatrix", CSTRLEN("MVPMatrix"),
-                             &sandbox->cbuffer);
-    DrawVertices(engine, &sandbox->vertex_buffer);
+    BindVertexBuffer(engine, sandbox->vertex_buffer);
+    BindGraphicsProgram(engine, sandbox->graphics_program);
+
+    DrawVertices(engine, sandbox->vertex_buffer);
 }
 
 internal SOUND_CALLBACK(OnSound)
 {
-    Sandbox     *sandbox = cast(Sandbox *, engine->user_ponter);
+    Sandbox     *sandbox = cast(Sandbox *, engine->user_pointer);
     AudioBuffer *audio   = &sandbox->audio;
 
     if (audio)
@@ -230,7 +224,4 @@ internal SOUND_CALLBACK(OnSound)
     }
 }
 
-USER_MAIN()
-{
-    return EngineRun(instance, OnInit, OnDestroy, OnUpdateAndRender, OnSound);
-}
+USER_MAIN(OnInit, OnDestroy, OnUpdateAndRender, OnSound);

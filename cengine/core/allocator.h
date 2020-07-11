@@ -7,9 +7,9 @@
 #include "core/core.h"
 
 #if DEBUG
-    extern u64 gAllocationsPerFrame;
-    extern u64 gReAllocationsPerFrame;
-    extern u64 gDeAllocationsPerFrame;
+    CENGINE_DATA u64 gAllocationsPerFrame;
+    CENGINE_DATA u64 gReAllocationsPerFrame;
+    CENGINE_DATA u64 gDeAllocationsPerFrame;
 #endif
 
 typedef struct BlockHeader BlockHeader;

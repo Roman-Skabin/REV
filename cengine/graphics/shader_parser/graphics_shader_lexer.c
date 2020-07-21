@@ -111,8 +111,6 @@ internal void TokenizeFloat(ShaderLexer *lexer)
 
     lexer->token.kind = TOKEN_KIND_FLOAT;
 
-#if 1
-    // @NotChecked(Roman)
     lexer->token.f64_val = atof(lexer->token.start);
 
     while (isdigit(*lexer->stream)) ++lexer->stream;
@@ -122,68 +120,24 @@ internal void TokenizeFloat(ShaderLexer *lexer)
         if (*lexer->stream == '+' || *lexer->stream == '-') ++lexer->stream;
         while (isdigit(*lexer->stream)) ++lexer->stream;
     }
-#else
-    while (isdigit(*lexer->stream)) ++lexer->stream;
-    if (*lexer->stream == 'e')
-    {
-        ++lexer->stream;
-        if (*lexer->stream == '+' || *lexer->stream == '-') ++lexer->stream;
-        while (isdigit(*lexer->stream)) ++lexer->stream;
-        _snscanf(lexer->token.start, lexer->stream - lexer->token.start, "%le", &lexer->token.f64_val);
-        if (*lexer->stream == 'f') ++lexer->stream;
-    }
-    else if (*lexer->stream == 'E')
-    {
-        ++lexer->stream;
-        if (*lexer->stream == '+' || *lexer->stream == '-') ++lexer->stream;
-        while (isdigit(*lexer->stream)) ++lexer->stream;
-        _snscanf(lexer->token.start, lexer->stream - lexer->token.start, "%lE", &lexer->token.f64_val);
-        if (*lexer->stream == 'f') ++lexer->stream;
-    }
-    else
-    {
-        _snscanf(lexer->token.start, lexer->stream - lexer->token.start, "%lf", &lexer->token.f64_val);
-        if (*lexer->stream == 'f') ++lexer->stream;
-    }
-#endif
 }
 
-internal void TokenizeInt(ShaderLexer *lexer)
+internal void TokenizeInt(ShaderLexer *lexer, u32 base)
 {
     // [whitespace][sign][digits]
 
-    // @TODO(Roman): Adapt to various number bases
     // @NOTE(Roman): Minus and digits have to be already passed.
 
     lexer->token.kind = TOKEN_KIND_INT;
 
-#if 1
-    // @NotChecked(Roman)
     if (*lexer->token.start == '-')
     {
-        lexer->token.s64_val = strtoll(lexer->token.start, null, 10);
+        lexer->token.s64_val = strtoll(lexer->token.start, null, base);
     }
     else
     {
-        lexer->token.u64_val = strtoull(lexer->token.start, null, 10);
+        lexer->token.u64_val = strtoull(lexer->token.start, null, base);
     }
-#else
-    if (*lexer->token.start == '-')
-    {
-        _snscanf(lexer->token.start + 1,
-                 lexer->stream - lexer->token.start - 1,
-                 "%I64i",
-                 &lexer->token.s64_val);
-        lexer->token.s64_val = -lexer->token.s64_val;
-    }
-    else
-    {
-        _snscanf(lexer->token.start,
-                 lexer->stream - lexer->token.start,
-                 "%I64i",
-                 &lexer->token.u64_val);
-    }
-#endif
 }
 
 #define ELSE_IF_CHAR(c1, k1) else if (*lexer->stream == (c1)) { lexer->token.kind = (k1); ++lexer->stream; }
@@ -211,6 +165,7 @@ tokenize_again:
     else if (isdigit(*lexer->stream))
     {
         while (isdigit(*lexer->stream)) ++lexer->stream;
+
         if (*lexer->stream == '.')
         {
             ++lexer->stream;
@@ -218,7 +173,19 @@ tokenize_again:
         }
         else
         {
-            TokenizeInt(lexer);
+            u32 base = 10;
+
+            if (*lexer->token.start == '0')
+            {
+                char base_identifier = lexer->token.start[1];
+
+                /**/ if (base_identifier == 'x' || base_identifier == 'X') base = 16;
+                else if (base_identifier == 'b' || base_identifier == 'B') base = 2;
+                else if (isdigit(base_identifier))                         base = 8;
+                else SyntaxError(lexer, "unrecognized base identifier: expected 'x' or 'X' or 'b' or 'B', got '%c'", base_identifier);
+            }
+
+            TokenizeInt(lexer, base);
         }
     }
     else if (*lexer->stream == '-')
@@ -232,7 +199,19 @@ tokenize_again:
         }
         else if (lexer->stream - digit_start)
         {
-            TokenizeInt(lexer);
+            u32 base = 10;
+
+            if (*digit_start == '0')
+            {
+                char base_identifier = digit_start[1];
+
+                /**/ if (base_identifier == 'x' || base_identifier == 'X') base = 16;
+                else if (base_identifier == 'b' || base_identifier == 'B') base = 2;
+                else if (isdigit(base_identifier))                         base = 8;
+                else SyntaxError(lexer, "unrecognized base identifier: expected 'x' or 'X' or 'b' or 'B', got '%c'", base_identifier);
+            }
+
+            TokenizeInt(lexer, base);
         }
         else
         {

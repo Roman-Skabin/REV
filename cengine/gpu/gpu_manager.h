@@ -15,13 +15,15 @@ enum GPU_MANAGER_CONSTANTS
 // @TODO(Roman): Enable multiple adapters support
 typedef struct GPUManager
 {
+    Logger                       logger;
+
 #if DEBUG
-    Logger                       debug_logger;
     ID3D12Debug1                *debug;
     IDXGIDebug1                 *dxgi_debug;
     ID3D12InfoQueue             *info_queue;
     IDXGIInfoQueue              *dxgi_info_queue;
 #endif
+
     IDXGIFactory2               *factory;
     IDXGIAdapter1               *adapter;
     ID3D12Device                *device;
@@ -55,16 +57,17 @@ typedef struct GPUManager
 
     struct
     {
-        D3D12_FEATURE_DATA_D3D12_OPTIONS  options;
-        D3D12_FEATURE_DATA_D3D12_OPTIONS1 options1;
-        D3D12_FEATURE_DATA_D3D12_OPTIONS2 options2;
-        D3D12_FEATURE_DATA_D3D12_OPTIONS3 options3;
-        D3D12_FEATURE_DATA_D3D12_OPTIONS4 options4;
-        D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5;
-        D3D12_FEATURE_DATA_D3D12_OPTIONS6 options6;
-        D3D12_FEATURE_DATA_ARCHITECTURE1  architecture;
-        D3D12_FEATURE_DATA_ROOT_SIGNATURE root_signature;
-        D3D12_FEATURE_DATA_SHADER_MODEL   shader_model;
+        D3D12_FEATURE_DATA_D3D12_OPTIONS               options;
+        D3D12_FEATURE_DATA_D3D12_OPTIONS1              options1;
+        D3D12_FEATURE_DATA_D3D12_OPTIONS2              options2;
+        D3D12_FEATURE_DATA_D3D12_OPTIONS3              options3;
+        D3D12_FEATURE_DATA_D3D12_OPTIONS4              options4;
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5              options5;
+        D3D12_FEATURE_DATA_D3D12_OPTIONS6              options6;
+        D3D12_FEATURE_DATA_ARCHITECTURE1               architecture;
+        D3D12_FEATURE_DATA_ROOT_SIGNATURE              root_signature;
+        D3D12_FEATURE_DATA_SHADER_MODEL                shader_model;
+        D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT virtual_address;
     } features;
 
     HRESULT                      error;

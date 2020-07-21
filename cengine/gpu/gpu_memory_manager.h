@@ -7,16 +7,28 @@
 #include "gpu/gpu_manager.h"
 #include "core/allocator.h"
 
-// @TODO(Roman): Aliased (overlapped) resources
-// @TODO(Roman): Arrays as a single memory block
+// @TODO(Roman): Aliased (overlapped) resources. For transient memory at least for now.
+// @TODO(Roman): Arrays as a single memory block, e.g. array of 2D textures.
 // @TODO(Roman): Check memory capacity before pushing resources and descriptors
 // @TODO(Roman): Push ShaderResource [buffer|texture],
 //               Push UnorderedAccess [buffer|texture],
 //               Push Sampler
 // @TOOD(Roman): Move Draw (and Bind probably) stuff somewhere.
 //               This functionality doesn't belong to memory management.
-// @TODO(Roman): One common enum for resource and descriptor heap
-//               allocation states. Short name required.
+// @TOOD(Roman): Add upload resource to GPUResource and create it
+//               right on entire resource creation. It'd be better
+//               and faster then create upload resource on copy.
+//               + Rewrite creation with placed resources only.
+// @TODO(Roman): LIST GPUResource *free_list in GPUResourceMemory.
+//               Just saved pointers to freed resources.
+// @TODO(Roman): Add ID3D12Fences to the GPUResoucre to be shure
+//               the copy operation is completed.
+
+enum
+{
+    GPU_RESOURCE_ALLIGNMENT      = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
+    GPU_MSAA_RESOURCE_ALLIGNMENT = D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT,
+};
 
 typedef enum GPU_RESOURCE_ALLOCATION_STATE
 {
@@ -42,16 +54,26 @@ typedef struct GPUDescHeap GPUDescHeap;
 struct GPUResource
 {
     ExtendsList(GPUResource);
-    ID3D12Resource                *resource;
-    char                           name[64];
-    u64                            name_len;
-    GPUDescHeap                   *desc_heap;
-    GPU_RESOURCE_ALLOCATION_STATE  allocation_state;
-    GPU_RESOURCE_KIND              kind;
-    u32                            vi_count;
-    u32                            vi_stride;
-    D3D12_RESOURCE_STATES          initial_state;
-    D3D12_RESOURCE_DESC            resource_desc;
+
+    ID3D12Resource *default_resource;
+
+    ID3D12Resource *upload_resources[SWAP_CHAIN_BUFFERS_COUNT];
+    byte           *upload_pointers[SWAP_CHAIN_BUFFERS_COUNT];
+
+    GPU_RESOURCE_KIND             kind;
+    GPU_RESOURCE_ALLOCATION_STATE allocation_state;
+
+    GPUDescHeap *desc_heap;
+
+    u32 vertex_index_count;
+    u32 vertex_index_stride;
+
+    D3D12_RESOURCE_STATES initial_state;
+
+    u32  name_len;
+    char name[64];
+
+    D3D12_RESOURCE_DESC resource_desc;
 };
 
 typedef enum GPU_DESC_HEAP_ALLOCATION_STATE
@@ -74,9 +96,13 @@ typedef struct GPUResourceMemory
 {
     LIST GPUResource *resources;
 
-    ID3D12Heap  *gpu_heap;
-    u64          gpu_heap_offset;
-    u64          gpu_heap_capacity;
+    ID3D12Heap      *default_heap;
+    u64              default_offset;
+    u64              default_capacity; // @Cleanup(Roman): Redundant?
+
+    ID3D12Heap      *upload_heap[SWAP_CHAIN_BUFFERS_COUNT];
+    u64              upload_offset[SWAP_CHAIN_BUFFERS_COUNT];
+    u64              upload_capacity[SWAP_CHAIN_BUFFERS_COUNT]; // @Cleanup(Roman): Redundant?
 } GPUResourceMemory;
 
 typedef struct GPUDescHeapMemory
@@ -86,28 +112,22 @@ typedef struct GPUDescHeapMemory
 
 typedef struct GPUMemoryManager
 {
-    Allocator         *allocator;
-    GPUResourceMemory  permanent_memory;
-    GPUDescHeapMemory  desc_heap_memory;
-    GPUResourceMemory  transient_memory[SWAP_CHAIN_BUFFERS_COUNT];
-    HRESULT            error;
+    Allocator        *allocator;
+
+    GPUDescHeapMemory desc_heap_memory;
+
+    GPUResourceMemory buffer_memory;
+    GPUResourceMemory texture_memory;
+
+    HRESULT           error;
 } GPUMemoryManager;
 
-typedef enum GPU_MEMORY_TYPE
-{
-    GPU_MEMORY_TYPE_PERMANENT         = BIT(0),
-    GPU_MEMORY_TYPE_TRANSIENT_CURRENT = BIT(1), // Can't be OR'd with GPU_MEMORY_TYPE_TRANSIENT_ALL
-    GPU_MEMORY_TYPE_TRANSIENT_ALL     = BIT(2), // Can't be OR'd with GPU_MEMORY_TYPE_TRANSIENT_CURRENT
-} GPU_MEMORY_TYPE;
-
 CENGINE_FUN void ResetGPUMemory(
-    IN Engine          *engine,
-    IN GPU_MEMORY_TYPE  type
+    IN Engine *engine
 );
 
 CENGINE_FUN void ReleaseGPUMemory(
-    IN Engine          *engine,
-    IN GPU_MEMORY_TYPE  type
+    IN Engine *engine
 );
 
 CENGINE_FUN GPUResource *PushVertexBuffer(
@@ -121,11 +141,22 @@ CENGINE_FUN GPUResource *PushIndexBuffer(
     IN u32     count
 );
 
+// @NOTE(Roman): It would be better if you pass non-null name_len,
+//               otherwise strlen will be used.
 CENGINE_FUN GPUResource *PushConstantBuffer(
-    IN Engine     *engine,
-    IN u32         size_in_bytes,
-    IN const char *name,
-    IN u64         name_len
+    IN       Engine     *engine,
+    IN       u32         size_in_bytes,
+    IN       const char *name,
+    OPTIONAL u32         name_len
+);
+
+// @NOTE(Roman): It would be better if you pass non-null name_len,
+//               otherwise strlen will be used.
+CENGINE_FUN void SetGPUResourceName(
+    IN       Engine      *engine,
+    IN       GPUResource *resource,
+    IN       const char  *name,
+    OPTIONAL u32          name_len
 );
 
 CENGINE_FUN void SetGPUResourceData(
@@ -134,11 +165,13 @@ CENGINE_FUN void SetGPUResourceData(
     IN void        *data
 );
 
+// @NOTE(Roman): It would be better if you pass non-null name_len,
+//               otherwise strlen will be used.
 CENGINE_FUN void SetGPUResourceDataByName(
-    IN Engine      *engine,
-    IN const char  *name,
-    IN u64          name_len,
-    IN void        *data
+    IN       Engine     *engine,
+    IN       const char *name,
+    OPTIONAL u32         name_len,
+    IN       void       *data
 );
 
 CENGINE_FUN void BindVertexBuffer(

@@ -110,7 +110,10 @@
 
 #define cast(type, x) ((type)(x))
 
-#define ArrayCount(arr) (sizeof(arr) / sizeof(*(arr)))
+#define ArrayCount(arr)                     (sizeof(arr) / sizeof(*(arr)))
+#define ArrayCountInStruct(_struct, _field) ArrayCount(cast(_struct *, null)->_field)
+#define StructFieldSize(_struct, _field)    sizeof(cast(_struct *, null)->_field)
+#define StructFieldOffset(_struct, _field)  cast(u64, &(cast(_struct *, null)->_field))
 
 #define ALIGN_UP(x, a)   (((x) + ((a) - 1)) & ~((a) - 1))
 #define ALIGN_DOWN(x, a) ( (x)              & ~((a) - 1))

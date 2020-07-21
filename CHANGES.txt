@@ -1,4 +1,5 @@
-- 0.0.59
+- 0.0.2
+    - Added CHANGES.txt, now all changes will be documented.
     - GPU Resource Manager:
         - free list for resources and descriptor heaps.
         - linked with GPU programs.
@@ -20,3 +21,6 @@
         - Added SRWLock (very lightweight mutex).
         - some minor things.
     - Added console in debug build (for D3D12/DXGI messages).
+
+- 0.0.1
+    - All the stuff from the first 57 commits.

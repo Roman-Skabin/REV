@@ -45,7 +45,7 @@ void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...)
     {
         case MESSAGE_TYPE_ERROR:
         {
-            sprintf(title, "Error: 0x%I32X!", GetLastError());
+            sprintf(title, "Error: 0x%08I32X!", GetLastError());
         } break;
         
         case MESSAGE_TYPE_WARNING:
@@ -96,7 +96,7 @@ void ShowDebugMessage(
     u32 last_error = GetLastError();
 
     char box_title[64];
-    sprintf(box_title, "%s: 0x%I32X!", title, last_error);
+    sprintf(box_title, "%s: 0x%08I32X!", title, last_error);
 
     va_list args;
     va_start(args, format);

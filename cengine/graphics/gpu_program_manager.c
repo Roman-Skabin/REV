@@ -141,7 +141,7 @@ GraphicsProgram *AddGraphicsProgram(
     SafeRelease(error);
 
     engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateRootSignature(engine->gpu_manager.device,
-                                                                                        1,
+                                                                                        0,
                                                                                         graphics_program->signature->lpVtbl->GetBufferPointer(graphics_program->signature),
                                                                                         graphics_program->signature->lpVtbl->GetBufferSize(graphics_program->signature),
                                                                                         &IID_ID3D12RootSignature,
@@ -320,7 +320,7 @@ GraphicsProgram *AddGraphicsProgram(
     gpsd.DSVFormat             = DXGI_FORMAT_D32_FLOAT;
     gpsd.SampleDesc.Count      = 1;
     gpsd.SampleDesc.Quality    = 0;
-    gpsd.NodeMask              = 1;
+    gpsd.NodeMask              = 0;
     gpsd.CachedPSO             = cached_pipeline_state;
     gpsd.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
 
@@ -385,24 +385,28 @@ void BindGraphicsProgram(
             {
                 graphics_list->lpVtbl->SetGraphicsRootConstantBufferView(graphics_list,
                                                                          i,
-                                                                         resource->resource->lpVtbl->GetGPUVirtualAddress(resource->resource));
+                                                                         resource->default_resource->lpVtbl->GetGPUVirtualAddress(resource->default_resource));
             } break;
 
             case GPU_RESOURCE_KIND_SR:
             {
                 graphics_list->lpVtbl->SetGraphicsRootShaderResourceView(graphics_list,
                                                                          i,
-                                                                         resource->resource->lpVtbl->GetGPUVirtualAddress(resource->resource));
+                                                                         resource->default_resource->lpVtbl->GetGPUVirtualAddress(resource->default_resource));
             } break;
 
             case GPU_RESOURCE_KIND_UA:
             {
                 graphics_list->lpVtbl->SetGraphicsRootUnorderedAccessView(graphics_list,
                                                                           i,
-                                                                          resource->resource->lpVtbl->GetGPUVirtualAddress(resource->resource));
+                                                                          resource->default_resource->lpVtbl->GetGPUVirtualAddress(resource->default_resource));
             } break;
 
-            // @TODO(Roman): Add samplers, constants and tables
+            default:
+            {
+                // @TODO(Roman): Add samplers, constants and tables
+                FailedM("Samplers, constants and tables are not supported yet");
+            } break;
         }
     }
 }
@@ -479,7 +483,7 @@ void SetGraphicsProgramTables(
         D3D12_COMPUTE_PIPELINE_STATE_DESC cpsd;
         cpsd.pRootSignature = pipeline_state->shaders_resources->root_signature;
         cpsd.CS             = compute_shader->bytecode;
-        cpsd.NodeMask       = 1;
+        cpsd.NodeMask       = 0;
         cpsd.CachedPSO      = cached_pipeline_state;
         cpsd.Flags          = D3D12_PIPELINE_STATE_FLAG_NONE;
 

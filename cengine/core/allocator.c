@@ -27,6 +27,9 @@ struct BlockHeader
     s32          reserved;
     u64          data_bytes;
     BlockHeader *prev;
+    // @NOTE(Roman): My be null. Used only in free list
+    // @Issue(Roman): Do we need BlockHeader *prev_free?
+    // @TODO(Roman): BlockHeader *next_free;
     byte         data[0];
 };
 
@@ -69,8 +72,7 @@ internal BlockHeader *FindBestMatch(Allocator *allocator, u64 bytes)
 
     for (header = allocator->base;
          header < allocator->base + allocator->cap - sizeof(BlockHeader) && header->block_state != BLOCK_STATE_NONE;
-         prev_header = header,
-         header = header->data + header->data_bytes)
+         prev_header = header, header = header->data + header->data_bytes)
     {
         if (header->block_state == BLOCK_STATE_IN_FREE_LIST)
         {

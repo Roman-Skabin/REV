@@ -27,8 +27,7 @@ VSOutput CustomVSEntryPoint(float4 pos : POSITION, float4 col : COLOR)
     printf("pos = { %f, %f, %f, %f }", pos.x, pos.y, pos.z, pos.w);
     printf("col = { %f, %f, %f, %f }", col.r, col.g, col.b, col.a);
     VSOutput output;
-    // output.pos = mul(cMVP, pos);
-    output.pos = pos;
+    output.pos = mul(cMVP, pos);
     output.col = col;
     return output;
 }

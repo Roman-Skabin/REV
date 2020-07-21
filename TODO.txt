@@ -6,9 +6,10 @@
     - Complete core\platform.h
     - BIG ISSUE: Do I really need all these Checks in my code,
                  especially at the beginning of functions?
-                 Doesn't it stupid, huh?
+                 Doesn't it stupid or useless, huh?
     - Edit all CheckM and FailedM calls (now they are able to get __VA_ARGS__)
     - Move all STD includes in platform.h to pch.h?
+    - Advanced free list for allocator.
 
 - Tools
     - Move improved timer to the tools?
@@ -16,7 +17,7 @@
 
 - Build
     - [Pre?]build system. Build only edited files
-      (source file change time > .obj file change time)
+      (source file change time > .obj file change time)?
 
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
@@ -25,7 +26,6 @@
     - Adapt to different ISA vec.h and mat.h
 
 - GPU
-    - FIX GPU RESOURCES!!! PRIMIRY TASK.
     - TODOs in cengine/gpu/gpu_memory_manager.h
     - Clean up GPUMemoryManager and GPUProgramManager
     - Print D3D12/DXGI messages in separate "while true" thread

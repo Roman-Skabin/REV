@@ -16,6 +16,9 @@ typedef struct BlockHeader BlockHeader;
 
 typedef struct Allocator
 {
+    // @NOTE(Roman): Just saved pointers to destroyed blocks.
+    // @TODO(Roman): BlockHeader *free_list;
+
     BlockHeader *base;
     u64          used;
     u64          cap;

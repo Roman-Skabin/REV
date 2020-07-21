@@ -4,3 +4,5 @@
 build/*.time
 log/
 bin/obj/
+nsight/*.dmp
+NEW_CHANGES.txt

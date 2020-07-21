@@ -767,7 +767,7 @@ internal void ParseInputLayout(
         else
         {
             desc->InputSlot            = 0;
-            desc->AlignedByteOffset    = i > 0 ? D3D12_APPEND_ALIGNED_ELEMENT : 0;
+            desc->AlignedByteOffset    = D3D12_APPEND_ALIGNED_ELEMENT;
             desc->InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
             desc->InstanceDataStepRate = 0;
 
@@ -1240,7 +1240,7 @@ internal void InitRootSignatureParameters(
             parameter->ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
 
             cbuffer->size_in_bytes = ALIGN_UP(cbuffer->size_in_bytes, 256);
-            GPUResource *resource  = PushConstantBuffer(engine, cbuffer->size_in_bytes, cbuffer->name, cbuffer->name_len);
+            GPUResource *resource  = PushConstantBuffer(engine, cbuffer->size_in_bytes, cbuffer->name, cast(u32, cbuffer->name_len));
             BufferPushBack(program->resources, resource);
         }
 
@@ -1264,7 +1264,7 @@ internal void InitRootSignatureParameters(
             parameter->ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
 
             cbuffer->size_in_bytes = ALIGN_UP(cbuffer->size_in_bytes, 256);
-            GPUResource *resource = PushConstantBuffer(engine, cbuffer->size_in_bytes, cbuffer->name, cbuffer->name_len);
+            GPUResource *resource = PushConstantBuffer(engine, cbuffer->size_in_bytes, cbuffer->name, cast(u32, cbuffer->name_len));
             BufferPushBack(program->resources, resource);
         }
 

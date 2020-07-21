@@ -270,29 +270,7 @@ internal void CreateAdapterAndDevice(Engine *engine)
     UINT               adapter_index = 0;
     DXGI_ADAPTER_DESC1 adapter_desc  = {0};
 
-#if 0
-    engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, 0, &engine->gpu_manager.adapter);
-    if (SUCCEEDED(engine->gpu_manager.error))
-    {
-        engine->gpu_manager.error = engine->gpu_manager.adapter->lpVtbl->GetDesc1(engine->gpu_manager.adapter, &adapter_desc);
-        Check(SUCCEEDED(engine->gpu_manager.error));
-
-        engine->gpu_manager.error = D3D12CreateDevice(engine->gpu_manager.adapter, D3D_FEATURE_LEVEL_12_1, &IID_ID3D12Device, &engine->gpu_manager.device);
-        if (SUCCEEDED(engine->gpu_manager.error) && !(adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
-        {
-        #if DEBUG
-            LogInfo(&engine->gpu_manager.debug_logger, "GPU Adapter: %S, Feature Level: %s", adapter_desc.Description, CSTR(D3D_FEATURE_LEVEL_12_1));
-        #endif
-            return;
-        }
-        SafeRelease(engine->gpu_manager.device);
-    }
-    SafeRelease(engine->gpu_manager.adapter);
-
-    for (UINT i = 1;
-#else
     for (UINT i = 0;
-#endif
          engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, i, &engine->gpu_manager.adapter) != DXGI_ERROR_NOT_FOUND;
          ++i)
     {
@@ -315,38 +293,18 @@ internal void CreateAdapterAndDevice(Engine *engine)
     {
         engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, adapter_index, &engine->gpu_manager.adapter);
         Check(SUCCEEDED(engine->gpu_manager.error));
-
+        
         engine->gpu_manager.error = D3D12CreateDevice(engine->gpu_manager.adapter, D3D_FEATURE_LEVEL_12_1, &IID_ID3D12Device, &engine->gpu_manager.device);
         Check(SUCCEEDED(engine->gpu_manager.error));
-    #if DEBUG
-        LogInfo(&engine->gpu_manager.debug_logger, "GPU Adapter: %S, Feature Level: %s", adapter_desc.Description, CSTR(D3D_FEATURE_LEVEL_12_1));
-    #endif
+
+        engine->gpu_manager.error = engine->gpu_manager.adapter->lpVtbl->GetDesc1(engine->gpu_manager.adapter, &adapter_desc);
+        Check(SUCCEEDED(engine->gpu_manager.error));
+
+        LogInfo(&engine->gpu_manager.logger, "GPU Adapter: %S, Feature Level: %s", adapter_desc.Description, CSTR(D3D_FEATURE_LEVEL_12_1));
     }
     else
     {
-    #if 0
-        engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, 0, &engine->gpu_manager.adapter);
-        if (SUCCEEDED(engine->gpu_manager.error))
-        {
-            engine->gpu_manager.error = engine->gpu_manager.adapter->lpVtbl->GetDesc1(engine->gpu_manager.adapter, &adapter_desc);
-            Check(SUCCEEDED(engine->gpu_manager.error));
-
-            engine->gpu_manager.error = D3D12CreateDevice(engine->gpu_manager.adapter, D3D_FEATURE_LEVEL_12_0, &IID_ID3D12Device, &engine->gpu_manager.device);
-            if (SUCCEEDED(engine->gpu_manager.error) && !(adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
-            {
-            #if DEBUG
-                LogInfo(&engine->gpu_manager.debug_logger, "GPU Adapter: %S, Feature Level: %s", adapter_desc.Description, CSTR(D3D_FEATURE_LEVEL_12_0));
-            #endif
-                return;
-            }
-            SafeRelease(engine->gpu_manager.device);
-        }
-        SafeRelease(engine->gpu_manager.adapter);
-
-        for (UINT i = 1;
-    #else
         for (UINT i = 0;
-    #endif
              engine->gpu_manager.factory->lpVtbl->EnumAdapters1(engine->gpu_manager.factory, i, &engine->gpu_manager.adapter) != D3D12_ERROR_ADAPTER_NOT_FOUND;
              ++i)
         {
@@ -372,20 +330,21 @@ internal void CreateAdapterAndDevice(Engine *engine)
 
         engine->gpu_manager.error = D3D12CreateDevice(engine->gpu_manager.adapter, D3D_FEATURE_LEVEL_12_0, &IID_ID3D12Device, &engine->gpu_manager.device);
         Check(SUCCEEDED(engine->gpu_manager.error));
-    #if DEBUG
-        LogInfo(&engine->gpu_manager.debug_logger, "GPU Adapter: %S, Feature Level: %s", adapter_desc.Description, CSTR(D3D_FEATURE_LEVEL_12_0));
-    #endif
+
+        engine->gpu_manager.error = engine->gpu_manager.adapter->lpVtbl->GetDesc1(engine->gpu_manager.adapter, &adapter_desc);
+        Check(SUCCEEDED(engine->gpu_manager.error));
+
+        LogInfo(&engine->gpu_manager.logger, "GPU Adapter: %S, Feature Level: %s", adapter_desc.Description, CSTR(D3D_FEATURE_LEVEL_12_0));
     }
 }
 
 internal void CreateGPUManager(Engine *engine)
 {
-#if DEBUG
     DuplicateLogger("GPU Manager Logger",
                     LOG_TO_FILE | LOG_TO_CONSOLE,
                     &engine->logger,
-                    &engine->gpu_manager.debug_logger);
-
+                    &engine->gpu_manager.logger);
+#if DEBUG
     engine->gpu_manager.error = D3D12GetDebugInterface(&IID_ID3D12Debug1,
                                                        &engine->gpu_manager.debug);
     Check(SUCCEEDED(engine->gpu_manager.error));
@@ -489,11 +448,17 @@ internal void CreateGPUManager(Engine *engine)
                                                                                         sizeof(D3D12_FEATURE_DATA_SHADER_MODEL));
     Check(SUCCEEDED(engine->gpu_manager.error));
 
+    engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CheckFeatureSupport(engine->gpu_manager.device,
+                                                                                        D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT,
+                                                                                        &engine->gpu_manager.features.virtual_address,
+                                                                                        sizeof(D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT));
+    Check(SUCCEEDED(engine->gpu_manager.error));
+
     D3D12_COMMAND_QUEUE_DESC graphics_queue_desc;
     graphics_queue_desc.Type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
     graphics_queue_desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL; // D3D12_COMMAND_QUEUE_PRIORITY_GLOBAL_REALTIME ?
     graphics_queue_desc.Flags    = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    graphics_queue_desc.NodeMask = 1;
+    graphics_queue_desc.NodeMask = 0;
 
     engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateCommandQueue(engine->gpu_manager.device,
                                                                                        &graphics_queue_desc,
@@ -555,7 +520,7 @@ internal void CreateGPUManager(Engine *engine)
     #endif
     }
 
-    IDXGIFactory5 *factory5 = 0;
+    IDXGIFactory5 *factory5 = null;
     engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->QueryInterface(engine->gpu_manager.factory,
                                                                                     &IID_IDXGIFactory5,
                                                                                     &factory5);
@@ -566,7 +531,6 @@ internal void CreateGPUManager(Engine *engine)
                                                                       &engine->gpu_manager.tearing_supported,
                                                                       sizeof(b32));
     Check(SUCCEEDED(engine->gpu_manager.error));
-
     SafeRelease(factory5);
 
     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1;
@@ -594,7 +558,7 @@ internal void CreateGPUManager(Engine *engine)
     swap_chain_fullscreen_desc.Scaling                 = DXGI_MODE_SCALING_STRETCHED;
     swap_chain_fullscreen_desc.Windowed                = true;
 
-    IDXGISwapChain1 *swap_chain1 = 0;
+    IDXGISwapChain1 *swap_chain1 = null;
     engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->CreateSwapChainForHwnd(engine->gpu_manager.factory,
                                                                                             engine->gpu_manager.graphics_queue,
                                                                                             engine->window.handle,
@@ -608,6 +572,7 @@ internal void CreateGPUManager(Engine *engine)
                                                                     &IID_IDXGISwapChain4,
                                                                     &engine->gpu_manager.swap_chain);
     Check(SUCCEEDED(engine->gpu_manager.error));
+    SafeRelease(swap_chain1);
 
 #if 0 // We'are already suppressing Alt+Enter in WindowProc
     engine->gpu_manager.error = engine->gpu_manager.factory->lpVtbl->MakeWindowAssociation(engine->gpu_manager.factory,
@@ -620,7 +585,7 @@ internal void CreateGPUManager(Engine *engine)
     rtv_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     rtv_desc_heap_desc.NumDescriptors = SWAP_CHAIN_BUFFERS_COUNT;
     rtv_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    rtv_desc_heap_desc.NodeMask       = 1;
+    rtv_desc_heap_desc.NodeMask       = 0;
 
     engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateDescriptorHeap(engine->gpu_manager.device,
                                                                                          &rtv_desc_heap_desc,
@@ -631,7 +596,6 @@ internal void CreateGPUManager(Engine *engine)
     engine->gpu_manager.rtv_desc_size = engine->gpu_manager.device->lpVtbl->GetDescriptorHandleIncrementSize(engine->gpu_manager.device,
                                                                                                              rtv_desc_heap_desc.Type);
 
-    #pragma warning(suppress: 4020) // I know what I'm doing.
     engine->gpu_manager.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.rtv_heap_desc, &engine->gpu_manager.rtv_cpu_desc_handle);
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
@@ -657,7 +621,7 @@ internal void CreateGPUManager(Engine *engine)
     dsv_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     dsv_desc_heap_desc.NumDescriptors = 1;
     dsv_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    dsv_desc_heap_desc.NodeMask       = 1;
+    dsv_desc_heap_desc.NodeMask       = 0;
 
     engine->gpu_manager.error = engine->gpu_manager.device->lpVtbl->CreateDescriptorHeap(engine->gpu_manager.device,
                                                                                          &dsv_desc_heap_desc,
@@ -665,15 +629,14 @@ internal void CreateGPUManager(Engine *engine)
                                                                                          &engine->gpu_manager.dsv_heap_desc);
     Check(SUCCEEDED(engine->gpu_manager.error));
 
-    #pragma warning(suppress: 4020) // I know what I'm doing.
     engine->gpu_manager.dsv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.dsv_heap_desc, &engine->gpu_manager.dsv_cpu_desc_handle);
 
     D3D12_HEAP_PROPERTIES ds_heap_properties;
     ds_heap_properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
     ds_heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
     ds_heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    ds_heap_properties.CreationNodeMask     = 1;
-    ds_heap_properties.VisibleNodeMask      = 1;
+    ds_heap_properties.CreationNodeMask     = 0;
+    ds_heap_properties.VisibleNodeMask      = 0;
 
     D3D12_RESOURCE_DESC ds_resource_desc;
     ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -816,8 +779,8 @@ internal void DestroyGPUManager(Engine *engine)
     SafeRelease(engine->gpu_manager.info_queue);
     SafeRelease(engine->gpu_manager.dxgi_debug);
     SafeRelease(engine->gpu_manager.debug);
-    DestroyLogger(&engine->gpu_manager.debug_logger);
 #endif
+    DestroyLogger(&engine->gpu_manager.logger);
 
     LogInfo(&engine->logger, "GPUManager was destroyed");
 }
@@ -839,7 +802,7 @@ internal void ResizeGPUBuffers(Engine *engine)
         flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
-    u32                 node_masks[]     = { 1, 1 };
+    u32                 node_masks[]     = { 0, 0 };
     ID3D12CommandQueue *present_queues[] = { engine->gpu_manager.graphics_queue, engine->gpu_manager.graphics_queue };
 
     engine->gpu_manager.error = engine->gpu_manager.swap_chain->lpVtbl->ResizeBuffers1(engine->gpu_manager.swap_chain,
@@ -853,7 +816,6 @@ internal void ResizeGPUBuffers(Engine *engine)
     Check(SUCCEEDED(engine->gpu_manager.error));
 
     // Recreate buffers
-    #pragma warning(suppress: 4020) // I know what I'm doing.
     engine->gpu_manager.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.rtv_heap_desc, &engine->gpu_manager.rtv_cpu_desc_handle);
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
@@ -876,15 +838,14 @@ internal void ResizeGPUBuffers(Engine *engine)
     engine->gpu_manager.current_buffer           = engine->gpu_manager.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->gpu_manager.swap_chain);
     engine->gpu_manager.rtv_cpu_desc_handle.ptr += engine->gpu_manager.current_buffer * engine->gpu_manager.rtv_desc_size;
 
-    #pragma warning(suppress: 4020) // I know what I'm doing.
     engine->gpu_manager.dsv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.dsv_heap_desc, &engine->gpu_manager.dsv_cpu_desc_handle);
 
     D3D12_HEAP_PROPERTIES ds_heap_properties;
     ds_heap_properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
     ds_heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
     ds_heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    ds_heap_properties.CreationNodeMask     = 1;
-    ds_heap_properties.VisibleNodeMask      = 1;
+    ds_heap_properties.CreationNodeMask     = 0;
+    ds_heap_properties.VisibleNodeMask      = 0;
 
     D3D12_RESOURCE_DESC ds_resource_desc;
     ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -944,7 +905,6 @@ internal void StartFrame(Engine *engine)
     SetFullscreen(engine, engine->window.fullscreened);
 
     WaitForGPU(engine);
-    ResetGPUMemory(engine, GPU_MEMORY_TYPE_TRANSIENT_CURRENT);
 
     engine->gpu_manager.error = graphics_allocator->lpVtbl->Reset(graphics_allocator);
     Check(SUCCEEDED(engine->gpu_manager.error));
@@ -1094,7 +1054,6 @@ internal void EndFrame(Engine *engine)
     // Swap buffers
     engine->gpu_manager.current_buffer = engine->gpu_manager.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->gpu_manager.swap_chain);
 
-    #pragma warning(suppress: 4020) // I know what I'm doing.
     engine->gpu_manager.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.rtv_heap_desc, &engine->gpu_manager.rtv_cpu_desc_handle);
     engine->gpu_manager.rtv_cpu_desc_handle.ptr += engine->gpu_manager.current_buffer * engine->gpu_manager.rtv_desc_size;
 }
@@ -1313,83 +1272,135 @@ internal void DestroySound(Engine *engine)
 
 internal void CreateGPUMemoryManager(
     IN Engine *engine,
-    IN u64     permanent_memory_capacity,
-    IN u64     transient_memory_capacity)
+    IN u64     gpu_memory_capacity)
 {
     Check(engine);
-    CheckM(permanent_memory_capacity, "Permanent memory capacity can't be 0");
-    CheckM(transient_memory_capacity, "Transient memory capacity can't be 0");
-    CheckM(engine->gpu_manager.features.options.ResourceHeapTier >= D3D12_RESOURCE_HEAP_TIER_2,
-           "Your GPU adapter is not compatible by this engine. Resource Heap Tier must be >= 2, yours = 1.\n"
-           "You may try to reinitialize an engine with another adapter. See CreateAdapterAndDevice function in cengine.c");
+    CheckM(gpu_memory_capacity, "GPU memory capacity can't be 0");
+
+    LogInfo(&engine->gpu_manager.logger,
+            "GPU Resource Heap Tier: D3D12_RESOURCE_HEAP_TIER_%I32d",
+            engine->gpu_manager.features.options.ResourceHeapTier);
+
+    gpu_memory_capacity = ALIGN_UP(gpu_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+    u64 gpu_buffer_memory_cap  = ALIGN_UP(cast(u64, 0.4f * gpu_memory_capacity), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+    u64 gpu_texture_memory_cap = ALIGN_UP(cast(u64, 0.6f * gpu_memory_capacity), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+
+    D3D12_HEAP_DESC default_buffer_heap_desc = {0};
+    default_buffer_heap_desc.SizeInBytes                     = gpu_buffer_memory_cap;
+    default_buffer_heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    default_buffer_heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    default_buffer_heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    default_buffer_heap_desc.Properties.CreationNodeMask     = 0;
+    default_buffer_heap_desc.Properties.VisibleNodeMask      = 0;
+    default_buffer_heap_desc.Alignment                       = GPU_RESOURCE_ALLIGNMENT;
+    default_buffer_heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS
+                                                             | D3D12_HEAP_FLAG_SHARED;
+
+    D3D12_HEAP_DESC default_texture_heap_desc = {0};
+    default_texture_heap_desc.SizeInBytes                     = gpu_texture_memory_cap;
+    default_texture_heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    default_texture_heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    default_texture_heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    default_texture_heap_desc.Properties.CreationNodeMask     = 0;
+    default_texture_heap_desc.Properties.VisibleNodeMask      = 0;
+    default_texture_heap_desc.Alignment                       = GPU_RESOURCE_ALLIGNMENT;
+    default_texture_heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES
+                                                              | D3D12_HEAP_FLAG_SHARED;
+
+    D3D12_HEAP_DESC upload_buffer_heap_desc = {0};
+    upload_buffer_heap_desc.SizeInBytes                     = gpu_buffer_memory_cap;
+    upload_buffer_heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_UPLOAD;
+    upload_buffer_heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    upload_buffer_heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    upload_buffer_heap_desc.Properties.CreationNodeMask     = 0;
+    upload_buffer_heap_desc.Properties.VisibleNodeMask      = 0;
+    upload_buffer_heap_desc.Alignment                       = GPU_RESOURCE_ALLIGNMENT;
+    upload_buffer_heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+
+    D3D12_HEAP_DESC upload_texture_heap_desc = {0};
+    upload_texture_heap_desc.SizeInBytes                     = gpu_texture_memory_cap;
+    upload_texture_heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_UPLOAD;
+    upload_texture_heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    upload_texture_heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    upload_texture_heap_desc.Properties.CreationNodeMask     = 0;
+    upload_texture_heap_desc.Properties.VisibleNodeMask      = 0;
+    upload_texture_heap_desc.Alignment                       = GPU_RESOURCE_ALLIGNMENT;
+    upload_texture_heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
 
     // @Issue(Roman): Create a separate allocator for GPU Memory Manager?
     engine->gpu_memory_manager.allocator = &engine->allocator;
 
-    {
-        engine->gpu_memory_manager.permanent_memory.gpu_heap_capacity = ALIGN_UP(permanent_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+    // Default memory
+    engine->gpu_memory_manager.buffer_memory.default_capacity  = gpu_buffer_memory_cap;
+    engine->gpu_memory_manager.texture_memory.default_capacity = gpu_texture_memory_cap;
 
-        D3D12_HEAP_DESC heap_desc;
-        heap_desc.SizeInBytes                     = engine->gpu_memory_manager.permanent_memory.gpu_heap_capacity;
-        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
-        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-        heap_desc.Properties.CreationNodeMask     = 1;
-        heap_desc.Properties.VisibleNodeMask      = 1;
-        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES
-                                                  | D3D12_HEAP_FLAG_SHARED;
+    engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                      &default_buffer_heap_desc,
+                                                                                      &IID_ID3D12Heap,
+                                                                                      &engine->gpu_memory_manager.buffer_memory.default_heap);
+    CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Default Buffer Heap");
+    Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+    engine->gpu_memory_manager.error = engine->gpu_memory_manager.buffer_memory.default_heap->lpVtbl->SetPrivateData(engine->gpu_memory_manager.buffer_memory.default_heap,
+                                                                                                                     &WKPDID_D3DDebugObjectName,
+                                                                                                                     CSTRLEN("Default Buffer Heap"),
+                                                                                                                     "Default Buffer Heap");
+    Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+    engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                      &default_texture_heap_desc,
+                                                                                      &IID_ID3D12Heap,
+                                                                                      &engine->gpu_memory_manager.texture_memory.default_heap);
+    CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Default Texture Heap");
+    Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+    engine->gpu_memory_manager.error = engine->gpu_memory_manager.texture_memory.default_heap->lpVtbl->SetPrivateData(engine->gpu_memory_manager.texture_memory.default_heap,
+                                                                                                                      &WKPDID_D3DDebugObjectName,
+                                                                                                                      CSTRLEN("Default Texture Heap"),
+                                                                                                                      "Default Texture Heap");
+    Check(SUCCEEDED(engine->gpu_memory_manager.error));
+
+    // Upload memory
+    char heap_name[32];
+    s32  heap_name_len = 0;
+    
+    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+    {
+        engine->gpu_memory_manager.buffer_memory.upload_capacity[i]  = gpu_buffer_memory_cap;
+        engine->gpu_memory_manager.texture_memory.upload_capacity[i] = gpu_texture_memory_cap;
 
         engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
-                                                                                          &heap_desc,
+                                                                                          &upload_buffer_heap_desc,
                                                                                           &IID_ID3D12Heap,
-                                                                                          &engine->gpu_memory_manager.permanent_memory.gpu_heap);
-        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Permanent Memory");
+                                                                                          engine->gpu_memory_manager.buffer_memory.upload_heap + i);
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Upload Buffer Heap");
         Check(SUCCEEDED(engine->gpu_memory_manager.error));
 
-        engine->gpu_memory_manager.error = engine->gpu_memory_manager.permanent_memory.gpu_heap->lpVtbl->SetPrivateData(engine->gpu_memory_manager.permanent_memory.gpu_heap,
-                                                                                                                        &WKPDID_D3DDebugObjectName,
-                                                                                                                        CSTRLEN("Permanent Memory"),
-                                                                                                                        "Permanent Memory");
+        ID3D12Heap *upload_buffer_heap = engine->gpu_memory_manager.buffer_memory.upload_heap[i];
+
+        heap_name_len = sprintf(heap_name, "Upload Buffer Heap #%I32u", i);
+        engine->gpu_memory_manager.error = upload_buffer_heap->lpVtbl->SetPrivateData(upload_buffer_heap,
+                                                                                      &WKPDID_D3DDebugObjectName,
+                                                                                      heap_name_len,
+                                                                                      heap_name);
         Check(SUCCEEDED(engine->gpu_memory_manager.error));
-    }
+        
+        engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
+                                                                                          &upload_texture_heap_desc,
+                                                                                          &IID_ID3D12Heap,
+                                                                                          engine->gpu_memory_manager.texture_memory.upload_heap + i);
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Upload Buffer Heap");
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
 
-    {
-        transient_memory_capacity = ALIGN_UP(transient_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+        ID3D12Heap *upload_texture_heap = engine->gpu_memory_manager.texture_memory.upload_heap[i];
 
-        D3D12_HEAP_DESC heap_desc;
-        heap_desc.SizeInBytes                     = transient_memory_capacity;
-        heap_desc.Properties.Type                 = D3D12_HEAP_TYPE_CUSTOM;
-        heap_desc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE;
-        heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
-        heap_desc.Properties.CreationNodeMask     = 1;
-        heap_desc.Properties.VisibleNodeMask      = 1;
-        heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-        heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ALL_BUFFERS_AND_TEXTURES;
-
-        char heap_name[32];
-        s32  heap_name_len = 0;
-
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-        {
-            GPUResourceMemory *transient_memory = engine->gpu_memory_manager.transient_memory + i;
-
-            transient_memory->gpu_heap_capacity = transient_memory_capacity;
-
-            engine->gpu_memory_manager.error = engine->gpu_manager.device->lpVtbl->CreateHeap(engine->gpu_manager.device,
-                                                                                              &heap_desc,
-                                                                                              &IID_ID3D12Heap,
-                                                                                              &transient_memory->gpu_heap);
-            CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Transient Memory");
-            Check(SUCCEEDED(engine->gpu_memory_manager.error));
-
-            heap_name_len = sprintf(heap_name, "Transient Memory #%I32u", i);
-            engine->gpu_memory_manager.error = transient_memory->gpu_heap->lpVtbl->SetPrivateData(transient_memory->gpu_heap,
-                                                                                                  &WKPDID_D3DDebugObjectName,
-                                                                                                  heap_name_len,
-                                                                                                  heap_name);
-            Check(SUCCEEDED(engine->gpu_memory_manager.error));
-        }
+        heap_name_len = sprintf(heap_name, "Upload Texture Heap #%I32u", i);
+        engine->gpu_memory_manager.error = upload_texture_heap->lpVtbl->SetPrivateData(upload_texture_heap,
+                                                                                       &WKPDID_D3DDebugObjectName,
+                                                                                       heap_name_len,
+                                                                                       heap_name);
+        Check(SUCCEEDED(engine->gpu_memory_manager.error));
     }
 }
 
@@ -1397,14 +1408,14 @@ internal void DestroyGPUMemoryManager(Engine *engine)
 {
     Check(engine);
 
-    ReleaseGPUMemory(engine, GPU_MEMORY_TYPE_PERMANENT | GPU_MEMORY_TYPE_TRANSIENT_ALL);
+    ReleaseGPUMemory(engine);
 
-    SafeRelease(engine->gpu_memory_manager.permanent_memory.gpu_heap);
-
+    SafeRelease(engine->gpu_memory_manager.buffer_memory.default_heap);
+    SafeRelease(engine->gpu_memory_manager.texture_memory.default_heap);
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
-        GPUResourceMemory *transient_memory = engine->gpu_memory_manager.transient_memory + i;
-        SafeRelease(transient_memory->gpu_heap);
+        SafeRelease(engine->gpu_memory_manager.buffer_memory.upload_heap[i]);
+        SafeRelease(engine->gpu_memory_manager.texture_memory.upload_heap[i]);
     }
 }
 
@@ -1575,7 +1586,7 @@ int EngineRun(
     InputCreate(engine);
     TimerCreate(engine);
     CreateGPUManager(engine);
-    CreateGPUMemoryManager(engine, MB(512ui64), MB(512ui64));
+    CreateGPUMemoryManager(engine, MB(512ui64));
     CreateSound(engine);
     engine->work_queue = CreateWorkQueue(engine);
 

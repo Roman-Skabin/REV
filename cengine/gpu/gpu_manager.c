@@ -86,6 +86,12 @@ void LogDirectXMessages(Engine *engine)
                 case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_MESSAGE:    AddCSTR(composed_message, composed_message_len, "MESSAGE: ")    break;
             }
 
+            while (isspace(*message->pDescription))
+            {
+                ++message->pDescription;
+                --message->DescriptionByteLength;
+            }
+
             CopyMemory(composed_message + composed_message_len, message->pDescription, message->DescriptionByteLength);
             composed_message_len += message->DescriptionByteLength;
 
@@ -106,9 +112,9 @@ void LogDirectXMessages(Engine *engine)
 
             switch (message->Severity)
             {
-                case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR:   LogError(&engine->gpu_manager.debug_logger,  "%.*s", composed_message_len, composed_message); break;
-                case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING: LogWarning(&engine->gpu_manager.debug_logger,"%.*s", composed_message_len, composed_message); break;
-                default:                                       LogInfo(&engine->gpu_manager.debug_logger,   "%.*s", composed_message_len, composed_message); break;
+                case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR:   LogError(&engine->gpu_manager.logger,  "%.*s", composed_message_len, composed_message); break;
+                case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING: LogWarning(&engine->gpu_manager.logger,"%.*s", composed_message_len, composed_message); break;
+                default:                                       LogInfo(&engine->gpu_manager.logger,   "%.*s", composed_message_len, composed_message); break;
             }
 
             ZeroMemory(composed_message, composed_message_len);
@@ -149,6 +155,12 @@ void LogDirectXMessages(Engine *engine)
                 case D3D12_MESSAGE_SEVERITY_MESSAGE:    AddCSTR(composed_message, composed_message_len, "D3D12 MESSAGE: ")    break;
             }
 
+            while (isspace(*message->pDescription))
+            {
+                ++message->pDescription;
+                --message->DescriptionByteLength;
+            }
+
             CopyMemory(composed_message + composed_message_len, message->pDescription, message->DescriptionByteLength);
             composed_message_len += message->DescriptionByteLength;
 
@@ -169,9 +181,9 @@ void LogDirectXMessages(Engine *engine)
 
             switch (message->Severity)
             {
-                case D3D12_MESSAGE_SEVERITY_ERROR:   LogError(&engine->gpu_manager.debug_logger,  "%.*s", composed_message_len, composed_message); break;
-                case D3D12_MESSAGE_SEVERITY_WARNING: LogWarning(&engine->gpu_manager.debug_logger,"%.*s", composed_message_len, composed_message); break;
-                default:                             LogInfo(&engine->gpu_manager.debug_logger,   "%.*s", composed_message_len, composed_message); break;
+                case D3D12_MESSAGE_SEVERITY_ERROR:   LogError(&engine->gpu_manager.logger,  "%.*s", composed_message_len, composed_message); break;
+                case D3D12_MESSAGE_SEVERITY_WARNING: LogWarning(&engine->gpu_manager.logger,"%.*s", composed_message_len, composed_message); break;
+                default:                             LogInfo(&engine->gpu_manager.logger,   "%.*s", composed_message_len, composed_message); break;
             }
 
             ZeroMemory(composed_message, composed_message_len);

@@ -15,20 +15,10 @@
 //               Push Sampler
 // @TOOD(Roman): Move Draw (and Bind probably) stuff somewhere.
 //               This functionality doesn't belong to memory management.
-// @TOOD(Roman): Add upload resource to GPUResource and create it
-//               right on entire resource creation. It'd be better
-//               and faster then create upload resource on copy.
-//               + Rewrite creation with placed resources only.
 // @TODO(Roman): LIST GPUResource *free_list in GPUResourceMemory.
 //               Just saved pointers to freed resources.
 // @TODO(Roman): Add ID3D12Fences to the GPUResoucre to be shure
 //               the copy operation is completed.
-
-enum
-{
-    GPU_RESOURCE_ALLIGNMENT      = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-    GPU_MSAA_RESOURCE_ALLIGNMENT = D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT,
-};
 
 typedef enum GPU_RESOURCE_ALLOCATION_STATE
 {

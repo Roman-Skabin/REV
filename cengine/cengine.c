@@ -1293,7 +1293,7 @@ internal void CreateGPUMemoryManager(
     default_buffer_heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
     default_buffer_heap_desc.Properties.CreationNodeMask     = 0;
     default_buffer_heap_desc.Properties.VisibleNodeMask      = 0;
-    default_buffer_heap_desc.Alignment                       = GPU_RESOURCE_ALLIGNMENT;
+    default_buffer_heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
     default_buffer_heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS
                                                              | D3D12_HEAP_FLAG_SHARED;
 
@@ -1304,7 +1304,7 @@ internal void CreateGPUMemoryManager(
     default_texture_heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
     default_texture_heap_desc.Properties.CreationNodeMask     = 0;
     default_texture_heap_desc.Properties.VisibleNodeMask      = 0;
-    default_texture_heap_desc.Alignment                       = GPU_RESOURCE_ALLIGNMENT;
+    default_texture_heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
     default_texture_heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES
                                                               | D3D12_HEAP_FLAG_SHARED;
 
@@ -1315,7 +1315,7 @@ internal void CreateGPUMemoryManager(
     upload_buffer_heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
     upload_buffer_heap_desc.Properties.CreationNodeMask     = 0;
     upload_buffer_heap_desc.Properties.VisibleNodeMask      = 0;
-    upload_buffer_heap_desc.Alignment                       = GPU_RESOURCE_ALLIGNMENT;
+    upload_buffer_heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
     upload_buffer_heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 
     D3D12_HEAP_DESC upload_texture_heap_desc = {0};
@@ -1325,7 +1325,7 @@ internal void CreateGPUMemoryManager(
     upload_texture_heap_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
     upload_texture_heap_desc.Properties.CreationNodeMask     = 0;
     upload_texture_heap_desc.Properties.VisibleNodeMask      = 0;
-    upload_texture_heap_desc.Alignment                       = GPU_RESOURCE_ALLIGNMENT;
+    upload_texture_heap_desc.Alignment                       = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
     upload_texture_heap_desc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
 
     // @Issue(Roman): Create a separate allocator for GPU Memory Manager?

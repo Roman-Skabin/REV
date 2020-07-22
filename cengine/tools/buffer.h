@@ -21,7 +21,7 @@ typedef struct BufferHeader
 CENGINE_FUN void *CreateBuffer(Allocator *allocator, u64 alignment_in_bytes);
 CENGINE_FUN void  _DestroyBuffer(void **buffer);
 
-#define DestroyBuffer(_buffer) _DestroyBuffer(&(_buffer))
+#define DestroyBuffer(buffer) _DestroyBuffer(&(buffer))
 
 CENGINE_FUN void *ExpandBuffer(BufferHeader *header, u64 element_bytes);
 
@@ -67,10 +67,10 @@ CENGINE_FUN void *ExpandBuffer(BufferHeader *header, u64 element_bytes);
 #define BufferEraseBack(buffer)  { u64 where = BufferGetCount(buffer); BufferErase(buffer, where); }
 #define BufferEraseFront(buffer) BufferErase(buffer, 0)
 
-#define BufferClear(buffer)                         \
-{                                                   \
-    Check(buffer);                                  \
-    BufferHeader *header = BufferGetHeader(buffer); \
-    ZeroMemory(buffer, header->count);              \
-    header->count = 0;                              \
+#define BufferClear(buffer)                                \
+{                                                          \
+    Check(buffer);                                         \
+    BufferHeader *header = BufferGetHeader(buffer);        \
+    ZeroMemory(buffer, header->count * sizeof(*(buffer))); \
+    header->count = 0;                                     \
 }

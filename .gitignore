@@ -3,6 +3,6 @@
 *.pdf
 build/*.time
 log/
-bin/obj/
+bin/
 nsight/*.dmp
 NEW_CHANGES.txt

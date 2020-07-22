@@ -10,6 +10,7 @@
     - Edit all CheckM and FailedM calls (now they are able to get __VA_ARGS__)
     - Move all STD includes in platform.h to pch.h?
     - Advanced free list for allocator.
+    - Level system (not a "System" actualy but kinda).
 
 - Tools
     - Move improved timer to the tools?
@@ -39,6 +40,7 @@
 - Graphics
     - Custom graphics shader's parser and GraphicsProgram generation
         - SRVs, UAVs, static samplers, tables (, constants?)
+        - Hash table for interns
         - Add Root Signature v1.1 specific settings.
         - Includes
         - Parse templates (Buffer<type> name; vector<type, dim> name; ...)

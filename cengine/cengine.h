@@ -19,10 +19,10 @@
 typedef USER_CALLBACK(UserCallback);
 
 #if DEBUG
-#define USER_MAIN(_OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound)                          \
-int __cdecl main(int args_count, char *args[])                                                \
-{                                                                                             \
-    return EngineRun(GetModuleHandleA(0), _OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound); \
+#define USER_MAIN(_OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound)                             \
+int __cdecl main(int args_count, char *args[])                                                   \
+{                                                                                                \
+    return EngineRun(GetModuleHandleA(null), _OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound); \
 }
 #else
 #define USER_MAIN(_OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound)                                 \
@@ -82,7 +82,6 @@ struct Engine
         UserCallback  *OnInit;
         UserCallback  *OnDestroy;
         UserCallback  *OnUpdateAndRender;
-        UserCallback  *OnRender;
         SoundCallback *OnSound;
     } user_callbacks;
 

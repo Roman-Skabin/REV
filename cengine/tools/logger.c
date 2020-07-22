@@ -63,10 +63,10 @@ void DuplicateLogger(
     OUT Logger     *dest)
 {
     Check(name);
-    CheckM(log_to & LOG_TO_FILE, "<log_to> param required LOG_TO_FILE flag");
+    CheckM(log_to & LOG_TO_FILE, "<log_to> param required LOG_TO_FILE flag, got: 0x%08I32X", log_to);
     Check(src);
-    CheckM(src->log_to & LOG_TO_FILE, "Source logger has to get LOG_TO_FILE flag");
-    CheckM(src->file, "Source logger's file is invalid");
+    CheckM(src->log_to & LOG_TO_FILE, "%s (src) required LOG_TO_FILE flag, got: 0x%I32X", src->name, src->log_to);
+    CheckM(src->file, "%s's (src) file is <null>", src->name);
     Check(dest);
 
     dest->name         = name;

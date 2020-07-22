@@ -1339,7 +1339,9 @@ internal void CreateGPUMemoryManager(
                                                                                       &default_buffer_heap_desc,
                                                                                       &IID_ID3D12Heap,
                                                                                       &engine->gpu_memory_manager.buffer_memory.default_heap);
-    CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Default Buffer Heap");
+    CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY,
+           "There is no enough GPU memory to create Default Buffer Heap. Requested capacity: %I64u",
+           gpu_buffer_memory_cap);
     Check(SUCCEEDED(engine->gpu_memory_manager.error));
 
     engine->gpu_memory_manager.error = engine->gpu_memory_manager.buffer_memory.default_heap->lpVtbl->SetPrivateData(engine->gpu_memory_manager.buffer_memory.default_heap,
@@ -1352,7 +1354,9 @@ internal void CreateGPUMemoryManager(
                                                                                       &default_texture_heap_desc,
                                                                                       &IID_ID3D12Heap,
                                                                                       &engine->gpu_memory_manager.texture_memory.default_heap);
-    CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Default Texture Heap");
+    CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY,
+           "There is no enough GPU memory to create Default Texture Heap. Requested capacity: %I64u",
+           gpu_texture_memory_cap);
     Check(SUCCEEDED(engine->gpu_memory_manager.error));
 
     engine->gpu_memory_manager.error = engine->gpu_memory_manager.texture_memory.default_heap->lpVtbl->SetPrivateData(engine->gpu_memory_manager.texture_memory.default_heap,
@@ -1374,7 +1378,9 @@ internal void CreateGPUMemoryManager(
                                                                                           &upload_buffer_heap_desc,
                                                                                           &IID_ID3D12Heap,
                                                                                           engine->gpu_memory_manager.buffer_memory.upload_heap + i);
-        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Upload Buffer Heap");
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY,
+               "There is no enough GPU memory to create Upload Buffer Heap. Requested capacity: %I64u",
+               gpu_buffer_memory_cap);
         Check(SUCCEEDED(engine->gpu_memory_manager.error));
 
         ID3D12Heap *upload_buffer_heap = engine->gpu_memory_manager.buffer_memory.upload_heap[i];
@@ -1390,7 +1396,9 @@ internal void CreateGPUMemoryManager(
                                                                                           &upload_texture_heap_desc,
                                                                                           &IID_ID3D12Heap,
                                                                                           engine->gpu_memory_manager.texture_memory.upload_heap + i);
-        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY, "There is no enough GPU memory to create Upload Buffer Heap");
+        CheckM(engine->gpu_memory_manager.error != E_OUTOFMEMORY,
+               "There is no enough GPU memory to create Upload Buffer Heap. Requested capacity: %I64u",
+               gpu_buffer_memory_cap);
         Check(SUCCEEDED(engine->gpu_memory_manager.error));
 
         ID3D12Heap *upload_texture_heap = engine->gpu_memory_manager.texture_memory.upload_heap[i];
@@ -1567,7 +1575,7 @@ int EngineRun(
     DebugResult(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
 
     Memory engine_memory;
-    CreateMemory(&engine_memory, GB(1ui64), GB(2ui64));
+    CreateMemory(GB(1ui64), GB(2ui64), &engine_memory);
 
     Engine *engine = PushToPA(Engine, &engine_memory, 1);
     engine->memory = &engine_memory;

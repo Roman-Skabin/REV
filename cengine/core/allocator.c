@@ -33,14 +33,18 @@ struct BlockHeader
     byte         data[0];
 };
 
-void CreateAllocator(Allocator *allocator, void *base_address, u64 capacity, b32 clear_memory)
+void CreateAllocator(
+    IN       Allocator *allocator,
+    OPTIONAL void      *base_address,
+    IN       u64        capacity,
+    IN       b32        clear_memory)
 {
-    Check(capacity);
+    Check(allocator);
+    CheckM(capacity, "Allocator's capacity can't be 0");
 
     if (!base_address)
     {
-        allocator->base = VirtualAlloc(0, capacity, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-        Check(allocator->base);
+        DebugResult(allocator->base = VirtualAlloc(null, capacity, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
         allocator->reserved = true;
     }
     else
@@ -53,7 +57,8 @@ void CreateAllocator(Allocator *allocator, void *base_address, u64 capacity, b32
     allocator->cap  = capacity;
 }
 
-void DestroyAllocator(Allocator *allocator)
+void DestroyAllocator(
+    IN Allocator *allocator)
 {
     Check(allocator);
     if (allocator->reserved)
@@ -63,12 +68,14 @@ void DestroyAllocator(Allocator *allocator)
     ZeroMemory(allocator, sizeof(Allocator));
 }
 
-internal BlockHeader *FindBestMatch(Allocator *allocator, u64 bytes)
+internal BlockHeader *FindBestMatch(
+    IN Allocator *allocator,
+    IN u64        bytes)
 {
-    BlockHeader *best_in_list  = 0;
-    BlockHeader *first_in_list = 0;
-    BlockHeader *header        = 0;
-    BlockHeader *prev_header   = 0;
+    BlockHeader *best_in_list  = null;
+    BlockHeader *first_in_list = null;
+    BlockHeader *header        = null;
+    BlockHeader *prev_header   = null;
 
     for (header = allocator->base;
          header < allocator->base + allocator->cap - sizeof(BlockHeader) && header->block_state != BLOCK_STATE_NONE;
@@ -134,29 +141,45 @@ internal BlockHeader *FindBestMatch(Allocator *allocator, u64 bytes)
         return header;
     }
 
-    return 0;
+    return null;
 }
 
-void *Allocate(Allocator *allocator, u64 bytes)
+void *Allocate(
+    IN Allocator *allocator,
+    IN u64        bytes)
 {
     Check(allocator);
-    if (bytes)
-    {
-        Check(bytes <= allocator->cap - allocator->used);
+    CheckM(bytes, "bytes can't be 0")
 
-        BlockHeader *header = FindBestMatch(allocator, bytes);
-        CheckM(header, "Memory overflow");
+    CheckM(bytes <= allocator->cap - allocator->used,
+           "Memory overflow.\n"
+           "Bytes to allocate: %I64u.\n"
+           "Remain allocator capacity: %I64u.\n"
+           "Maximum bytes can be allocated: %I64u",
+           bytes,
+           allocator->cap - allocator->used,
+           allocator->cap - allocator->used - sizeof(BlockHeader));
 
-        #if DEBUG
-            ++gAllocationsPerFrame;
-        #endif
+    BlockHeader *header = FindBestMatch(allocator, bytes);
+    CheckM(header,
+           "Memory overflow.\n"
+           "Bytes to allocate: %I64u.\n"
+           "Remain allocator capacity: %I64u.\n"
+           "Maximum bytes can be allocated: %I64u\n",
+           bytes,
+           allocator->cap - allocator->used,
+           allocator->cap - allocator->used - sizeof(BlockHeader));
 
-        return header->data;
-    }
-    return 0;
+    #if DEBUG
+        ++gAllocationsPerFrame;
+    #endif
+
+    return header->data;
 }
 
-internal void MergeNearbyBlocksInFreeList(Allocator *allocator, BlockHeader *header)
+internal void MergeNearbyBlocksInFreeList(
+    IN Allocator   *allocator,
+    IN BlockHeader *header)
 {
     BlockHeader *next_header = header->data + header->data_bytes;
     if (next_header->block_state == BLOCK_STATE_IN_FREE_LIST)
@@ -185,7 +208,9 @@ internal void MergeNearbyBlocksInFreeList(Allocator *allocator, BlockHeader *hea
     }
 }
 
-void DeAllocate(Allocator *allocator, void **mem)
+void DeAllocate(
+    IN Allocator  *allocator,
+    IN void      **mem)
 {
     Check(allocator);
     if (mem && *mem)
@@ -206,11 +231,14 @@ void DeAllocate(Allocator *allocator, void **mem)
             ++gDeAllocationsPerFrame;
         #endif
 
-        *mem = 0;
+        *mem = null;
     }
 }
 
-void *ReAllocate(Allocator *allocator, void **mem, u64 bytes)
+void *ReAllocate(
+    IN       Allocator  *allocator,
+    OPTIONAL void      **mem,
+    OPTIONAL u64         bytes)
 {
     if (!mem || !*mem)
     {
@@ -220,15 +248,30 @@ void *ReAllocate(Allocator *allocator, void **mem, u64 bytes)
     if (!bytes)
     {
         DeAllocate(allocator, mem);
-        return 0;
+        return null;
     }
 
     Check(allocator);
-    Check(allocator->base->data <= *mem && *mem < allocator->base + allocator->cap);
-    CheckM(bytes <= allocator->cap - allocator->used, "Memory overflow");
+    CheckM(allocator->base->data <= *mem && *mem < allocator->base + allocator->cap,
+           "This memory block (%p) doesn't belong to this allocator [%p; %p].",
+           mem,
+           allocator->base->data,
+           allocator->base + allocator->cap - 1);
 
     BlockHeader *header = cast(byte *, *mem) - sizeof(BlockHeader);
-    Check(header->block_state == BLOCK_STATE_ALLOCATED);
+
+    CheckM(header->block_state == BLOCK_STATE_ALLOCATED,
+           "This memory block (%p) is not allocated yet/already",
+           mem);
+
+    CheckM(cast(s64, header->data_bytes - bytes) <= 0 ? true : header->data_bytes - bytes <= allocator->cap - allocator->used,
+           "Memory overflow.\n"
+           "Additional bytes to allocate: %I64u.\n"
+           "Remain allocator capacity: %I64u.\n"
+           "Maximum bytes can be allocated: %I64u",
+           header->data_bytes - bytes,
+           allocator->cap - allocator->used,
+           allocator->cap - allocator->used - sizeof(BlockHeader));
 
     if (header->data_bytes == bytes)
     {
@@ -236,7 +279,7 @@ void *ReAllocate(Allocator *allocator, void **mem, u64 bytes)
     }
 
     BlockHeader *next_header = header->data + header->data_bytes;
-    BlockHeader *new_header  = 0;
+    BlockHeader *new_header  = null;
 
     if (next_header->block_state == BLOCK_STATE_IN_FREE_LIST
     && header->data_bytes + sizeof(BlockHeader) + next_header->data_bytes == bytes)
@@ -268,10 +311,17 @@ void *ReAllocate(Allocator *allocator, void **mem, u64 bytes)
             allocator->used -= header->data_bytes;
             MergeNearbyBlocksInFreeList(allocator, header);
         }
-        CheckM(new_header, "Memory overflow");
+        CheckM(new_header,
+               "Memory overflow.\n"
+               "Bytes to allocate: %I64u.\n"
+               "Remain allocator capacity: %I64u.\n"
+               "Maximum bytes can be allocated: %I64u",
+               bytes,
+               allocator->cap - allocator->used,
+               allocator->cap - allocator->used - sizeof(BlockHeader));
     }
 
-    *mem = 0;
+    *mem = null;
 
     #if DEBUG
         ++gReAllocationsPerFrame;
@@ -280,7 +330,10 @@ void *ReAllocate(Allocator *allocator, void **mem, u64 bytes)
     return new_header->data;
 }
 
-void *AllocateAligned(Allocator *allocator, u64 bytes, u64 alignment)
+void *AllocateAligned(
+    IN       Allocator *allocator,
+    IN       u64        bytes,
+    OPTIONAL u64        alignment)
 {
     if (alignment < CENGINE_DEFAULT_ALIGNMENT) alignment = CENGINE_DEFAULT_ALIGNMENT;
     CheckM(IS_POW_2(alignment), "Alignment must be power of 2");
@@ -288,12 +341,18 @@ void *AllocateAligned(Allocator *allocator, u64 bytes, u64 alignment)
     return Allocate(allocator, aligned_bytes);
 }
 
-void DeAllocateAligned(Allocator *allocator, void **mem)
+void DeAllocateAligned(
+    IN Allocator  *allocator,
+    IN void      **mem)
 {
     DeAllocate(allocator, mem);
 }
 
-void *ReAllocateAligned(Allocator *allocator, void **mem, u64 bytes, u64 alignment)
+void *ReAllocateAligned(
+    IN       Allocator  *allocator,
+    OPTIONAL void      **mem,
+    OPTIONAL u64         bytes,
+    OPTIONAL u64         alignment)
 {
     if (alignment < CENGINE_DEFAULT_ALIGNMENT) alignment = CENGINE_DEFAULT_ALIGNMENT;
     CheckM(IS_POW_2(alignment), "Alignment must be power of 2");

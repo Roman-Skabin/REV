@@ -14,7 +14,7 @@
 
 - Tools
     - Move improved timer to the tools?
-    - Overlapped I/O
+    - Several simultaneous read operations under the same file?
 
 - Build
     - [Pre?]build system. Build only edited files

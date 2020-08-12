@@ -25,7 +25,7 @@ void CreateLogger(
     if ((logger->log_to & LOG_TO_FILE) && filename)
     {
         // @Optimize(Roman): FILE_FLAG_NO_BUFFERING
-        logger->file = CreateFileA(filename, GENERIC_WRITE, FILE_SHARE_WRITE, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, 0);
+        logger->file = CreateFileA(filename, GENERIC_WRITE, FILE_SHARE_WRITE, null, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, null);
 
         if (logger->file == INVALID_HANDLE_VALUE)
         {

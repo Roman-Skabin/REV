@@ -28,47 +28,47 @@ typedef struct AsyncFile
 } AsyncFile;
 
 CENGINE_FUN void CreateAsyncFile(
-    IN  const char *filename,
-    IN  FILE_FLAG   flags,
-    OUT AsyncFile  *file
+    in  const char *filename,
+    in  FILE_FLAG   flags,
+    out AsyncFile  *file
 );
 
 CENGINE_FUN void CopyAsyncFile(
-    OUT AsyncFile *dest,
-    IN  AsyncFile *src
+    out AsyncFile *dest,
+    in  AsyncFile *src
 );
 
 CENGINE_FUN void CloseAsyncFile(
-    IN AsyncFile *file
+    in AsyncFile *file
 );
 
 CENGINE_FUN void ClearAsyncFile(
-    IN AsyncFile *file
+    in AsyncFile *file
 );
 
 CENGINE_FUN void ReadAsyncFile(
-    IN  AsyncFile *file,
-    OUT void      *buffer,
-    IN  u32        buffer_bytes
+    in  AsyncFile *file,
+    out void      *buffer,
+    in  u32        buffer_bytes
 );
 
 CENGINE_FUN void WriteAsyncFile(
-    IN  AsyncFile *file,
-    OUT void      *buffer,
-    IN  u32        buffer_bytes
+    in  AsyncFile *file,
+    out void      *buffer,
+    in  u32        buffer_bytes
 );
 
 CENGINE_FUN void AppendAsyncFile(
-    IN  AsyncFile *file,
-    OUT void      *buffer,
-    IN  u32        buffer_bytes
+    in  AsyncFile *file,
+    out void      *buffer,
+    in  u32        buffer_bytes
 );
 
 CENGINE_FUN void WaitForAsyncFile(
-    IN AsyncFile *file
+    in AsyncFile *file
 );
 
 CENGINE_FUN void SetAsyncFileOffset(
-    IN AsyncFile *file,
-    IN u32        offset
+    in AsyncFile *file,
+    in u32        offset
 );

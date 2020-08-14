@@ -16,7 +16,7 @@
 }
 
 void ResetGPUMemory(
-    IN Engine *engine)
+    in Engine *engine)
 {
     Check(engine);
 
@@ -58,7 +58,7 @@ void ResetGPUMemory(
 }
 
 void ReleaseGPUMemory(
-    IN Engine *engine)
+    in Engine *engine)
 {
     Check(engine);
 
@@ -123,9 +123,9 @@ void ReleaseGPUMemory(
 }
 
 internal GPUResource *FindOrAllocateResource(
-    IN  Engine              *engine,
-    IN  D3D12_RESOURCE_DESC *resource_desc,
-    OUT b32                 *allocated)
+    in  Engine              *engine,
+    in  D3D12_RESOURCE_DESC *resource_desc,
+    out b32                 *allocated)
 {
     Check(engine);
     Check(resource_desc);
@@ -213,9 +213,9 @@ internal GPUResource *FindOrAllocateResource(
 }
 
 internal GPUDescHeap *FindOrAllocateDescHeap(
-    IN  Engine                     *engine,
-    IN  D3D12_DESCRIPTOR_HEAP_DESC *desc_heap_desc,
-    OUT b32                        *allocated)
+    in  Engine                     *engine,
+    in  D3D12_DESCRIPTOR_HEAP_DESC *desc_heap_desc,
+    out b32                        *allocated)
 {
     Check(engine);
     Check(desc_heap_desc);
@@ -257,9 +257,9 @@ internal GPUDescHeap *FindOrAllocateDescHeap(
 }
 
 internal void CreateGPUResource(
-    IN     Engine            *engine,
-    IN     GPUResourceMemory *resource_memory,
-    IN OUT GPUResource       *resource)
+    in     Engine            *engine,
+    in     GPUResourceMemory *resource_memory,
+    in out GPUResource       *resource)
 {
     Check(engine);
     Check(resource_memory);
@@ -326,9 +326,9 @@ internal void CreateGPUResource(
 }
 
 GPUResource *PushVertexBuffer(
-    IN Engine *engine,
-    IN u32     count,
-    IN u32     stride)
+    in Engine *engine,
+    in u32     count,
+    in u32     stride)
 {
     Check(engine);
     Check(count);
@@ -378,8 +378,8 @@ GPUResource *PushVertexBuffer(
 }
 
 GPUResource *PushIndexBuffer(
-    IN Engine *engine,
-    IN u32     count)
+    in Engine *engine,
+    in u32     count)
 {
     Check(engine);
     Check(count);
@@ -428,10 +428,10 @@ GPUResource *PushIndexBuffer(
 }
 
 GPUResource *PushConstantBuffer(
-    IN Engine     *engine,
-    IN u32         size_in_bytes,
-    IN const char *name,
-    IN u32         name_len)
+    in Engine     *engine,
+    in u32         size_in_bytes,
+    in const char *name,
+    in u32         name_len)
 {
     Check(engine);
     Check(size_in_bytes && size_in_bytes <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
@@ -515,10 +515,10 @@ GPUResource *PushConstantBuffer(
 }
 
 void SetGPUResourceName(
-    IN       Engine      *engine,
-    IN       GPUResource *resource,
-    IN       const char  *name,
-    OPTIONAL u32          name_len)
+    in  Engine      *engine,
+    in  GPUResource *resource,
+    in  const char  *name,
+    opt u32          name_len)
 {
     Check(engine);
     Check(resource);
@@ -562,9 +562,9 @@ void SetGPUResourceName(
 }
 
 void SetGPUResourceData(
-    IN Engine      *engine,
-    IN GPUResource *resource,
-    IN void        *data)
+    in Engine      *engine,
+    in GPUResource *resource,
+    in void        *data)
 {
     Check(engine);
     Check(resource);
@@ -621,10 +621,10 @@ void SetGPUResourceData(
 }
 
 void SetGPUResourceDataByName(
-    IN       Engine      *engine,
-    IN       const char  *name,
-    OPTIONAL u32          name_len,
-    IN       void        *data)
+    in  Engine      *engine,
+    in  const char  *name,
+    opt u32          name_len,
+    in  void        *data)
 {
     Check(engine);
     Check(name);
@@ -672,8 +672,8 @@ void SetGPUResourceDataByName(
 }
 
 void BindVertexBuffer(
-    IN Engine      *engine,
-    IN GPUResource *resource)
+    in Engine      *engine,
+    in GPUResource *resource)
 {
     Check(engine);
     Check(resource);
@@ -689,8 +689,8 @@ void BindVertexBuffer(
 }
 
 void BindIndxeBuffer(
-    IN Engine      *engine,
-    IN GPUResource *resource)
+    in Engine      *engine,
+    in GPUResource *resource)
 {
     Check(engine);
     Check(resource);
@@ -706,8 +706,8 @@ void BindIndxeBuffer(
 }
 
 void DrawVertices(
-    IN Engine      *engine,
-    IN GPUResource *resource)
+    in Engine      *engine,
+    in GPUResource *resource)
 {
     Check(engine);
     Check(resource);
@@ -717,8 +717,8 @@ void DrawVertices(
 }
 
 void DrawIndices(
-    IN Engine      *engine,
-    IN GPUResource *resource)
+    in Engine      *engine,
+    in GPUResource *resource)
 {
     Check(engine);
     Check(resource);

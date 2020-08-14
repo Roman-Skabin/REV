@@ -65,7 +65,7 @@ internal void CompileShader(Engine *engine, Shader *shader, ShaderDesc *desc, D3
 //
 
 internal GraphicsProgram *PushGraphicsProgram(
-    IN Engine *engine)
+    in Engine *engine)
 {
     GraphicsProgram *program = PushToPA(GraphicsProgram, engine->memory, 1);
     program->resources = CreateBuffer(&engine->allocator, 1);
@@ -85,9 +85,9 @@ internal GraphicsProgram *PushGraphicsProgram(
 }
 
 GraphicsProgram *AddGraphicsProgram(
-    IN       Engine           *engine,
-    IN       const char       *file_with_shaders,
-    OPTIONAL D3D_SHADER_MACRO *predefines)
+    in  Engine           *engine,
+    in  const char       *file_with_shaders,
+    opt D3D_SHADER_MACRO *predefines)
 {
     Check(engine);
     Check(file_with_shaders);
@@ -334,7 +334,7 @@ GraphicsProgram *AddGraphicsProgram(
 }
 
 void DestroyGraphicsProgram(
-    IN GraphicsProgram *graphics_program)
+    in GraphicsProgram *graphics_program)
 {
     if (graphics_program)
     {
@@ -352,8 +352,8 @@ void DestroyGraphicsProgram(
 }
 
 void BindGraphicsProgram(
-    IN Engine          *engine,
-    IN GraphicsProgram *graphics_program)
+    in Engine          *engine,
+    in GraphicsProgram *graphics_program)
 {
     Check(engine);
     Check(graphics_program);
@@ -413,11 +413,11 @@ void BindGraphicsProgram(
 
 #if 0
 void SetGraphicsProgramConstants(
-    IN Engine          *engine,
-    IN GraphicsProgram *graphics_program,
-    IN void            *constants,
-    IN u32              slot_index,
-    IN u32              count)
+    in Engine          *engine,
+    in GraphicsProgram *graphics_program,
+    in void            *constants,
+    in u32              slot_index,
+    in u32              count)
 {
     Check(engine);
     Check(graphics_program);
@@ -430,12 +430,12 @@ void SetGraphicsProgramConstants(
 }
 
 void SetGraphicsProgramTables(
-    IN Engine                *engine,
-    IN GraphicsProgram       *graphics_program,
-    IN ID3D12DescriptorHeap **heap_desc,
-    IN u32                   *slot_indices,
-    IN u32                   *desc_sizes,
-    IN u32                    count)
+    in Engine                *engine,
+    in GraphicsProgram       *graphics_program,
+    in ID3D12DescriptorHeap **heap_desc,
+    in u32                   *slot_indices,
+    in u32                   *desc_sizes,
+    in u32                    count)
 {
     // case SHADERS_RESOURCE_TYPE_TABLE:
     // {
@@ -461,10 +461,10 @@ void SetGraphicsProgramTables(
     //
 
     void CreateComputePipelineState(
-        IN  Engine           *engine,
-        IN  Shader           *compute_shader,
-        IN  ShadersResources *shaders_resources,
-        OUT PipelineState    *pipeline_state)
+        in  Engine           *engine,
+        in  Shader           *compute_shader,
+        in  ShadersResources *shaders_resources,
+        out PipelineState    *pipeline_state)
     {
         Check(engine);
         Check(compute_shader);

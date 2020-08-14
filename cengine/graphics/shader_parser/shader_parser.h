@@ -50,17 +50,17 @@ typedef struct Token
 typedef struct ShaderLexer ShaderLexer;
 
 CENGINE_FUN const char *TokenKindName(
-    IN ShaderLexer *lexer,
-    IN TOKEN_KIND   kind
+    in ShaderLexer *lexer,
+    in TOKEN_KIND   kind
 );
 
 CENGINE_FUN const char *TokenInfo(
-    IN ShaderLexer *lexer
+    in ShaderLexer *lexer
 );
 
 CENGINE_FUN void CheckToken(
-    IN ShaderLexer *lexer,
-    IN TOKEN_KIND   kind
+    in ShaderLexer *lexer,
+    in TOKEN_KIND   kind
 );
 
 struct ShaderLexer
@@ -78,13 +78,13 @@ struct ShaderLexer
 };
 
 CENGINE_FUN void CreateGraphicsShaderLexer(
-    IN  Engine      *engine,
-    IN  const char  *stream,
-    OUT ShaderLexer *lexer
+    in  Engine      *engine,
+    in  const char  *stream,
+    out ShaderLexer *lexer
 );
 
 CENGINE_FUN void GetNextGraphicsShaderToken(
-    IN ShaderLexer *lexer
+    in ShaderLexer *lexer
 );
 
 typedef struct ShaderParser
@@ -95,8 +95,8 @@ typedef struct ShaderParser
 } ShaderParser;
 
 CENGINE_FUN void ParseGraphicsShaders(
-    IN  Engine              *engine,
-    IN  const char          *file_with_shaders,
-    IN  GraphicsProgram     *program,
-    OUT GraphicsProgramDesc *gpd
+    in  Engine              *engine,
+    in  const char          *file_with_shaders,
+    in  GraphicsProgram     *program,
+    out GraphicsProgramDesc *gpd
 );

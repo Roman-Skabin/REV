@@ -71,16 +71,16 @@ typedef struct GPUProgramManager
 } GPUProgramManager;
 
 CENGINE_FUN GraphicsProgram *AddGraphicsProgram(
-    IN       Engine           *engine,
-    IN       const char       *file_with_shaders,
-    OPTIONAL D3D_SHADER_MACRO *predefines
+    in  Engine           *engine,
+    in  const char       *file_with_shaders,
+    opt D3D_SHADER_MACRO *predefines
 );
 
 CENGINE_FUN void DestroyGraphicsProgram(
-    IN GraphicsProgram *graphics_program
+    in GraphicsProgram *graphics_program
 );
 
 CENGINE_FUN void BindGraphicsProgram(
-    IN Engine          *engine,
-    IN GraphicsProgram *graphics_program
+    in Engine          *engine,
+    in GraphicsProgram *graphics_program
 );

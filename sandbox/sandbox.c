@@ -36,10 +36,13 @@ typedef struct Vertex
 
 internal USER_CALLBACK(OnInit)
 {
+    Timer profile_timer;
+    StartProfiling("OnInitProfileTimer", CSTRLEN("OnInitProfileTimer"), &profile_timer);
+
     Sandbox *sandbox     = PushToPA(Sandbox, engine->memory, 1);
     engine->user_pointer = sandbox;
 
-    CreateLogger("Sandbox Logger", "../log/sandbox.log", LOG_TO_FILE, &sandbox->logger);
+    CreateLogger("Sandbox Logger", "../log/sandbox.log", LOG_TO_FILE | LOG_TO_CONSOLE, &sandbox->logger);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
 #if RELEASE
     SetFullscreen(engine, true);
@@ -125,6 +128,8 @@ internal USER_CALLBACK(OnInit)
     CBufferData cbuffer_data;
     cbuffer_data.MVP = m4_mul(sandbox->camera.proj, sandbox->camera.view);
     SetGPUResourceDataByName(engine, "MVPMatrix", CSTRLEN("MVPMatrix"), &cbuffer_data);
+
+    StopProfiling(&profile_timer, &sandbox->logger);
 }
 
 internal USER_CALLBACK(OnDestroy)

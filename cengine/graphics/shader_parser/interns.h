@@ -22,21 +22,21 @@ typedef struct Interns
 } Interns;
 
 CENGINE_FUN void CreateInterns(
-    IN  Engine  *engine,
-    OUT Interns *interns
+    in  Engine  *engine,
+    out Interns *interns
 );
 
 CENGINE_FUN const char *InternStringRange(
-    IN Interns    *interns,
-    IN const char *start,
-    IN const char *end
+    in Interns    *interns,
+    in const char *start,
+    in const char *end
 );
 
 CENGINE_NOINLINE
 CENGINE_FUN const char *InternString(
-    IN Interns    *interns,
-    IN const char *string,
-    IN u64         length
+    in Interns    *interns,
+    in const char *string,
+    in u64         length
 );
 
 #define InternCSTR(interns, cstr) InternString(interns, cstr, CSTRLEN(cstr))

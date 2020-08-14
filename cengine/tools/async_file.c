@@ -6,9 +6,9 @@
 #include "tools/async_file.h"
 
 void CreateAsyncFile(
-    IN  const char *filename,
-    IN  FILE_FLAG   flags,
-    OUT AsyncFile  *file)
+    in  const char *filename,
+    in  FILE_FLAG   flags,
+    out AsyncFile  *file)
 {
     Check(filename);
     Check(flags);
@@ -16,7 +16,7 @@ void CreateAsyncFile(
     u64 filename_len = strlen(filename);
     CheckM(filename_len && filename_len < ArrayCount(file->name),
            "Filename is too long. Max length is %I64u",
-           ArrayCount(file->name));
+           ArrayCount(file->name) - 1);
 
     file->flags             = flags;
     file->offset            = 0;
@@ -69,8 +69,8 @@ void CreateAsyncFile(
 }
 
 void CopyAsyncFile(
-    OUT AsyncFile *dest,
-    IN  AsyncFile *src)
+    out AsyncFile *dest,
+    in  AsyncFile *src)
 {
     Check(dest);
     Check(src);
@@ -97,7 +97,7 @@ void CopyAsyncFile(
 }
 
 void CloseAsyncFile(
-    IN AsyncFile *file)
+    in AsyncFile *file)
 {
     if (file)
     {
@@ -120,7 +120,7 @@ void CloseAsyncFile(
 }
 
 void ClearAsyncFile(
-    IN AsyncFile *file)
+    in AsyncFile *file)
 {
     Check(file);
     CheckM(file->flags & FILE_FLAG_OPENED, "File is not opened");
@@ -135,9 +135,9 @@ void ClearAsyncFile(
 }
 
 internal void WINAPI OverlappedReadCompletionRoutine(
-    IN     u32         error_code,
-    IN     u32         number_of_bytes_transfered,
-    IN OUT OVERLAPPED *overlapped)
+    in     u32         error_code,
+    in     u32         number_of_bytes_transfered,
+    in out OVERLAPPED *overlapped)
 {
     // @Important(Roman): NOT SAFETY!!!
     AsyncFile *file = cast(AsyncFile *, cast(byte *, overlapped)
@@ -149,9 +149,9 @@ internal void WINAPI OverlappedReadCompletionRoutine(
 }
 
 void ReadAsyncFile(
-    IN  AsyncFile *file,
-    OUT void      *buffer,
-    IN  u32        buffer_bytes)
+    in  AsyncFile *file,
+    out void      *buffer,
+    in  u32        buffer_bytes)
 {
     Check(file);
     CheckM(file->flags & FILE_FLAG_OPENED, "File is not opened");
@@ -174,9 +174,9 @@ void ReadAsyncFile(
 }
 
 internal void WINAPI OverlappedWriteCompletionRoutine(
-    IN     u32         error_code,
-    IN     u32         number_of_bytes_transfered,
-    IN OUT OVERLAPPED *overlapped)
+    in     u32         error_code,
+    in     u32         number_of_bytes_transfered,
+    in out OVERLAPPED *overlapped)
 {
     // @Important(Roman): NOT SAFETY!!!
     AsyncFile *file = cast(AsyncFile *, cast(byte *, overlapped)
@@ -193,9 +193,9 @@ internal void WINAPI OverlappedWriteCompletionRoutine(
 }
 
 void WriteAsyncFile(
-    IN  AsyncFile *file,
-    OUT void      *buffer,
-    IN  u32        buffer_bytes)
+    in  AsyncFile *file,
+    out void      *buffer,
+    in  u32        buffer_bytes)
 {
     Check(file);
     CheckM(file->flags & FILE_FLAG_OPENED, "File is not opened");
@@ -218,9 +218,9 @@ void WriteAsyncFile(
 }
 
 void AppendAsyncFile(
-    IN  AsyncFile *file,
-    OUT void      *buffer,
-    IN  u32        buffer_bytes)
+    in  AsyncFile *file,
+    out void      *buffer,
+    in  u32        buffer_bytes)
 {
     Check(file);
     CheckM(file->flags & FILE_FLAG_OPENED, "File is not opened");
@@ -245,7 +245,7 @@ void AppendAsyncFile(
 }
 
 void WaitForAsyncFile(
-    IN AsyncFile *file)
+    in AsyncFile *file)
 {
     Check(file);
     CheckM(file->flags & FILE_FLAG_OPENED, "File is not opened");
@@ -258,8 +258,8 @@ void WaitForAsyncFile(
 }
 
 void SetAsyncFileOffset(
-    IN AsyncFile *file,
-    IN u32        offset)
+    in AsyncFile *file,
+    in u32        offset)
 {
     Check(file);
     CheckM(file->flags & FILE_FLAG_OPENED, "File is not opened");

@@ -9,10 +9,10 @@
 global SRWLOCK gSRWLock = SRWLOCK_INIT;
 
 void CreateLogger(
-    IN       const char *name,
-    OPTIONAL const char *filename,
-    IN       LOG_TO      log_to,
-    OUT      Logger     *logger)
+    in  const char *name,
+    opt const char *filename,
+    in  LOG_TO      log_to,
+    out Logger     *logger)
 {
     Check(name);
     Check(logger);
@@ -57,10 +57,10 @@ void CreateLogger(
 }
 
 void DuplicateLogger(
-    IN  const char *name,
-    IN  LOG_TO      log_to,
-    IN  Logger     *src,
-    OUT Logger     *dest)
+    in  const char *name,
+    in  LOG_TO      log_to,
+    in  Logger     *src,
+    out Logger     *dest)
 {
     Check(name);
     CheckM(log_to & LOG_TO_FILE, "<log_to> param required LOG_TO_FILE flag, got: 0x%08I32X", log_to);
@@ -106,7 +106,7 @@ void DuplicateLogger(
 }
 
 void DestroyLogger(
-    IN Logger *logger)
+    in Logger *logger)
 {
     Check(logger);
     LogInfo(logger, "%s was destroyed", logger->name);
@@ -115,19 +115,15 @@ void DestroyLogger(
     {
         DebugResult(CloseHandle(logger->file));
     }
-    if (logger->console && (logger->log_to & LOG_TO_CONSOLE))
-    {
-        DebugResult(CloseHandle(logger->console));
-    }
 
     ZeroMemory(logger, sizeof(Logger));
 }
 
 void __cdecl LoggerLog(
-    IN       Logger     *logger,
-    IN       LOG_KIND    log_kind,
-    IN       const char *format,
-    OPTIONAL ...)
+    in       Logger     *logger,
+    in       LOG_KIND    log_kind,
+    in       const char *format,
+    opt ...)
 {
     Check(logger);
     Check(format);

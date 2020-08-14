@@ -1,19 +1,16 @@
 - Core
     - Make engine's user pointer and sandbox thread safety
-    - Improve timer: public, name, segmented profiling, output result to... somewhere
     - More significant logs. Have to be almost everywhere, BUT DO NOT TRASH THE CODE!
     - Include all slightly changes files in pch.h
     - Complete core\platform.h
     - BIG ISSUE: Do I really need all these Checks in my code,
                  especially at the beginning of functions?
                  Doesn't it stupid or useless, huh?
-    - Edit all CheckM and FailedM calls (now they are able to get __VA_ARGS__)
-    - Move all STD includes in platform.h to pch.h?
+    - Move all STD includes from platform.h to pch.h?
     - Advanced free list for allocator.
     - Level system (not a "System" actualy but kinda).
 
 - Tools
-    - Move improved timer to the tools?
     - Several simultaneous read operations under the same file?
 
 - Build

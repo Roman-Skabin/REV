@@ -186,72 +186,6 @@ internal INLINE void InputPull(Engine *engine)
 }
 
 //
-// Timer
-//
-
-#define QPF(s64_val) QueryPerformanceFrequency(cast(LARGE_INTEGER *, &(s64_val)))
-#define QPC(s64_val) QueryPerformanceCounter(cast(LARGE_INTEGER *, &(s64_val)))
-
-internal void TimerCreate(Engine *engine)
-{
-    if (QPF(engine->timer.ticks_per_second) && QPC(engine->timer.initial_ticks))
-    {
-        LogSuccess(&engine->logger, "Timer was created");
-    }
-    else
-    {
-        LogError(&engine->logger, "Timer was not created");
-        FailedM("Timer creation failure");
-    }
-
-    engine->timer.stopped    = true;
-    engine->timer.stop_begin = engine->timer.initial_ticks;
-}
-
-internal void TimerPull(Engine *engine)
-{
-    s64 cur_ticks;
-    QPC(cur_ticks);
-    cur_ticks -= engine->timer.initial_ticks + engine->timer.stop_duration;
-
-    if (!engine->timer.stopped)
-    {
-        engine->timer.delta_ticks = cur_ticks - engine->timer.ticks;
-        engine->timer.ticks       = cur_ticks;
-
-        engine->timer.delta_seconds = engine->timer.delta_ticks / cast(f32, engine->timer.ticks_per_second);
-        engine->timer.seconds       = engine->timer.ticks       / cast(f32, engine->timer.ticks_per_second);
-    }
-
-    engine->timer.total_seconds = (cur_ticks + engine->timer.stop_duration) / cast(f32, engine->timer.ticks_per_second);
-}
-
-void TimerStart(Engine *engine)
-{
-    if (engine->timer.stopped)
-    {
-        s64 stop_end;
-        QPC(stop_end);
-        engine->timer.stop_last_duration  = stop_end - engine->timer.stop_begin;
-        engine->timer.stop_duration      += engine->timer.stop_last_duration;
-        engine->timer.stopped             = false;
-
-        LogInfo(&engine->logger, "Timer was started");
-    }
-}
-
-void TimerStop(Engine *engine)
-{
-    if (!engine->timer.stopped)
-    {
-        QPC(engine->timer.stop_begin);
-        engine->timer.stopped = true;
-
-        LogInfo(&engine->logger, "Timer was stopped");
-    }
-}
-
-//
 // GPUManager
 //
 
@@ -899,7 +833,7 @@ internal void StartFrame(Engine *engine)
 
     // Pull
     InputPull(engine);
-    TimerPull(engine);
+    StepTimer(&engine->timer);
 
     // Delayed SetFullscreen if we need to.
     SetFullscreen(engine, engine->window.fullscreened);
@@ -1271,8 +1205,8 @@ internal void DestroySound(Engine *engine)
 //
 
 internal void CreateGPUMemoryManager(
-    IN Engine *engine,
-    IN u64     gpu_memory_capacity)
+    in Engine *engine,
+    in u64     gpu_memory_capacity)
 {
     Check(engine);
     CheckM(gpu_memory_capacity, "GPU memory capacity can't be 0");
@@ -1432,7 +1366,7 @@ internal void DestroyGPUMemoryManager(Engine *engine)
 //
 
 internal void DestroyGPUProgramManager(
-    IN Engine *engine)
+    in Engine *engine)
 {
     Check(engine);
 
@@ -1566,11 +1500,11 @@ internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPA
 }
 
 int EngineRun(
-    OPTIONAL HINSTANCE      instance,
-    IN       UserCallback  *OnInit,
-    IN       UserCallback  *OnDestroy,
-    IN       UserCallback  *OnUpdateAndRender,
-    IN       SoundCallback *OnSound)
+    opt HINSTANCE      instance,
+    in  UserCallback  *OnInit,
+    in  UserCallback  *OnDestroy,
+    in  UserCallback  *OnUpdateAndRender,
+    in  SoundCallback *OnSound)
 {
     DebugResult(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
 
@@ -1592,7 +1526,7 @@ int EngineRun(
     CreateLogger("Engine Logger", "../log/cengine.log", LOG_TO_FILE, &engine->logger);
     WindowCreate(engine, "CEngine", v2s_1(960, 540), instance);
     InputCreate(engine);
-    TimerCreate(engine);
+    CreateTimer("EngineMainTimer", CSTRLEN("EngineMainTimer"), &engine->timer);
     CreateGPUManager(engine);
     CreateGPUMemoryManager(engine, MB(512ui64));
     CreateSound(engine);
@@ -1602,7 +1536,7 @@ int EngineRun(
     engine->user_callbacks.OnInit(engine);
     EndFrame(engine);
 
-    TimerStart(engine);
+    StartTimer(&engine->timer);
 
     MSG msg = {0};
     ShowWindow(engine->window.handle, SW_SHOW);
@@ -1632,7 +1566,7 @@ int EngineRun(
         }
     }
 
-    TimerStop(engine);
+    StopTimer(&engine->timer);
     DestroySound(engine);
     FlushGPU(engine);
 

@@ -31,22 +31,22 @@ typedef struct Logger
 } Logger;
 
 CENGINE_FUN void CreateLogger(
-    IN       const char *name,
-    OPTIONAL const char *filename, // @NOTE(Roman): Required if you are logging to the file
-    IN       LOG_TO      log_to,
-    OUT      Logger     *logger
+    in  const char *name,
+    opt const char *filename, // @NOTE(Roman): Required if you are logging to the file
+    in  LOG_TO      log_to,
+    out Logger     *logger
 );
 
 // @NOTE(Roman): <dest> logs to the exactly same file as a <src>
 CENGINE_FUN void DuplicateLogger(
-    IN  const char *name,
-    IN  LOG_TO      log_to, // @NOTE(Roman): LOG_TO_FILE flag is required
-    IN  Logger     *src,    // @NOTE(Roman): Has to get LOG_TO_FILE flag
-    OUT Logger     *dest
+    in  const char *name,
+    in  LOG_TO      log_to, // @NOTE(Roman): LOG_TO_FILE flag is required
+    in  Logger     *src,    // @NOTE(Roman): Has to get LOG_TO_FILE flag
+    out Logger     *dest
 );
 
 CENGINE_FUN void DestroyLogger(
-    IN Logger *logger
+    in Logger *logger
 );
 
 typedef enum LOG_KIND
@@ -58,10 +58,10 @@ typedef enum LOG_KIND
 } LOG_KIND;
 
 CENGINE_FUN void __cdecl LoggerLog(
-    IN       Logger     *logger,
-    IN       LOG_KIND    log_kind,
-    IN       const char *format,
-    OPTIONAL ...
+    in  Logger     *logger,
+    in  LOG_KIND    log_kind,
+    in  const char *format,
+    opt ...
 );
 
 #define LogInfo(logger, format, ...)    LoggerLog(logger, LOG_KIND_INFO,    format, __VA_ARGS__)

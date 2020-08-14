@@ -34,10 +34,10 @@ struct BlockHeader
 };
 
 void CreateAllocator(
-    IN       Allocator *allocator,
-    OPTIONAL void      *base_address,
-    IN       u64        capacity,
-    IN       b32        clear_memory)
+    in  Allocator *allocator,
+    opt void      *base_address,
+    in  u64        capacity,
+    in  b32        clear_memory)
 {
     Check(allocator);
     CheckM(capacity, "Allocator's capacity can't be 0");
@@ -58,7 +58,7 @@ void CreateAllocator(
 }
 
 void DestroyAllocator(
-    IN Allocator *allocator)
+    in Allocator *allocator)
 {
     Check(allocator);
     if (allocator->reserved)
@@ -69,8 +69,8 @@ void DestroyAllocator(
 }
 
 internal BlockHeader *FindBestMatch(
-    IN Allocator *allocator,
-    IN u64        bytes)
+    in Allocator *allocator,
+    in u64        bytes)
 {
     BlockHeader *best_in_list  = null;
     BlockHeader *first_in_list = null;
@@ -145,8 +145,8 @@ internal BlockHeader *FindBestMatch(
 }
 
 void *Allocate(
-    IN Allocator *allocator,
-    IN u64        bytes)
+    in Allocator *allocator,
+    in u64        bytes)
 {
     Check(allocator);
     CheckM(bytes, "bytes can't be 0")
@@ -178,8 +178,8 @@ void *Allocate(
 }
 
 internal void MergeNearbyBlocksInFreeList(
-    IN Allocator   *allocator,
-    IN BlockHeader *header)
+    in Allocator   *allocator,
+    in BlockHeader *header)
 {
     BlockHeader *next_header = header->data + header->data_bytes;
     if (next_header->block_state == BLOCK_STATE_IN_FREE_LIST)
@@ -209,8 +209,8 @@ internal void MergeNearbyBlocksInFreeList(
 }
 
 void DeAllocate(
-    IN Allocator  *allocator,
-    IN void      **mem)
+    in Allocator  *allocator,
+    in void      **mem)
 {
     Check(allocator);
     if (mem && *mem)
@@ -236,9 +236,9 @@ void DeAllocate(
 }
 
 void *ReAllocate(
-    IN       Allocator  *allocator,
-    OPTIONAL void      **mem,
-    OPTIONAL u64         bytes)
+    in  Allocator  *allocator,
+    opt void      **mem,
+    opt u64         bytes)
 {
     if (!mem || !*mem)
     {
@@ -331,9 +331,9 @@ void *ReAllocate(
 }
 
 void *AllocateAligned(
-    IN       Allocator *allocator,
-    IN       u64        bytes,
-    OPTIONAL u64        alignment)
+    in  Allocator *allocator,
+    in  u64        bytes,
+    opt u64        alignment)
 {
     if (alignment < CENGINE_DEFAULT_ALIGNMENT) alignment = CENGINE_DEFAULT_ALIGNMENT;
     CheckM(IS_POW_2(alignment), "Alignment must be power of 2");
@@ -342,17 +342,17 @@ void *AllocateAligned(
 }
 
 void DeAllocateAligned(
-    IN Allocator  *allocator,
-    IN void      **mem)
+    in Allocator  *allocator,
+    in void      **mem)
 {
     DeAllocate(allocator, mem);
 }
 
 void *ReAllocateAligned(
-    IN       Allocator  *allocator,
-    OPTIONAL void      **mem,
-    OPTIONAL u64         bytes,
-    OPTIONAL u64         alignment)
+    in  Allocator  *allocator,
+    opt void      **mem,
+    opt u64         bytes,
+    opt u64         alignment)
 {
     if (alignment < CENGINE_DEFAULT_ALIGNMENT) alignment = CENGINE_DEFAULT_ALIGNMENT;
     CheckM(IS_POW_2(alignment), "Alignment must be power of 2");

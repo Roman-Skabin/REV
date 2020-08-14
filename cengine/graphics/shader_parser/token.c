@@ -16,8 +16,8 @@
 }
 
 const char *TokenKindName(
-    IN ShaderLexer *lexer,
-    IN TOKEN_KIND   kind)
+    in ShaderLexer *lexer,
+    in TOKEN_KIND   kind)
 {
     if (kind < lexer->token_kind_names_count)
     {
@@ -31,7 +31,7 @@ const char *TokenKindName(
 }
 
 const char *TokenInfo(
-    IN ShaderLexer *lexer)
+    in ShaderLexer *lexer)
 {
     if (lexer->token.kind == TOKEN_KIND_NAME
     ||  lexer->token.kind == TOKEN_KIND_KEYWORD)
@@ -45,8 +45,8 @@ const char *TokenInfo(
 }
 
 void CheckToken(
-    IN ShaderLexer *lexer,
-    IN TOKEN_KIND   kind)
+    in ShaderLexer *lexer,
+    in TOKEN_KIND   kind)
 {
     if (lexer->token.kind != kind)
     {

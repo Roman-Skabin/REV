@@ -40,12 +40,12 @@ typedef struct AudioBuffer
 } AudioBuffer;
 
 CENGINE_FUN void CreateAudioBuffer(
-    IN  Engine      *engine,
-    IN  const char  *filename,
-    OUT AudioBuffer *buffer
+    in  Engine      *engine,
+    in  const char  *filename,
+    out AudioBuffer *buffer
 );
 
 CENGINE_FUN void DestroyAudioBuffer(
-    IN Engine      *engine,
-    IN AudioBuffer *buffer
+    in Engine      *engine,
+    in AudioBuffer *buffer
 );

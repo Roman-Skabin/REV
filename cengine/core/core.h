@@ -119,6 +119,22 @@
 #define ALIGN_DOWN(x, a) ( (x)              & ~((a) - 1))
 #define IS_POW_2(x)      ((x) && (((x) & ((x) - 1)) == 0))
 
+#ifdef in
+#undef in
+#endif
+
+#ifdef out
+#undef out
+#endif
+
+#ifdef opt
+#undef opt
+#endif
+
+#define in
+#define out
+#define opt
+
 //
 // Types
 //
@@ -197,13 +213,13 @@ typedef enum MESSAGE_TYPE
 CENGINE_FUN void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
 CENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
 CENGINE_FUN void ShowDebugMessage(
-    IN       b32         message_is_expr,
-    IN       const char *file,
-    IN       u64         line,
-    IN       const char *function,
-    IN       const char *title,
-    IN       const char *format,
-    OPTIONAL ...
+    in  b32         message_is_expr,
+    in  const char *file,
+    in  u64         line,
+    in  const char *function,
+    in  const char *title,
+    in  const char *format,
+    opt ...
 );
 
 #if DEVDEBUG

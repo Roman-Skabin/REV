@@ -113,73 +113,73 @@ typedef struct GPUMemoryManager
 } GPUMemoryManager;
 
 CENGINE_FUN void ResetGPUMemory(
-    IN Engine *engine
+    in Engine *engine
 );
 
 CENGINE_FUN void ReleaseGPUMemory(
-    IN Engine *engine
+    in Engine *engine
 );
 
 CENGINE_FUN GPUResource *PushVertexBuffer(
-    IN Engine *engine,
-    IN u32     count,
-    IN u32     stride
+    in Engine *engine,
+    in u32     count,
+    in u32     stride
 );
 
 CENGINE_FUN GPUResource *PushIndexBuffer(
-    IN Engine *engine,
-    IN u32     count
+    in Engine *engine,
+    in u32     count
 );
 
 // @NOTE(Roman): It would be better if you pass non-null name_len,
 //               otherwise strlen will be used.
 CENGINE_FUN GPUResource *PushConstantBuffer(
-    IN       Engine     *engine,
-    IN       u32         size_in_bytes,
-    IN       const char *name,
-    OPTIONAL u32         name_len
+    in  Engine     *engine,
+    in  u32         size_in_bytes,
+    in  const char *name,
+    opt u32         name_len
 );
 
 // @NOTE(Roman): It would be better if you pass non-null name_len,
 //               otherwise strlen will be used.
 CENGINE_FUN void SetGPUResourceName(
-    IN       Engine      *engine,
-    IN       GPUResource *resource,
-    IN       const char  *name,
-    OPTIONAL u32          name_len
+    in  Engine      *engine,
+    in  GPUResource *resource,
+    in  const char  *name,
+    opt u32          name_len
 );
 
 CENGINE_FUN void SetGPUResourceData(
-    IN Engine      *engine,
-    IN GPUResource *resource,
-    IN void        *data
+    in Engine      *engine,
+    in GPUResource *resource,
+    in void        *data
 );
 
 // @NOTE(Roman): It would be better if you pass non-null name_len,
 //               otherwise strlen will be used.
 CENGINE_FUN void SetGPUResourceDataByName(
-    IN       Engine     *engine,
-    IN       const char *name,
-    OPTIONAL u32         name_len,
-    IN       void       *data
+    in  Engine     *engine,
+    in  const char *name,
+    opt u32         name_len,
+    in  void       *data
 );
 
 CENGINE_FUN void BindVertexBuffer(
-    IN Engine      *engine,
-    IN GPUResource *resource
+    in Engine      *engine,
+    in GPUResource *resource
 );
 
 CENGINE_FUN void BindIndxeBuffer(
-    IN Engine      *engine,
-    IN GPUResource *resource
+    in Engine      *engine,
+    in GPUResource *resource
 );
 
 CENGINE_FUN void DrawVertices(
-    IN Engine      *engine,
-    IN GPUResource *resource
+    in Engine      *engine,
+    in GPUResource *resource
 );
 
 CENGINE_FUN void DrawIndices(
-    IN Engine      *engine,
-    IN GPUResource *resource
+    in Engine      *engine,
+    in GPUResource *resource
 );

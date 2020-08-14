@@ -14,6 +14,7 @@
 #include "gpu/gpu_manager.h"
 #include "gpu/gpu_memory_manager.h"
 #include "graphics/gpu_program_manager.h"
+#include "tools/timer.h"
 
 #define USER_CALLBACK(name) void name(Engine *engine)
 typedef USER_CALLBACK(UserCallback);
@@ -58,24 +59,7 @@ struct Engine
         Gamepad gamepad;
     } input;
 
-    struct
-    {
-        s64 initial_ticks;
-        s64 ticks_per_second;
-
-        s64 ticks;
-        s64 delta_ticks;
-
-        s64 stop_begin;
-        s64 stop_duration;
-        s64 stop_last_duration;
-
-        f32 seconds;
-        f32 delta_seconds;
-        f32 total_seconds;
-
-        b32 stopped;
-    } timer;
+    Timer timer;
 
     struct
     {
@@ -99,14 +83,13 @@ struct Engine
 };
 
 CENGINE_FUN int EngineRun(
-    OPTIONAL HINSTANCE      instance,
-    IN       UserCallback  *OnInit,
-    IN       UserCallback  *OnDestroy,
-    IN       UserCallback  *OnUpdateAndRender,
-    IN       SoundCallback *OnSound
+    opt HINSTANCE      instance,
+    in  UserCallback  *OnInit,
+    in  UserCallback  *OnDestroy,
+    in  UserCallback  *OnUpdateAndRender,
+    in  SoundCallback *OnSound
 );
 
-CENGINE_FUN void TimerStart(Engine *engine);
-CENGINE_FUN void TimerStop(Engine *engine);
-
-CENGINE_FUN void SetFullscreen(Engine *engine, b32 set);
+CENGINE_FUN void SetFullscreen(
+    in Engine *engine,
+    in b32     set);

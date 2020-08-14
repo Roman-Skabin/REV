@@ -7,9 +7,9 @@
 #include "cengine.h"
 
 void CreateAudioBuffer(
-    IN  Engine      *engine,
-    IN  const char  *filename,
-    OUT AudioBuffer *buffer)
+    in  Engine      *engine,
+    in  const char  *filename,
+    out AudioBuffer *buffer)
 {
     Check(engine);
     Check(filename);
@@ -113,8 +113,8 @@ void CreateAudioBuffer(
 }
 
 void DestroyAudioBuffer(
-    IN Engine      *engine,
-    IN AudioBuffer *buffer)
+    in Engine      *engine,
+    in AudioBuffer *buffer)
 {
     Check(engine);
     Check(buffer);

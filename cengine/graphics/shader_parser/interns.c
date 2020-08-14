@@ -7,8 +7,8 @@
 #include "cengine.h"
 
 void CreateInterns(
-    IN  Engine  *engine,
-    OUT Interns *interns)
+    in  Engine  *engine,
+    out Interns *interns)
 {
     Check(engine);
     Check(interns);
@@ -18,9 +18,9 @@ void CreateInterns(
 }
 
 const char *InternStringRange(
-    IN Interns    *interns,
-    IN const char *start,
-    IN const char *end)
+    in Interns    *interns,
+    in const char *start,
+    in const char *end)
 {
     Check(interns);
     Check(start < end);
@@ -68,9 +68,9 @@ const char *InternStringRange(
 }
 
 const char *InternString(
-    IN Interns    *interns,
-    IN const char *string,
-    IN u64         length)
+    in Interns    *interns,
+    in const char *string,
+    in u64         length)
 {
     return InternStringRange(interns, string, string + length);
 }

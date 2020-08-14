@@ -218,9 +218,9 @@ void memset_f64(f64 *mem, f64 val, u64 count)
 //
 
 void CreateMemory(
-    IN  u64     transient_area_cap,
-    IN  u64     permanent_area_cap,
-    OUT Memory *memory)
+    in  u64     transient_area_cap,
+    in  u64     permanent_area_cap,
+    out Memory *memory)
 {
     Check(memory);
     CheckM(transient_area_cap, "Transient area capacity must be greater than 0");
@@ -248,7 +248,7 @@ void CreateMemory(
 }
 
 void DestroyMemory(
-    IN Memory *memory)
+    in Memory *memory)
 {
     Check(memory);
 
@@ -261,8 +261,8 @@ void DestroyMemory(
 }
 
 void *PushToTransientArea(
-    IN Memory *memory,
-    IN u64     bytes)
+    in Memory *memory,
+    in u64     bytes)
 {
     Check(memory);
     CheckM(bytes, "0 bytes has been passed");
@@ -281,9 +281,9 @@ void *PushToTransientArea(
 }
 
 void *PushToTransientAreaAligned(
-    IN Memory *memory,
-    IN u64     bytes,
-    IN u64     alignment)
+    in Memory *memory,
+    in u64     bytes,
+    in u64     alignment)
 {
     Check(memory);
     CheckM(bytes, "0 bytes was passed");
@@ -307,7 +307,7 @@ void *PushToTransientAreaAligned(
 }
 
 void ResetTransientArea(
-    IN Memory *memory)
+    in Memory *memory)
 {
     Check(memory);
     ZeroMemory(memory->transient.base, memory->transient.size);
@@ -315,8 +315,8 @@ void ResetTransientArea(
 }
 
 void *PushToPermanentArea(
-    IN Memory *memory,
-    IN u64     bytes)
+    in Memory *memory,
+    in u64     bytes)
 {
     Check(memory);
     CheckM(bytes, "0 bytes was passed");
@@ -335,9 +335,9 @@ void *PushToPermanentArea(
 }
 
 void *PushToPermanentAreaAligned(
-    IN Memory *memory,
-    IN u64     bytes,
-    IN u64     alignment)
+    in Memory *memory,
+    in u64     bytes,
+    in u64     alignment)
 {
     Check(memory);
     CheckM(bytes, "0 bytes was passed");

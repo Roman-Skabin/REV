@@ -34,9 +34,9 @@
 }
 
 internal char *ReadEntireShaderFile(
-    IN       Engine     *engine,
-    IN       const char *filename,
-    OPTIONAL u32        *size)
+    in  Engine     *engine,
+    in  const char *filename,
+    opt u32        *size)
 {
     Check(engine)
     Check(filename)
@@ -240,8 +240,8 @@ internal void InitBuiltinTypes(Engine *engine, ShaderParser *parser)
 }
 
 internal void ParsePreprocessor(
-    IN  ShaderParser        *parser,
-    OUT GraphicsProgramDesc *gpd)
+    in  ShaderParser        *parser,
+    out GraphicsProgramDesc *gpd)
 {
     GetNextGraphicsShaderToken(&parser->lexer);
     if (TokenEqualsCSTR(parser->lexer.token, "cengine"))
@@ -593,7 +593,7 @@ internal void ParsePreprocessor(
 }
 
 internal u32 CountTypesInStructRecursively(
-    IN ASTType *struct_type)
+    in ASTType *struct_type)
 {
     u32 count = 0;
     for (u64 i = 0; i < struct_type->_struct->fields_count; ++i)
@@ -612,10 +612,10 @@ internal u32 CountTypesInStructRecursively(
 }
 
 internal u32 CollectStructFiedlsRecursivelyForInputLayout(
-    IN ShaderParser             *parser,
-    IN ASTType                  *struct_type,
-    IN u32                       outer_index,
-    IN D3D12_INPUT_ELEMENT_DESC *desc)
+    in ShaderParser             *parser,
+    in ASTType                  *struct_type,
+    in u32                       outer_index,
+    in D3D12_INPUT_ELEMENT_DESC *desc)
 {
     for (u64 i = 0; i < struct_type->_struct->fields_count; ++i)
     {
@@ -801,8 +801,8 @@ internal void ParseInputLayout(
 }
 
 internal void ParseStruct(
-    IN     Engine       *engine,
-    IN OUT ShaderParser *parser)
+    in     Engine       *engine,
+    in out ShaderParser *parser)
 {
     // struct name
     // {
@@ -953,8 +953,8 @@ internal void ParseStruct(
 }
 
 internal void ParseTypedef(
-    IN     Engine       *engine,
-    IN OUT ShaderParser *parser)
+    in     Engine       *engine,
+    in out ShaderParser *parser)
 {
     // typedef [const] type name ['['index']'];
 
@@ -1084,9 +1084,9 @@ internal void ParseTypedef(
 }
 
 internal void ParseCBuffer(
-    IN     Engine              *engine,
-    IN OUT ShaderParser        *parser,
-    IN OUT GraphicsProgramDesc *gpd)
+    in     Engine              *engine,
+    in out ShaderParser        *parser,
+    in out GraphicsProgramDesc *gpd)
 {
     // cbuffer name [: register(b# [, space#])]
     // {
@@ -1218,10 +1218,10 @@ internal void ParseCBuffer(
 }
 
 internal void InitRootSignatureParameters(
-    IN     Engine              *engine,
-    IN     ShaderParser        *parser,
-    IN OUT GraphicsProgram     *program,
-    OUT    GraphicsProgramDesc *gpd)
+    in     Engine              *engine,
+    in     ShaderParser        *parser,
+    in out GraphicsProgram     *program,
+    out    GraphicsProgramDesc *gpd)
 {
     if (gpd->rsd.Version == D3D_ROOT_SIGNATURE_VERSION_1_0)
     {
@@ -1273,10 +1273,10 @@ internal void InitRootSignatureParameters(
 }
 
 void ParseGraphicsShaders(
-    IN  Engine              *engine,
-    IN  const char          *file_with_shaders,
-    OUT GraphicsProgram     *program,
-    OUT GraphicsProgramDesc *gpd)
+    in  Engine              *engine,
+    in  const char          *file_with_shaders,
+    out GraphicsProgram     *program,
+    out GraphicsProgramDesc *gpd)
 {
     char *shader_code = ReadEntireShaderFile(engine, file_with_shaders, null);
     gpd->sd.filename = file_with_shaders;

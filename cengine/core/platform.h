@@ -25,13 +25,13 @@
 #elif defined(__MINGW64__)
     #define CENGINE_COMPILER_MINGW 1
 #elif defined(__MINGW32__)
-    #error Only 64-bit systems (=> and compilers) supported!
+    #error Only 64-bit systems (=> and compilers) are supported!
 #else
     #error Unsupported compiler!
 #endif
 
 #if !CENGINE_COMPILER_MSVC
-    #error Currently only MSVC compiler supported!
+    #error Currently only MSVC compiler is supported!
 #endif
 
 //
@@ -39,7 +39,7 @@
 //
 
 #ifndef _WIN64
-    #error Only 64-bit systems supported!
+    #error Only 64-bit systems are supported!
 #endif
 
 //
@@ -197,20 +197,20 @@
     #define CENGINE_EXPORT        __declspec(dllexport)
     #define CENGINE_IMPORT        __declspec(dllimport)
     #define CENGINE_NOINLINE      __declspec(noinline)
-    #define CENGINE_VECTOR_CALL   __vectorcall
     #define CENGINE_INLINE        __forceinline
     #define CENGINE_ALIGN(_bytes) __declspec(align(_bytes))
     #define CENGINE_INTRIN_TYPE   __declspec(intrin_type)
     #define CENGINE_SELECTANY     __declspec(selectany)
+    #define CENGINE_NOVTABLE      __declspec(novtable)
 #elif CENGINE_COMPILER_GCC || CENGINE_COMPILER_CLANG || CENGINE_COMPILER_MINGW
     #define CENGINE_EXPORT        __attribute__((dllexport))
     #define CENGINE_IMPORT        __attribute__((dllimport))
     #define CENGINE_NOINLINE      __attribute__((noinline))
-    #define CENGINE_VECTOR_CALL   __vectorcall
     #define CENGINE_INLINE        inline  __attribute__((always_inline))
     #define CENGINE_ALIGN(_bytes) __attribute__((aligned(_bytes)))
     #define CENGINE_INTRIN_TYPE
     #define CENGINE_SELECTANY     __attribute__((selectany))
+    #define CENGINE_NOVTABLE
 #endif
 
 #pragma warning(pop)

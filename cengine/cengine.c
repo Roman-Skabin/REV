@@ -912,7 +912,6 @@ internal void StartFrame(Engine *engine)
                                                  0, 0);
 }
 
-// @TODO(Roman): EndFrame in several work threads
 internal void EndFrame(Engine *engine)
 {
     ID3D12GraphicsCommandList *graphics_list = engine->gpu_manager.graphics_lists[engine->gpu_manager.current_buffer];
@@ -1087,11 +1086,11 @@ void SetFullscreen(Engine *engine, b32 set)
 // Sound
 //
 
-internal DWORD WINAPI SoundThreadProc(LPVOID arg)
+internal u32 WINAPI SoundThreadProc(void *arg)
 {
     Engine *engine = cast(Engine *, arg);
 
-    HANDLE event        = CreateEventExA(0, "EngineSoundEvent", 0, EVENT_ALL_ACCESS);
+    HANDLE event        = CreateEventExA(null, "EngineSoundEvent", 0, EVENT_ALL_ACCESS);
     engine->sound.error = engine->sound.client->lpVtbl->SetEventHandle(engine->sound.client, event);
     Check(SUCCEEDED(engine->sound.error));
 
@@ -1136,17 +1135,17 @@ internal DWORD WINAPI SoundThreadProc(LPVOID arg)
 
 internal void CreateSound(Engine *engine)
 {
-    engine->sound.error = CoInitializeEx(0, COINIT_MULTITHREADED);
+    engine->sound.error = CoInitializeEx(null, COINIT_MULTITHREADED);
     Check(SUCCEEDED(engine->sound.error));
 
-    IMMDeviceEnumerator *mmdevice_enumerator = 0;
-    engine->sound.error = CoCreateInstance(&CLSID_MMDeviceEnumerator, 0, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &mmdevice_enumerator);
+    IMMDeviceEnumerator *mmdevice_enumerator = null;
+    engine->sound.error = CoCreateInstance(&CLSID_MMDeviceEnumerator, null, CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator, &mmdevice_enumerator);
     Check(SUCCEEDED(engine->sound.error));
 
     engine->sound.error = mmdevice_enumerator->lpVtbl->GetDefaultAudioEndpoint(mmdevice_enumerator, eRender, eConsole, &engine->sound.device);
     Check(SUCCEEDED(engine->sound.error));
 
-    engine->sound.error = engine->sound.device->lpVtbl->Activate(engine->sound.device, &IID_IAudioClient, CLSCTX_INPROC_SERVER | CLSCTX_ACTIVATE_64_BIT_SERVER, 0, &engine->sound.client);
+    engine->sound.error = engine->sound.device->lpVtbl->Activate(engine->sound.device, &IID_IAudioClient, CLSCTX_INPROC_SERVER | CLSCTX_ACTIVATE_64_BIT_SERVER, null, &engine->sound.client);
     Check(SUCCEEDED(engine->sound.error));
 
     engine->sound.wave_format.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
@@ -1164,7 +1163,7 @@ internal void CreateSound(Engine *engine)
                        | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM
                        | AUDCLNT_STREAMFLAGS_RATEADJUST;
 
-    engine->sound.error = engine->sound.client->lpVtbl->Initialize(engine->sound.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, 0, 0, cast(WAVEFORMATEX *, &engine->sound.wave_format), 0);
+    engine->sound.error = engine->sound.client->lpVtbl->Initialize(engine->sound.client, AUDCLNT_SHAREMODE_SHARED, stream_flags, 0, 0, cast(WAVEFORMATEX *, &engine->sound.wave_format), &GUID_NULL);
     Check(SUCCEEDED(engine->sound.error));
 
     engine->sound.error = engine->sound.client->lpVtbl->GetService(engine->sound.client, &IID_IAudioRenderClient, &engine->sound.renderer);
@@ -1175,13 +1174,13 @@ internal void CreateSound(Engine *engine)
 
     engine->sound.pause = true;
 
-    DebugResult(CloseHandle(CreateThread(0, 0, SoundThreadProc, engine, 0, 0)));
+    DebugResult(CloseHandle(CreateThread(null, 0, SoundThreadProc, engine, 0, null)));
 
     mmdevice_enumerator->lpVtbl->Release(mmdevice_enumerator);
 
     engine->sound.error = MFStartup(MF_VERSION, MFSTARTUP_LITE);
     Check(SUCCEEDED(engine->sound.error));
-    
+
     LogSuccess(&engine->logger, "Sound was initialized");
 }
 
@@ -1196,7 +1195,7 @@ internal void DestroySound(Engine *engine)
     engine->sound.renderer->lpVtbl->Release(engine->sound.renderer);
     engine->sound.client->lpVtbl->Release(engine->sound.client);
     engine->sound.device->lpVtbl->Release(engine->sound.device);
-    
+
     LogSuccess(&engine->logger, "Sound was destroyed");
 }
 
@@ -1543,11 +1542,6 @@ int EngineRun(
     while (!engine->window.closed)
     {
         // Reset
-    #if DEBUG
-        gAllocationsPerFrame   = 0;
-        gReAllocationsPerFrame = 0;
-        gDeAllocationsPerFrame = 0;
-    #endif
         ResetTransientArea(engine->memory);
         engine->window.resized = false;
         InputReset(engine);

@@ -7,7 +7,6 @@
                  especially at the beginning of functions?
                  Doesn't it stupid or useless, huh?
     - Move all STD includes from platform.h to pch.h?
-    - Advanced free list for allocator.
     - Level system (not a "System" actualy but kinda).
 
 - Tools
@@ -57,6 +56,6 @@
     - Different callbacks for audios and sounds (fx)
 
 - Editor
-    - GUI (ImGUI or write my own?)
+    - UI (ImGUI or write my own?)
     - Vertex and index buffer generation.
     - Ability to choose render targets' (framebuffers') dimension.

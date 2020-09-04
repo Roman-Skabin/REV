@@ -6,30 +6,28 @@
 
 #include "core/core.h"
 
-#if DEBUG
-    CENGINE_DATA u64 gAllocationsPerFrame;
-    CENGINE_DATA u64 gReAllocationsPerFrame;
-    CENGINE_DATA u64 gDeAllocationsPerFrame;
-#endif
-
 typedef struct BlockHeader BlockHeader;
 
 typedef struct Allocator
 {
-    // @NOTE(Roman): Just saved pointers to destroyed blocks.
-    // @TODO(Roman): BlockHeader *free_list;
-
-    BlockHeader *base;
+    BlockHeader *free_list;
+    BlockHeader *first;
+    BlockHeader *last_allocated;
     u64          used;
     u64          cap;
-    b32          reserved;
+#if DEBUG
+    u64          allocations_count;
+    u64          reallocations_count;
+    u64          deallocations_count;
+#endif
+    b32          valloc_used;
 } Allocator;
 
 CENGINE_FUN void CreateAllocator(
     in  Allocator *allocator,
     opt void      *base_address,
     in  u64        capacity,
-    in  b32        clear_memory // @NOTE(Roman): There is a sence to use it only if base_address = null.
+    in  b32        clear_memory // @NOTE(Roman): There is a sence to use it only if base_address != null.
 );
 
 CENGINE_FUN void DestroyAllocator(

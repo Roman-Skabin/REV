@@ -44,14 +44,9 @@ internal USER_CALLBACK(OnInit)
 
     CreateLogger("Sandbox Logger", "../log/sandbox.log", LOG_TO_FILE | LOG_TO_CONSOLE, &sandbox->logger);
     DebugResult(SetWindowTextA(engine->window.handle, WINDOW_TITLE));
-#if RELEASE
-    SetFullscreen(engine, true);
-#endif
 
-#if RELEASE
     CreateAudioBuffer(engine, "../assets/audio/audio.wav", &sandbox->audio);
     SoundPlay(&engine->sound);
-#endif
 
     v4 cube_v0 = v4_1(-0.5, -0.5f, 0.2f, 1.0f);
     v4 cube_v1 = v4_1(-0.5, -0.5f, 1.2f, 1.0f);
@@ -136,9 +131,7 @@ internal USER_CALLBACK(OnDestroy)
 {
     Sandbox *sandbox = cast(Sandbox *, engine->user_pointer);
     DestroyGraphicsProgram(sandbox->graphics_program);
-#if RELEASE
     DestroyAudioBuffer(engine, &sandbox->audio);
-#endif
     DestroyLogger(&sandbox->logger);
 }
 
@@ -162,6 +155,11 @@ internal USER_CALLBACK(OnUpdateAndRender)
     if (engine->input.keys[KEY_F11].pressed)
     {
         SetFullscreen(engine, !engine->window.fullscreened);
+    }
+
+    if (engine->input.keys[KEY_P].pressed)
+    {
+        ToggleSoundPlay(&engine->sound);
     }
 
     if (engine->input.keys[KEY_LEFT].pressed)

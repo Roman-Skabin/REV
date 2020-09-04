@@ -28,8 +28,9 @@ typedef struct SoundStream
     b32                   pause;
 } SoundStream;
 
-INLINE void SoundPlay(SoundStream *stream)  { stream->pause = false; }
-INLINE void SoundPause(SoundStream *stream) { stream->pause = true;  }
+INLINE void SoundPlay(SoundStream *stream)       { stream->pause = false;          }
+INLINE void SoundPause(SoundStream *stream)      { stream->pause = true;           }
+INLINE void ToggleSoundPlay(SoundStream *stream) { stream->pause = !stream->pause; }
 
 typedef struct AudioBuffer
 {

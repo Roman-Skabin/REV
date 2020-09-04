@@ -56,9 +56,9 @@ struct GraphicsProgram
     ID3DBlob             *signature;
     ID3D12RootSignature  *root_signature;
     ID3D12PipelineState  *pipeline_state;
-    // @NOTE(Roman):      Vertex and index buffers creates separately
-    //                    from the graphics program. At least while we
-    //                    do not have a UI.
+    // @NOTE(Roman): Vertex and index buffers creates separately
+    //               from the graphics program. At least while we
+    //               do not have a UI.
     BUF GPUResource     **resources;
     u32                   shaders_count;
     Shader                shaders[MAX_GRAPHICS_SHADERS];

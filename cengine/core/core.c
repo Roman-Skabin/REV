@@ -27,7 +27,35 @@ void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...)
 
     if (debug_in & DEBUG_IN_CONSOLE)
     {
-        WriteConsoleA(gConsole, buffer, len, 0, 0);
+        WriteConsoleA(gConsole, buffer, len, null, null);
+    }
+    if (debug_in & DEBUG_IN_DEBUG)
+    {
+        OutputDebugStringA(buffer);
+    }
+
+    va_end(args);
+}
+
+void __cdecl DebugFC(DEBUG_IN debug_in, DEBUG_COLOR color, const char *format, ...)
+{
+    if (!gConsole)
+    {
+        gConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    }
+
+    va_list args;
+    va_start(args, format);
+
+    char buffer[BUFSIZ] = {'\0'};
+    int len             = vsprintf(buffer, format, args);
+    buffer[len]         = '\n';
+
+    if (debug_in & DEBUG_IN_CONSOLE)
+    {
+        SetConsoleTextAttribute(gConsole, color);
+        WriteConsoleA(gConsole, buffer, len, null, null);
+        SetConsoleTextAttribute(gConsole, DEBUG_COLOR_INFO);
     }
     if (debug_in & DEBUG_IN_DEBUG)
     {
@@ -82,7 +110,7 @@ void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...)
     }
 }
 
-void ShowDebugMessage(
+void __cdecl ShowDebugMessage(
     in  b32         message_is_expr,
     in  const char *file,
     in  u64         line,

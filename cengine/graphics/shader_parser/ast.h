@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "tools/buffer.h"
 #include "math/vec.h"
 
 typedef struct ASTType        ASTType;

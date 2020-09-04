@@ -6,15 +6,18 @@
 
 #include "core/pch.h"
 
+enum
+{
 #if CENGINE_ISA >= CENGINE_ISA_AVX512
-    #define CENGINE_DEFAULT_ALIGNMENT sizeof(__m512)
+    CENGINE_DEFAULT_ALIGNMENT = sizeof(__m512)
 #elif CENGINE_ISA >= CENGINE_ISA_AVX
-    #define CENGINE_DEFAULT_ALIGNMENT sizeof(__m256)
+    CENGINE_DEFAULT_ALIGNMENT = sizeof(__m256)
 #elif CENGINE_ISA >= CENGINE_ISA_SSE
-    #define CENGINE_DEFAULT_ALIGNMENT sizeof(__m128)
+    CENGINE_DEFAULT_ALIGNMENT = sizeof(__m128)
 #else
-    #define CENGINE_DEFAULT_ALIGNMENT sizeof(void *)
+    CENGINE_DEFAULT_ALIGNMENT = sizeof(void *)
 #endif
+};
 
 #if CENGINE_ISA >= CENGINE_ISA_SSE
     #pragma pack(push, 16)
@@ -61,7 +64,7 @@
 #define CENGINE_CLASS CENGINE_IMPEXP
 
 #if CENGINE_ISA >= CENGINE_ISA_SSE
-    #define MATH_CALL CENGINE_VECTOR_CALL
+    #define MATH_CALL __vectorcall
 #else
     #define MATH_CALL
 #endif
@@ -85,7 +88,7 @@
 #define CSTRLEN(cstr) (sizeof(cstr) - 1)
 
 #ifdef NULL
-    #undef  NULL
+    #undef NULL
 #endif
 #define NULL 0
 #ifndef __cplusplus
@@ -93,12 +96,14 @@
 #endif
 #define null nullptr
 
-#ifndef interface
-    #ifdef __cplusplus
-        #define interface __interface
-    #else
-        #define interface struct
-    #endif
+#ifdef interface
+    #undef interface
+#endif
+
+#ifdef __cplusplus
+    #define interface struct CENGINE_NOVTABLE
+#else
+    #define interface struct
 #endif
 
 #define KB(x) (  (x) * 1024)
@@ -120,15 +125,15 @@
 #define IS_POW_2(x)      ((x) && (((x) & ((x) - 1)) == 0))
 
 #ifdef in
-#undef in
+    #undef in
 #endif
 
 #ifdef out
-#undef out
+    #undef out
 #endif
 
 #ifdef opt
-#undef opt
+    #undef opt
 #endif
 
 #define in
@@ -194,13 +199,13 @@ typedef u8 byte;
 #define BYTE_MIN U8_MIN
 
 //
-// Debuging
+// Debugging
 //
 
 typedef enum DEBUG_IN
 {
-    DEBUG_IN_CONSOLE = 0x1,
-    DEBUG_IN_DEBUG   = 0x2,
+    DEBUG_IN_CONSOLE = BIT(0),
+    DEBUG_IN_DEBUG   = BIT(1),
 } DEBUG_IN;
 
 typedef enum MESSAGE_TYPE
@@ -210,9 +215,18 @@ typedef enum MESSAGE_TYPE
     MESSAGE_TYPE_INFO    = MB_ICONINFORMATION,
 } MESSAGE_TYPE;
 
+typedef enum DEBUG_COLOR
+{
+    DEBUG_COLOR_INFO    = 0x7,
+    DEBUG_COLOR_ERROR   = 0x4,
+    DEBUG_COLOR_WARNING = 0x6,
+    DEBUG_COLOR_SUCCESS = 0xA,
+} DEBUG_COLOR;
+
 CENGINE_FUN void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
+CENGINE_FUN void __cdecl DebugFC(DEBUG_IN debug_in, DEBUG_COLOR color, const char *format, ...);
 CENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
-CENGINE_FUN void ShowDebugMessage(
+CENGINE_FUN void __cdecl ShowDebugMessage(
     in  b32         message_is_expr,
     in  const char *file,
     in  u64         line,
@@ -222,7 +236,7 @@ CENGINE_FUN void ShowDebugMessage(
     opt ...
 );
 
-#if DEVDEBUG
+#if DEVDEBUG && !defined(CENGINE_NO_CHECKS)
 
     #define CheckM(expr, message, ...) if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); __debugbreak(); ExitProcess(1); }
     #define Check(expr)                if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); __debugbreak(); ExitProcess(1); }
@@ -231,7 +245,7 @@ CENGINE_FUN void ShowDebugMessage(
     #define DebugResult(expr)                Check(expr)
     #define DebugResultM(expr, message, ...) CheckM(expr, message, __VA_ARGS__)
 
-#elif DEBUG
+#elif !defined(CENGINE_NO_CHECKS)
 
     #define CheckM(expr, message, ...) if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); ExitProcess(1); }
     #define Check(expr)                if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); ExitProcess(1); }
@@ -282,5 +296,9 @@ typedef struct Engine Engine;
 //     Extends[D]List(<struct_name>);
 //     ... // other fields
 // };
+//
+// You can see concrete examples of using LIST
+// and ExtendsList in cengine/graphics/shader_parser/ast.h
+
 #define ExtendsList(Type)              Type *next
 #define ExtendsDList(Type) Type *prev; Type *next

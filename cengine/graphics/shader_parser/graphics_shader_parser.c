@@ -1239,7 +1239,8 @@ internal void InitRootSignatureParameters(
             parameter->Descriptor.RegisterSpace  = cbuffer->space;
             parameter->ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
 
-            cbuffer->size_in_bytes = ALIGN_UP(cbuffer->size_in_bytes, 256);
+            // cbuffer->size_in_bytes = ALIGN_UP(cbuffer->size_in_bytes, 256);
+            cbuffer->size_in_bytes = max(256, cbuffer->size_in_bytes);
             GPUResource *resource  = PushConstantBuffer(engine, cbuffer->size_in_bytes, cbuffer->name, cast(u32, cbuffer->name_len));
             BufferPushBack(program->resources, resource);
         }
@@ -1263,7 +1264,8 @@ internal void InitRootSignatureParameters(
             parameter->Descriptor.Flags          = cbuffer->flags;
             parameter->ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
 
-            cbuffer->size_in_bytes = ALIGN_UP(cbuffer->size_in_bytes, 256);
+            // cbuffer->size_in_bytes = ALIGN_UP(cbuffer->size_in_bytes, 256);
+            cbuffer->size_in_bytes = max(256, cbuffer->size_in_bytes);
             GPUResource *resource = PushConstantBuffer(engine, cbuffer->size_in_bytes, cbuffer->name, cast(u32, cbuffer->name_len));
             BufferPushBack(program->resources, resource);
         }

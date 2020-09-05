@@ -15,7 +15,7 @@ cbuffer MVPMatrix : register(b0, space0)
 {
     float4x4 cMVP;
 };
- 
+
 struct VSOutput
 {
     float4 pos : SV_Position;
@@ -24,10 +24,11 @@ struct VSOutput
 
 VSOutput CustomVSEntryPoint(float4 pos : POSITION, float4 col : COLOR)
 {
-    printf("pos = { %f, %f, %f, %f }", pos.x, pos.y, pos.z, pos.w);
-    printf("col = { %f, %f, %f, %f }", col.r, col.g, col.b, col.a);
+    // printf("pos = { %f, %f, %f, %f }", pos.x, pos.y, pos.z, pos.w);
+    // printf("col = { %f, %f, %f, %f }", col.r, col.g, col.b, col.a);
     VSOutput output;
     output.pos = mul(cMVP, pos);
+    // output.pos = pos;
     output.col = col;
     return output;
 }

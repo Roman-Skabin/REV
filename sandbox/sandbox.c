@@ -14,9 +14,10 @@ typedef struct Camera
     m4 proj;
 } Camera;
 
-typedef struct CENGINE_ALIGN(256) CBufferData
+typedef struct CBufferData
 {
     m4 MVP;
+    byte alignment[256 - sizeof(m4)];
 } CBufferData;
 
 typedef struct Sandbox

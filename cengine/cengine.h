@@ -19,19 +19,11 @@
 #define USER_CALLBACK(name) void name(Engine *engine)
 typedef USER_CALLBACK(UserCallback);
 
-#if DEBUG
 #define USER_MAIN(_OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound)                             \
 int __cdecl main(int args_count, char *args[])                                                   \
 {                                                                                                \
     return EngineRun(GetModuleHandleA(null), _OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound); \
 }
-#else
-#define USER_MAIN(_OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound)                                 \
-int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR command_line, int show_window) \
-{                                                                                                    \
-    return EngineRun(instance, _OnInit, _OnDestroy, _OnUpdateAndRender, _OnSound);                   \
-}
-#endif
 
 struct Engine
 {

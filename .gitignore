@@ -4,5 +4,5 @@
 build/*.time
 log/
 bin/
-nsight/*.dmp
+nsight/
 NEW_CHANGES.txt

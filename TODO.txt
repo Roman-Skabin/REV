@@ -1,3 +1,6 @@
+- PRIMARY!!!
+    - Move to C++ because of bad D3D12 compatibility with C.
+
 - Core
     - Make engine's user pointer and sandbox thread safety
     - More significant logs. Have to be almost everywhere, BUT DO NOT TRASH THE CODE!
@@ -56,6 +59,6 @@
     - Different callbacks for audios and sounds (fx)
 
 - Editor
-    - UI (ImGUI or write my own?)
+    - UI (ImGUI or Nuklear or write my own?)
     - Vertex and index buffer generation.
     - Ability to choose render targets' (framebuffers') dimension.

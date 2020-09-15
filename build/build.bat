@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-rem use: build [cengine|sandbox] [release]
+rem use: build [engine|sandbox] [release]
 
 cls
 
@@ -19,7 +19,7 @@ if not exist ..\assets\audio    mkdir ..\assets\audio
 if not exist ..\assets\shaders  mkdir ..\assets\shaders
 if not exist ..\bin             mkdir ..\bin
 if not exist ..\bin\obj         mkdir ..\bin\obj
-if not exist ..\bin\obj\cengine mkdir ..\bin\obj\cengine
+if not exist ..\bin\obj\engine  mkdir ..\bin\obj\engine
 if not exist ..\bin\obj\sandbox mkdir ..\bin\obj\sandbox
 if not exist ..\log             mkdir ..\log
 
@@ -28,7 +28,7 @@ set /A COMPILE_CENGINE = 0
 
 if /I "!PROJECT!" == "sandbox" (
     set /A COMPILE_SANDBOX = 1
-) else if /I "!PROJECT!" == "cengine" (
+) else if /I "!PROJECT!" == "engine" (
     set /A COMPILE_CENGINE = 1
 ) else if "!PROJECT!" == "" (
     set /A COMPILE_SANDBOX = 1
@@ -37,25 +37,25 @@ if /I "!PROJECT!" == "sandbox" (
 
 ctime -begin full.time
 
-REM cengine
+REM engine
 if !COMPILE_CENGINE! == 1 (
     set OPTIMIZATION= -Ob2 -Oi -favor:blend
     set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
-    set LANGUAGE= -Zc:wchar_t- -Zc:inline
+    set LANGUAGE= -Zc:wchar_t- -Zc:inline -std:c++17
     set DIAGNOSTICS= -W3
     set IMPORT_LIBS=
     set LINKER= -link
     set LINKING=
     set INPUT_FILES=
-    set PREPROCESSOR= -Icengine -D_CENGINE_DEV
-    set MISCELLANEOUS= -TC
-    set OUTPUT_FILES= -Fo:bin\obj\cengine\ -Fe:bin\cengine.dll -Fp:bin\obj\cengine\cengine.pch
+    set PREPROCESSOR= -Iengine -D_ENGINE_DEV
+    set MISCELLANEOUS= -TP
+    set OUTPUT_FILES= -Fo:bin\obj\engine\ -Fe:bin\engine.dll -Fp:bin\obj\engine\engine.pch
 
     REM first 'for' needs just for getting full filename
-    for /F %%i in ('dir /A-D /S /B ..\cengine\core\pch.c') do (
+    for /F %%i in ('dir /A-D /S /B ..\engine\core\pch.cpp') do (
         set PCH_FILE=%%i
     )
-    for /F %%i in ('dir /A-D /S /B ..\cengine\*.c') do (
+    for /F %%i in ('dir /A-D /S /B ..\engine\*.cpp') do (
         set FILE=%%i
         if /I "!FILE!" NEQ "!PCH_FILE!" (
             set INPUT_FILES=!INPUT_FILES! !FILE!
@@ -68,24 +68,24 @@ if !COMPILE_CENGINE! == 1 (
         set LINKING= !LINKING! -MT -LD
         set LINKER= !LINKER! -incremental:no -opt:ref
         REM Temporary, added for debuging release build
-        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\cengine.pdb
+        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\engine.pdb
         set LANGUAGE= !LANGUAGE! -Zi
     ) else (
         set OPTIMIZATION= !OPTIMIZATION! -Od
         set LINKING= !LINKING! -MTd -LDd
-        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\cengine.pdb
+        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\engine.pdb
         set LANGUAGE= !LANGUAGE! -Zi
     )
 
-    ctime -begin cengine.time
+    ctime -begin engine.time
 
     pushd ..
-        echo ==========================    Compiling cengine...    ==========================
-        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yccore\pch.h !LINKING! !DIAGNOSTICS! cengine\core\pch.c !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
-        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yucore\pch.h !LINKING! !DIAGNOSTICS! !INPUT_FILES! !OUTPUT_FILES! !LINKER! bin\obj\cengine\pch.obj !IMPORT_LIBS! -nologo
+        echo ==========================    Compiling engine...    ==========================
+        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yccore\pch.h !LINKING! !DIAGNOSTICS! engine\core\pch.cpp !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
+        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yucore\pch.h !LINKING! !DIAGNOSTICS! !INPUT_FILES! !OUTPUT_FILES! !LINKER! bin\obj\engine\pch.obj !IMPORT_LIBS! -nologo
     popd
 
-    ctime -end cengine.time
+    ctime -end engine.time
 
     echo.
 )
@@ -94,17 +94,17 @@ REM sandbox
 if !COMPILE_SANDBOX! == 1 (
     set OPTIMIZATION= -Ob2 -Oi -favor:blend
     set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
-    set LANGUAGE= -Zc:wchar_t- -Zc:inline
+    set LANGUAGE= -Zc:wchar_t- -Zc:inline -std:c++17
     set DIAGNOSTICS= -W3
-    set IMPORT_LIBS= User32.lib bin\cengine.lib
+    set IMPORT_LIBS= User32.lib bin\engine.lib
     set LINKING=
     set LINKER= -link
     set INPUT_FILES=
-    set PREPROCESSOR= -Icengine
-    set MISCELLANEOUS= -MP -TC
+    set PREPROCESSOR= -Iengine
+    set MISCELLANEOUS= -MP -TP
     set OUTPUT_FILES= -Fo:bin\obj\sandbox\ -Fe:bin\sandbox.exe
 
-    for /F %%i in ('dir /A-D /S /B ..\sandbox\*.c') do (
+    for /F %%i in ('dir /A-D /S /B ..\sandbox\*.cpp') do (
         set INPUT_FILES=!INPUT_FILES! %%i
     )
 

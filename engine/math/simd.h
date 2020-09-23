@@ -156,8 +156,8 @@ enum class MM_SHUFFLE // for _mm_shuffle_*
     XWWW, YWWW, ZWWW, WWWW
 };
 
-template<typename T>
-INLINE b32 MATH_CALL mm_equals(T *a, T *b)
+template<typename T, typename U>
+INLINE b32 MATH_CALL mm_equals(T *a, U *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(*cast<__m128i *>(a),
@@ -170,8 +170,8 @@ INLINE b32 MATH_CALL mm_equals(T *a, T *b)
 #endif
 }
 
-template<typename T>
-INLINE b32 MATH_CALL mm256_equals(T *a, T *b)
+template<typename T, typename U>
+INLINE b32 MATH_CALL mm256_equals(T *a, U *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0x0F == _mm256_cmpeq_epi64_mask(*cast<__m256i *>(a),
@@ -199,8 +199,8 @@ INLINE b32 MATH_CALL mm256_equals(T *a, T *b)
 #endif
 }
 
-template<typename T>
-INLINE b32 MATH_CALL mm512_equals(T *a, T *b)
+template<typename T, typename U>
+INLINE b32 MATH_CALL mm512_equals(T *a, U *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0xFF == _mm512_cmpeq_epi64_mask(*cast<__m512i *>(a),

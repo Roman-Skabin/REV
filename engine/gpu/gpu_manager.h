@@ -13,7 +13,7 @@ enum GPU_MANAGER_CONSTANTS
 };
 
 // @TODO(Roman): Enable multiple adapters support
-typedef struct GPUManager
+struct GPUManager final
 {
     Logger                       logger;
 
@@ -71,10 +71,10 @@ typedef struct GPUManager
     } features;
 
     HRESULT                      error;
-} GPUManager;
+};
 
-ENGINE_FUN void SetVSync(Engine *engine, b32 enable);
+ENGINE_FUN void SetVSync(in Engine *engine, in b32 enable);
 
 #if DEBUG
-ENGINE_FUN void LogDirectXMessages(Engine *engine);
+ENGINE_FUN void LogDirectXMessages(in Engine *engine);
 #endif

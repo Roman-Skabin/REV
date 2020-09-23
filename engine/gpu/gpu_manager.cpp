@@ -6,16 +6,17 @@
 #include "gpu/gpu_manager.h"
 #include "cengine.h"
 
-#define SafeRelease(directx_interface)                           \
-{                                                                \
-    if (directx_interface)                                       \
-    {                                                            \
-        (directx_interface)->lpVtbl->Release(directx_interface); \
-        (directx_interface) = 0;                                 \
-    }                                                            \
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_base_of_v<IUnknown, T>>>
+static void SafeRelease(in_out_opt T *&directx_interface)
+{
+    if (directx_interface)
+    {
+        directx_interface->Release();
+        directx_interface = nullptr;
+    }
 }
 
-void SetVSync(Engine *engine, b32 enable)
+void SetVSync(in Engine *engine, in b32 enable)
 {
     Check(engine);
     if (engine->gpu_manager.vsync != enable)
@@ -34,18 +35,17 @@ void SetVSync(Engine *engine, b32 enable)
 {                                                                 \
     (_message_len) += sprintf((_message) + (_message_len),        \
                               " [%.*s MESSAGE, MESSAGE_ID = %d]", \
-                              cast(int, CSTRLEN(_category)),      \
+                              cast<int>(CSTRLEN(_category)),      \
                               (_category),                        \
                               _id);                               \
 }
 
 #if DEBUG
-void LogDirectXMessages(Engine *engine)
+void LogDirectXMessages(in Engine *engine)
 {
     Check(engine);
 
-    u64 num_messages = engine->gpu_manager.dxgi_info_queue->lpVtbl->GetNumStoredMessages(engine->gpu_manager.dxgi_info_queue,
-                                                                                         DXGI_DEBUG_ALL);
+    u64 num_messages = engine->gpu_manager.dxgi_info_queue->GetNumStoredMessages(DXGI_DEBUG_ALL);
     if (num_messages)
     {
         char composed_message[1024] = {0};
@@ -54,26 +54,24 @@ void LogDirectXMessages(Engine *engine)
         for (u64 i = 0; i < num_messages; ++i)
         {
             u64 message_length = 0;
-            engine->gpu_manager.error = engine->gpu_manager.dxgi_info_queue->lpVtbl->GetMessage(engine->gpu_manager.dxgi_info_queue,
-                                                                                                DXGI_DEBUG_ALL,
-                                                                                                i,
-                                                                                                0,
-                                                                                                &message_length);
+            engine->gpu_manager.error = engine->gpu_manager.dxgi_info_queue->GetMessage(DXGI_DEBUG_ALL,
+                                                                                        i,
+                                                                                        0,
+                                                                                        &message_length);
             Check(SUCCEEDED(engine->gpu_manager.error));
 
-            DXGI_INFO_QUEUE_MESSAGE *message = PushToTransientArea(engine->memory, message_length);
-            engine->gpu_manager.error = engine->gpu_manager.dxgi_info_queue->lpVtbl->GetMessage(engine->gpu_manager.dxgi_info_queue,
-                                                                                                DXGI_DEBUG_ALL,
-                                                                                                i,
-                                                                                                message,
-                                                                                                &message_length);
+            DXGI_INFO_QUEUE_MESSAGE *message = cast<DXGI_INFO_QUEUE_MESSAGE *>(engine->memory->PushToTransientArea(message_length));
+            engine->gpu_manager.error = engine->gpu_manager.dxgi_info_queue->GetMessage(DXGI_DEBUG_ALL,
+                                                                                        i,
+                                                                                        message,
+                                                                                        &message_length);
             Check(SUCCEEDED(engine->gpu_manager.error));
 
             composed_message_len = 0;
 
-            /**/ if (GUID_EQUALS(message->Producer, DXGI_DEBUG_D3D12)) AddCSTR(composed_message, composed_message_len, "D3D12 ")
-            else if (GUID_EQUALS(message->Producer, DXGI_DEBUG_DXGI))  AddCSTR(composed_message, composed_message_len, "DXGI ")
-            else if (GUID_EQUALS(message->Producer, DXGI_DEBUG_APP))   AddCSTR(composed_message, composed_message_len, "APP ")
+            /**/ if (mm_equals(&message->Producer, &DXGI_DEBUG_D3D12)) AddCSTR(composed_message, composed_message_len, "D3D12 ")
+            else if (mm_equals(&message->Producer, &DXGI_DEBUG_DXGI))  AddCSTR(composed_message, composed_message_len, "DXGI ")
+            else if (mm_equals(&message->Producer, &DXGI_DEBUG_APP))   AddCSTR(composed_message, composed_message_len, "APP ")
             else                                                       AddCSTR(composed_message, composed_message_len, "<UNKNOWN> ")
 
             switch (message->Severity)
@@ -111,18 +109,18 @@ void LogDirectXMessages(Engine *engine)
 
             switch (message->Severity)
             {
-                case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR:   LogError(&engine->gpu_manager.logger,  "%.*s", composed_message_len, composed_message); break;
-                case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING: LogWarning(&engine->gpu_manager.logger,"%.*s", composed_message_len, composed_message); break;
-                default:                                       LogInfo(&engine->gpu_manager.logger,   "%.*s", composed_message_len, composed_message); break;
+                case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR:   engine->gpu_manager.logger.LogError(  "%.*s", composed_message_len, composed_message); break;
+                case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING: engine->gpu_manager.logger.LogWarning("%.*s", composed_message_len, composed_message); break;
+                default:                                       engine->gpu_manager.logger.LogInfo(   "%.*s", composed_message_len, composed_message); break;
             }
 
             ZeroMemory(composed_message, composed_message_len);
         }
 
-        engine->gpu_manager.dxgi_info_queue->lpVtbl->ClearStoredMessages(engine->gpu_manager.dxgi_info_queue, DXGI_DEBUG_ALL);
+        engine->gpu_manager.dxgi_info_queue->ClearStoredMessages(DXGI_DEBUG_ALL);
     }
 
-    if (num_messages = engine->gpu_manager.info_queue->lpVtbl->GetNumStoredMessages(engine->gpu_manager.info_queue))
+    if (num_messages = engine->gpu_manager.info_queue->GetNumStoredMessages())
     {
         char composed_message[1024] = {0};
         u64  composed_message_len   = 0;
@@ -130,17 +128,15 @@ void LogDirectXMessages(Engine *engine)
         for (u64 i = 0; i < num_messages; ++i)
         {
             u64 message_length = 0;
-            engine->gpu_manager.error = engine->gpu_manager.info_queue->lpVtbl->GetMessage(engine->gpu_manager.info_queue,
-                                                                                           i,
-                                                                                           0,
-                                                                                           &message_length);
+            engine->gpu_manager.error = engine->gpu_manager.info_queue->GetMessage(i,
+                                                                                   0,
+                                                                                   &message_length);
             Check(SUCCEEDED(engine->gpu_manager.error));
 
-            D3D12_MESSAGE *message = PushToTransientArea(engine->memory, message_length);
-            engine->gpu_manager.error = engine->gpu_manager.info_queue->lpVtbl->GetMessage(engine->gpu_manager.info_queue,
-                                                                                           i,
-                                                                                           message,
-                                                                                           &message_length);
+            D3D12_MESSAGE *message = cast<D3D12_MESSAGE *>(engine->memory->PushToTransientArea(message_length));
+            engine->gpu_manager.error = engine->gpu_manager.info_queue->GetMessage(i,
+                                                                                   message,
+                                                                                   &message_length);
             Check(SUCCEEDED(engine->gpu_manager.error));
 
             composed_message_len = 0;
@@ -180,15 +176,15 @@ void LogDirectXMessages(Engine *engine)
 
             switch (message->Severity)
             {
-                case D3D12_MESSAGE_SEVERITY_ERROR:   LogError(&engine->gpu_manager.logger,  "%.*s", composed_message_len, composed_message); break;
-                case D3D12_MESSAGE_SEVERITY_WARNING: LogWarning(&engine->gpu_manager.logger,"%.*s", composed_message_len, composed_message); break;
-                default:                             LogInfo(&engine->gpu_manager.logger,   "%.*s", composed_message_len, composed_message); break;
+                case D3D12_MESSAGE_SEVERITY_ERROR:   engine->gpu_manager.logger.LogError(  "%.*s", composed_message_len, composed_message); break;
+                case D3D12_MESSAGE_SEVERITY_WARNING: engine->gpu_manager.logger.LogWarning("%.*s", composed_message_len, composed_message); break;
+                default:                             engine->gpu_manager.logger.LogInfo(   "%.*s", composed_message_len, composed_message); break;
             }
 
             ZeroMemory(composed_message, composed_message_len);
         }
 
-        engine->gpu_manager.info_queue->lpVtbl->ClearStoredMessages(engine->gpu_manager.info_queue);
+        engine->gpu_manager.info_queue->ClearStoredMessages();
     }
 }
 #endif

@@ -91,11 +91,7 @@ namespace RTTI
 
     template<typename T> using is_arithmetic = bool_constant<is_arithmetic_v<T>>;
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     template<typename T> inline constexpr bool is_xmm_v = is_any_of_v<remove_cv_t<T>, __m128, __m128i, __m128d, xmm>;
-#else
-    template<typename T> inline constexpr bool is_xmm_v = false;
-#endif
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX
     template<typename T> inline constexpr bool is_ymm_v = is_any_of_v<remove_cv_t<T>, __m256, __m256i, __m256d, ymm>;

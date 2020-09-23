@@ -46,55 +46,26 @@
 // ISA
 //
 
-#define ENGINE_ISA_SSE      0x10
-#define ENGINE_ISA_SSE2     0x20
-#define ENGINE_ISA_SSE3     0x30
-#define ENGINE_ISA_SSSE3    0x40
-#define ENGINE_ISA_SSE4     0x50
-#define ENGINE_ISA_SSE4a    0x60
-#define ENGINE_ISA_SSE4_1   0x70
-#define ENGINE_ISA_SSE4_2   0x80
-#define ENGINE_ISA_AVX      0x90
-#define ENGINE_ISA_AVX2     0xA0
-#define ENGINE_ISA_AVX512   0xB0
-
-// @NOTE(Roman): OR'd with the ENGINE_ISA_AVX512
-#define ENGINE_ISA_AVX512F  0x00
-#define ENGINE_ISA_AVX512CD 0x01
-#define ENGINE_ISA_AVX512VL 0x02
-#define ENGINE_ISA_AVX512DQ 0x04
-#define ENGINE_ISA_AVX512BW 0x08
-
-#define ENGINE_ISA 0
+// @NOTE(Roman): On x64 CPUs we wanna see at least nothing but SSE.
+//               And I don't care is it SSE 4.2 or just SSE.
+//               https://store.steampowered.com/hwsurvey says
+//               there are 97.58% CPUs supported SSE 4.2 (9/16/2020).
+//               So if your CPU does not support SSE 4.2
+//               some instractions will be illegal probably.
+#define ENGINE_ISA_SSE    0
+#define ENGINE_ISA_AVX    1
+#define ENGINE_ISA_AVX2   2
+#define ENGINE_ISA_AVX512 3
 
 #if ENGINE_COMPILER_MSVC
     #if defined(__AVX512BW__) || defined(__AVX512CD__) || defined(__AVX512DQ__) || defined(__AVX512F__) || defined(__AVX512VL__)
         #define ENGINE_ISA ENGINE_ISA_AVX512
-        #if defined(__AVX512F__)
-            #define ENGINE_ISA (ENGINE_ISA | ENGINE_ISA_AVX512F)
-        #endif
-        #if defined(__AVX512CD__)
-            #define ENGINE_ISA (ENGINE_ISA | ENGINE_ISA_AVX512CD)
-        #endif
-        #if defined(__AVX512VL__)
-            #define ENGINE_ISA (ENGINE_ISA | ENGINE_ISA_AVX512VL)
-        #endif
-        #if defined(__AVX512DQ__)
-            #define ENGINE_ISA (ENGINE_ISA | ENGINE_ISA_AVX512DQ)
-        #endif
-        #if defined(__AVX512BW__)
-            #define ENGINE_ISA (ENGINE_ISA | ENGINE_ISA_AVX512BW)
-        #endif
     #elif defined(__AVX2__)
         #define ENGINE_ISA ENGINE_ISA_AVX2
     #elif defined(__AVX__)
         #define ENGINE_ISA ENGINE_ISA_AVX
-    #elif _M_IX86_FP == 2
-        #define ENGINE_ISA ENGINE_ISA_SSE2
-    #elif _M_IX86_FP == 1
-        #define ENGINE_ISA ENGINE_ISA_SSE
     #else
-        #error Unsupported ISA!
+        #define ENGINE_ISA ENGINE_ISA_SSE
     #endif
 #elif ENGINE_COMPILER_GCC
     // @TODO(Roman): Cross compiler ISA defines
@@ -160,24 +131,8 @@
         #define _ZMMINTRIN_H_INCLUDED // to suppres include zmmintrin from immintrin
         #include <immintrin.h>
         #include <ammintrin.h> // AMD specific intrinsics
-    #elif ENGINE_ISA >= ENGINE_ISA_SSE4_2
+    #else
         #include <wmmintrin.h>
-        #include <nmmintrin.h>
-        #include <ammintrin.h> // AMD specific intrinsics
-    #elif ENGINE_ISA >= ENGINE_ISA_SSE4_1
-        #include <smmintrin.h>
-        #include <ammintrin.h> // AMD specific intrinsics
-    #elif ENGINE_ISA >= ENGINE_ISA_SSSE3
-        #include <tmmintrin.h>
-        #include <ammintrin.h> // AMD specific intrinsics
-    #elif ENGINE_ISA >= ENGINE_ISA_SSE3
-        #include <pmmintrin.h>
-        #include <ammintrin.h> // AMD specific intrinsics
-    #elif ENGINE_ISA >= ENGINE_ISA_SSE2
-        #include <emmintrin.h>
-        #include <ammintrin.h> // AMD specific intrinsics
-    #elif ENGINE_ISA >= ENGINE_ISA_SSE
-        #include <xmmintrin.h>
         #include <ammintrin.h> // AMD specific intrinsics
     #endif
 #elif ENGINE_COMPILER_GCC

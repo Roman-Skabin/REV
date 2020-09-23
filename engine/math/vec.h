@@ -13,7 +13,7 @@
 // v2
 //
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2 final
 {
     struct { f32 x, y; };
     struct { f32 w, h; };
@@ -48,6 +48,12 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2
                   (end.y - start.y) * percent.y + start.y);
     }
 
+    static v2 MATH_CALL clamp(v2 val, v2 min, v2 max)
+    {
+        return v2(__max(min.x, __min(max.x, val.x)),
+                  __max(min.y, __min(max.y, val.y)));
+    }
+
     v2& MATH_CALL operator+=(v2 r)  { x += r.x; y += r.y; return *this; }
     v2& MATH_CALL operator-=(v2 r)  { x -= r.x; y -= r.y; return *this; }
     v2& MATH_CALL operator*=(v2 r)  { x *= r.x; y *= r.y; return *this; }
@@ -69,6 +75,11 @@ INLINE v2 MATH_CALL operator-(v2 l, f32 r) { return v2(l.x - r, l.y - r); }
 INLINE v2 MATH_CALL operator*(v2 l, f32 r) { return v2(l.x * r, l.y * r); }
 INLINE v2 MATH_CALL operator/(v2 l, f32 r) { return v2(l.x / r, l.y / r); }
 
+INLINE v2 MATH_CALL operator+(f32 l, v2 r) { return v2(l + r.x, l + r.y); }
+INLINE v2 MATH_CALL operator-(f32 l, v2 r) { return v2(l - r.x, l - r.y); }
+INLINE v2 MATH_CALL operator*(f32 l, v2 r) { return v2(l * r.x, l * r.y); }
+INLINE v2 MATH_CALL operator/(f32 l, v2 r) { return v2(l / r.x, l / r.y); }
+
 INLINE bool MATH_CALL operator==(v2 l, v2 r) { return l.x == r.x && l.y == r.y; }
 INLINE bool MATH_CALL operator!=(v2 l, v2 r) { return l.x != r.x || l.y != r.y; }
 
@@ -81,7 +92,7 @@ INLINE bool MATH_CALL operator>=(v2 l, v2 r) { return l.length_sq() >= r.length_
 INLINE bool MATH_CALL operator< (v2 l, v2 r) { return l.length_sq() <  r.length_sq(); }
 INLINE bool MATH_CALL operator> (v2 l, v2 r) { return l.length_sq() >  r.length_sq(); }
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2s
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2s final
 {
     struct { s32 x, y; };
     struct { s32 w, h; };
@@ -101,6 +112,12 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2s
 
     f32 MATH_CALL length()    const { return sqrtf(cast<f32>(x*x + y*y)); }
     s32 MATH_CALL length_sq() const { return x*x + y*y;                   }
+
+    static v2s MATH_CALL clamp(v2s val, v2s min, v2s max)
+    {
+        return v2s(__max(min.x, __min(max.x, val.x)),
+                   __max(min.y, __min(max.y, val.y)));
+    }
 
     v2s& MATH_CALL operator+=(v2s r) { x += r.x; y += r.y; return *this; }
     v2s& MATH_CALL operator-=(v2s r) { x -= r.x; y -= r.y; return *this; }
@@ -123,6 +140,11 @@ INLINE v2s MATH_CALL operator-(v2s l, s32 r) { return v2s(l.x - r, l.y - r); }
 INLINE v2s MATH_CALL operator*(v2s l, s32 r) { return v2s(l.x * r, l.y * r); }
 INLINE v2s MATH_CALL operator/(v2s l, s32 r) { return v2s(l.x / r, l.y / r); }
 
+INLINE v2s MATH_CALL operator+(s32 l, v2s r) { return v2s(l + r.x, l + r.y); }
+INLINE v2s MATH_CALL operator-(s32 l, v2s r) { return v2s(l - r.x, l - r.y); }
+INLINE v2s MATH_CALL operator*(s32 l, v2s r) { return v2s(l * r.x, l * r.y); }
+INLINE v2s MATH_CALL operator/(s32 l, v2s r) { return v2s(l / r.x, l / r.y); }
+
 INLINE bool MATH_CALL operator==(v2s l, v2s r) { return l.x == r.x && l.y == r.y; }
 INLINE bool MATH_CALL operator!=(v2s l, v2s r) { return l.x != r.x || l.y != r.y; }
 
@@ -135,7 +157,7 @@ INLINE bool MATH_CALL operator>=(v2s l, v2s r) { return l.length_sq() >= r.lengt
 INLINE bool MATH_CALL operator< (v2s l, v2s r) { return l.length_sq() <  r.length_sq(); }
 INLINE bool MATH_CALL operator> (v2s l, v2s r) { return l.length_sq() >  r.length_sq(); }
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2u
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2u final
 {
     struct { u32 x, y; };
     struct { u32 w, h; };
@@ -157,6 +179,12 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) v2u
     f32 MATH_CALL length()    const { return sqrtf(cast<f32>(x*x + y*y)); }
     u32 MATH_CALL length_sq() const { return x*x + y*y; }
 
+    static v2u MATH_CALL clamp(v2u val, v2u min, v2u max)
+    {
+        return v2u(__max(min.x, __min(max.x, val.x)),
+                   __max(min.y, __min(max.y, val.y)));
+    }
+
     v2u& MATH_CALL operator+=(v2u r) { x += r.x; y += r.y; return *this; }
     v2u& MATH_CALL operator-=(v2u r) { x -= r.x; y -= r.y; return *this; }
     v2u& MATH_CALL operator*=(v2u r) { x *= r.x; y *= r.y; return *this; }
@@ -177,6 +205,11 @@ INLINE v2u MATH_CALL operator+(v2u l, u32 r) { return v2u(l.x + r, l.y + r); }
 INLINE v2u MATH_CALL operator-(v2u l, u32 r) { return v2u(l.x - r, l.y - r); }
 INLINE v2u MATH_CALL operator*(v2u l, u32 r) { return v2u(l.x * r, l.y * r); }
 INLINE v2u MATH_CALL operator/(v2u l, u32 r) { return v2u(l.x / r, l.y / r); }
+
+INLINE v2u MATH_CALL operator+(u32 l, v2u r) { return v2u(l + r.x, l + r.y); }
+INLINE v2u MATH_CALL operator-(u32 l, v2u r) { return v2u(l - r.x, l - r.y); }
+INLINE v2u MATH_CALL operator*(u32 l, v2u r) { return v2u(l * r.x, l * r.y); }
+INLINE v2u MATH_CALL operator/(u32 l, v2u r) { return v2u(l / r.x, l / r.y); }
 
 INLINE bool MATH_CALL operator==(v2u l, v2u r) { return l.x == r.x && l.y == r.y; }
 INLINE bool MATH_CALL operator!=(v2u l, v2u r) { return l.x != r.x || l.y != r.y; }
@@ -202,17 +235,14 @@ INLINE v2s MATH_CALL v2u_to_v2s(v2u v) { return v2s(cast<s32>(       v.x ), cast
 // v3
 //
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3 final
 {
     struct { f32 x, y, z; };
     struct { f32 r, g, b; };
     v2 xy;
     v2 rg;
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     __m128 mm;
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v3(                   ) : mm(_mm_setzero_ps())                        {}
     v3(f32 val            ) : mm(_mm_setr_ps(val, val, val, 0.0f))        {}
     v3(f32 x, f32 y, f32 z) : mm(_mm_setr_ps(x, y, z, 0.0f))              {}
@@ -221,35 +251,16 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3
     v3(__m128 _mm         ) : mm(mm_insert_f32<3>(_mm, 0.0f))             {}
     v3(const v3& v        ) : mm(v.mm)                                    {}
     v3(v3&& v             ) : mm(v.mm)                                    {}
-#else
-    v3(f32 val = 0        ) : x(val),  y(val),    z(val)    {}
-    v3(f32 x, f32 y, f32 z) : x(x),    y(y),      z(z)      {}
-    v3(f32 arr[3]         ) : x(*arr), y(arr[1]), z(arr[2]) {}
-    v3(v2 xy, f32 z       ) : x(xy.x), y(xy.y),   z(z)      {}
-    v3(const v3& v        ) : x(v.x),  y(v.y),    z(v.z)    {}
-    v3(v3&& v             ) : x(v.x),  y(v.y),    z(v.z)    {}
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v3& MATH_CALL operator=(f32 val    ) { mm = _mm_setr_ps(val, val, val, 0.0f);        return *this; }
     v3& MATH_CALL operator=(f32 arr[3] ) { mm = _mm_setr_ps(*arr, arr[1], arr[2], 0.0f); return *this; }
     v3& MATH_CALL operator=(__m128 _mm ) { mm = mm_insert_f32<3>(_mm, 0.0f);             return *this; }
     v3& MATH_CALL operator=(const v3& v) { mm = v.mm;                                    return *this; }
     v3& MATH_CALL operator=(v3&& v     ) { mm = v.mm;                                    return *this; }
-#else
-    v3& operator=(f32 val    ) { x = val;  y = val;    z = val;    return *this; }
-    v3& operator=(f32 arr[3] ) { x = *arr; y = arr[1]; z = arr[2]; return *this; }
-    v3& operator=(const v3& v) { x = v.x;  y = v.y;    z = v.z;    return *this; }
-    v3& operator=(v3&& v     ) { x = v.x;  y = v.y;    z = v.z;    return *this; }
-#endif
 
     f32 MATH_CALL dot(v3 r) const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         return _mm_cvtss_f32(_mm_dp_ps(mm, r.mm, 0x71));
-    #else
-        return x*r.x + y*r.y + z*r.z;
-    #endif
     }
 
     v3 MATH_CALL cross(v3 r) const
@@ -257,241 +268,74 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3
         //  [x]   [r.x]   [ (y * r.z - z * r.y)]   [y * r.z - z * r.y]
         //  [y] x [r.y] = [-(x * r.z - z * r.x)] = [z * r.x - x * r.z];
         //  [z]   [r.z]   [ (x * r.y - y * r.x)]   [x * r.y - y * r.x]
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
+
         return v3(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(  mm,   mm, cast<s32>(MM_SHUFFLE::YZXW)),
                                         _mm_shuffle_ps(r.mm, r.mm, cast<s32>(MM_SHUFFLE::ZXYW))),
                              _mm_mul_ps(_mm_shuffle_ps(  mm,   mm, cast<s32>(MM_SHUFFLE::ZXYW)),
                                         _mm_shuffle_ps(r.mm, r.mm, cast<s32>(MM_SHUFFLE::YZXW)))));
-    #else
-        return v3(x * r.z - z * r.y,
-                  z * r.x - x * r.z,
-                  x * r.y - y * r.x);
-    #endif
     }
 
     f32 MATH_CALL length() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(mm, mm, 0x71)));
-    #else
-        return sqrtf(x*x + y*y + z*z);
-    #endif
     }
 
     f32 MATH_CALL length_sq() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         return _mm_cvtss_f32(_mm_dp_ps(mm, mm, 0x71));
-    #else
-        return x*x + y*y + z*z;
-    #endif
     }
 
     v3 MATH_CALL normalize() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         return v3(_mm_div_ps(mm, _mm_sqrt_ps(_mm_dp_ps(mm, mm, 0x7F))));
-    #else
-        f32 len = sqrtf(x*x + y*y + z*z);
-        return v3(x / len, y / len, z / len);
-    #endif
     }
 
     static v3 MATH_CALL lerp(v3 start, v3 end, v3 percent)
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128 per = _mm_max_ps(_mm_setzero_ps(), _mm_min_ps(_mm_set_ps1(1.0f), percent.mm));
         return v3(_mm_add_ps(_mm_mul_ps(_mm_sub_ps(end.mm, start.mm), per), start.mm));
-    #else
-        return v3((end.x - start.x) * __max(0.0f, __min(1.0f, percent.x)) + start.x,
-                  (end.y - start.y) * __max(0.0f, __min(1.0f, percent.y)) + start.y,
-                  (end.z - start.z) * __max(0.0f, __min(1.0f, percent.z)) + start.z);
-    #endif
     }
 
-    v3& MATH_CALL operator+=(v3 r)
+    static v3 MATH_CALL clamp(v3 val, v3 min, v3 max)
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_ps(mm, r.mm);
-    #else
-        x += r.x;
-        y += r.y;
-        z += r.z;
-    #endif
-        return *this;
+        return v3(_mm_max_ps(min.mm, _mm_min_ps(max.mm, val.mm)));
     }
 
-    v3& MATH_CALL operator-=(v3 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_ps(mm, r.mm);
-    #else
-        x -= r.x;
-        y -= r.y;
-        z -= r.z;
-    #endif
-        return *this;
-    }
+    v3& MATH_CALL operator+=(v3 r) { mm = _mm_add_ps(mm, r.mm); return *this; }
+    v3& MATH_CALL operator-=(v3 r) { mm = _mm_sub_ps(mm, r.mm); return *this; }
+    v3& MATH_CALL operator*=(v3 r) { mm = _mm_mul_ps(mm, r.mm); return *this; }
+    v3& MATH_CALL operator/=(v3 r) { mm = _mm_div_ps(mm, r.mm); return *this; }
 
-    v3& MATH_CALL operator*=(v3 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_ps(mm, r.mm);
-    #else
-        x *= r.x;
-        y *= r.y;
-        z *= r.z;
-    #endif
-        return *this;
-    }
-
-    v3& MATH_CALL operator/=(v3 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_ps(mm, r.mm);
-    #else
-        x /= r.x;
-        y /= r.y;
-        z /= r.z;
-    #endif
-        return *this;
-    }
-
-    v3& MATH_CALL operator+=(f32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_ps(mm, _mm_setr_ps(r, r, r, 0.0f));
-    #else
-        x += r;
-        y += r;
-        z += r;
-    #endif
-        return *this;
-    }
-
-    v3& MATH_CALL operator-=(f32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_ps(mm, _mm_setr_ps(r, r, r, 0.0f));
-    #else
-        x -= r;
-        y -= r;
-        z -= r;
-    #endif
-        return *this;
-    }
-
-    v3& MATH_CALL operator*=(f32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_ps(mm, _mm_setr_ps(r, r, r, 0.0f));
-    #else
-        x *= r;
-        y *= r;
-        z *= r;
-    #endif
-        return *this;
-    }
-
-    v3& MATH_CALL operator/=(f32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_ps(mm, _mm_setr_ps(r, r, r, 0.0f));
-    #else
-        x /= r;
-        y /= r;
-        z /= r;
-    #endif
-        return *this;
-    }
+    v3& MATH_CALL operator+=(f32 r) { mm = _mm_add_ps(mm, _mm_setr_ps(r, r, r, 0.0f)); return *this; }
+    v3& MATH_CALL operator-=(f32 r) { mm = _mm_sub_ps(mm, _mm_setr_ps(r, r, r, 0.0f)); return *this; }
+    v3& MATH_CALL operator*=(f32 r) { mm = _mm_mul_ps(mm, _mm_setr_ps(r, r, r, 0.0f)); return *this; }
+    v3& MATH_CALL operator/=(f32 r) { mm = _mm_div_ps(mm, _mm_setr_ps(r, r, r, 0.0f)); return *this; }
 };
 
-INLINE v3 MATH_CALL operator+(v3 l, v3 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3(_mm_add_ps(l.mm, r.mm));
-#else
-    return v3(l.x + r.x, l.y + r.y, l.z + r.z);
-#endif
-}
+INLINE v3 MATH_CALL operator+(v3 l, v3 r) { return v3(_mm_add_ps(l.mm, r.mm)); }
+INLINE v3 MATH_CALL operator-(v3 l, v3 r) { return v3(_mm_sub_ps(l.mm, r.mm)); }
+INLINE v3 MATH_CALL operator*(v3 l, v3 r) { return v3(_mm_mul_ps(l.mm, r.mm)); }
+INLINE v3 MATH_CALL operator/(v3 l, v3 r) { return v3(_mm_div_ps(l.mm, r.mm)); }
 
-INLINE v3 MATH_CALL operator-(v3 l, v3 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3(_mm_sub_ps(l.mm, r.mm));
-#else
-    return v3(l.x - r.x, l.y - r.y, l.z - r.z);
-#endif
-}
+INLINE v3 MATH_CALL operator+(v3 l, f32 r) { return v3(_mm_add_ps(l.mm, _mm_setr_ps(r, r, r, 0.0f))); }
+INLINE v3 MATH_CALL operator-(v3 l, f32 r) { return v3(_mm_sub_ps(l.mm, _mm_setr_ps(r, r, r, 0.0f))); }
+INLINE v3 MATH_CALL operator*(v3 l, f32 r) { return v3(_mm_mul_ps(l.mm, _mm_setr_ps(r, r, r, 0.0f))); }
+INLINE v3 MATH_CALL operator/(v3 l, f32 r) { return v3(_mm_div_ps(l.mm, _mm_setr_ps(r, r, r, 0.0f))); }
 
-INLINE v3 MATH_CALL operator*(v3 l, v3 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3(_mm_mul_ps(l.mm, r.mm));
-#else
-    return v3(l.x * r.x, l.y * r.y, l.z * r.z);
-#endif
-}
-
-INLINE v3 MATH_CALL operator/(v3 l, v3 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3(_mm_div_ps(l.mm, r.mm));
-#else
-    return v3(l.x / r.x, l.y / r.y, l.z / r.z);
-#endif
-}
-
-INLINE v3 MATH_CALL operator+(v3 l, f32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3(_mm_add_ps(l.mm, _mm_setr_ps(r, r, r, 0.0f)));
-#else
-    return v3(l.x + r, l.y + r, l.z + r);
-#endif
-}
-
-INLINE v3 MATH_CALL operator-(v3 l, f32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3(_mm_sub_ps(l.mm, _mm_setr_ps(r, r, r, 0.0f)));
-#else
-    return v3(l.x - r, l.y - r, l.z - r);
-#endif
-}
-
-INLINE v3 MATH_CALL operator*(v3 l, f32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3(_mm_mul_ps(l.mm, _mm_setr_ps(r, r, r, 0.0f)));
-#else
-    return v3(l.x * r, l.y * r, l.z * r);
-#endif
-}
-
-INLINE v3 MATH_CALL operator/(v3 l, f32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3(_mm_div_ps(l.mm, _mm_setr_ps(r, r, r, 0.0f)));
-#else
-    return v3(l.x / r, l.y / r, l.z / r);
-#endif
-}
+INLINE v3 MATH_CALL operator+(f32 l, v3 r) { return v3(_mm_add_ps(_mm_setr_ps(l, l, l, 0.0f), r.mm)); }
+INLINE v3 MATH_CALL operator-(f32 l, v3 r) { return v3(_mm_sub_ps(_mm_setr_ps(l, l, l, 0.0f), r.mm)); }
+INLINE v3 MATH_CALL operator*(f32 l, v3 r) { return v3(_mm_mul_ps(_mm_setr_ps(l, l, l, 0.0f), r.mm)); }
+INLINE v3 MATH_CALL operator/(f32 l, v3 r) { return v3(_mm_div_ps(_mm_setr_ps(l, l, l, 0.0f), r.mm)); }
 
 INLINE bool MATH_CALL operator==(v3 l, v3 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(*cast<__m128i *>(&l.mm),
                                         *cast<__m128i *>(&r.mm));
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128 eq_mask = _mm_cmpeq_ps(l.mm, r.mm);
     __m128 ones    = _mm_cmpeq_ps(eq_mask, eq_mask);
     return _mm_testc_ps(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] == mm_r[0]
-        && mm_l[1] == mm_r[1];
 #endif
 }
 
@@ -500,15 +344,10 @@ INLINE bool MATH_CALL operator!=(v3 l, v3 r)
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 != _mm_cmpeq_epi64_mask(*cast<__m128i *>(&l.mm),
                                         *cast<__m128i *>(&r.mm));
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128 eq_mask = _mm_cmpeq_ps(l.mm, r.mm);
     __m128 ones    = _mm_cmpeq_ps(eq_mask, eq_mask);
     return !_mm_testc_ps(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] != mm_r[0]
-        || mm_l[1] != mm_r[1];
 #endif
 }
 
@@ -521,17 +360,14 @@ INLINE bool MATH_CALL operator>=(v3 l, v3 r) { return l.length_sq() >= r.length_
 INLINE bool MATH_CALL operator< (v3 l, v3 r) { return l.length_sq() <  r.length_sq(); }
 INLINE bool MATH_CALL operator> (v3 l, v3 r) { return l.length_sq() >  r.length_sq(); }
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3s
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3s final
 {
     struct { s32 x, y, z; };
     struct { s32 r, g, b; };
     v2s xy;
     v2s rg;
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     __m128i mm;
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v3s(                   ) : mm(_mm_setzero_si128())                     {}
     v3s(s32 val            ) : mm(_mm_setr_epi32(val, val, val, 0))        {}
     v3s(s32 x, s32 y, s32 z) : mm(_mm_setr_epi32(x, y, z, 0))              {}
@@ -540,38 +376,19 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3s
     v3s(__m128i _mm        ) : mm(_mm_insert_epi32(_mm, 0, 3))             {}
     v3s(const v3s& v       ) : mm(v.mm)                                    {}
     v3s(v3s&& v            ) : mm(v.mm)                                    {}
-#else
-    v3s(s32 val = 0        ) : x(val),  y(val),    z(val)    {}
-    v3s(s32 x, s32 y, s32 z) : x(x),    y(y),      z(z)      {}
-    v3s(s32 arr[3]         ) : x(*arr), y(arr[1]), z(arr[2]) {}
-    v3s(v2s xy, s32 z      ) : x(xy.x), y(xy.y),   z(z)      {}
-    v3s(const v3s& v       ) : x(v.x),  y(v.y),    z(v.z)    {}
-    v3s(v3s&& v            ) : x(v.x),  y(v.y),    z(v.z)    {}
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v3s& MATH_CALL operator=(s32 val     ) { mm = _mm_setr_epi32(val, val, val, 0);        return *this; }
     v3s& MATH_CALL operator=(s32 arr[3]  ) { mm = _mm_setr_epi32(*arr, arr[1], arr[2], 0); return *this; }
     v3s& MATH_CALL operator=(__m128i _mm ) { mm = _mm_insert_epi32(_mm, 0, 3);             return *this; }
     v3s& MATH_CALL operator=(const v3s& v) { mm = v.mm;                                    return *this; }
     v3s& MATH_CALL operator=(v3s&& v     ) { mm = v.mm;                                    return *this; }
-#else
-    v3s& operator=(s32 val     ) { x = val;  y = val;    z = val;    return *this; }
-    v3s& operator=(s32 arr[3]  ) { x = *arr; y = arr[1]; z = arr[2]; return *this; }
-    v3s& operator=(const v3s& v) { x = v.x;  y = v.y;    z = v.z;    return *this; }
-    v3s& operator=(v3s&& v     ) { x = v.x;  y = v.y;    z = v.z;    return *this; }
-#endif
 
     s32 MATH_CALL dot(v3s r) const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128i m = _mm_mul_epi32(mm, r.mm);
         __m128i h = _mm_hadd_epi32(m, m);
         __m128i d = _mm_hadd_epi32(h, h);
         return _mm_cvtsi128_si32(d);
-    #else
-        return x * r.x + y * r.y + z * r.z;
-    #endif
     }
 
     v3s MATH_CALL cross(v3s r) const
@@ -579,222 +396,66 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3s
         //  [x]   [r.x]   [ (y * r.z - z * r.y)]   [y * r.z - z * r.y]
         //  [y] x [r.y] = [-(x * r.z - z * r.x)] = [z * r.x - x * r.z];
         //  [z]   [r.z]   [ (x * r.y - y * r.x)]   [x * r.y - y * r.x]
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
+
         return v3s(_mm_sub_epi32(_mm_mul_epi32(_mm_shuffle_epi32(  mm, cast<s32>(MM_SHUFFLE::YZXW)),
                                                _mm_shuffle_epi32(r.mm, cast<s32>(MM_SHUFFLE::ZXYW))),
                                  _mm_mul_epi32(_mm_shuffle_epi32(  mm, cast<s32>(MM_SHUFFLE::ZXYW)),
                                                _mm_shuffle_epi32(r.mm, cast<s32>(MM_SHUFFLE::YZXW)))));
-    #else
-        return v3s(x * r.z - z * r.y,
-                   z * r.x - x * r.z,
-                   x * r.y - y * r.x);
-    #endif
     }
 
     f32 MATH_CALL length() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128 m = _mm_cvtepi32_ps(mm);
         return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(m, m, 0x71)));
-    #else
-        return sqrtf(cast<f32>(x*x + y*y + z*z));
-    #endif
     }
 
     s32 MATH_CALL length_sq() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128i m = _mm_mul_epi32(mm, mm);
         __m128i h = _mm_hadd_epi32(m, m);
         __m128i d = _mm_hadd_epi32(h, h);
         return _mm_cvtsi128_si32(d);
-    #else
-        return x*x + y*y + z*z;
-    #endif
     }
 
-    v3s& MATH_CALL operator+=(v3s r)
+    static v3s MATH_CALL clamp(v3s val, v3s min, v3s max)
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_epi32(mm, r.mm);
-    #else
-        x += r.x;
-        y += r.y;
-        z += r.z;
-    #endif
-        return *this;
+        return v3s(_mm_max_epi32(min.mm, _mm_min_epi32(max.mm, val.mm)));
     }
 
-    v3s& MATH_CALL operator-=(v3s r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_epi32(mm, r.mm);
-    #else
-        x -= r.x;
-        y -= r.y;
-        z -= r.z;
-    #endif
-        return *this;
-    }
+    v3s& MATH_CALL operator+=(v3s r) { mm = _mm_add_epi32(mm, r.mm); return *this; }
+    v3s& MATH_CALL operator-=(v3s r) { mm = _mm_sub_epi32(mm, r.mm); return *this; }
+    v3s& MATH_CALL operator*=(v3s r) { mm = _mm_mul_epi32(mm, r.mm); return *this; }
+    v3s& MATH_CALL operator/=(v3s r) { mm = _mm_div_epi32(mm, r.mm); return *this; }
 
-    v3s& MATH_CALL operator*=(v3s r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_epi32(mm, r.mm);
-    #else
-        x *= r.x;
-        y *= r.y;
-        z *= r.z;
-    #endif
-        return *this;
-    }
-
-    v3s& MATH_CALL operator/=(v3s r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_epi32(mm, r.mm);
-    #else
-        x /= r.x;
-        y /= r.y;
-        z /= r.z;
-    #endif
-        return *this;
-    }
-
-    v3s& MATH_CALL operator+=(s32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_epi32(mm, _mm_setr_epi32(r, r, r, 0));
-    #else
-        x += r;
-        y += r;
-        z += r;
-    #endif
-        return *this;
-    }
-
-    v3s& MATH_CALL operator-=(s32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_epi32(mm, _mm_setr_epi32(r, r, r, 0));
-    #else
-        x -= r;
-        y -= r;
-        z -= r;
-    #endif
-        return *this;
-    }
-
-    v3s& MATH_CALL operator*=(s32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_epi32(mm, _mm_setr_epi32(r, r, r, 0));
-    #else
-        x *= r;
-        y *= r;
-        z *= r;
-    #endif
-        return *this;
-    }
-
-    v3s& MATH_CALL operator/=(s32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_epi32(mm, _mm_setr_epi32(r, r, r, 0));
-    #else
-        x /= r;
-        y /= r;
-        z /= r;
-    #endif
-        return *this;
-    }
+    v3s& MATH_CALL operator+=(s32 r) { mm = _mm_add_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
+    v3s& MATH_CALL operator-=(s32 r) { mm = _mm_sub_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
+    v3s& MATH_CALL operator*=(s32 r) { mm = _mm_mul_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
+    v3s& MATH_CALL operator/=(s32 r) { mm = _mm_div_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
 };
 
-INLINE v3s MATH_CALL operator+(v3s l, v3s r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3s(_mm_add_epi32(l.mm, r.mm));
-#else
-    return v3s(l.x + r.x, l.y + r.y, l.z + r.z);
-#endif
-}
+INLINE v3s MATH_CALL operator+(v3s l, v3s r) { return v3s(_mm_add_epi32(l.mm, r.mm)); }
+INLINE v3s MATH_CALL operator-(v3s l, v3s r) { return v3s(_mm_sub_epi32(l.mm, r.mm)); }
+INLINE v3s MATH_CALL operator*(v3s l, v3s r) { return v3s(_mm_mul_epi32(l.mm, r.mm)); }
+INLINE v3s MATH_CALL operator/(v3s l, v3s r) { return v3s(_mm_div_epi32(l.mm, r.mm)); }
 
-INLINE v3s MATH_CALL operator-(v3s l, v3s r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3s(_mm_sub_epi32(l.mm, r.mm));
-#else
-    return v3s(l.x - r.x, l.y - r.y, l.z - r.z);
-#endif
-}
+INLINE v3s MATH_CALL operator+(v3s l, s32 r) { return v3s(_mm_add_epi32(l.mm, _mm_setr_epi32(r, r, r, 0))); }
+INLINE v3s MATH_CALL operator-(v3s l, s32 r) { return v3s(_mm_sub_epi32(l.mm, _mm_setr_epi32(r, r, r, 0))); }
+INLINE v3s MATH_CALL operator*(v3s l, s32 r) { return v3s(_mm_mul_epi32(l.mm, _mm_setr_epi32(r, r, r, 0))); }
+INLINE v3s MATH_CALL operator/(v3s l, s32 r) { return v3s(_mm_div_epi32(l.mm, _mm_setr_epi32(r, r, r, 0))); }
 
-INLINE v3s MATH_CALL operator*(v3s l, v3s r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3s(_mm_mul_epi32(l.mm, r.mm));
-#else
-    return v3s(l.x * r.x, l.y * r.y, l.z * r.z);
-#endif
-}
-
-INLINE v3s MATH_CALL operator/(v3s l, v3s r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3s(_mm_div_epi32(l.mm, r.mm));
-#else
-    return v3s(l.x / r.x, l.y / r.y, l.z / r.z);
-#endif
-}
-
-INLINE v3s MATH_CALL operator+(v3s l, s32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3s(_mm_add_epi32(l.mm, _mm_setr_epi32(r, r, r, 0)));
-#else
-    return v3s(l.x + r, l.y + r, l.z + r);
-#endif
-}
-
-INLINE v3s MATH_CALL operator-(v3s l, s32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3s(_mm_sub_epi32(l.mm, _mm_setr_epi32(r, r, r, 0)));
-#else
-    return v3s(l.x - r, l.y - r, l.z - r);
-#endif
-}
-
-INLINE v3s MATH_CALL operator*(v3s l, s32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3s(_mm_mul_epi32(l.mm, _mm_setr_epi32(r, r, r, 0)));
-#else
-    return v3s(l.x * r, l.y * r, l.z * r);
-#endif
-}
-
-INLINE v3s MATH_CALL operator/(v3s l, s32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3s(_mm_div_epi32(l.mm, _mm_setr_epi32(r, r, r, 0)));
-#else
-    return v3s(l.x / r, l.y / r, l.z / r);
-#endif
-}
+INLINE v3s MATH_CALL operator+(s32 l, v3s r) { return v3s(_mm_add_epi32(_mm_setr_epi32(l, l, l, 0), r.mm)); }
+INLINE v3s MATH_CALL operator-(s32 l, v3s r) { return v3s(_mm_sub_epi32(_mm_setr_epi32(l, l, l, 0), r.mm)); }
+INLINE v3s MATH_CALL operator*(s32 l, v3s r) { return v3s(_mm_mul_epi32(_mm_setr_epi32(l, l, l, 0), r.mm)); }
+INLINE v3s MATH_CALL operator/(s32 l, v3s r) { return v3s(_mm_div_epi32(_mm_setr_epi32(l, l, l, 0), r.mm)); }
 
 INLINE bool MATH_CALL operator==(v3s l, v3s r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(l.mm, r.mm);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(l.mm, r.mm);
     __m128i ones    = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return _mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] == mm_r[0]
-        && mm_l[1] == mm_r[1];
 #endif
 }
 
@@ -802,15 +463,10 @@ INLINE bool MATH_CALL operator!=(v3s l, v3s r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 != _mm_cmpeq_epi64_mask(l.mm, r.mm);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(l.mm, r.mm);
     __m128i ones    = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return !_mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] != mm_r[0]
-        || mm_l[1] != mm_r[1];
 #endif
 }
 
@@ -823,17 +479,14 @@ INLINE bool MATH_CALL operator>=(v3s l, v3s r) { return l.length_sq() >= r.lengt
 INLINE bool MATH_CALL operator< (v3s l, v3s r) { return l.length_sq() <  r.length_sq(); }
 INLINE bool MATH_CALL operator> (v3s l, v3s r) { return l.length_sq() >  r.length_sq(); }
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3u
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3u final
 {
     struct { u32 x, y, z; };
     struct { u32 r, g, b; };
     v2u xy;
     v2u rg;
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     __m128i mm;
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v3u(                   ) : mm(_mm_setzero_si128())                     {}
     v3u(u32 val            ) : mm(_mm_setr_epi32(val, val, val, 0))        {}
     v3u(u32 x, u32 y, u32 z) : mm(_mm_setr_epi32(x, y, z, 0))              {}
@@ -842,38 +495,19 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3u
     v3u(__m128i _mm        ) : mm(_mm_insert_epi32(_mm, 0, 3))             {}
     v3u(const v3u& v       ) : mm(v.mm)                                    {}
     v3u(v3u&& v            ) : mm(v.mm)                                    {}
-#else
-    v3u(u32 val = 0        ) : x(val),  y(val),    z(val)    {}
-    v3u(u32 x, u32 y, u32 z) : x(x),    y(y),      z(z)      {}
-    v3u(u32 arr[3]         ) : x(*arr), y(arr[1]), z(arr[2]) {}
-    v3u(v2u xy, u32 z      ) : x(xy.x), y(xy.y),   z(z)      {}
-    v3u(const v3u& v       ) : x(v.x),  y(v.y),    z(v.z)    {}
-    v3u(v3u&& v            ) : x(v.x),  y(v.y),    z(v.z)    {}
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v3u& MATH_CALL operator=(u32 val     ) { mm = _mm_setr_epi32(val, val, val, 0);        return *this; }
     v3u& MATH_CALL operator=(u32 arr[3]  ) { mm = _mm_setr_epi32(*arr, arr[1], arr[2], 0); return *this; }
     v3u& MATH_CALL operator=(__m128i _mm ) { mm = _mm_insert_epi32(_mm, 0, 3);             return *this; }
     v3u& MATH_CALL operator=(const v3u& v) { mm = v.mm;                                    return *this; }
     v3u& MATH_CALL operator=(v3u&& v     ) { mm = v.mm;                                    return *this; }
-#else
-    v3u& operator=(u32 val     ) { x = val;  y = val;    z = val;    return *this; }
-    v3u& operator=(u32 arr[3]  ) { x = *arr; y = arr[1]; z = arr[2]; return *this; }
-    v3u& operator=(const v3u& v) { x = v.x;  y = v.y;    z = v.z;    return *this; }
-    v3u& operator=(v3u&& v     ) { x = v.x;  y = v.y;    z = v.z;    return *this; }
-#endif
 
     u32 MATH_CALL dot(v3u r) const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128i m = _mm_mul_epi32(mm, r.mm);
         __m128i h = _mm_hadd_epi32(m, m);
         __m128i d = _mm_hadd_epi32(h, h);
         return _mm_cvtsi128_si32(d);
-    #else
-        return x * r.x + y * r.y + z * r.z;
-    #endif
     }
 
     v3u MATH_CALL cross(v3u r) const
@@ -881,222 +515,66 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3u
         //  [x]   [r.x]   [ (y * r.z - z * r.y)]   [y * r.z - z * r.y]
         //  [y] x [r.y] = [-(x * r.z - z * r.x)] = [z * r.x - x * r.z];
         //  [z]   [r.z]   [ (x * r.y - y * r.x)]   [x * r.y - y * r.x]
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
+
         return v3u(_mm_sub_epi32(_mm_mul_epi32(_mm_shuffle_epi32(  mm, cast<s32>(MM_SHUFFLE::YZXW)),
                                                _mm_shuffle_epi32(r.mm, cast<s32>(MM_SHUFFLE::ZXYW))),
                                  _mm_mul_epi32(_mm_shuffle_epi32(  mm, cast<s32>(MM_SHUFFLE::ZXYW)),
                                                _mm_shuffle_epi32(r.mm, cast<s32>(MM_SHUFFLE::YZXW)))));
-    #else
-        return v3u(x * r.z - z * r.y,
-                   z * r.x - x * r.z,
-                   x * r.y - y * r.x);
-    #endif
     }
 
     f32 MATH_CALL length() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128 m = _mm_cvtepi32_ps(mm);
         return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(m, m, 0x71)));
-    #else
-        return sqrtf(cast<f32>(x*x + y*y + z*z));
-    #endif
     }
 
     u32 MATH_CALL length_sq() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128i m = _mm_mul_epi32(mm, mm);
         __m128i h = _mm_hadd_epi32(m, m);
         __m128i d = _mm_hadd_epi32(h, h);
         return _mm_cvtsi128_si32(d);
-    #else
-        return x*x + y*y + z*z;
-    #endif
     }
 
-    v3u& MATH_CALL operator+=(v3u r)
+    static v3u MATH_CALL clamp(v3u val, v3u min, v3u max)
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_epi32(mm, r.mm);
-    #else
-        x += r.x;
-        y += r.y;
-        z += r.z;
-    #endif
-        return *this;
+        return v3u(_mm_max_epi32(min.mm, _mm_min_epi32(max.mm, val.mm)));
     }
 
-    v3u& MATH_CALL operator-=(v3u r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_epi32(mm, r.mm);
-    #else
-        x -= r.x;
-        y -= r.y;
-        z -= r.z;
-    #endif
-        return *this;
-    }
+    v3u& MATH_CALL operator+=(v3u r) { mm = _mm_add_epi32(mm, r.mm); return *this; }
+    v3u& MATH_CALL operator-=(v3u r) { mm = _mm_sub_epi32(mm, r.mm); return *this; }
+    v3u& MATH_CALL operator*=(v3u r) { mm = _mm_mul_epi32(mm, r.mm); return *this; }
+    v3u& MATH_CALL operator/=(v3u r) { mm = _mm_div_epi32(mm, r.mm); return *this; }
 
-    v3u& MATH_CALL operator*=(v3u r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_epi32(mm, r.mm);
-    #else
-        x *= r.x;
-        y *= r.y;
-        z *= r.z;
-    #endif
-        return *this;
-    }
-
-    v3u& MATH_CALL operator/=(v3u r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_epi32(mm, r.mm);
-    #else
-        x /= r.x;
-        y /= r.y;
-        z /= r.z;
-    #endif
-        return *this;
-    }
-
-    v3u& MATH_CALL operator+=(u32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_epi32(mm, _mm_setr_epi32(r, r, r, 0));
-    #else
-        x += r;
-        y += r;
-        z += r;
-    #endif
-        return *this;
-    }
-
-    v3u& MATH_CALL operator-=(u32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_epi32(mm, _mm_setr_epi32(r, r, r, 0));
-    #else
-        x -= r;
-        y -= r;
-        z -= r;
-    #endif
-        return *this;
-    }
-
-    v3u& MATH_CALL operator*=(u32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_epi32(mm, _mm_setr_epi32(r, r, r, 0));
-    #else
-        x *= r;
-        y *= r;
-        z *= r;
-    #endif
-        return *this;
-    }
-
-    v3u& MATH_CALL operator/=(u32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_epi32(mm, _mm_setr_epi32(r, r, r, 0));
-    #else
-        x /= r;
-        y /= r;
-        z /= r;
-    #endif
-        return *this;
-    }
+    v3u& MATH_CALL operator+=(u32 r) { mm = _mm_add_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
+    v3u& MATH_CALL operator-=(u32 r) { mm = _mm_sub_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
+    v3u& MATH_CALL operator*=(u32 r) { mm = _mm_mul_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
+    v3u& MATH_CALL operator/=(u32 r) { mm = _mm_div_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
 };
 
-INLINE v3u MATH_CALL operator+(v3u l, v3u r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3u(_mm_add_epi32(l.mm, r.mm));
-#else
-    return v3u(l.x + r.x, l.y + r.y, l.z + r.z);
-#endif
-}
+INLINE v3u MATH_CALL operator+(v3u l, v3u r) { return v3u(_mm_add_epi32(l.mm, r.mm)); }
+INLINE v3u MATH_CALL operator-(v3u l, v3u r) { return v3u(_mm_sub_epi32(l.mm, r.mm)); }
+INLINE v3u MATH_CALL operator*(v3u l, v3u r) { return v3u(_mm_mul_epi32(l.mm, r.mm)); }
+INLINE v3u MATH_CALL operator/(v3u l, v3u r) { return v3u(_mm_div_epi32(l.mm, r.mm)); }
 
-INLINE v3u MATH_CALL operator-(v3u l, v3u r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3u(_mm_sub_epi32(l.mm, r.mm));
-#else
-    return v3u(l.x - r.x, l.y - r.y, l.z - r.z);
-#endif
-}
+INLINE v3u MATH_CALL operator+(v3u l, u32 r) { return v3u(_mm_add_epi32(l.mm, _mm_setr_epi32(r, r, r, 0))); }
+INLINE v3u MATH_CALL operator-(v3u l, u32 r) { return v3u(_mm_sub_epi32(l.mm, _mm_setr_epi32(r, r, r, 0))); }
+INLINE v3u MATH_CALL operator*(v3u l, u32 r) { return v3u(_mm_mul_epi32(l.mm, _mm_setr_epi32(r, r, r, 0))); }
+INLINE v3u MATH_CALL operator/(v3u l, u32 r) { return v3u(_mm_div_epi32(l.mm, _mm_setr_epi32(r, r, r, 0))); }
 
-INLINE v3u MATH_CALL operator*(v3u l, v3u r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3u(_mm_mul_epi32(l.mm, r.mm));
-#else
-    return v3u(l.x * r.x, l.y * r.y, l.z * r.z);
-#endif
-}
-
-INLINE v3u MATH_CALL operator/(v3u l, v3u r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3u(_mm_div_epi32(l.mm, r.mm));
-#else
-    return v3u(l.x / r.x, l.y / r.y, l.z / r.z);
-#endif
-}
-
-INLINE v3u MATH_CALL operator+(v3u l, u32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3u(_mm_add_epi32(l.mm, _mm_setr_epi32(r, r, r, 0)));
-#else
-    return v3u(l.x + r, l.y + r, l.z + r);
-#endif
-}
-
-INLINE v3u MATH_CALL operator-(v3u l, u32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3u(_mm_sub_epi32(l.mm, _mm_setr_epi32(r, r, r, 0)));
-#else
-    return v3u(l.x - r, l.y - r, l.z - r);
-#endif
-}
-
-INLINE v3u MATH_CALL operator*(v3u l, u32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3u(_mm_mul_epi32(l.mm, _mm_setr_epi32(r, r, r, 0)));
-#else
-    return v3u(l.x * r, l.y * r, l.z * r);
-#endif
-}
-
-INLINE v3u MATH_CALL operator/(v3u l, u32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v3u(_mm_div_epi32(l.mm, _mm_setr_epi32(r, r, r, 0)));
-#else
-    return v3u(l.x / r, l.y / r, l.z / r);
-#endif
-}
+INLINE v3u MATH_CALL operator+(u32 l, v3u r) { return v3u(_mm_add_epi32(_mm_setr_epi32(l, l, l, 0), r.mm)); }
+INLINE v3u MATH_CALL operator-(u32 l, v3u r) { return v3u(_mm_sub_epi32(_mm_setr_epi32(l, l, l, 0), r.mm)); }
+INLINE v3u MATH_CALL operator*(u32 l, v3u r) { return v3u(_mm_mul_epi32(_mm_setr_epi32(l, l, l, 0), r.mm)); }
+INLINE v3u MATH_CALL operator/(u32 l, v3u r) { return v3u(_mm_div_epi32(_mm_setr_epi32(l, l, l, 0), r.mm)); }
 
 INLINE bool MATH_CALL operator==(v3u l, v3u r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(l.mm, r.mm);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(l.mm, r.mm);
     __m128i ones    = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return _mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] == mm_r[0]
-        && mm_l[1] == mm_r[1];
 #endif
 }
 
@@ -1104,15 +582,10 @@ INLINE bool MATH_CALL operator!=(v3u l, v3u r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 != _mm_cmpeq_epi64_mask(l.mm, r.mm);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(l.mm, r.mm);
     __m128i ones    = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return !_mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] != mm_r[0]
-        || mm_l[1] != mm_r[1];
 #endif
 }
 
@@ -1137,7 +610,7 @@ INLINE v3s MATH_CALL v3u_to_v3s(v3u v) { return v3s(                v.mm ); }
 // v4
 //
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4 final
 {
     struct { f32 x, y, z, w; };
     struct { f32 r, g, b, a; };
@@ -1145,11 +618,8 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4
     v2 rg;
     v3 xyz;
     v3 rgb;
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     __m128 mm;
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v4(                          ) : mm(_mm_setzero_ps())              {}
     v4(f32 val                   ) : mm(_mm_set_ps1(val))              {}
     v4(f32 x, f32 y, f32 z, f32 w) : mm(_mm_setr_ps(x, y, z, w))       {}
@@ -1159,36 +629,16 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4
     v4(__m128 _mm                ) : mm(_mm)                           {}
     v4(const v4& v               ) : mm(v.mm)                          {}
     v4(v4&& v                    ) : mm(v.mm)                          {}
-#else
-    v4(f32 val = 0               ) : x(val),   y(val),    z(val),    w(val)    {}
-    v4(f32 x, f32 y, f32 z, f32 w) : x(x),     y(y),      z(z),      w(w)      {}
-    v4(f32 arr[4]                ) : x(*arr),  y(arr[1]), z(arr[2]), w(arr[3]) {}
-    v4(v2 xy, f32 z, f32 w       ) : x(xy.x),  y(xy.y),   z(z),      w(w)      {}
-    v4(v3 xyz, f32 w             ) : x(xyz.x), y(xyz.y),  z(xyz.z),  w(w)      {}
-    v4(const v4& v               ) : x(v.x),   y(v.y),    z(v.z),    w(v.w)    {}
-    v4(v4&& v                    ) : x(v.x),   y(v.y),    z(v.z),    w(v.w)    {}
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v4& MATH_CALL operator=(f32 val    ) { mm = _mm_set_ps1(val); return *this; }
     v4& MATH_CALL operator=(f32 arr[4] ) { mm = _mm_load_ps(arr); return *this; }
     v4& MATH_CALL operator=(__m128 _mm ) { mm = _mm;              return *this; }
     v4& MATH_CALL operator=(const v4& v) { mm = v.mm;             return *this; }
     v4& MATH_CALL operator=(v4&& v     ) { mm = v.mm;             return *this; }
-#else
-    v4& operator=(f32 val    ) { x = val;  y = val;    z = val;    w = val;    return *this; }
-    v4& operator=(f32 arr[4] ) { x = *arr; y = arr[1]; z = arr[2]; w = arr[3]; return *this; }
-    v4& operator=(const v4& v) { x = v.x;  y = v.y;    z = v.z;    w = v.z;    return *this; }
-    v4& operator=(v4&& v     ) { x = v.x;  y = v.y;    z = v.z;    w = v.z;    return *this; }
-#endif
 
     f32 MATH_CALL dot(v4 r) const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         return _mm_cvtss_f32(_mm_dp_ps(mm, r.mm, 0x71));
-    #else
-        return x*r.x + y*r.y + z*r.z;
-    #endif
     }
 
     v4 MATH_CALL cross(v4 r) const
@@ -1197,263 +647,83 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4
         //  [y] x [r.y] = [-(x * r.z - z * r.x)] = [z * r.x - x * r.z];
         //  [z]   [r.z]   [ (x * r.y - y * r.x)]   [x * r.y - y * r.x]
         //  [w]   [r.w]   [ (w * r.w - w * r.w)]   [        0        ]
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
+
         return v4(_mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(  mm,   mm, cast<s32>(MM_SHUFFLE::YZXW)),
                                         _mm_shuffle_ps(r.mm, r.mm, cast<s32>(MM_SHUFFLE::ZXYW))),
                              _mm_mul_ps(_mm_shuffle_ps(  mm,   mm, cast<s32>(MM_SHUFFLE::ZXYW)),
                                         _mm_shuffle_ps(r.mm, r.mm, cast<s32>(MM_SHUFFLE::YZXW)))));
-    #else
-        return v4(x * r.z - z * r.y,
-                  z * r.x - x * r.z,
-                  x * r.y - y * r.x,
-                  0.0f);
-    #endif
     }
 
     f32 MATH_CALL length() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(mm, mm, 0x71)));
-    #else
-        return sqrtf(x*x + y*y + z*z);
-    #endif
     }
 
     f32 MATH_CALL length_sq() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         return _mm_cvtss_f32(_mm_dp_ps(mm, mm, 0x71));
-    #else
-        return x*x + y*y + z*z;
-    #endif
     }
 
     v4 MATH_CALL normalize() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         return v4(mm_insert_f32<3>(_mm_div_ps(mm, _mm_sqrt_ps(_mm_dp_ps(mm, mm, 0x7F))), w)); // save original w value
-    #else
-        f32 len = sqrtf(x*x + y*y + z*z);
-        return v4(x / len, y / len, z / len, w); // save original w value
-    #endif
     }
 
     v4 MATH_CALL normalize_w() const
     {
         if (w && w != 1.0f)
         {
-        #if ENGINE_ISA >= ENGINE_ISA_SSE
             return v4(_mm_div_ps(mm, _mm_set_ps1(w)));
-        #else
-            return v4(x / w, y / w, z / w, 1.0f);
-        #endif
         }
         return *this;
     }
 
     static v4 MATH_CALL lerp(v4 start, v4 end, v4 percent)
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128 per = _mm_max_ps(_mm_setzero_ps(), _mm_min_ps(_mm_set_ps1(1.0f), percent.mm));
         return v4(_mm_add_ps(_mm_mul_ps(_mm_sub_ps(end.mm, start.mm), per), start.mm));
-    #else
-        return v4((end.x - start.x) * __max(0.0f, __min(1.0f, percent.x)) + start.x,
-                  (end.y - start.y) * __max(0.0f, __min(1.0f, percent.y)) + start.y,
-                  (end.z - start.z) * __max(0.0f, __min(1.0f, percent.z)) + start.z,
-                  (end.w - start.w) * __max(0.0f, __min(1.0f, percent.w)) + start.w);
-    #endif
     }
 
-    v4& MATH_CALL operator+=(v4 r)
+    static v4 MATH_CALL clamp(v4 val, v4 min, v4 max)
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_ps(mm, r.mm);
-    #else
-        x += r.x;
-        y += r.y;
-        z += r.z;
-        w += r.w;
-    #endif
-        return *this;
+        return v4(_mm_max_ps(min.mm, _mm_min_ps(max.mm, val.mm)));
     }
 
-    v4& MATH_CALL operator-=(v4 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_ps(mm, r.mm);
-    #else
-        x -= r.x;
-        y -= r.y;
-        z -= r.z;
-        w -= r.w;
-    #endif
-        return *this;
-    }
+    v4& MATH_CALL operator+=(v4 r) { mm = _mm_add_ps(mm, r.mm); return *this; }
+    v4& MATH_CALL operator-=(v4 r) { mm = _mm_sub_ps(mm, r.mm); return *this; }
+    v4& MATH_CALL operator*=(v4 r) { mm = _mm_mul_ps(mm, r.mm); return *this; }
+    v4& MATH_CALL operator/=(v4 r) { mm = _mm_div_ps(mm, r.mm); return *this; }
 
-    v4& MATH_CALL operator*=(v4 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_ps(mm, r.mm);
-    #else
-        x *= r.x;
-        y *= r.y;
-        z *= r.z;
-        w *= r.w;
-    #endif
-        return *this;
-    }
-
-    v4& MATH_CALL operator/=(v4 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_ps(mm, r.mm);
-    #else
-        x /= r.x;
-        y /= r.y;
-        z /= r.z;
-        w /= r.w;
-    #endif
-        return *this;
-    }
-
-    v4& MATH_CALL operator+=(f32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_ps(mm, _mm_set_ps1(r));
-    #else
-        x += r;
-        y += r;
-        z += r;
-        w += r;
-    #endif
-        return *this;
-    }
-
-    v4& MATH_CALL operator-=(f32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_ps(mm, _mm_set_ps1(r));
-    #else
-        x -= r;
-        y -= r;
-        z -= r;
-    #endif
-        return *this;
-    }
-
-    v4& MATH_CALL operator*=(f32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_ps(mm, _mm_set_ps1(r));
-    #else
-        x *= r;
-        y *= r;
-        z *= r;
-        z *= r;
-    #endif
-        return *this;
-    }
-
-    v4& MATH_CALL operator/=(f32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_ps(mm, _mm_set_ps1(r));
-    #else
-        x /= r;
-        y /= r;
-        z /= r;
-        z /= r;
-    #endif
-        return *this;
-    }
+    v4& MATH_CALL operator+=(f32 r) { mm = _mm_add_ps(mm, _mm_set_ps1(r)); return *this; }
+    v4& MATH_CALL operator-=(f32 r) { mm = _mm_sub_ps(mm, _mm_set_ps1(r)); return *this; }
+    v4& MATH_CALL operator*=(f32 r) { mm = _mm_mul_ps(mm, _mm_set_ps1(r)); return *this; }
+    v4& MATH_CALL operator/=(f32 r) { mm = _mm_div_ps(mm, _mm_set_ps1(r)); return *this; }
 };
 
-INLINE v4 MATH_CALL operator+(v4 l, v4 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4(_mm_add_ps(l.mm, r.mm));
-#else
-    return v4(l.x + r.x, l.y + r.y, l.z + r.z, l.w + r.w);
-#endif
-}
+INLINE v4 MATH_CALL operator+(v4 l, v4 r) { return v4(_mm_add_ps(l.mm, r.mm)); }
+INLINE v4 MATH_CALL operator-(v4 l, v4 r) { return v4(_mm_sub_ps(l.mm, r.mm)); }
+INLINE v4 MATH_CALL operator*(v4 l, v4 r) { return v4(_mm_mul_ps(l.mm, r.mm)); }
+INLINE v4 MATH_CALL operator/(v4 l, v4 r) { return v4(_mm_div_ps(l.mm, r.mm)); }
 
-INLINE v4 MATH_CALL operator-(v4 l, v4 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4(_mm_sub_ps(l.mm, r.mm));
-#else
-    return v4(l.x - r.x, l.y - r.y, l.z - r.z, l.w - r.w);
-#endif
-}
+INLINE v4 MATH_CALL operator+(v4 l, f32 r) { return v4(_mm_add_ps(l.mm, _mm_set_ps1(r))); }
+INLINE v4 MATH_CALL operator-(v4 l, f32 r) { return v4(_mm_sub_ps(l.mm, _mm_set_ps1(r))); }
+INLINE v4 MATH_CALL operator*(v4 l, f32 r) { return v4(_mm_mul_ps(l.mm, _mm_set_ps1(r))); }
+INLINE v4 MATH_CALL operator/(v4 l, f32 r) { return v4(_mm_div_ps(l.mm, _mm_set_ps1(r))); }
 
-INLINE v4 MATH_CALL operator*(v4 l, v4 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4(_mm_mul_ps(l.mm, r.mm));
-#else
-    return v4(l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w);
-#endif
-}
-
-INLINE v4 MATH_CALL operator/(v4 l, v4 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4(_mm_div_ps(l.mm, r.mm));
-#else
-    return v4(l.x / r.x, l.y / r.y, l.z / r.z, l.w / r.w);
-#endif
-}
-
-INLINE v4 MATH_CALL operator+(v4 l, f32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4(_mm_add_ps(l.mm, _mm_set_ps1(r)));
-#else
-    return v4(l.x + r, l.y + r, l.z + r, l.w + r);
-#endif
-}
-
-INLINE v4 MATH_CALL operator-(v4 l, f32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4(_mm_sub_ps(l.mm, _mm_set_ps1(r)));
-#else
-    return v4(l.x - r, l.y - r, l.z - r, l.w - r);
-#endif
-}
-
-INLINE v4 MATH_CALL operator*(v4 l, f32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4(_mm_mul_ps(l.mm, _mm_set_ps1(r)));
-#else
-    return v4(l.x * r, l.y * r, l.z * r, l.w * r);
-#endif
-}
-
-INLINE v4 MATH_CALL operator/(v4 l, f32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4(_mm_div_ps(l.mm, _mm_set_ps1(r)));
-#else
-    return v4(l.x / r, l.y / r, l.z / r, l.w / r);
-#endif
-}
+INLINE v4 MATH_CALL operator+(f32 l, v4 r) { return v4(_mm_add_ps(_mm_set_ps1(l), r.mm)); }
+INLINE v4 MATH_CALL operator-(f32 l, v4 r) { return v4(_mm_sub_ps(_mm_set_ps1(l), r.mm)); }
+INLINE v4 MATH_CALL operator*(f32 l, v4 r) { return v4(_mm_mul_ps(_mm_set_ps1(l), r.mm)); }
+INLINE v4 MATH_CALL operator/(f32 l, v4 r) { return v4(_mm_div_ps(_mm_set_ps1(l), r.mm)); }
 
 INLINE bool MATH_CALL operator==(v4 l, v4 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(*cast<__m128i *>(&l.mm),
                                         *cast<__m128i *>(&r.mm));
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128 eq_mask = _mm_cmpeq_ps(l.mm, r.mm);
     __m128 ones    = _mm_cmpeq_ps(eq_mask, eq_mask);
     return _mm_testc_ps(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] == mm_r[0]
-        && mm_l[1] == mm_r[1];
 #endif
 }
 
@@ -1462,15 +732,10 @@ INLINE bool MATH_CALL operator!=(v4 l, v4 r)
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 != _mm_cmpeq_epi64_mask(*cast<__m128i *>(&l.mm),
                                         *cast<__m128i *>(&r.mm));
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128 eq_mask = _mm_cmpeq_ps(l.mm, r.mm);
     __m128 ones    = _mm_cmpeq_ps(eq_mask, eq_mask);
     return !_mm_testc_ps(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] != mm_r[0]
-        || mm_l[1] != mm_r[1];
 #endif
 }
 
@@ -1483,7 +748,7 @@ INLINE bool MATH_CALL operator>=(v4 l, v4 r) { return l.length_sq() >= r.length_
 INLINE bool MATH_CALL operator< (v4 l, v4 r) { return l.length_sq() <  r.length_sq(); }
 INLINE bool MATH_CALL operator> (v4 l, v4 r) { return l.length_sq() >  r.length_sq(); }
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4s
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4s final
 {
     struct { s32 x, y, z, w; };
     struct { s32 r, g, b, a; };
@@ -1491,11 +756,8 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4s
     v2s rg;
     v3s xyz;
     v3s rgb;
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     __m128i mm;
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v4s(                          ) : mm(_mm_setzero_si128())                  {}
     v4s(s32 val                   ) : mm(_mm_set1_epi32(val))                  {}
     v4s(s32 x, s32 y, s32 z, s32 w) : mm(_mm_setr_epi32(x, y, z, w))           {}
@@ -1505,39 +767,19 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4s
     v4s(__m128i _mm               ) : mm(_mm)                                  {}
     v4s(const v4s& v              ) : mm(v.mm)                                 {}
     v4s(v4s&& v                   ) : mm(v.mm)                                 {}
-#else
-    v4s(s32 val = 0               ) : x(val),   y(val),    z(val),    w(val)    {}
-    v4s(s32 x, s32 y, s32 z, s32 w) : x(x),     y(y),      z(z),      w(w)      {}
-    v4s(s32 arr[4]                ) : x(*arr),  y(arr[1]), z(arr[2]), w(arr[3]) {}
-    v4s(v2s xy, s32 z, s32 w      ) : x(xy.x),  y(xy.y),   z(z),      w(w)      {}
-    v4s(v3s xyz, s32 w            ) : x(xyz.x), y(xyz.y),  z(xyz.z),  w(w)      {}
-    v4s(const v4s& v              ) : x(v.x),   y(v.y),    z(v.z),    w(v.w)    {}
-    v4s(v4s&& v                   ) : x(v.x),   y(v.y),    z(v.z),    w(v.w)    {}
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v4s& MATH_CALL operator=(s32 val     ) { mm = _mm_set1_epi32(val);                  return *this; }
     v4s& MATH_CALL operator=(s32 arr[4]  ) { mm = _mm_load_si128(cast<__m128i *>(arr)); return *this; }
     v4s& MATH_CALL operator=(__m128i _mm ) { mm = _mm;                                  return *this; }
     v4s& MATH_CALL operator=(const v4s& v) { mm = v.mm;                                 return *this; }
     v4s& MATH_CALL operator=(v4s&& v     ) { mm = v.mm;                                 return *this; }
-#else
-    v4s& operator=(s32 val     ) { x = val;  y = val;    z = val;    w = val;    return *this; }
-    v4s& operator=(s32 arr[4]  ) { x = *arr; y = arr[1]; z = arr[2]; w = arr[3]; return *this; }
-    v4s& operator=(const v4s& v) { x = v.x;  y = v.y;    z = v.z;    w = v.z;    return *this; }
-    v4s& operator=(v4s&& v     ) { x = v.x;  y = v.y;    z = v.z;    w = v.z;    return *this; }
-#endif
 
     s32 MATH_CALL dot(v4s r) const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128i m = _mm_mul_epi32(mm, r.mm);
         __m128i h = _mm_hadd_epi32(m, m);
         __m128i d = _mm_hadd_epi32(h, h);
         return _mm_cvtsi128_si32(d);
-    #else
-        return x*r.x + y*r.y + z*r.z;
-    #endif
     }
 
     v4s MATH_CALL cross(v4s r) const
@@ -1546,230 +788,66 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4s
         //  [y] x [r.y] = [-(x * r.z - z * r.x)] = [z * r.x - x * r.z];
         //  [z]   [r.z]   [ (x * r.y - y * r.x)]   [x * r.y - y * r.x]
         //  [w]   [r.w]   [ (w * r.w - w * r.w)]   [        0        ]
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
+
         return v4s(_mm_sub_epi32(_mm_mul_epi32(_mm_shuffle_epi32(  mm, cast<s32>(MM_SHUFFLE::YZXW)),
                                                _mm_shuffle_epi32(r.mm, cast<s32>(MM_SHUFFLE::ZXYW))),
                                  _mm_mul_epi32(_mm_shuffle_epi32(  mm, cast<s32>(MM_SHUFFLE::ZXYW)),
                                                _mm_shuffle_epi32(r.mm, cast<s32>(MM_SHUFFLE::YZXW)))));
-    #else
-        return v4s(x * r.z - z * r.y,
-                   z * r.x - x * r.z,
-                   x * r.y - y * r.x,
-                   0);
-    #endif
     }
 
     f32 MATH_CALL length() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128 m = _mm_cvtepi32_ps(mm);
         return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(m, m, 0x71)));
-    #else
-        return sqrtf(cast<f32>(x*x + y*y + z*z));
-    #endif
     }
 
     s32 MATH_CALL length_sq() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128i m = _mm_mul_epi32(mm, mm);
         __m128i h = _mm_hadd_epi32(m, m);
         __m128i d = _mm_hadd_epi32(h, h);
         return _mm_cvtsi128_si32(d);
-    #else
-        return x*x + y*y + z*z;
-    #endif
     }
 
-    v4s& MATH_CALL operator+=(v4s r)
+    static v4s MATH_CALL clamp(v4s val, v4s min, v4s max)
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_epi32(mm, r.mm);
-    #else
-        x += r.x;
-        y += r.y;
-        z += r.z;
-        w += r.w;
-    #endif
-        return *this;
+        return v4s(_mm_max_epi32(min.mm, _mm_min_epi32(max.mm, val.mm)));
     }
 
-    v4s& MATH_CALL operator-=(v4s r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_epi32(mm, r.mm);
-    #else
-        x -= r.x;
-        y -= r.y;
-        z -= r.z;
-        w -= r.w;
-    #endif
-        return *this;
-    }
+    v4s& MATH_CALL operator+=(v4s r) { mm = _mm_add_epi32(mm, r.mm); return *this; }
+    v4s& MATH_CALL operator-=(v4s r) { mm = _mm_sub_epi32(mm, r.mm); return *this; }
+    v4s& MATH_CALL operator*=(v4s r) { mm = _mm_mul_epi32(mm, r.mm); return *this; }
+    v4s& MATH_CALL operator/=(v4s r) { mm = _mm_div_epi32(mm, r.mm); return *this; }
 
-    v4s& MATH_CALL operator*=(v4s r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_epi32(mm, r.mm);
-    #else
-        x *= r.x;
-        y *= r.y;
-        z *= r.z;
-        w *= r.w;
-    #endif
-        return *this;
-    }
-
-    v4s& MATH_CALL operator/=(v4s r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_epi32(mm, r.mm);
-    #else
-        x /= r.x;
-        y /= r.y;
-        z /= r.z;
-        w /= r.w;
-    #endif
-        return *this;
-    }
-
-    v4s& MATH_CALL operator+=(s32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_epi32(mm, _mm_set1_epi32(r));
-    #else
-        x += r;
-        y += r;
-        z += r;
-        w += r;
-    #endif
-        return *this;
-    }
-
-    v4s& MATH_CALL operator-=(s32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_epi32(mm, _mm_set1_epi32(r));
-    #else
-        x -= r;
-        y -= r;
-        z -= r;
-    #endif
-        return *this;
-    }
-
-    v4s& MATH_CALL operator*=(s32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_epi32(mm, _mm_set1_epi32(r));
-    #else
-        x *= r;
-        y *= r;
-        z *= r;
-        z *= r;
-    #endif
-        return *this;
-    }
-
-    v4s& MATH_CALL operator/=(s32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_epi32(mm, _mm_set1_epi32(r));
-    #else
-        x /= r;
-        y /= r;
-        z /= r;
-        z /= r;
-    #endif
-        return *this;
-    }
+    v4s& MATH_CALL operator+=(s32 r) { mm = _mm_add_epi32(mm, _mm_set1_epi32(r)); return *this; }
+    v4s& MATH_CALL operator-=(s32 r) { mm = _mm_sub_epi32(mm, _mm_set1_epi32(r)); return *this; }
+    v4s& MATH_CALL operator*=(s32 r) { mm = _mm_mul_epi32(mm, _mm_set1_epi32(r)); return *this; }
+    v4s& MATH_CALL operator/=(s32 r) { mm = _mm_div_epi32(mm, _mm_set1_epi32(r)); return *this; }
 };
 
-INLINE v4s MATH_CALL operator+(v4s l, v4s r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4s(_mm_add_epi32(l.mm, r.mm));
-#else
-    return v4s(l.x + r.x, l.y + r.y, l.z + r.z, l.w + r.w);
-#endif
-}
+INLINE v4s MATH_CALL operator+(v4s l, v4s r) { return v4s(_mm_add_epi32(l.mm, r.mm)); }
+INLINE v4s MATH_CALL operator-(v4s l, v4s r) { return v4s(_mm_sub_epi32(l.mm, r.mm)); }
+INLINE v4s MATH_CALL operator*(v4s l, v4s r) { return v4s(_mm_mul_epi32(l.mm, r.mm)); }
+INLINE v4s MATH_CALL operator/(v4s l, v4s r) { return v4s(_mm_div_epi32(l.mm, r.mm)); }
 
-INLINE v4s MATH_CALL operator-(v4s l, v4s r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4s(_mm_sub_epi32(l.mm, r.mm));
-#else
-    return v4s(l.x - r.x, l.y - r.y, l.z - r.z, l.w - r.w);
-#endif
-}
+INLINE v4s MATH_CALL operator+(v4s l, s32 r) { return v4s(_mm_add_epi32(l.mm, _mm_set1_epi32(r))); }
+INLINE v4s MATH_CALL operator-(v4s l, s32 r) { return v4s(_mm_sub_epi32(l.mm, _mm_set1_epi32(r))); }
+INLINE v4s MATH_CALL operator*(v4s l, s32 r) { return v4s(_mm_mul_epi32(l.mm, _mm_set1_epi32(r))); }
+INLINE v4s MATH_CALL operator/(v4s l, s32 r) { return v4s(_mm_div_epi32(l.mm, _mm_set1_epi32(r))); }
 
-INLINE v4s MATH_CALL operator*(v4s l, v4s r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4s(_mm_mul_epi32(l.mm, r.mm));
-#else
-    return v4s(l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w);
-#endif
-}
-
-INLINE v4s MATH_CALL operator/(v4s l, v4s r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4s(_mm_div_epi32(l.mm, r.mm));
-#else
-    return v4s(l.x / r.x, l.y / r.y, l.z / r.z, l.w / r.w);
-#endif
-}
-
-INLINE v4s MATH_CALL operator+(v4s l, s32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4s(_mm_add_epi32(l.mm, _mm_set1_epi32(r)));
-#else
-    return v4s(l.x + r, l.y + r, l.z + r, l.w + r);
-#endif
-}
-
-INLINE v4s MATH_CALL operator-(v4s l, s32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4s(_mm_sub_epi32(l.mm, _mm_set1_epi32(r)));
-#else
-    return v4s(l.x - r, l.y - r, l.z - r, l.w - r);
-#endif
-}
-
-INLINE v4s MATH_CALL operator*(v4s l, s32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4s(_mm_mul_epi32(l.mm, _mm_set1_epi32(r)));
-#else
-    return v4s(l.x * r, l.y * r, l.z * r, l.w * r);
-#endif
-}
-
-INLINE v4s MATH_CALL operator/(v4s l, s32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4s(_mm_div_epi32(l.mm, _mm_set1_epi32(r)));
-#else
-    return v4s(l.x / r, l.y / r, l.z / r, l.w / r);
-#endif
-}
+INLINE v4s MATH_CALL operator+(s32 l, v4s r) { return v4s(_mm_add_epi32(_mm_set1_epi32(l), r.mm)); }
+INLINE v4s MATH_CALL operator-(s32 l, v4s r) { return v4s(_mm_sub_epi32(_mm_set1_epi32(l), r.mm)); }
+INLINE v4s MATH_CALL operator*(s32 l, v4s r) { return v4s(_mm_mul_epi32(_mm_set1_epi32(l), r.mm)); }
+INLINE v4s MATH_CALL operator/(s32 l, v4s r) { return v4s(_mm_div_epi32(_mm_set1_epi32(l), r.mm)); }
 
 INLINE bool MATH_CALL operator==(v4s l, v4s r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(l.mm, r.mm);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(l.mm, r.mm);
     __m128i ones    = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return _mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] == mm_r[0]
-        && mm_l[1] == mm_r[1];
 #endif
 }
 
@@ -1777,15 +855,10 @@ INLINE bool MATH_CALL operator!=(v4s l, v4s r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 != _mm_cmpeq_epi64_mask(l.mm, r.mm);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(l.mm, r.mm);
     __m128i ones    = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return !_mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] != mm_r[0]
-        || mm_l[1] != mm_r[1];
 #endif
 }
 
@@ -1798,7 +871,7 @@ INLINE bool MATH_CALL operator>=(v4s l, v4s r) { return l.length_sq() >= r.lengt
 INLINE bool MATH_CALL operator< (v4s l, v4s r) { return l.length_sq() <  r.length_sq(); }
 INLINE bool MATH_CALL operator> (v4s l, v4s r) { return l.length_sq() >  r.length_sq(); }
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4u
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4u final
 {
     struct { u32 x, y, z, w; };
     struct { u32 r, g, b, a; };
@@ -1806,11 +879,8 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4u
     v2u rg;
     v3u xyz;
     v3u rgb;
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     __m128i mm;
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v4u(                          ) : mm(_mm_setzero_si128())                  {}
     v4u(u32 val                   ) : mm(_mm_set1_epi32(val))                  {}
     v4u(u32 x, u32 y, u32 z, u32 w) : mm(_mm_setr_epi32(x, y, z, w))           {}
@@ -1820,39 +890,19 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4u
     v4u(__m128i _mm               ) : mm(_mm)                                  {}
     v4u(const v4u& v              ) : mm(v.mm)                                 {}
     v4u(v4u&& v                   ) : mm(v.mm)                                 {}
-#else
-    v4u(u32 val = 0               ) : x(val),   y(val),    z(val),    w(val)    {}
-    v4u(u32 x, u32 y, u32 z, u32 w) : x(x),     y(y),      z(z),      w(w)      {}
-    v4u(u32 arr[4]                ) : x(*arr),  y(arr[1]), z(arr[2]), w(arr[3]) {}
-    v4u(v2u xy, u32 z, u32 w      ) : x(xy.x),  y(xy.y),   z(z),      w(w)      {}
-    v4u(v3u xyz, u32 w            ) : x(xyz.x), y(xyz.y),  z(xyz.z),  w(w)      {}
-    v4u(const v4u& v              ) : x(v.x),   y(v.y),    z(v.z),    w(v.w)    {}
-    v4u(v4u&& v                   ) : x(v.x),   y(v.y),    z(v.z),    w(v.w)    {}
-#endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     v4u& MATH_CALL operator=(u32 val     ) { mm = _mm_set1_epi32(val);                  return *this; }
     v4u& MATH_CALL operator=(u32 arr[4]  ) { mm = _mm_load_si128(cast<__m128i *>(arr)); return *this; }
     v4u& MATH_CALL operator=(__m128i _mm ) { mm = _mm;                                  return *this; }
     v4u& MATH_CALL operator=(const v4u& v) { mm = v.mm;                                 return *this; }
     v4u& MATH_CALL operator=(v4u&& v     ) { mm = v.mm;                                 return *this; }
-#else
-    v4u& operator=(u32 val     ) { x = val;  y = val;    z = val;    w = val;    return *this; }
-    v4u& operator=(u32 arr[4]  ) { x = *arr; y = arr[1]; z = arr[2]; w = arr[3]; return *this; }
-    v4u& operator=(const v4u& v) { x = v.x;  y = v.y;    z = v.z;    w = v.z;    return *this; }
-    v4u& operator=(v4u&& v     ) { x = v.x;  y = v.y;    z = v.z;    w = v.z;    return *this; }
-#endif
 
     u32 MATH_CALL dot(v4u r) const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128i m = _mm_mul_epi32(mm, r.mm);
         __m128i h = _mm_hadd_epi32(m, m);
         __m128i d = _mm_hadd_epi32(h, h);
         return _mm_cvtsi128_si32(d);
-    #else
-        return x*r.x + y*r.y + z*r.z;
-    #endif
     }
 
     v4u MATH_CALL cross(v4u r) const
@@ -1861,230 +911,66 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4u
         //  [y] x [r.y] = [-(x * r.z - z * r.x)] = [z * r.x - x * r.z];
         //  [z]   [r.z]   [ (x * r.y - y * r.x)]   [x * r.y - y * r.x]
         //  [w]   [r.w]   [ (w * r.w - w * r.w)]   [        0        ]
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
+
         return v4u(_mm_sub_epi32(_mm_mul_epi32(_mm_shuffle_epi32(  mm, cast<s32>(MM_SHUFFLE::YZXW)),
                                                _mm_shuffle_epi32(r.mm, cast<s32>(MM_SHUFFLE::ZXYW))),
                                  _mm_mul_epi32(_mm_shuffle_epi32(  mm, cast<s32>(MM_SHUFFLE::ZXYW)),
                                                _mm_shuffle_epi32(r.mm, cast<s32>(MM_SHUFFLE::YZXW)))));
-    #else
-        return v4u(x * r.z - z * r.y,
-                   z * r.x - x * r.z,
-                   x * r.y - y * r.x,
-                   0);
-    #endif
     }
 
     f32 MATH_CALL length() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128 m = _mm_cvtepi32_ps(mm);
         return _mm_cvtss_f32(_mm_sqrt_ss(_mm_dp_ps(m, m, 0x71)));
-    #else
-        return sqrtf(cast<f32>(x*x + y*y + z*z));
-    #endif
     }
 
     u32 MATH_CALL length_sq() const
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
         __m128i m = _mm_mul_epi32(mm, mm);
         __m128i h = _mm_hadd_epi32(m, m);
         __m128i d = _mm_hadd_epi32(h, h);
         return _mm_cvtsi128_si32(d);
-    #else
-        return x*x + y*y + z*z;
-    #endif
     }
 
-    v4u& MATH_CALL operator+=(v4u r)
+    static v4u MATH_CALL clamp(v4u val, v4u min, v4u max)
     {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_epi32(mm, r.mm);
-    #else
-        x += r.x;
-        y += r.y;
-        z += r.z;
-        w += r.w;
-    #endif
-        return *this;
+        return v4u(_mm_max_epi32(min.mm, _mm_min_epi32(max.mm, val.mm)));
     }
 
-    v4u& MATH_CALL operator-=(v4u r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_epi32(mm, r.mm);
-    #else
-        x -= r.x;
-        y -= r.y;
-        z -= r.z;
-        w -= r.w;
-    #endif
-        return *this;
-    }
+    v4u& MATH_CALL operator+=(v4u r) { mm = _mm_add_epi32(mm, r.mm); return *this; }
+    v4u& MATH_CALL operator-=(v4u r) { mm = _mm_sub_epi32(mm, r.mm); return *this; }
+    v4u& MATH_CALL operator*=(v4u r) { mm = _mm_mul_epi32(mm, r.mm); return *this; }
+    v4u& MATH_CALL operator/=(v4u r) { mm = _mm_div_epi32(mm, r.mm); return *this; }
 
-    v4u& MATH_CALL operator*=(v4u r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_epi32(mm, r.mm);
-    #else
-        x *= r.x;
-        y *= r.y;
-        z *= r.z;
-        w *= r.w;
-    #endif
-        return *this;
-    }
-
-    v4u& MATH_CALL operator/=(v4u r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_epi32(mm, r.mm);
-    #else
-        x /= r.x;
-        y /= r.y;
-        z /= r.z;
-        w /= r.w;
-    #endif
-        return *this;
-    }
-
-    v4u& MATH_CALL operator+=(u32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_add_epi32(mm, _mm_set1_epi32(r));
-    #else
-        x += r;
-        y += r;
-        z += r;
-        w += r;
-    #endif
-        return *this;
-    }
-
-    v4u& MATH_CALL operator-=(u32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_sub_epi32(mm, _mm_set1_epi32(r));
-    #else
-        x -= r;
-        y -= r;
-        z -= r;
-    #endif
-        return *this;
-    }
-
-    v4u& MATH_CALL operator*=(u32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_mul_epi32(mm, _mm_set1_epi32(r));
-    #else
-        x *= r;
-        y *= r;
-        z *= r;
-        z *= r;
-    #endif
-        return *this;
-    }
-
-    v4u& MATH_CALL operator/=(u32 r)
-    {
-    #if ENGINE_ISA >= ENGINE_ISA_SSE
-        mm = _mm_div_epi32(mm, _mm_set1_epi32(r));
-    #else
-        x /= r;
-        y /= r;
-        z /= r;
-        z /= r;
-    #endif
-        return *this;
-    }
+    v4u& MATH_CALL operator+=(u32 r) { mm = _mm_add_epi32(mm, _mm_set1_epi32(r)); return *this; }
+    v4u& MATH_CALL operator-=(u32 r) { mm = _mm_sub_epi32(mm, _mm_set1_epi32(r)); return *this; }
+    v4u& MATH_CALL operator*=(u32 r) { mm = _mm_mul_epi32(mm, _mm_set1_epi32(r)); return *this; }
+    v4u& MATH_CALL operator/=(u32 r) { mm = _mm_div_epi32(mm, _mm_set1_epi32(r)); return *this; }
 };
 
-INLINE v4u MATH_CALL operator+(v4u l, v4u r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4u(_mm_add_epi32(l.mm, r.mm));
-#else
-    return v4u(l.x + r.x, l.y + r.y, l.z + r.z, l.w + r.w);
-#endif
-}
+INLINE v4u MATH_CALL operator+(v4u l, v4u r) { return v4u(_mm_add_epi32(l.mm, r.mm)); }
+INLINE v4u MATH_CALL operator-(v4u l, v4u r) { return v4u(_mm_sub_epi32(l.mm, r.mm)); }
+INLINE v4u MATH_CALL operator*(v4u l, v4u r) { return v4u(_mm_mul_epi32(l.mm, r.mm)); }
+INLINE v4u MATH_CALL operator/(v4u l, v4u r) { return v4u(_mm_div_epi32(l.mm, r.mm)); }
 
-INLINE v4u MATH_CALL operator-(v4u l, v4u r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4u(_mm_sub_epi32(l.mm, r.mm));
-#else
-    return v4u(l.x - r.x, l.y - r.y, l.z - r.z, l.w - r.w);
-#endif
-}
+INLINE v4u MATH_CALL operator+(v4u l, u32 r) { return v4u(_mm_add_epi32(l.mm, _mm_set1_epi32(r))); }
+INLINE v4u MATH_CALL operator-(v4u l, u32 r) { return v4u(_mm_sub_epi32(l.mm, _mm_set1_epi32(r))); }
+INLINE v4u MATH_CALL operator*(v4u l, u32 r) { return v4u(_mm_mul_epi32(l.mm, _mm_set1_epi32(r))); }
+INLINE v4u MATH_CALL operator/(v4u l, u32 r) { return v4u(_mm_div_epi32(l.mm, _mm_set1_epi32(r))); }
 
-INLINE v4u MATH_CALL operator*(v4u l, v4u r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4u(_mm_mul_epi32(l.mm, r.mm));
-#else
-    return v4u(l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w);
-#endif
-}
-
-INLINE v4u MATH_CALL operator/(v4u l, v4u r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4u(_mm_div_epi32(l.mm, r.mm));
-#else
-    return v4u(l.x / r.x, l.y / r.y, l.z / r.z, l.w / r.w);
-#endif
-}
-
-INLINE v4u MATH_CALL operator+(v4u l, u32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4u(_mm_add_epi32(l.mm, _mm_set1_epi32(r)));
-#else
-    return v4u(l.x + r, l.y + r, l.z + r, l.w + r);
-#endif
-}
-
-INLINE v4u MATH_CALL operator-(v4u l, u32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4u(_mm_sub_epi32(l.mm, _mm_set1_epi32(r)));
-#else
-    return v4u(l.x - r, l.y - r, l.z - r, l.w - r);
-#endif
-}
-
-INLINE v4u MATH_CALL operator*(v4u l, u32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4u(_mm_mul_epi32(l.mm, _mm_set1_epi32(r)));
-#else
-    return v4u(l.x * r, l.y * r, l.z * r, l.w * r);
-#endif
-}
-
-INLINE v4u MATH_CALL operator/(v4u l, u32 r)
-{
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    return v4u(_mm_div_epi32(l.mm, _mm_set1_epi32(r)));
-#else
-    return v4u(l.x / r, l.y / r, l.z / r, l.w / r);
-#endif
-}
+INLINE v4u MATH_CALL operator+(u32 l, v4u r) { return v4u(_mm_add_epi32(_mm_set1_epi32(l), r.mm)); }
+INLINE v4u MATH_CALL operator-(u32 l, v4u r) { return v4u(_mm_sub_epi32(_mm_set1_epi32(l), r.mm)); }
+INLINE v4u MATH_CALL operator*(u32 l, v4u r) { return v4u(_mm_mul_epi32(_mm_set1_epi32(l), r.mm)); }
+INLINE v4u MATH_CALL operator/(u32 l, v4u r) { return v4u(_mm_div_epi32(_mm_set1_epi32(l), r.mm)); }
 
 INLINE bool MATH_CALL operator==(v4u l, v4u r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(l.mm, r.mm);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(l.mm, r.mm);
     __m128i ones    = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return _mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] == mm_r[0]
-        && mm_l[1] == mm_r[1];
 #endif
 }
 
@@ -2092,15 +978,10 @@ INLINE bool MATH_CALL operator!=(v4u l, v4u r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 != _mm_cmpeq_epi64_mask(l.mm, r.mm);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(l.mm, r.mm);
     __m128i ones    = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return !_mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_l = cast<u64 *>(&l);
-    u64 *mm_r = cast<u64 *>(&r);
-    return mm_l[0] != mm_r[0]
-        || mm_l[1] != mm_r[1];
 #endif
 }
 

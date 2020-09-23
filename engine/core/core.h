@@ -11,17 +11,11 @@
     #define ENGINE_DEFAULT_ALIGNMENT sizeof(__m512)
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
     #define ENGINE_DEFAULT_ALIGNMENT sizeof(__m256)
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
-    #define ENGINE_DEFAULT_ALIGNMENT sizeof(__m128)
 #else
-    #define ENGINE_DEFAULT_ALIGNMENT sizeof(void *)
+    #define ENGINE_DEFAULT_ALIGNMENT sizeof(__m128)
 #endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    #pragma pack(push, 16)
-#else
-    #pragma pack(push, 8)
-#endif
+#pragma pack(push, 16)
 
 #ifdef DEBUG
     #undef DEBUG
@@ -61,11 +55,7 @@
 #define ENGINE_DATA  ENGINE_IMPEXP
 #define ENGINE_CLASS ENGINE_IMPEXP
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    #define MATH_CALL __vectorcall
-#else
-    #define MATH_CALL __cdecl
-#endif
+#define MATH_CALL __vectorcall
 
 #if DEVDEBUG
     #define INLINE ENGINE_NOINLINE inline

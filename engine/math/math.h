@@ -5,7 +5,7 @@
 #pragma once
 
 #include "core/core.h"
-#include <math.h>
+#include <corecrt_math.h>
 
 #define f64_E         2.71828182845904523536   // e
 #define f64_LOG2E     1.44269504088896340736   // log2(e)
@@ -68,47 +68,36 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) reg64
     f64   f;
     s64   s;
     u64   u;
-#if ENGINE_ISA < ENGINE_ISA_SSE
-    __m64 m;
-#endif
 
     reg64(              ) : f(0.0) {}
     reg64(f64          v) : f(v)   {}
     reg64(s64          v) : s(v)   {}
     reg64(u64          v) : u(v)   {}
-#if ENGINE_ISA < ENGINE_ISA_SSE
-    reg64(__m64        v) : m(v)   {}
-#endif
     reg64(const reg64& v) : f(v.f) {}
     reg64(reg64&&      v) : f(v.f) {}
 
     MATH_CALL operator   f64() const { return f; }
     MATH_CALL operator   s64() const { return s; }
     MATH_CALL operator   u64() const { return u; }
-#if ENGINE_ISA < ENGINE_ISA_SSE
-    MATH_CALL operator __m64() const { return m; }
-#endif
 
     reg64& MATH_CALL operator=(f64          v) { f = v;   return *this; }
     reg64& MATH_CALL operator=(s64          v) { s = v;   return *this; }
     reg64& MATH_CALL operator=(u64          v) { u = v;   return *this; }
-#if ENGINE_ISA < ENGINE_ISA_SSE
-    reg64& MATH_CALL operator=(__m64        v) { m = v;   return *this; }
-#endif
     reg64& MATH_CALL operator=(const reg64& v) { f = v.f; return *this; }
     reg64& MATH_CALL operator=(reg64&&      v) { f = v.f; return *this; }
 };
 
-INLINE f32 MATH_CALL lerp(f32 start, f32 end, f32 percent)
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_floating_point_v<T>>>
+INLINE T MATH_CALL lerp(T start, T end, T percent)
 {
-    percent = __max(0.0f, __min(1.0f, percent));
+    percent = __max(0, __min(1, percent));
     return (end - start) * percent + start;
 }
 
-INLINE f64 MATH_CALL lerp(f64 start, f64 end, f64 percent)
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>>
+INLINE T MATH_CALL clamp(T val, T min, T max)
 {
-    percent = __max(0.0, __min(1.0, percent));
-    return (end - start) * percent + start;
+    return __max(min, __min(max, val));
 }
 
 // value <= 20

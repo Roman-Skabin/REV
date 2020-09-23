@@ -220,9 +220,7 @@ internal GPUDescHeap *FindOrAllocateDescHeap(
     Check(engine);
     Check(desc_heap_desc);
     Check(allocated);
-#if ENGINE_ISA >= ENGINE_ISA_SSE
     Check(sizeof(D3D12_DESCRIPTOR_HEAP_DESC) == sizeof(__m128i));
-#endif
 
     GPUDescHeap *prev = 0;
 

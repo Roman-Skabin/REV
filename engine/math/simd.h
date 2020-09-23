@@ -8,7 +8,6 @@
 
 #pragma pack(push, 1)
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
 union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) xmm
 {
     __m128  f;
@@ -32,7 +31,6 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) xmm
     xmm& MATH_CALL operator=(const xmm& v) { f = v.f; return *this; }
     xmm& MATH_CALL operator=(xmm&&      v) { f = v.f; return *this; }
 };
-#endif
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX
 union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) ymm
@@ -86,125 +84,93 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(64) zmm
 };
 #endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    template<typename T, typename MMType, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T> && RTTI::is_simd_v<MMType>>>
-    constexpr T MATH_CALL MM(MMType mm, u8 index) { return cast<T *>(mm)[index]; }
+#undef _MM_SHUFFLE
+enum class MM_SHUFFLE // for _mm_shuffle_*
+{
+    XXXX, YXXX, ZXXX, WXXX,
+    XYXX, YYXX, ZYXX, WYXX,
+    XZXX, YZXX, ZZXX, WZXX,
+    XWXX, YWXX, ZWXX, WWXX,
+    XXYX, YXYX, ZXYX, WXYX,
+    XYYX, YYYX, ZYYX, WYYX,
+    XZYX, YZYX, ZZYX, WZYX,
+    XWYX, YWYX, ZWYX, WWYX,
+    XXZX, YXZX, ZXZX, WXZX,
+    XYZX, YYZX, ZYZX, WYZX,
+    XZZX, YZZX, ZZZX, WZZX,
+    XWZX, YWZX, ZWZX, WWZX,
+    XXWX, YXWX, ZXWX, WXWX,
+    XYWX, YYWX, ZYWX, WYWX,
+    XZWX, YZWX, ZZWX, WZWX,
+    XWWX, YWWX, ZWWX, WWWX,
 
-    constexpr f32 MATH_CALL MMf(__m128  mm, u8 index) { return mm.m128_f32[index];  }
-    constexpr s32 MATH_CALL MMi(__m128i mm, u8 index) { return mm.m128i_i32[index]; }
-    constexpr u32 MATH_CALL MMu(__m128i mm, u8 index) { return mm.m128i_u32[index]; }
+    XXXY, YXXY, ZXXY, WXXY,
+    XYXY, YYXY, ZYXY, WYXY,
+    XZXY, YZXY, ZZXY, WZXY,
+    XWXY, YWXY, ZWXY, WWXY,
+    XXYY, YXYY, ZXYY, WXYY,
+    XYYY, YYYY, ZYYY, WYYY,
+    XZYY, YZYY, ZZYY, WZYY,
+    XWYY, YWYY, ZWYY, WWYY,
+    XXZY, YXZY, ZXZY, WXZY,
+    XYZY, YYZY, ZYZY, WYZY,
+    XZZY, YZZY, ZZZY, WZZY,
+    XWZY, YWZY, ZWZY, WWZY,
+    XXWY, YXWY, ZXWY, WXWY,
+    XYWY, YYWY, ZYWY, WYWY,
+    XZWY, YZWY, ZZWY, WZWY,
+    XWWY, YWWY, ZWWY, WWWY,
 
-    constexpr f32 MATH_CALL MM128f(__m128  mm, u8 index) { return mm.m128_f32[index];  }
-    constexpr s32 MATH_CALL MM128i(__m128i mm, u8 index) { return mm.m128i_i32[index]; }
-    constexpr u32 MATH_CALL MM128u(__m128i mm, u8 index) { return mm.m128i_u32[index]; }
-#endif
+    XXXZ, YXXZ, ZXXZ, WXXZ,
+    XYXZ, YYXZ, ZYXZ, WYXZ,
+    XZXZ, YZXZ, ZZXZ, WZXZ,
+    XWXZ, YWXZ, ZWXZ, WWXZ,
+    XXYZ, YXYZ, ZXYZ, WXYZ,
+    XYYZ, YYYZ, ZYYZ, WYYZ,
+    XZYZ, YZYZ, ZZYZ, WZYZ,
+    XWYZ, YWYZ, ZWYZ, WWYZ,
+    XXZZ, YXZZ, ZXZZ, WXZZ,
+    XYZZ, YYZZ, ZYZZ, WYZZ,
+    XZZZ, YZZZ, ZZZZ, WZZZ,
+    XWZZ, YWZZ, ZWZZ, WWZZ,
+    XXWZ, YXWZ, ZXWZ, WXWZ,
+    XYWZ, YYWZ, ZYWZ, WYWZ,
+    XZWZ, YZWZ, ZZWZ, WZWZ,
+    XWWZ, YWWZ, ZWWZ, WWWZ,
 
-#if ENGINE_ISA >= ENGINE_ISA_AVX
-    constexpr f32 MATH_CALL MM256f(__m256  mm, u8 index) { return mm.m256_f32[index];  }
-    constexpr s32 MATH_CALL MM256i(__m256i mm, u8 index) { return mm.m256i_i32[index]; }
-    constexpr u32 MATH_CALL MM256u(__m256i mm, u8 index) { return mm.m256i_u32[index]; }
-#endif
+    XXXW, YXXW, ZXXW, WXXW,
+    XYXW, YYXW, ZYXW, WYXW,
+    XZXW, YZXW, ZZXW, WZXW,
+    XWXW, YWXW, ZWXW, WWXW,
+    XXYW, YXYW, ZXYW, WXYW,
+    XYYW, YYYW, ZYYW, WYYW,
+    XZYW, YZYW, ZZYW, WZYW,
+    XWYW, YWYW, ZWYW, WWYW,
+    XXZW, YXZW, ZXZW, WXZW,
+    XYZW, YYZW, ZYZW, WYZW,
+    XZZW, YZZW, ZZZW, WZZW,
+    XWZW, YWZW, ZWZW, WWZW,
+    XXWW, YXWW, ZXWW, WXWW,
+    XYWW, YYWW, ZYWW, WYWW,
+    XZWW, YZWW, ZZWW, WZWW,
+    XWWW, YWWW, ZWWW, WWWW
+};
 
-#if ENGINE_ISA >= ENGINE_ISA_AVX512
-    constexpr f32 MATH_CALL MM512f(__m512  mm, u8 index) { return mm.m512_f32[index];  }
-    constexpr s32 MATH_CALL MM512i(__m512i mm, u8 index) { return mm.m512i_i32[index]; }
-    constexpr u32 MATH_CALL MM512u(__m512i mm, u8 index) { return mm.m512i_u32[index]; }
-#endif
-
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    #undef _MM_SHUFFLE
-    enum class MM_SHUFFLE // for _mm_shuffle_*
-    {
-        XXXX, YXXX, ZXXX, WXXX,
-        XYXX, YYXX, ZYXX, WYXX,
-        XZXX, YZXX, ZZXX, WZXX,
-        XWXX, YWXX, ZWXX, WWXX,
-        XXYX, YXYX, ZXYX, WXYX,
-        XYYX, YYYX, ZYYX, WYYX,
-        XZYX, YZYX, ZZYX, WZYX,
-        XWYX, YWYX, ZWYX, WWYX,
-        XXZX, YXZX, ZXZX, WXZX,
-        XYZX, YYZX, ZYZX, WYZX,
-        XZZX, YZZX, ZZZX, WZZX,
-        XWZX, YWZX, ZWZX, WWZX,
-        XXWX, YXWX, ZXWX, WXWX,
-        XYWX, YYWX, ZYWX, WYWX,
-        XZWX, YZWX, ZZWX, WZWX,
-        XWWX, YWWX, ZWWX, WWWX,
-
-        XXXY, YXXY, ZXXY, WXXY,
-        XYXY, YYXY, ZYXY, WYXY,
-        XZXY, YZXY, ZZXY, WZXY,
-        XWXY, YWXY, ZWXY, WWXY,
-        XXYY, YXYY, ZXYY, WXYY,
-        XYYY, YYYY, ZYYY, WYYY,
-        XZYY, YZYY, ZZYY, WZYY,
-        XWYY, YWYY, ZWYY, WWYY,
-        XXZY, YXZY, ZXZY, WXZY,
-        XYZY, YYZY, ZYZY, WYZY,
-        XZZY, YZZY, ZZZY, WZZY,
-        XWZY, YWZY, ZWZY, WWZY,
-        XXWY, YXWY, ZXWY, WXWY,
-        XYWY, YYWY, ZYWY, WYWY,
-        XZWY, YZWY, ZZWY, WZWY,
-        XWWY, YWWY, ZWWY, WWWY,
-
-        XXXZ, YXXZ, ZXXZ, WXXZ,
-        XYXZ, YYXZ, ZYXZ, WYXZ,
-        XZXZ, YZXZ, ZZXZ, WZXZ,
-        XWXZ, YWXZ, ZWXZ, WWXZ,
-        XXYZ, YXYZ, ZXYZ, WXYZ,
-        XYYZ, YYYZ, ZYYZ, WYYZ,
-        XZYZ, YZYZ, ZZYZ, WZYZ,
-        XWYZ, YWYZ, ZWYZ, WWYZ,
-        XXZZ, YXZZ, ZXZZ, WXZZ,
-        XYZZ, YYZZ, ZYZZ, WYZZ,
-        XZZZ, YZZZ, ZZZZ, WZZZ,
-        XWZZ, YWZZ, ZWZZ, WWZZ,
-        XXWZ, YXWZ, ZXWZ, WXWZ,
-        XYWZ, YYWZ, ZYWZ, WYWZ,
-        XZWZ, YZWZ, ZZWZ, WZWZ,
-        XWWZ, YWWZ, ZWWZ, WWWZ,
-
-        XXXW, YXXW, ZXXW, WXXW,
-        XYXW, YYXW, ZYXW, WYXW,
-        XZXW, YZXW, ZZXW, WZXW,
-        XWXW, YWXW, ZWXW, WWXW,
-        XXYW, YXYW, ZXYW, WXYW,
-        XYYW, YYYW, ZYYW, WYYW,
-        XZYW, YZYW, ZZYW, WZYW,
-        XWYW, YWYW, ZWYW, WWYW,
-        XXZW, YXZW, ZXZW, WXZW,
-        XYZW, YYZW, ZYZW, WYZW,
-        XZZW, YZZW, ZZZW, WZZW,
-        XWZW, YWZW, ZWZW, WWZW,
-        XXWW, YXWW, ZXWW, WXWW,
-        XYWW, YYWW, ZYWW, WYWW,
-        XZWW, YZWW, ZZWW, WZWW,
-        XWWW, YWWW, ZWWW, WWWW
-    };
-#endif
-
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>>
+template<typename T>
 INLINE b32 MATH_CALL mm_equals(T *a, T *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(*cast<__m128i *>(a),
                                         *cast<__m128i *>(b));
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i eq_mask = _mm_cmpeq_epi64(*cast<__m128i *>(a),
                                       *cast<__m128i *>(b));
     __m128i ones = _mm_cmpeq_epi64(eq_mask, eq_mask);
     return _mm_testc_si128(eq_mask, ones);
-#else
-    u64 *mm_a = cast<u64 *>(a);
-    u64 *mm_b = cast<u64 *>(b);
-    return *(mm_a + 0) == *(mm_b + 0)
-        && *(mm_a + 1) == *(mm_b + 1);
 #endif
 }
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>>
+template<typename T>
 INLINE b32 MATH_CALL mm256_equals(T *a, T *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
@@ -222,7 +188,7 @@ INLINE b32 MATH_CALL mm256_equals(T *a, T *b)
     __m256d ones = _mm256_cmp_pd(eq_mask, eq_mask, _CMP_EQ_OQ);
     return _mm256_testc_si256(_mm256_castpd_si256(eq_mask),
                               _mm256_castpd_si256(ones));
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i *mm_a      = cast<__m128i *>(a);
     __m128i *mm_b      = cast<__m128i *>(b);
     __m128i  eq_mask_l = _mm_cmpeq_epi64(*(mm_a    ), *(mm_b    ));
@@ -230,17 +196,10 @@ INLINE b32 MATH_CALL mm256_equals(T *a, T *b)
     __m128i  mask      = _mm_and_si128(eq_mask_l, eq_mask_h);
     __m128i  ones      = _mm_cmpeq_epi64(mask, mask);
     return _mm_testc_si128(mask, ones);
-#else
-    u64 *mm_a = cast(u64 *, a);
-    u64 *mm_b = cast(u64 *, b);
-    return *(mm_a + 0) == *(mm_b + 0)
-        && *(mm_a + 1) == *(mm_b + 1)
-        && *(mm_a + 2) == *(mm_b + 2)
-        && *(mm_a + 3) == *(mm_b + 3);
 #endif
 }
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>>
+template<typename T>
 INLINE b32 MATH_CALL mm512_equals(T *a, T *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
@@ -263,7 +222,7 @@ INLINE b32 MATH_CALL mm512_equals(T *a, T *b)
     __m256d  ones      = _mm256_cmp_pd(mask, mask, _CMP_EQ_OQ);
     return _mm256_testc_si256(_mm256_castpd_si256(mask),
                               _mm256_castpd_si256(ones));
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
     __m128i *mm_a      = cast<__m128i *>(a);
     __m128i *mm_b      = cast<__m128i *>(b);
     __m128i  eq_mask_0 = _mm_cmpeq_epi64(*(mm_a    ), *(mm_b    ));
@@ -275,50 +234,71 @@ INLINE b32 MATH_CALL mm512_equals(T *a, T *b)
     __m128i  mask      = _mm_and_si128(mask_l, mask_h);
     __m128i  ones      = _mm_cmpeq_epi64(mask, mask);
     return _mm_testc_si128(mask, ones);
-#else
-    u64 *mm_a = cast<u64 *>(a);
-    u64 *mm_b = cast<u64 *>(b);
-    return *(mm_a + 0) == *(mm_b + 0)
-        && *(mm_a + 1) == *(mm_b + 1)
-        && *(mm_a + 2) == *(mm_b + 2)
-        && *(mm_a + 3) == *(mm_b + 3)
-        && *(mm_a + 4) == *(mm_b + 4)
-        && *(mm_a + 5) == *(mm_b + 5)
-        && *(mm_a + 6) == *(mm_b + 6)
-        && *(mm_a + 7) == *(mm_b + 7);
 #endif
 }
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    #undef _MM_EXTRACT_FLOAT
-    template<u8 index>
-    INLINE f32 MATH_CALL mm_extract_ps(__m128 mm)
-    {
-        return reg32(_mm_extract_ps(mm, index)).f;
-    }
-#endif
+#undef _MM_EXTRACT_FLOAT
+template<u8 index> INLINE f32 MATH_CALL mm_extract_f32(__m128  mm) { return reg32(_mm_extract_ps(mm, index)).f; }
+template<u8 index> INLINE s32 MATH_CALL mm_extract_s32(__m128i mm) { return _mm_extract_epi32(mm, index); }
+template<u8 index> INLINE u32 MATH_CALL mm_extract_u32(__m128i mm) { return cast<u32>(_mm_extract_epi32(mm, index)); }
+
+template<> INLINE f32 MATH_CALL mm_extract_f32<0>(__m128  mm) { return _mm_cvtss_f32(mm); }
+template<> INLINE s32 MATH_CALL mm_extract_s32<0>(__m128i mm) { return _mm_cvtsi128_si32(mm); }
+template<> INLINE u32 MATH_CALL mm_extract_u32<0>(__m128i mm) { return cast<u32>(_mm_cvtsi128_si32(mm)); }
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX
-    template<u8 index>
-    INLINE f32 MATH_CALL mm256_extract_ps(__m256 mm256)
-    {
-        return reg32(_mm256_extract_epi32(ymm(mm256).i, index)).f;
-    }
+    template<u8 index> INLINE f32 MATH_CALL mm_extract_f32(__m256  mm) { return reg32(_mm256_extract_epi32(ymm(mm).i, index)).f; }
+    template<u8 index> INLINE s32 MATH_CALL mm_extract_s32(__m256i mm) { return _mm256_extract_epi32(mm, index); }
+    template<u8 index> INLINE u32 MATH_CALL mm_extract_u32(__m256i mm) { return cast<u32>(_mm256_extract_epi32(mm, index)); }
+
+    template<> INLINE f32 MATH_CALL mm_extract_f32<0>(__m256  mm) { return _mm_cvtss_f32(_mm256_castps256_ps128(mm)); }
+    template<> INLINE s32 MATH_CALL mm_extract_s32<0>(__m256i mm) { return _mm_cvtsi128_si32(_mm256_castsi256_si128(mm)); }
+    template<> INLINE u32 MATH_CALL mm_extract_u32<0>(__m256i mm) { return cast<u32>(_mm_cvtsi128_si32(_mm256_castsi256_si128(mm))); }
 #endif
 
-#if ENGINE_ISA >= ENGINE_ISA_SSE
-    template<u8 index>
-    INLINE __m128 MATH_CALL mm_insert_f32(__m128 mm128, f32 val)
-    {
-        return xmm(_mm_insert_epi32(xmm(mm128).i, reg32(val).i, index)).f;
-    }
+#if ENGINE_ISA >= ENGINE_ISA_AVX512
+    template<u8 index> INLINE f32 MATH_CALL mm_extract_f32(__m512  mm) { return reg32(_mm_extract_ps(_mm512_extractf32x4_ps(mm, index / 4), index % 4)).f; }
+    template<u8 index> INLINE s32 MATH_CALL mm_extract_s32(__m512i mm) { return _mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4); }
+    template<u8 index> INLINE u32 MATH_CALL mm_extract_u32(__m512i mm) { return cast<u32>(_mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4)); }
+
+    template<> INLINE f32 MATH_CALL mm_extract_f32<0>(__m512  mm) { return _mm512_cvtss_f32(mm); }
+    template<> INLINE s32 MATH_CALL mm_extract_s32<0>(__m512i mm) { return _mm512_cvtsi512_si32(mm); }
+    template<> INLINE u32 MATH_CALL mm_extract_u32<0>(__m512i mm) { return cast<u32>(_mm512_cvtsi512_si32(mm)); }
 #endif
+
+template<u8 index> INLINE __m128  MATH_CALL mm_insert_f32(__m128  mm, f32 val) { return xmm(_mm_insert_epi32(xmm(mm).i, reg32(val).i, index)).f; }
+template<u8 index> INLINE __m128i MATH_CALL mm_insert_s32(__m128i mm, s32 val) { return _mm_insert_epi32(mm, val, index); }
+template<u8 index> INLINE __m128i MATH_CALL mm_insert_u32(__m128i mm, u32 val) { return _mm_insert_epi32(mm, val, index); }
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX
+    template<u8 index> INLINE __m256  MATH_CALL mm_insert_f32(__m256  mm, f32 val) { return ymm(_mm256_insert_epi32(ymm(mm).i, reg32(val).i, index)).f; }
+    template<u8 index> INLINE __m256i MATH_CALL mm_insert_s32(__m256i mm, s32 val) { return _mm256_insert_epi32(mm, val, index); }
+    template<u8 index> INLINE __m256i MATH_CALL mm_insert_u32(__m256i mm, u32 val) { return _mm256_insert_epi32(mm, val, index); }
+#endif
+
+#if ENGINE_ISA >= ENGINE_ISA_AVX512
     template<u8 index>
-    INLINE __m256 MATH_CALL mm256_insert_f32(__m256 mm256, f32 val)
+    INLINE __m512 MATH_CALL mm_insert_f32(__m512 mm, f32 val)
     {
-        return ymm(_mm256_insert_epi32(ymm(mm256).i, reg32(val).i, index)).f;
+        __m128 paste = _mm512_extractf32x4_ps(mm, index / 4);
+        paste = xmm(_mm_insert_epi32(xmm(paste).i, reg32(val).i, index % 4)).f;
+        return _mm512_insertf32x4(mm, paste, index / 4);
+    }
+
+    template<u8 index>
+    INLINE __m512i MATH_CALL mm_insert_s32(__m512i mm, s32 val)
+    {
+        __m128i paste = _mm512_extracti32x4_epi32(mm, index / 4);
+        paste = _mm_insert_epi32(paste, val, index % 4);
+        return _mm512_inserti32x4(mm, paste, index / 4);
+    }
+
+    template<u8 index>
+    INLINE __m512i MATH_CALL mm_insert_u32(__m512i mm, u32 val)
+    {
+        __m128i paste = _mm512_extracti32x4_epi32(mm, index / 4);
+        paste = _mm_insert_epi32(paste, val, index % 4);
+        return _mm512_inserti32x4(mm, paste, index / 4);
     }
 #endif
 

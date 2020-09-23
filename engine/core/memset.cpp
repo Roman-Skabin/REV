@@ -75,7 +75,7 @@ internal INLINE void memset_f32_avx(f32 *mem, f32 val, u64 count)
         ++index;
     }
 }
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
 internal INLINE void memset_f32_sse(f32 *mem, f32 val, u64 count)
 {
     __m128 *mm128_mem = cast<__m128 *>(mem);
@@ -104,10 +104,8 @@ void memset_f32(f32 *mem, f32 val, u64 count)
     memset_f32_avx512(mem, val, count);
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
     memset_f32_avx(mem, val, count);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
-    memset_f32_sse(mem, val, count)
 #else
-    while (count--) *mem++ = val;
+    memset_f32_sse(mem, val, count);
 #endif
 }
 
@@ -181,7 +179,7 @@ internal INLINE void memset_f64_avx(f64 *mem, f64 val, u64 count)
         ++index;
     }
 }
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
 internal INLINE void memset_f64_sse(f64 *mem, f64 val, u64 count)
 {
     __m128d *mm128_mem = cast<__m128d *>(mem);
@@ -210,10 +208,8 @@ void memset_f64(f64 *mem, f64 val, u64 count)
     memset_f64_avx512(mem, val, count);
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
     memset_f64_avx(mem, val, count);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
-    memset_f64_sse(mem, val, count)
 #else
-    while (count--) *mem++ = val;
+    memset_f64_sse(mem, val, count)
 #endif
 }
 
@@ -287,7 +283,7 @@ internal INLINE void memset_s8_avx(s8 *mem, s8 val, u64 count)
         ++index;
     }
 }
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
 internal INLINE void memset_s8_sse(s8 *mem, s8 val, u64 count)
 {
     __m128i *mm128_mem = cast<__m128i *>(mem);
@@ -316,10 +312,8 @@ void memset_s8(s8 *mem, s8 val, u64 count)
     memset_s8_avx512(mem, val, count);
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
     memset_s8_avx(mem, val, count);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
-    memset_s8_sse(mem, val, count)
 #else
-    while (count--) *mem++ = val;
+    memset_s8_sse(mem, val, count)
 #endif
 }
 
@@ -393,7 +387,7 @@ internal INLINE void memset_s16_avx(s16 *mem, s16 val, u64 count)
         ++index;
     }
 }
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
 internal INLINE void memset_s16_sse(s16 *mem, s16 val, u64 count)
 {
     __m128i *mm128_mem = cast<__m128i *>(mem);
@@ -422,10 +416,8 @@ void memset_s16(s16 *mem, s16 val, u64 count)
     memset_s16_avx512(mem, val, count);
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
     memset_s16_avx(mem, val, count);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
-    memset_s16_sse(mem, val, count)
 #else
-    while (count--) *mem++ = val;
+    memset_s16_sse(mem, val, count)
 #endif
 }
 
@@ -499,7 +491,7 @@ internal INLINE void memset_s32_avx(s32 *mem, s32 val, u64 count)
         ++index;
     }
 }
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
 internal INLINE void memset_s32_sse(s32 *mem, s32 val, u64 count)
 {
     __m128i *mm128_mem = cast<__m128i *>(mem);
@@ -528,10 +520,8 @@ void memset_s32(s32 *mem, s32 val, u64 count)
     memset_s32_avx512(mem, val, count);
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
     memset_s32_avx(mem, val, count);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
-    memset_s32_sse(mem, val, count)
 #else
-    while (count--) *mem++ = val;
+    memset_s32_sse(mem, val, count)
 #endif
 }
 
@@ -605,7 +595,7 @@ internal INLINE void memset_s64_avx(s64 *mem, s64 val, u64 count)
         ++index;
     }
 }
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
+#else
 internal INLINE void memset_s64_sse(s64 *mem, s64 val, u64 count)
 {
     __m128i *mm128_mem = cast<__m128i *>(mem);
@@ -634,9 +624,7 @@ void memset_s64(s64 *mem, s64 val, u64 count)
     memset_s64_avx512(mem, val, count);
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
     memset_s64_avx(mem, val, count);
-#elif ENGINE_ISA >= ENGINE_ISA_SSE
-    memset_s64_sse(mem, val, count)
 #else
-    while (count--) *mem++ = val;
+    memset_s64_sse(mem, val, count)
 #endif
 }

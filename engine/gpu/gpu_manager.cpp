@@ -6,16 +6,6 @@
 #include "gpu/gpu_manager.h"
 #include "cengine.h"
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_base_of_v<IUnknown, T>>>
-static void SafeRelease(in_out_opt T *&directx_interface)
-{
-    if (directx_interface)
-    {
-        directx_interface->Release();
-        directx_interface = nullptr;
-    }
-}
-
 void SetVSync(in Engine *engine, in b32 enable)
 {
     Check(engine);

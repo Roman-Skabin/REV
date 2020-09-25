@@ -6,6 +6,7 @@
 
 #include "gpu/gpu_manager.h"
 #include "core/allocator.h"
+#include "tools/list.hpp"
 
 // @TODO(Roman): Aliased (overlapped) resources. For transient memory at least for now.
 // @TODO(Roman): Arrays as a single memory block, e.g. array of 2D textures.
@@ -15,7 +16,7 @@
 //               Push Sampler
 // @TOOD(Roman): Move Draw (and Bind probably) stuff somewhere.
 //               This functionality doesn't belong to memory management.
-// @TODO(Roman): LIST GPUResource *free_list in GPUResourceMemory.
+// @TODO(Roman): List<GPUResource> free_list in GPUResourceMemory.
 //               Just saved pointers to freed resources.
 // @TODO(Roman): Add ID3D12Fences to the GPUResoucre to be shure
 //               the copy operation is completed.
@@ -43,8 +44,6 @@ typedef struct GPUDescHeap GPUDescHeap;
 
 struct GPUResource
 {
-    ExtendsList(GPUResource);
-
     ID3D12Resource *default_resource;
 
     ID3D12Resource *upload_resources[SWAP_CHAIN_BUFFERS_COUNT];
@@ -75,7 +74,6 @@ typedef enum GPU_DESC_HEAP_ALLOCATION_STATE
 
 struct GPUDescHeap
 {
-    ExtendsList(GPUDescHeap);
     ID3D12DescriptorHeap           *desc_heap;
     GPUResource                    *resource;
     D3D12_DESCRIPTOR_HEAP_DESC      desc_heap_desc;
@@ -84,7 +82,7 @@ struct GPUDescHeap
 
 typedef struct GPUResourceMemory
 {
-    LIST GPUResource *resources;
+    List<GPUResource> resources;
 
     ID3D12Heap      *default_heap;
     u64              default_offset;
@@ -97,7 +95,7 @@ typedef struct GPUResourceMemory
 
 typedef struct GPUDescHeapMemory
 {
-    LIST GPUDescHeap *desc_heaps;
+    List<GPUDescHeap> desc_heaps;
 } GPUDescHeapMemory;
 
 typedef struct GPUMemoryManager

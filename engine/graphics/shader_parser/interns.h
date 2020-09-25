@@ -5,21 +5,21 @@
 #pragma once
 
 #include "core/memory.h"
+#include "tools/list.hpp"
 
 typedef struct Intern Intern;
 
 struct Intern
 {
-    ExtendsList(Intern);
     const char *str;
     u64         len;
 };
 
-typedef struct Interns
+struct Interns
 {
-    LIST Intern *interns;
-    Memory *memory;
-} Interns;
+    List<Intern>  interns;
+    Memory       *memory;
+};
 
 ENGINE_FUN void CreateInterns(
     in  Engine  *engine,

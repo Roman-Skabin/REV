@@ -63,7 +63,7 @@ public:
                        (old_count - where) * sizeof(T));
         }
 
-        (..., *(m_Header->data + where++) = elements);
+        (..., m_Header->data[where++] = elements);
     }
 
     template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>>
@@ -81,7 +81,7 @@ public:
                        (old_count - where) * sizeof(T));
         }
 
-        (..., *(m_Header->data + where++) = RTTI::move(elements));
+        (..., m_Header->data[where++] = RTTI::move(elements));
     }
 
     template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushBack(in const U&... elements) { Insert(m_Header->count, elements...);                   }
@@ -185,11 +185,11 @@ public:
     T *begin() { return m_Header->data;                   }
     T *end()   { return m_Header->data + m_Header->count; }
 
-    const T& First() const { return *m_Header->data;                         }
-    const T& Last()  const { return *(m_Header->data + m_Header->count - 1); }
+    const T& First() const { return *m_Header->data;                     }
+    const T& Last()  const { return m_Header->data[m_Header->count - 1]; }
 
-    T& First() { return *m_Header->data;                         }
-    T& Last()  { return *(m_Header->data + m_Header->count - 1); }
+    T& First() { return *m_Header->data;                     }
+    T& Last()  { return m_Header->data[m_Header->count - 1]; }
 
     Buffer& operator=(in const Buffer& other)
     {
@@ -216,13 +216,13 @@ public:
     const T& operator[](in u64 index) const
     {
         CheckM(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
-        return *(m_Header->data + index);
+        return m_Header->data[index];
     }
 
     T& operator[](in u64 index)
     {
         CheckM(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
-        return *(m_Header->data + index);
+        return m_Header->data[index];
     }
 
 private:

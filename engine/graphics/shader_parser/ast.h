@@ -5,6 +5,7 @@
 #pragma once
 
 #include "math/vec.h"
+#include "tools/list.hpp"
 
 typedef struct ASTType        ASTType;
 typedef struct ASTStruct      ASTStruct;
@@ -31,7 +32,6 @@ typedef enum AST_TYPE_FLAG
 
 struct ASTType
 {
-    ExtendsList(ASTType);
     ASTType       *base_type;
     const char    *name;
     AST_TYPE_KIND  kind;
@@ -49,7 +49,6 @@ struct ASTType
 
 struct ASTStructField
 {
-    ExtendsList(ASTStructField);
     ASTType    *type;
     const char *semantic_name;
     u32         semantic_index;
@@ -57,15 +56,13 @@ struct ASTStructField
 
 struct ASTStruct
 {
-    ExtendsList(ASTStruct);
     const char          *name;
-    LIST ASTStructField *fields;
+    List<ASTStructField> fields;
     u64                  fields_count;
 };
 
 struct ASTCBuffer
 {
-    ExtendsList(ASTCBuffer);
     const char *name;
     u64         name_len;
     u32         _register;

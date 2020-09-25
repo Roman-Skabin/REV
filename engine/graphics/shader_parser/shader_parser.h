@@ -9,7 +9,7 @@
 #include "graphics/gpu_program_manager.h"
 #include "math/vec.h"
 
-typedef enum TOKEN_KIND
+enum TOKEN_KIND
 {
     TOKEN_KIND_EOF,
 
@@ -29,9 +29,9 @@ typedef enum TOKEN_KIND
     TOKEN_KIND_FLOAT,
     TOKEN_KIND_STRING,
     TOKEN_KIND_KEYWORD,
-} TOKEN_KIND;
+};
 
-typedef struct Token
+struct Token
 {
     TOKEN_KIND  kind;
     v2u         pos;
@@ -45,9 +45,9 @@ typedef struct Token
         u64         u64_val;
         f64         f64_val;
     };
-} Token;
+};
 
-typedef struct ShaderLexer ShaderLexer;
+struct ShaderLexer;
 
 ENGINE_FUN const char *TokenKindName(
     in ShaderLexer *lexer,
@@ -87,12 +87,12 @@ ENGINE_FUN void GetNextGraphicsShaderToken(
     in ShaderLexer *lexer
 );
 
-typedef struct ShaderParser
+struct ShaderParser
 {
     ShaderLexer      lexer;
-    LIST ASTType    *types;
-    LIST ASTCBuffer *cbuffers;
-} ShaderParser;
+    List<ASTType>    types;
+    List<ASTCBuffer> cbuffers;
+};
 
 ENGINE_FUN void ParseGraphicsShaders(
     in  Engine              *engine,

@@ -9,6 +9,7 @@
 #include "tools/work_queue.h"
 #include "core/memory.h"
 #include "core/allocator.h"
+#include "core/window.h"
 #include "tools/logger.h"
 #include "sound/sound.h"
 #include "gpu/gpu_manager.h"
@@ -27,22 +28,7 @@ int __cdecl main(int args_count, char *args[])                                  
 
 struct Engine
 {
-    struct
-    {
-        HWND handle;
-        HDC  context;
-        v2s  size;
-        b32  closed;
-        b32  resized;
-        b32  fullscreened;
-    } window;
-
-    struct
-    {
-        HMONITOR handle;
-        v2s      pos;
-        v2s      size;
-    } monitor;
+    Window window;
 
     struct
     {
@@ -62,7 +48,7 @@ struct Engine
     } user_callbacks;
 
     WorkQueue   *work_queue;
-    Memory      *memory;
+    Memory       memory;
     Allocator    allocator;
     Logger       logger;
     SoundStream  sound;

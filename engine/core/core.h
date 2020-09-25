@@ -196,6 +196,16 @@ constexpr bool IsPowOf2(in T x)
     return x && ((x & (x - 1)) == 0);
 }
 
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_base_of_v<IUnknown, T>>>
+INLINE void SafeRelease(in_out_opt T *&directx_interface)
+{
+    if (directx_interface)
+    {
+        directx_interface->Release();
+        directx_interface = null;
+    }
+}
+
 template<u64 size> struct GetEnumIntTypeBySize    {                   };
 template<>         struct GetEnumIntTypeBySize<1> { using type = s8;  };
 template<>         struct GetEnumIntTypeBySize<2> { using type = s16; };
@@ -306,32 +316,5 @@ ENGINE_FUN void __cdecl ShowDebugMessage(
 #endif
 #define FAILED(hr) ((hr) < 0)
 
-// @TODO(Roman): Remove everything below
-
-//
-// Global typedefs
-//
-
-typedef struct Engine Engine;
-
-//
-// Utils
-//
-
-// @NOTE(Roman): annotation for lists
-#define LIST
-
-// Declaration examples:
-//
-// typedef struct <struct_name> <struct_name>;
-// struct <struct_name>
-// {
-//     Extends[D]List(<struct_name>);
-//     ... // other fields
-// };
-//
-// You can see concrete examples of using LIST
-// and ExtendsList in cengine/graphics/shader_parser/ast.h
-
-#define ExtendsList(Type)              Type *next
-#define ExtendsDList(Type) Type *prev; Type *next
+// @TODO(Roman): Remove
+struct Engine;

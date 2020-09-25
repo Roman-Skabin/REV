@@ -188,15 +188,6 @@ internal INLINE void InputPull(Engine *engine)
 // GPUManager
 //
 
-#define SafeRelease(directx_interface)                           \
-{                                                                \
-    if (directx_interface)                                       \
-    {                                                            \
-        (directx_interface)->lpVtbl->Release(directx_interface); \
-        (directx_interface) = null;                              \
-    }                                                            \
-}
-
 internal void CreateAdapterAndDevice(Engine *engine)
 {
     SIZE_T             max_vram      = 0;
@@ -832,44 +823,42 @@ internal void StartFrame(Engine *engine)
 
     // Pull
     InputPull(engine);
-    StepTimer(&engine->timer);
+    engine->timer.Tick();
 
-    // Delayed SetFullscreen if we need to.
-    SetFullscreen(engine, engine->window.fullscreened);
+    engine->window.ApplyFullscreenRequst();
 
     WaitForGPU(engine);
 
-    engine->gpu_manager.error = graphics_allocator->lpVtbl->Reset(graphics_allocator);
+    engine->gpu_manager.error = graphics_allocator->Reset();
     Check(SUCCEEDED(engine->gpu_manager.error));
-    engine->gpu_manager.error = graphics_list->lpVtbl->Reset(graphics_list, graphics_allocator, 0);
+    engine->gpu_manager.error = graphics_list->Reset(graphics_allocator, 0);
     Check(SUCCEEDED(engine->gpu_manager.error));
 
     // Set viewport
     D3D12_VIEWPORT viewport;
     viewport.TopLeftX = 0.0f;
     viewport.TopLeftY = 0.0f;
-    viewport.Width    = cast(f32, engine->window.size.w);
-    viewport.Height   = cast(f32, engine->window.size.h);
+    viewport.Width    = cast<f32>(engine->window.Size().w);
+    viewport.Height   = cast<f32>(engine->window.Size().h);
     viewport.MinDepth = -1.0f;
     viewport.MaxDepth =  1.0f;
 
-    graphics_list->lpVtbl->RSSetViewports(graphics_list, 1, &viewport);
+    graphics_list->RSSetViewports(1, &viewport);
 
     // Set scissor rect (optimization)
     D3D12_RECT scissor_rect;
     scissor_rect.left   = 0;
     scissor_rect.top    = 0;
-    scissor_rect.right  = engine->window.size.w;
-    scissor_rect.bottom = engine->window.size.h;
+    scissor_rect.right  = engine->window.Size().w;
+    scissor_rect.bottom = engine->window.Size().h;
 
-    graphics_list->lpVtbl->RSSetScissorRects(graphics_list, 1, &scissor_rect);
+    graphics_list->RSSetScissorRects(1, &scissor_rect);
 
     // Set RTV And DSV
-    graphics_list->lpVtbl->OMSetRenderTargets(graphics_list,
-                                              1,
-                                              &engine->gpu_manager.rtv_cpu_desc_handle,
-                                              false,
-                                              &engine->gpu_manager.dsv_cpu_desc_handle);
+    graphics_list->OMSetRenderTargets(1,
+                                      &engine->gpu_manager.rtv_cpu_desc_handle,
+                                      false,
+                                      &engine->gpu_manager.dsv_cpu_desc_handle);
 
     // Set Resource Barriers
     D3D12_RESOURCE_BARRIER rt_barrier;
@@ -882,7 +871,7 @@ internal void StartFrame(Engine *engine)
 
     if (engine->gpu_manager.first_frame)
     {
-        graphics_list->lpVtbl->ResourceBarrier(graphics_list, 1, &rt_barrier);
+        graphics_list->ResourceBarrier(1, &rt_barrier);
     }
     else
     {
@@ -895,20 +884,18 @@ internal void StartFrame(Engine *engine)
         ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
         D3D12_RESOURCE_BARRIER begin_barriers[] = { rt_barrier, ds_barrier };
-        graphics_list->lpVtbl->ResourceBarrier(graphics_list, ArrayCount(begin_barriers), begin_barriers);
+        graphics_list->ResourceBarrier(ArrayCount(begin_barriers), begin_barriers);
     }
 
     // Clear
     f32 clear_color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-    graphics_list->lpVtbl->ClearRenderTargetView(graphics_list,
-                                                 engine->gpu_manager.rtv_cpu_desc_handle,
-                                                 clear_color,
-                                                 0, 0);
-    graphics_list->lpVtbl->ClearDepthStencilView(graphics_list,
-                                                 engine->gpu_manager.dsv_cpu_desc_handle,
-                                                 D3D12_CLEAR_FLAG_DEPTH,
-                                                 1.0f, 0,
-                                                 0, 0);
+    graphics_list->ClearRenderTargetView(engine->gpu_manager.rtv_cpu_desc_handle,
+                                         clear_color,
+                                         0, 0);
+    graphics_list->ClearDepthStencilView(engine->gpu_manager.dsv_cpu_desc_handle,
+                                         D3D12_CLEAR_FLAG_DEPTH,
+                                         1.0f, 0,
+                                         0, 0);
 }
 
 internal void EndFrame(Engine *engine)
@@ -933,10 +920,10 @@ internal void EndFrame(Engine *engine)
     ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
     D3D12_RESOURCE_BARRIER end_barriers[] = { rt_barrier, ds_barrier };
-    graphics_list->lpVtbl->ResourceBarrier(graphics_list, ArrayCount(end_barriers), end_barriers);
+    graphics_list->ResourceBarrier(ArrayCount(end_barriers), end_barriers);
 
     // Close and execute lists
-    engine->gpu_manager.error = graphics_list->lpVtbl->Close(graphics_list);
+    engine->gpu_manager.error = graphics_list->Close();
 #if DEBUG
     LogDirectXMessages(engine);
 #endif
@@ -946,9 +933,8 @@ internal void EndFrame(Engine *engine)
     {
         graphics_list,
     };
-    engine->gpu_manager.graphics_queue->lpVtbl->ExecuteCommandLists(engine->gpu_manager.graphics_queue,
-                                                                   ArrayCount(command_lists),
-                                                                   command_lists);
+    engine->gpu_manager.graphics_queue->ExecuteCommandLists(ArrayCount(command_lists),
+                                                            command_lists);
     Check(SUCCEEDED(engine->gpu_manager.error));
 
 #if DEBUG
@@ -974,9 +960,8 @@ internal void EndFrame(Engine *engine)
         present_flags |= DXGI_PRESENT_DO_NOT_SEQUENCE;
     }
 
-    engine->gpu_manager.error = engine->gpu_manager.swap_chain->lpVtbl->Present(engine->gpu_manager.swap_chain,
-                                                                                engine->gpu_manager.vsync,
-                                                                                present_flags);
+    engine->gpu_manager.error = engine->gpu_manager.swap_chain->Present(engine->gpu_manager.vsync,
+                                                                        present_flags);
     Check(SUCCEEDED(engine->gpu_manager.error));
 
 #if DEBUG
@@ -984,101 +969,10 @@ internal void EndFrame(Engine *engine)
 #endif
 
     // Swap buffers
-    engine->gpu_manager.current_buffer = engine->gpu_manager.swap_chain->lpVtbl->GetCurrentBackBufferIndex(engine->gpu_manager.swap_chain);
+    engine->gpu_manager.current_buffer = engine->gpu_manager.swap_chain->GetCurrentBackBufferIndex();
 
-    engine->gpu_manager.rtv_heap_desc->lpVtbl->GetCPUDescriptorHandleForHeapStart(engine->gpu_manager.rtv_heap_desc, &engine->gpu_manager.rtv_cpu_desc_handle);
+    engine->gpu_manager.rtv_cpu_desc_handle      = engine->gpu_manager.rtv_heap_desc->GetCPUDescriptorHandleForHeapStart();
     engine->gpu_manager.rtv_cpu_desc_handle.ptr += engine->gpu_manager.current_buffer * engine->gpu_manager.rtv_desc_size;
-}
-
-//
-// Window
-//
-
-internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
-
-internal void WindowCreate(Engine *engine, const char *title, v2s size, HINSTANCE instance)
-{
-    WNDCLASSA wca     = {0};
-    wca.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
-    wca.lpfnWndProc   = WindowProc;
-    wca.hInstance     = instance;
-    wca.hCursor       = LoadCursorA(0, IDC_ARROW);
-    wca.lpszClassName = "ENGINE_window_class";
-    DebugResult(RegisterClassA(&wca));
-
-    engine->window.size = size;
-
-    s32 width  = engine->window.size.w;
-    s32 height = engine->window.size.h;
-
-    RECT wr = { 0, 0, width, height };
-    if (AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false))
-    {
-        width  = wr.right  - wr.left;
-        height = wr.bottom - wr.top;
-    }
-
-    engine->window.handle = CreateWindowA(wca.lpszClassName, title, WS_OVERLAPPEDWINDOW, 10, 10, width, height, 0, 0, wca.hInstance, 0);
-    Check(engine->window.handle);
-
-    engine->window.context = GetDC(engine->window.handle);
-    Check(engine->window.context);
-
-    LogSuccess(&engine->logger, "Window was created");
-
-    engine->monitor.handle = MonitorFromWindow(engine->window.handle, MONITOR_DEFAULTTONEAREST);
-    Check(engine->monitor.handle);
-
-    MONITORINFO info;
-    info.cbSize = sizeof(MONITORINFO);
-    DebugResult(GetMonitorInfoA(engine->monitor.handle, &info));
-
-    engine->monitor.pos  = v2s_1(info.rcMonitor.left, info.rcMonitor.top);
-    engine->monitor.size = v2s_1(info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top);
-
-    LogSuccess(&engine->logger, "Monitor was initialized");
-
-    SetWindowLongPtrA(engine->window.handle, GWLP_USERDATA, cast(LONG_PTR, engine));
-}
-
-internal void WindowDestroy(Engine *engine, HINSTANCE instance)
-{
-    DebugResult(UnregisterClassA("ENGINE_window_class", instance));
-    LogInfo(&engine->logger, "Window was destroyed");
-}
-
-void SetFullscreen(Engine *engine, b32 set)
-{
-    local RECT wr;
-
-    if (engine->window.fullscreened == BIT(31))
-    {
-        DebugResult(GetWindowRect(engine->window.handle, &wr));
-        SetWindowLongPtrA(engine->window.handle, GWL_STYLE,
-                          GetWindowLongPtrA(engine->window.handle, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-        DebugResult(SetWindowPos(engine->window.handle, HWND_TOP,
-                                 engine->monitor.pos.x, engine->monitor.pos.y,
-                                 engine->monitor.size.w, engine->monitor.size.h,
-                                 SWP_ASYNCWINDOWPOS | SWP_FRAMECHANGED | SWP_DEFERERASE | SWP_NOCOPYBITS | SWP_NOREDRAW));
-        engine->window.fullscreened = true;
-    }
-    else if (engine->window.fullscreened == BIT(30))
-    {
-        SetWindowLongPtrA(engine->window.handle, GWL_STYLE,
-                          GetWindowLongPtrA(engine->window.handle, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
-        DebugResult(SetWindowPos(engine->window.handle, HWND_TOP,
-                                 wr.left, wr.top, wr.right - wr.left, wr.bottom - wr.top,
-                                 SWP_ASYNCWINDOWPOS | SWP_FRAMECHANGED | SWP_DEFERERASE | SWP_NOCOPYBITS | SWP_NOREDRAW));
-        engine->window.fullscreened = false;
-    }
-    else if (set == 1 && engine->window.fullscreened != 1)
-    {
-        engine->window.fullscreened = BIT(31);
-    }
-    else if (set == 0 && engine->window.fullscreened != 0)
-    {
-        engine->window.fullscreened = BIT(30);
-    }
 }
 
 //
@@ -1378,125 +1272,6 @@ internal void DestroyGPUProgramManager(
 // Main
 //
 
-internal LRESULT WINAPI WindowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam)
-{
-    LRESULT result = 0;
-    Engine *engine = cast(Engine *, GetWindowLongPtrA(window, GWLP_USERDATA));
-
-    switch (message)
-    {
-        case WM_DESTROY: // 0x0002
-        {
-            engine->window.closed = true;
-        } break;
-
-        case WM_SIZE: // 0x0005
-        {
-            v2s saved_size      = engine->window.size;
-            engine->window.size = v2s_1(cast(s32, lparam & 0xFFFF), cast(s32, lparam >> 16));
-            if ((engine->window.size.w != saved_size.w || engine->window.size.h != saved_size.h) && wparam != SIZE_MINIMIZED)
-            {
-            #if 0
-                ResizeGPUBuffers(engine);
-            #else
-                DXGI_MODE_DESC mode_desc;
-                mode_desc.Width                   = engine->window.size.w;
-                mode_desc.Height                  = engine->window.size.h;
-                mode_desc.RefreshRate.Numerator   = 0;
-                mode_desc.RefreshRate.Denominator = 1;
-                mode_desc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
-                mode_desc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-                mode_desc.Scaling                 = DXGI_MODE_SCALING_STRETCHED;
-                engine->gpu_manager.error = engine->gpu_manager.swap_chain->lpVtbl->ResizeTarget(engine->gpu_manager.swap_chain, &mode_desc);
-                Check(SUCCEEDED(engine->gpu_manager.error));
-            #endif
-                engine->window.resized = true;
-                LogInfo(&engine->logger, "Window was resized");
-            }
-        } break;
-
-        case WM_DISPLAYCHANGE: // 0x007E
-        {
-            // CloseHandle(engine->monitor.handle);
-            engine->monitor.handle = MonitorFromWindow(engine->window.handle, MONITOR_DEFAULTTONEAREST);
-            Check(engine->monitor.handle);
-
-            MONITORINFO info;
-            info.cbSize = sizeof(MONITORINFO);
-            DebugResult(GetMonitorInfoA(engine->monitor.handle, &info));
-
-            engine->monitor.pos  = v2s_1(info.rcMonitor.left, info.rcMonitor.top);
-            engine->monitor.size = v2s_1(info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top);
-
-            LogInfo(&engine->logger, "Monitor was changed");
-        } break;
-
-        case WM_INPUT: // 0x00FF
-        {
-            HRAWINPUT raw_input_handle = cast(HRAWINPUT, lparam);
-            UINT size = 0;
-            GetRawInputData(raw_input_handle, RID_INPUT, 0, &size, sizeof(RAWINPUTHEADER));
-
-            RAWINPUT *ri = cast(RAWINPUT *, PushToTransientArea(engine->memory, size));
-            if (GetRawInputData(raw_input_handle, RID_INPUT, ri, &size, sizeof(RAWINPUTHEADER)) == size
-            &&  ri->header.dwType == RIM_TYPEMOUSE)
-            {
-                engine->input.mouse.dpos.x =  ri->data.mouse.lLastX;
-                engine->input.mouse.dpos.y = -ri->data.mouse.lLastY;
-
-                engine->input.mouse.pos.x += engine->input.mouse.dpos.x;
-                engine->input.mouse.pos.y += engine->input.mouse.dpos.y;
-
-                if (ri->data.mouse.ulButtons & RI_MOUSE_WHEEL)
-                {
-                    engine->input.mouse.dwheel  = cast(s16, ri->data.mouse.usButtonData) / WHEEL_DELTA;
-                    engine->input.mouse.wheel  += engine->input.mouse.dwheel;
-                }
-
-                b32 down = engine->input.mouse.left_button.down;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) down = true;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.left_button, down);
-
-                down = engine->input.mouse.right_button.down;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) down = true;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.right_button, down);
-
-                down = engine->input.mouse.middle_button.down;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) down = true;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.middle_button, down);
-
-                down = engine->input.mouse.x1_button.down;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_4_DOWN) down = true;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_4_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.x1_button, down);
-
-                down = engine->input.mouse.x2_button.down;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_5_DOWN) down = true;
-                if (ri->data.mouse.usButtonFlags & RI_MOUSE_BUTTON_5_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.x2_button, down);
-            }
-
-            result = DefWindowProcA(window, message, wparam, lparam);
-        } break;
-
-        case WM_MENUCHAR: // 0x0100
-        {
-            // @NOTE(Roman): suppress bip sound on alt+enter
-            result = MNC_CLOSE << 16;
-        } break;
-
-        default:
-        {
-            result = DefWindowProcA(window, message, wparam, lparam);
-        } break;
-    }
-
-    return result;
-}
-
 int EngineRun(
     opt HINSTANCE      instance,
     in  UserCallback  *OnInit,
@@ -1506,52 +1281,55 @@ int EngineRun(
 {
     DebugResult(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST));
 
-    Memory engine_memory;
-    CreateMemory(GB(1ui64), GB(2ui64), &engine_memory);
-
-    Engine *engine = PushToPA(Engine, &engine_memory, 1);
-    engine->memory = &engine_memory;
+    Engine *engine = null;
+    {
+        Memory engine_memory(GB(1ui64), GB(2ui64));
+        engine = engine_memory.PushToPA<Engine>();
+        engine->memory = RTTI::move(engine_memory);
+    }
 
     DebugResult(engine->user_callbacks.OnInit            = OnInit);
     DebugResult(engine->user_callbacks.OnDestroy         = OnDestroy);
     DebugResult(engine->user_callbacks.OnUpdateAndRender = OnUpdateAndRender);
     DebugResult(engine->user_callbacks.OnSound           = OnSound);
 
-    u64 allocator_cap  = GB(1ui64);
-    void *base_address = PushToPermanentArea(engine->memory, allocator_cap);
-    CreateAllocator(&engine->allocator, base_address, allocator_cap, false);
+    u64   allocator_cap = GB(1ui64);
+    void *base_address  = engine->memory.PushToPermanentArea(allocator_cap);
 
-    CreateLogger("Engine Logger", "../log/cengine.log", LOG_TO_FILE, &engine->logger);
-    WindowCreate(engine, "CEngine", v2s_1(960, 540), instance);
+    engine->allocator  = Allocator(base_address, allocator_cap, false);
+    engine->logger     = Logger("Engine Logger", "../log/cengine.log", Logger::TARGET::FILE);
+    engine->window     = Window(engine->memory,
+                                null,
+                                null,
+                                engine->logger,
+                                "Engine",
+                                v2s(960, 540),
+                                v2s(10, 10),
+                                instance);
     InputCreate(engine);
-    CreateTimer("EngineMainTimer", CSTRLEN("EngineMainTimer"), &engine->timer);
+    engine->timer      = Timer("EngineMainTimer", CSTRLEN("EngineMainTimer"));
     CreateGPUManager(engine);
     CreateGPUMemoryManager(engine, MB(512ui64));
     CreateSound(engine);
-    engine->work_queue = CreateWorkQueue(engine);
+    engine->work_queue = WorkQueue::Create(engine->memory, engine->logger);
 
     StartFrame(engine);
     engine->user_callbacks.OnInit(engine);
     EndFrame(engine);
 
-    StartTimer(&engine->timer);
+    engine->timer.Start();
 
-    MSG msg = {0};
-    ShowWindow(engine->window.handle, SW_SHOW);
-    while (!engine->window.closed)
+    engine->window.Show();
+    while (!engine->window.Closed())
     {
         // Reset
-        ResetTransientArea(engine->memory);
-        engine->window.resized = false;
+        engine->memory.ResetTransientArea();
+        engine->window.Resset();
         InputReset(engine);
 
-        while (PeekMessageA(&msg, engine->window.handle, 0, 0, PM_REMOVE))
-        {
-            TranslateMessage(&msg);
-            DispatchMessageA(&msg);
-        }
+        engine->window.PollEvents();
 
-        if (!engine->window.closed)
+        if (!engine->window.Closed())
         {
             StartFrame(engine);
             engine->user_callbacks.OnUpdateAndRender(engine);
@@ -1559,7 +1337,7 @@ int EngineRun(
         }
     }
 
-    StopTimer(&engine->timer);
+    engine->timer.Stop();
     DestroySound(engine);
     FlushGPU(engine);
 
@@ -1569,12 +1347,8 @@ int EngineRun(
     DestroyGPUMemoryManager(engine);
     DestroyGPUManager(engine);
     InputDestroy(engine);
-    WindowDestroy(engine, instance);
-    DestroyLogger(&engine->logger);
-    DestroyAllocator(&engine->allocator);
-    DestroyMemory(engine->memory);
 
-    return cast(int, msg.wParam);
+    return 0;
 }
 
 #pragma warning(pop)

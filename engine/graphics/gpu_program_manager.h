@@ -6,6 +6,7 @@
 
 #include "gpu/gpu_memory_manager.h"
 #include "tools/buffer.hpp"
+#include "tools/list.hpp"
 
 enum
 {
@@ -49,10 +50,8 @@ typedef struct GraphicsProgramDesc
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC rsd;
 } GraphicsProgramDesc;
 
-typedef struct GraphicsProgram GraphicsProgram;
 struct GraphicsProgram
 {
-    ExtendsList(GraphicsProgram);
     ID3DBlob             *signature;
     ID3D12RootSignature  *root_signature;
     ID3D12PipelineState  *pipeline_state;
@@ -66,7 +65,7 @@ struct GraphicsProgram
 
 typedef struct GPUProgramManager
 {
-    LIST GraphicsProgram *graphics_programs;
+    List<GraphicsProgram> graphics_programs;
     // @TODO(Roman): Compute programs
 } GPUProgramManager;
 

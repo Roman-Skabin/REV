@@ -8,15 +8,6 @@
 #include "gpu/gpu_memory_manager.h"
 #include "cengine.h"
 
-#define SafeRelease(directx_interface)                           \
-{                                                                \
-    if (directx_interface)                                       \
-    {                                                            \
-        (directx_interface)->lpVtbl->Release(directx_interface); \
-        (directx_interface) = 0;                                 \
-    }                                                            \
-}
-
 //
 // Shader
 //

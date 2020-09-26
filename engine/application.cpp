@@ -7,6 +7,12 @@
 
 Application *Application::s_Application = null;
 
+Application *Application::Get()
+{
+    CheckM(s_Application, "Application is not created yet");
+    return s_Application;
+}
+
 Application::Application(const char *name)
     : m_Logger("Engine logger", "../log/cengine.log", Logger::TARGET::FILE),
       m_Memory(Memory::Get()),
@@ -18,7 +24,8 @@ Application::Application(const char *name)
                v2s(960, 540),
                v2s(10, 10)),
       m_Input(Input::Create(m_Window, m_Logger)),
-      m_Timer("EngineMainTimer", CSTRLEN("EngineMainTimer"))
+      m_Timer("EngineMainTimer", CSTRLEN("EngineMainTimer")),
+      m_Levels(&m_Allocator)
 {
     CheckM(!s_Application,
            "Only one application alowed. "
@@ -51,9 +58,10 @@ void Application::Run()
             m_Timer.Tick();
             m_Window.ApplyFullscreenRequst();
 
-            // Start Frame
-            // for (auto& level : m_Levels) level.OnUpdate(...);
-            // End Frame
+            for (Level *level : m_Levels)
+            {
+                level->OnUpdateAndRender();
+            }
         }
     }
 

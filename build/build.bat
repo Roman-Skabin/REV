@@ -100,7 +100,7 @@ if !COMPILE_SANDBOX! == 1 (
     set LINKER= -link
     set LINKING=
     set INPUT_FILES=
-    set PREPROCESSOR= -Iengine
+    set PREPROCESSOR= -Iengine -Isandbox
     set MISCELLANEOUS= -TP
     set OUTPUT_FILES= -Fo:bin\obj\sandbox\ -Fe:bin\sandbox.exe
 

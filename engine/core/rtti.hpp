@@ -172,6 +172,32 @@ namespace RTTI
 
     template<typename T> using is_array = bool_constant<is_array_v<T>>;
 
+    template<typename>   inline constexpr bool is_pointer_v      = false;
+    template<typename T> inline constexpr bool is_pointer_v<T *> = true;
+
+    template<typename T> using is_pointer = bool_constant<is_pointer_v<T>>;
+
+    template<typename ...Conditions>          struct all_true                : true_constant                                                 {};
+    template<typename Cond, typename ...Rest> struct all_true<Cond, Rest...> : conditional_t<Cond::value, all_true<Rest...>, false_constant> {};
+
+    template<typename ...Conditions> inline constexpr bool all_true_v = all_true<Conditions...>::value;
+
+    template<typename T, typename ...Types> using are_same = all_true<is_same<T, Types>...>;
+
+    template<typename T, typename ...Types> inline constexpr bool are_same_v = are_same<T, Types...>::value;
+
+    template<typename Base, typename ...Deriveds> using are_base_of = all_true<is_base_of<Base, Deriveds>...>;
+
+    template<typename Base, typename ...Deriveds> inline constexpr bool are_base_of_v = are_base_of<Base, Deriveds...>::value;
+
+    template<typename T> struct remove_pointer                    { using type = T; };
+    template<typename T> struct remove_pointer<T *>               { using type = T; };
+    template<typename T> struct remove_pointer<T *const>          { using type = T; };
+    template<typename T> struct remove_pointer<T *volatile>       { using type = T; };
+    template<typename T> struct remove_pointer<T *const volatile> { using type = T; };
+
+    template<typename T> using remove_pointer_t = typename remove_pointer<T>::type;
+
 #if 0
     template<typename T> constexpr remove_ref_t<T>&  to_lvalue(remove_ref_t<T>& x)  { return x; }
     template<typename T> constexpr remove_ref_t<T>&  to_lvalue(remove_ref_t<T>&& x) { return static_cast<T&>(x); }

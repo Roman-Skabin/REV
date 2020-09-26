@@ -81,6 +81,7 @@
 
 #pragma comment(lib, "User32.lib")      // Windows
 #pragma comment(lib, "Ole32.lib")       // Windows
+#pragma comment(lib, "Gdi32.lib")       // GDI
 #pragma comment(lib, "mfplat.lib")      // MFAPI
 #pragma comment(lib, "mfreadwrite.lib") // MFAPI
 #pragma comment(lib, "d3d12.lib")       // DirectX

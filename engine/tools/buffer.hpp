@@ -11,6 +11,7 @@ class Buffer final
 {
 public:
     using Type = T;
+    static inline constexpr u64 npos = U64_MAX;
 
     Buffer(in Allocator_t *allocator, in_opt u64 initial_capacity = 16, in_opt u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
         : m_Header(null)
@@ -48,7 +49,7 @@ public:
         }
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>>
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>>
     void Insert(in u64 where, in const U&... elements)
     {
         u64 old_count = m_Header->count;
@@ -63,10 +64,10 @@ public:
                        (old_count - where) * sizeof(T));
         }
 
-        (..., m_Header->data[where++] = elements);
+        (..., (m_Header->data[where++] = elements));
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>>
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>>
     void Insert(in u64 where, in U&&... elements)
     {
         u64 old_count = m_Header->count;
@@ -81,14 +82,14 @@ public:
                        (old_count - where) * sizeof(T));
         }
 
-        (..., m_Header->data[where++] = RTTI::move(elements));
+        (..., (m_Header->data[where++] = RTTI::move(elements)));
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushBack(in const U&... elements) { Insert(m_Header->count, elements...);                   }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushBack(in U&&... elements)      { Insert(m_Header->count, RTTI::forward<U>(elements)...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushBack(in const U&... elements) { Insert(m_Header->count, elements...);                   }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushBack(in U&&... elements)      { Insert(m_Header->count, RTTI::forward<U>(elements)...); }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushFront(in const U&... elements) { Insert(0, elements...);                   }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushFront(in U&&... elements)      { Insert(0, RTTI::forward<U>(elements)...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushFront(in const U&... elements) { Insert(0, elements...);                   }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushFront(in U&&... elements)      { Insert(0, RTTI::forward<U>(elements)...); }
 
     template<typename ...ConstructorArgs>
     void Emplace(in u64 where, in const ConstructorArgs&... args)
@@ -132,9 +133,10 @@ public:
     template<typename ...ConstructorArgs> void EmplaceFront(in const ConstructorArgs&... args) { Emplace(0, args...);                                 }
     template<typename ...ConstructorArgs> void EmplaceFront(in ConstructorArgs&&... args)      { Emplace(0, RTTI::forward<ConstructorArgs>(args)...); }
 
-    void Erase(u64 from, u64 to = from + 1)
+    void Erase(u64 from, u64 to = npos)
     {
-        CheckM(from < m_Header->count && from < to && to < m_Header->count, "Bad arguments: from = %I64u, to = %I64u", from, to);
+        if (to == npos) to = from + 1;
+        CheckM(from < m_Header->count && from < to && to <= m_Header->count, "Bad arguments: from = %I64u, to = %I64u, count = %I64u", from, to, m_Header->count);
 
         // @NOTE(Roman): Duh, we gotta do that because of destructors.
         //               In C we'd just ZeroMemory this region.
@@ -158,16 +160,22 @@ public:
 
     void Clear()
     {
-        // @NOTE(Roman): Duh, we gotta do that because of destructors.
-        //               In C we'd just ZeroMemory this region.
-        for (T *it = m_Header->data; it < m_Header->data + m_Header->count; ++it)
-        {
-            it->~T();
-        }
-
+        DestroyAll();
         ZeroMemory(m_Header->data, m_Header->count * sizeof(T));
 
         m_Header->count = 0;
+    }
+
+    u64 Find(const T& what) const
+    {
+        for (u64 i = 0; i < m_Header->count; ++i)
+        {
+            if (m_Header->data[i] == what)
+            {
+                return i;
+            }
+        }
+        return npos;
     }
 
     u64 Count()     const { return m_Header->count;             }
@@ -195,8 +203,10 @@ public:
     {
         if (m_Header != other->m_Header)
         {
-            m_Header = cast<Header *>(other.m_Header->allocator->ReAllocateAligned(sizeof(Header) + other.m_Header->capacity * sizeof(T),
-                                                                                          other.m_Header->alignment_in_bytes));
+            DestroyAll();
+            m_Header = cast<Header *>(other.m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                                                                                   sizeof(Header) + other.m_Header->capacity * sizeof(T),
+                                                                                   other.m_Header->alignment_in_bytes));
             CopyMemory(m_Header, other.m_Header, sizeof(Header) + other.m_Header->count * sizeof(T));
         }
         return *this;
@@ -206,6 +216,7 @@ public:
     {
         if (m_Header != other->m_Header)
         {
+            DestroyAll();
             if (m_Header) m_Header->allocator->DeAllocA(m_Header);
             m_Header       = other.m_Header;
             other.m_Header = null;
@@ -231,17 +242,25 @@ private:
         if (m_Header->count > m_Header->capacity)
         {
             m_Header->capacity *= 2;
-            m_Header            = cast<Header *>(allocator->ReAllocateAligned(cast<void *>(m_Header),
-                                                                                     sizeof(Header) + m_Header->capacity * sizeof(T),
-                                                                                     m_Header->alignment_in_bytes));
+            m_Header            = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                                                                                        sizeof(Header) + m_Header->capacity * sizeof(T),
+                                                                                        m_Header->alignment_in_bytes));
         }
         // @Issue(Roman): Do we need to fit the buffer if its capacity is a way bigger than number of elements in it?
         else if (2 * m_Header->count < m_Header->capacity)
         {
             m_Header->capacity = 2 * m_Header->count;
-            m_Header           = cast<Header *>(allocator->ReAllocateAligned(cast<void *>(m_Header),
-                                                                                    sizeof(Header) + m_Header->capacity * sizeof(T),
-                                                                                    m_Header->alignment_in_bytes));
+            m_Header           = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                                                                                       sizeof(Header) + m_Header->capacity * sizeof(T),
+                                                                                       m_Header->alignment_in_bytes));
+        }
+    }
+
+    void DestroyAll()
+    {
+        for (T *it = m_Header->data; it < m_Header->data + m_Header->count; ++it)
+        {
+            it->~T();
         }
     }
 

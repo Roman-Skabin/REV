@@ -93,23 +93,23 @@ public:
         }
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>>
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>>
     void Insert(in Node *where, in const U&... elements)
     {
-        (..., InsertOne(where)->m_Data = elements);
+        (..., (InsertOne(where)->m_Data = elements));
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>>
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>>
     void Insert(in Node *where, in U&&... elements)
     {
-        (..., InsertOne(where)->m_Data = RTTI::move(elements));
+        (..., (InsertOne(where)->m_Data = RTTI::move(elements)));
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushFront(in const U&... elements) { Insert(m_First, elements...); }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushBack(in const U&... elements)  { Insert(null,    elements...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushFront(in const U&... elements) { Insert(m_First, elements...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushBack(in const U&... elements)  { Insert(null,    elements...); }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushFront(in U&&... elements) { Insert(m_First, RTTI::forward<U>(elements)...); }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::is_same_v<T, U>...>> void PushBack(in U&&... elements)  { Insert(null,    RTTI::forward<U>(elements)...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushFront(in U&&... elements) { Insert(m_First, RTTI::forward<U>(elements)...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushBack(in U&&... elements)  { Insert(null,    RTTI::forward<U>(elements)...); }
 
     template<typename ...ConstructorArgs>
     void Emplace(in Node *where, in const ConstructorArgs&... args)
@@ -129,23 +129,14 @@ public:
     template<typename ...ConstructorArgs> void EmplaceFront(in ConstructorArgs&&... args) { Emplace(m_First, RTTI::forward<ConstructorArgs>(args)...); }
     template<typename ...ConstructorArgs> void EmplaceBack(in ConstructorArgs&&... args)  { Emplace(null,    RTTI::forward<ConstructorArgs>(args)...); }
 
-    void Erase(in Node *what)
+    template<typename ...Nodes, typename = RTTI::enable_if_t<RTTI::are_same_v<Node, Nodes...>>>
+    void Erase(in Nodes *... what)
     {
-        Node *prev = what->m_Prev;
-        Node *next = what->m_Next;
-
-        if (prev) prev->m_Next = m_Next;
-        if (next) next->m_Prev = m_Prev;
-
-        if (what == m_Firts) m_First = next;
-        if (what == m_Last ) m_Last  = prev;
-
-        m_Allocator.DeAlloc(what);
-        --m_Count;
+        (..., EraseOne(what));
     }
 
-    void EraseFront() { Erase(m_First); }
-    void EraseBack()  { Erase(m_Back);  }
+    void EraseFront() { EraseOne(m_First); }
+    void EraseBack()  { EraseOne(m_Back);  }
 
     void Clear()
     {
@@ -154,7 +145,7 @@ public:
             it->m_Data.~T();
 
             Node *next = it->m_Next;
-            m_Allocator.DeAlloc(it);
+            m_Allocator->DeAlloc(it);
             it = next;
         }
 
@@ -197,7 +188,7 @@ public:
     Node *operator[](in u64 index)
     {
         CheckM(index < m_Count, "Expected max index: %I64u, got: %I64u", m_Count - 1, index);
-        Node *node = m_Fisrt;
+        Node *node = m_First;
         for (u64 i = 0; i < index; ++i)
         {
             node = node->m_Next;
@@ -219,7 +210,7 @@ public:
 private:
     Node *InsertOne(Node *where)
     {
-        Node *node = m_Allocator.Alloc<Node>();
+        Node *node = m_Allocator->Alloc<Node>();
         ++m_Count;
 
         node->m_Prev = where ? where->m_Prev : m_Last;
@@ -231,6 +222,21 @@ private:
         if (!where          ) m_Last               = node;
 
         return node;
+    }
+
+    void EraseOne(Node *what)
+    {
+        Node *prev = what->m_Prev;
+        Node *next = what->m_Next;
+
+        if (prev) prev->m_Next = next;
+        if (next) next->m_Prev = prev;
+
+        if (what == m_First) m_First = next;
+        if (what == m_Last ) m_Last  = prev;
+
+        m_Allocator->DeAlloc(what);
+        --m_Count;
     }
 
 private:

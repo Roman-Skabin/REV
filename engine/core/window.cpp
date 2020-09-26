@@ -105,6 +105,7 @@ Window::Window(const Logger& logger,
     wca.lpfnWndProc   = WindowProc;
     wca.hInstance     = m_Instance;
     wca.hCursor       = LoadCursorA(0, IDC_ARROW);
+    wca.hbrBackground = GetSysColorBrush(COLOR_BACKGROUND);
     wca.lpszClassName = m_Title;
     DebugResult(RegisterClassA(&wca));
 

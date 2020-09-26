@@ -115,7 +115,7 @@ Logger::~Logger()
 {
     if (m_File || m_Console || m_Target != TARGET::NONE)
     {
-        LogInfo("%s was destroyed", m_Name);
+        LogInfo("%s has been destroyed", m_Name);
     }
 
     if (m_File && (m_Target & TARGET::FILE) != TARGET::NONE)

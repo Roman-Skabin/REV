@@ -27,10 +27,11 @@ enum
 class ENGINE_IMPEXP WorkQueue final
 {
 public:
-    static WorkQueue *Create(in Memory& memory, const Logger& logger);
+    static WorkQueue *Create(const Logger& logger);
+    static WorkQueue *Get();
 
 private:
-    WorkQueue(in Memory& memory, in const Logger& logger);
+    WorkQueue(in const Logger& logger);
 
 public:
     WorkQueue(in WorkQueue&& other) noexcept;
@@ -55,4 +56,6 @@ private:
     volatile s32   m_NextEntryToRead;
     volatile s32   m_NextEntryToWrite;
     WorkQueueEntry m_Entries[MAX_ENTRIES];
+
+    static WorkQueue *s_WorkQueue;
 };

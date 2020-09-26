@@ -30,7 +30,7 @@ global u64 gFactTable[21] =
     2432902008176640000  // fact(20)
 };
 
-u64 MATH_CALL fact(u8 value)
+u64 __vectorcall fact(u8 value)
 {
     return value <= 20 ? gFactTable[value] : 0;
 }

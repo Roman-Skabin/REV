@@ -5,6 +5,10 @@
 #include "core/pch.h"
 #include "core/memory.h"
 
+//
+// Memory::Area
+//
+
 Memory::Area::Area()
     : base(null),
       size(0),
@@ -12,7 +16,7 @@ Memory::Area::Area()
 {
 }
 
-Memory::Area::Area(in Area&& other)
+Memory::Area::Area(in Area&& other) noexcept
     : base(other.base),
       size(other.size),
       capacity(other.capacity)
@@ -22,7 +26,7 @@ Memory::Area::Area(in Area&& other)
     other.capacity = 0;
 }
 
-Memory::Area& Memory::Area::operator=(in Area&& other)
+Memory::Area& Memory::Area::operator=(in Area&& other) noexcept
 {
     if (this != &other)
     {
@@ -35,6 +39,26 @@ Memory::Area& Memory::Area::operator=(in Area&& other)
         other.capacity = 0;
     }
     return *this;
+}
+
+//
+// Memory
+//
+
+Memory *Memory::s_Memory = null;
+
+Memory *Memory::Create(in u64 transient_area_capacity, in u64 permanent_area_capacity)
+{
+    CheckM(!s_Memory, "Memory is already created. Use Memory::Get() function instead");
+    local Memory memory(transient_area_capacity, permanent_area_capacity);
+    s_Memory = &memory;
+    return s_Memory;
+}
+
+Memory *Memory::Get()
+{
+    CheckM(s_Memory, "Memory is not created yet");
+    return s_Memory;
 }
 
 Memory::Memory(in u64 transient_area_capacity, in u64 permanent_area_capacity)
@@ -63,25 +87,20 @@ Memory::Memory(in u64 transient_area_capacity, in u64 permanent_area_capacity)
     m_PermanentArea.size = 0;
 }
 
-Memory::Memory(in Memory&& other)
-    : m_TransientArea(RTTI::move(other.m_TransientArea)),
-      m_PermanentArea(RTTI::move(other.m_PermanentArea))
-{
-}
-
 Memory::~Memory()
 {
     if (m_TransientArea.base)
     {
         DebugResult(VirtualFree(m_TransientArea.base, 0, MEM_RELEASE));
-        m_TransientArea.base = null;
-    }
-    m_TransientArea.size     = 0;
-    m_TransientArea.capacity = 0;
 
-    m_PermanentArea.base     = null;
-    m_PermanentArea.size     = 0;
-    m_PermanentArea.capacity = 0;
+        m_TransientArea.base     = null;
+        m_TransientArea.size     = 0;
+        m_TransientArea.capacity = 0;
+
+        m_PermanentArea.base     = null;
+        m_PermanentArea.size     = 0;
+        m_PermanentArea.capacity = 0;
+    }
 }
 
 void *Memory::PushToTransientArea(in u64 bytes)

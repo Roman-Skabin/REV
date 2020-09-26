@@ -52,9 +52,13 @@ void memset_any(T *mem, T&& val, u64 count)
 class ENGINE_IMPEXP Memory final
 {
 public:
-    Memory(in u64 transient_area_capacity, in u64 permanent_area_capacity);
-    Memory(in Memory&& other);
+    static Memory *Create(in u64 transient_area_capacity, in u64 permanent_area_capacity);
+    static Memory *Get();
 
+private:
+    Memory(in u64 transient_area_capacity, in u64 permanent_area_capacity);
+
+public:
     ~Memory();
 
     void *PushToTransientArea(in u64 bytes);
@@ -70,11 +74,12 @@ public:
     template<typename T> constexpr T *PushToPA(in u64 count = 1)                         { return cast<T *>(PushToPermanentArea(count * sizeof(T)));                   }
     template<typename T> constexpr T *PushToPAA(in u64 count = 1, opt u64 alignment = 0) { return cast<T *>(PushToPermanentAreaAligned(count * sizeof(T), alignment)); }
 
-    Memory& operator=(Memory&& other);
-
 private:
     Memory(const Memory&) = delete;
+    Memory(Memory&&)      = delete;
+
     Memory& operator=(const Memory&) = delete;
+    Memory& operator=(Memory&&)      = delete;
 
 private:
     struct ENGINE_IMPEXP Area final
@@ -84,9 +89,9 @@ private:
         u64   capacity;
 
         Area();
-        Area(in Area&& other);
+        Area(in Area&& other) noexcept;
 
-        Area& operator=(in Area&& other);
+        Area& operator=(in Area&& other) noexcept;
 
         Area(const Area&) = delete;
         Area& operator=(const Area&) = delete;
@@ -94,4 +99,6 @@ private:
 
     Area m_TransientArea;
     Area m_PermanentArea;
+
+    static Memory *s_Memory;
 };

@@ -4,6 +4,7 @@
 
 #include "core/pch.h"
 #include "core/window.h"
+#include "core/input.h"
 
 //
 // Monitor
@@ -81,34 +82,28 @@ Monitor& Monitor::operator=(Monitor&& other) noexcept
 // Window
 //
 
-Window::Window(Memory&           memory,
-               OnResizeProc     *OnResize,
-               OnMouseEventProc *OnMouseEvent,
-               const Logger&     logger,
-               const char       *title,
-               v2s               size,
-               v2s               pos,
-               HINSTANCE         instance)
+Window::Window(const Logger& logger,
+               OnResizeProc *OnResize,
+               const char   *title,
+               v2s           size,
+               v2s           pos)
     : m_Monitor(),
-      m_Instance(instance ? instance : cast<HINSTANCE>(GetModuleHandleA(null))),
+      m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
       m_Handle(null),
       m_Context(null),
       m_Title(title),
       m_Pos(pos),
       m_Size(size),
-      m_Flags(FLAGS::NONE),
+      m_Flags(FLAGS::CLOSED),
       m_Logger(logger),
-      OnResizeCallback(OnResize),
-      OnMouseEventCallback(OnMouseEvent),
-      m_Memory(memory)
+      OnResizeCallback(OnResize)
 {
-    CheckM(OnResize, "OnResizes can't be null");
-    CheckM(OnMouseEvent, "OnMouseEvent can't be null");
+    // CheckM(OnResize, "OnResize can't be null");
 
     WNDCLASSA wca     = {0};
     wca.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
     wca.lpfnWndProc   = WindowProc;
-    wca.hInstance     = instance;
+    wca.hInstance     = m_Instance;
     wca.hCursor       = LoadCursorA(0, IDC_ARROW);
     wca.lpszClassName = m_Title;
     DebugResult(RegisterClassA(&wca));
@@ -146,9 +141,7 @@ Window::Window(Window&& other) noexcept
       m_Size(other.m_Size),
       m_Flags(other.m_Flags),
       m_Logger(RTTI::move(other.m_Logger)),
-      OnResizeCallback(other.OnResizeCallback),
-      OnMouseEventCallback(other.OnMouseEventCallback),
-      m_Memory(RTTI::move(other.m_Memory))
+      OnResizeCallback(other.OnResizeCallback)
 {
     other.m_Instance = null;
     other.m_Handle   = null;
@@ -160,7 +153,8 @@ Window::~Window()
     if (m_Instance)
     {
         DebugResult(UnregisterClassA(m_Title, m_Instance));
-        m_Logger.LogInfo("Window \"%s\" was destroyed", m_Title);
+        m_Instance = null;
+        m_Logger.LogInfo("Window \"%s\" has been destroyed", m_Title);
     }
 }
 
@@ -191,6 +185,12 @@ void Window::PollEvents()
     }
 }
 
+void Window::Show()
+{
+    ShowWindow(m_Handle, SW_SHOW);
+    m_Flags &= ~FLAGS::CLOSED;
+}
+
 bool Window::Closed() const
 {
     return (m_Flags & FLAGS::CLOSED) != FLAGS::NONE;
@@ -206,31 +206,27 @@ bool Window::Fullscreened() const
     return (m_Flags & FLAGS::FULLSCREENED) != FLAGS::NONE;
 }
 
-void Window::Show()
-{
-    ShowWindow(m_Handle, SW_SHOW);
-}
-
 Window& Window::operator=(Window&& other) noexcept
 {
     if (this != &other)
     {
-        m_Monitor            = RTTI::move(other.m_Monitor);
-        m_Instance           = other.m_Instance;
-        m_Handle             = other.m_Handle;
-        m_Context            = other.m_Context;
-        m_Title              = other.m_Title;
-        m_Pos                = other.m_Pos;
-        m_Size               = other.m_Size;
-        m_Flags              = other.m_Flags;
-        const_cast<Logger&>(m_Logger) = RTTI::move(other.m_Logger);
-        OnResizeCallback     = other.OnResizeCallback;
-        OnMouseEventCallback = other.OnMouseEventCallback;
-        m_Memory             = RTTI::move(other.m_Memory);
+        m_Monitor        = RTTI::move(other.m_Monitor);
+        m_Instance       = other.m_Instance;
+        m_Handle         = other.m_Handle;
+        m_Context        = other.m_Context;
+        m_Title          = other.m_Title;
+        m_Pos            = RTTI::move(other.m_Pos);
+        m_Size           = RTTI::move(other.m_Size);
+        m_Flags          = other.m_Flags;
+        m_Logger         = RTTI::move(other.m_Logger);
+        OnResizeCallback = other.OnResizeCallback;
 
-        other.m_Instance = null;
-        other.m_Handle   = null;
-        other.m_Context  = null;
+        other.m_Instance       = null;
+        other.m_Handle         = null;
+        other.m_Context        = null;
+        other.m_Title          = null;
+        other.m_Flags          = FLAGS::NONE;
+        other.OnResizeCallback = null;
     }
     return *this;
 }
@@ -300,7 +296,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             #endif
             #endif
 
-                window->OnResizeCallback(new_size);
+                if (window->OnResizeCallback) window->OnResizeCallback(new_size);
 
                 window->m_Size = new_size;
                 window->m_Flags |= Window::FLAGS::RESIZED;
@@ -320,51 +316,12 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             UINT bytes = 0;
             GetRawInputData(raw_input_handle, RID_INPUT, 0, &bytes, sizeof(RAWINPUTHEADER));
 
-            RAWINPUT *raw_input = cast<RAWINPUT *>(window->m_Memory.PushToTransientArea(bytes));
+            RAWINPUT *raw_input = cast<RAWINPUT *>(Memory::Get()->PushToTransientArea(bytes));
 
             if (GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &bytes, sizeof(RAWINPUTHEADER)) == bytes
             &&  raw_input->header.dwType == RIM_TYPEMOUSE)
             {
-            // @TODO(Roman): Move to the OnInputCallback.
-            #if 0
-                engine->input.mouse.dpos.x =  raw_mouse.lLastX;
-                engine->input.mouse.dpos.y = -raw_mouse.lLastY;
-
-                engine->input.mouse.pos.x += engine->input.mouse.dpos.x;
-                engine->input.mouse.pos.y += engine->input.mouse.dpos.y;
-
-                if (raw_mouse.ulButtons & RI_MOUSE_WHEEL)
-                {
-                    engine->input.mouse.dwheel  = cast(s16, raw_mouse.usButtonData) / WHEEL_DELTA;
-                    engine->input.mouse.wheel  += engine->input.mouse.dwheel;
-                }
-
-                b32 down = engine->input.mouse.left_button.down;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) down = true;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.left_button, down);
-
-                down = engine->input.mouse.right_button.down;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) down = true;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.right_button, down);
-
-                down = engine->input.mouse.middle_button.down;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) down = true;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.middle_button, down);
-
-                down = engine->input.mouse.x1_button.down;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_BUTTON_4_DOWN) down = true;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_BUTTON_4_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.x1_button, down);
-
-                down = engine->input.mouse.x2_button.down;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_BUTTON_5_DOWN) down = true;
-                if (raw_mouse.usButtonFlags & RI_MOUSE_BUTTON_5_UP  ) down = false;
-                DigitalButtonPull(&engine->input.mouse.x2_button, down);
-            #endif
-                window->OnMouseEventCallback(raw_input->data.mouse);
+                Input::Get()->m_Mouse.UpdateState(raw_input->data.mouse);
             }
 
             result = DefWindowProcA(handle, message, wparam, lparam);

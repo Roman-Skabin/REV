@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "math/math.h"
 
 #pragma pack(push, 1)
 
@@ -21,15 +21,15 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) xmm
     xmm(const xmm& v) : f(v.f)              {}
     xmm(xmm&&      v) : f(v.f)              {}
 
-    MATH_CALL operator __m128()  const { return f; }
-    MATH_CALL operator __m128i() const { return i; }
-    MATH_CALL operator __m128d() const { return d; }
+    __vectorcall operator __m128()  const { return f; }
+    __vectorcall operator __m128i() const { return i; }
+    __vectorcall operator __m128d() const { return d; }
 
-    xmm& MATH_CALL operator=(__m128     v) { f = v;   return *this; }
-    xmm& MATH_CALL operator=(__m128i    v) { i = v;   return *this; }
-    xmm& MATH_CALL operator=(__m128d    v) { d = v;   return *this; }
-    xmm& MATH_CALL operator=(const xmm& v) { f = v.f; return *this; }
-    xmm& MATH_CALL operator=(xmm&&      v) { f = v.f; return *this; }
+    xmm& __vectorcall operator=(__m128     v) { f = v;   return *this; }
+    xmm& __vectorcall operator=(__m128i    v) { i = v;   return *this; }
+    xmm& __vectorcall operator=(__m128d    v) { d = v;   return *this; }
+    xmm& __vectorcall operator=(const xmm& v) { f = v.f; return *this; }
+    xmm& __vectorcall operator=(xmm&&      v) { f = v.f; return *this; }
 };
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -46,15 +46,15 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) ymm
     ymm(const ymm& v) : f(v.f)                 {}
     ymm(ymm&&      v) : f(v.f)                 {}
 
-    MATH_CALL operator __m256()  const { return f; }
-    MATH_CALL operator __m256i() const { return i; }
-    MATH_CALL operator __m256d() const { return d; }
+    __vectorcall operator __m256()  const { return f; }
+    __vectorcall operator __m256i() const { return i; }
+    __vectorcall operator __m256d() const { return d; }
 
-    ymm& MATH_CALL operator=(__m256     v) { f = v;   return *this; }
-    ymm& MATH_CALL operator=(__m256i    v) { i = v;   return *this; }
-    ymm& MATH_CALL operator=(__m256d    v) { d = v;   return *this; }
-    ymm& MATH_CALL operator=(const ymm& v) { f = v.f; return *this; }
-    ymm& MATH_CALL operator=(ymm&&      v) { f = v.f; return *this; }
+    ymm& __vectorcall operator=(__m256     v) { f = v;   return *this; }
+    ymm& __vectorcall operator=(__m256i    v) { i = v;   return *this; }
+    ymm& __vectorcall operator=(__m256d    v) { d = v;   return *this; }
+    ymm& __vectorcall operator=(const ymm& v) { f = v.f; return *this; }
+    ymm& __vectorcall operator=(ymm&&      v) { f = v.f; return *this; }
 };
 #endif
 
@@ -72,15 +72,15 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(64) zmm
     zmm(const zmm& v) : f(v.f)                 {}
     zmm(zmm&&      v) : f(v.f)                 {}
 
-    MATH_CALL operator __m512()  const { return f; }
-    MATH_CALL operator __m512i() const { return i; }
-    MATH_CALL operator __m512d() const { return d; }
+    __vectorcall operator __m512()  const { return f; }
+    __vectorcall operator __m512i() const { return i; }
+    __vectorcall operator __m512d() const { return d; }
 
-    zmm& MATH_CALL operator=(__m512     v) { f = v;   return *this; }
-    zmm& MATH_CALL operator=(__m512i    v) { i = v;   return *this; }
-    zmm& MATH_CALL operator=(__m512d    v) { d = v;   return *this; }
-    zmm& MATH_CALL operator=(const zmm& v) { f = v.f; return *this; }
-    zmm& MATH_CALL operator=(zmm&&      v) { f = v.f; return *this; }
+    zmm& __vectorcall operator=(__m512     v) { f = v;   return *this; }
+    zmm& __vectorcall operator=(__m512i    v) { i = v;   return *this; }
+    zmm& __vectorcall operator=(__m512d    v) { d = v;   return *this; }
+    zmm& __vectorcall operator=(const zmm& v) { f = v.f; return *this; }
+    zmm& __vectorcall operator=(zmm&&      v) { f = v.f; return *this; }
 };
 #endif
 
@@ -157,7 +157,7 @@ enum class MM_SHUFFLE // for _mm_shuffle_*
 };
 
 template<typename T, typename U>
-INLINE b32 MATH_CALL mm_equals(T *a, U *b)
+INLINE b32 __vectorcall mm_equals(T *a, U *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(*cast<__m128i *>(a),
@@ -171,7 +171,7 @@ INLINE b32 MATH_CALL mm_equals(T *a, U *b)
 }
 
 template<typename T, typename U>
-INLINE b32 MATH_CALL mm256_equals(T *a, U *b)
+INLINE b32 __vectorcall mm256_equals(T *a, U *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0x0F == _mm256_cmpeq_epi64_mask(*cast<__m256i *>(a),
@@ -200,7 +200,7 @@ INLINE b32 MATH_CALL mm256_equals(T *a, U *b)
 }
 
 template<typename T, typename U>
-INLINE b32 MATH_CALL mm512_equals(T *a, U *b)
+INLINE b32 __vectorcall mm512_equals(T *a, U *b)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0xFF == _mm512_cmpeq_epi64_mask(*cast<__m512i *>(a),
@@ -238,47 +238,47 @@ INLINE b32 MATH_CALL mm512_equals(T *a, U *b)
 }
 
 #undef _MM_EXTRACT_FLOAT
-template<u8 index> INLINE f32 MATH_CALL mm_extract_f32(__m128  mm) { return reg32(_mm_extract_ps(mm, index)).f; }
-template<u8 index> INLINE s32 MATH_CALL mm_extract_s32(__m128i mm) { return _mm_extract_epi32(mm, index); }
-template<u8 index> INLINE u32 MATH_CALL mm_extract_u32(__m128i mm) { return cast<u32>(_mm_extract_epi32(mm, index)); }
+template<u8 index> INLINE f32 __vectorcall mm_extract_f32(__m128  mm) { return reg32(_mm_extract_ps(mm, index)).f; }
+template<u8 index> INLINE s32 __vectorcall mm_extract_s32(__m128i mm) { return _mm_extract_epi32(mm, index); }
+template<u8 index> INLINE u32 __vectorcall mm_extract_u32(__m128i mm) { return cast<u32>(_mm_extract_epi32(mm, index)); }
 
-template<> INLINE f32 MATH_CALL mm_extract_f32<0>(__m128  mm) { return _mm_cvtss_f32(mm); }
-template<> INLINE s32 MATH_CALL mm_extract_s32<0>(__m128i mm) { return _mm_cvtsi128_si32(mm); }
-template<> INLINE u32 MATH_CALL mm_extract_u32<0>(__m128i mm) { return cast<u32>(_mm_cvtsi128_si32(mm)); }
+template<> INLINE f32 __vectorcall mm_extract_f32<0>(__m128  mm) { return _mm_cvtss_f32(mm); }
+template<> INLINE s32 __vectorcall mm_extract_s32<0>(__m128i mm) { return _mm_cvtsi128_si32(mm); }
+template<> INLINE u32 __vectorcall mm_extract_u32<0>(__m128i mm) { return cast<u32>(_mm_cvtsi128_si32(mm)); }
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX
-    template<u8 index> INLINE f32 MATH_CALL mm_extract_f32(__m256  mm) { return reg32(_mm256_extract_epi32(ymm(mm).i, index)).f; }
-    template<u8 index> INLINE s32 MATH_CALL mm_extract_s32(__m256i mm) { return _mm256_extract_epi32(mm, index); }
-    template<u8 index> INLINE u32 MATH_CALL mm_extract_u32(__m256i mm) { return cast<u32>(_mm256_extract_epi32(mm, index)); }
+    template<u8 index> INLINE f32 __vectorcall mm_extract_f32(__m256  mm) { return reg32(_mm256_extract_epi32(ymm(mm).i, index)).f; }
+    template<u8 index> INLINE s32 __vectorcall mm_extract_s32(__m256i mm) { return _mm256_extract_epi32(mm, index); }
+    template<u8 index> INLINE u32 __vectorcall mm_extract_u32(__m256i mm) { return cast<u32>(_mm256_extract_epi32(mm, index)); }
 
-    template<> INLINE f32 MATH_CALL mm_extract_f32<0>(__m256  mm) { return _mm_cvtss_f32(_mm256_castps256_ps128(mm)); }
-    template<> INLINE s32 MATH_CALL mm_extract_s32<0>(__m256i mm) { return _mm_cvtsi128_si32(_mm256_castsi256_si128(mm)); }
-    template<> INLINE u32 MATH_CALL mm_extract_u32<0>(__m256i mm) { return cast<u32>(_mm_cvtsi128_si32(_mm256_castsi256_si128(mm))); }
+    template<> INLINE f32 __vectorcall mm_extract_f32<0>(__m256  mm) { return _mm_cvtss_f32(_mm256_castps256_ps128(mm)); }
+    template<> INLINE s32 __vectorcall mm_extract_s32<0>(__m256i mm) { return _mm_cvtsi128_si32(_mm256_castsi256_si128(mm)); }
+    template<> INLINE u32 __vectorcall mm_extract_u32<0>(__m256i mm) { return cast<u32>(_mm_cvtsi128_si32(_mm256_castsi256_si128(mm))); }
 #endif
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
-    template<u8 index> INLINE f32 MATH_CALL mm_extract_f32(__m512  mm) { return reg32(_mm_extract_ps(_mm512_extractf32x4_ps(mm, index / 4), index % 4)).f; }
-    template<u8 index> INLINE s32 MATH_CALL mm_extract_s32(__m512i mm) { return _mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4); }
-    template<u8 index> INLINE u32 MATH_CALL mm_extract_u32(__m512i mm) { return cast<u32>(_mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4)); }
+    template<u8 index> INLINE f32 __vectorcall mm_extract_f32(__m512  mm) { return reg32(_mm_extract_ps(_mm512_extractf32x4_ps(mm, index / 4), index % 4)).f; }
+    template<u8 index> INLINE s32 __vectorcall mm_extract_s32(__m512i mm) { return _mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4); }
+    template<u8 index> INLINE u32 __vectorcall mm_extract_u32(__m512i mm) { return cast<u32>(_mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4)); }
 
-    template<> INLINE f32 MATH_CALL mm_extract_f32<0>(__m512  mm) { return _mm512_cvtss_f32(mm); }
-    template<> INLINE s32 MATH_CALL mm_extract_s32<0>(__m512i mm) { return _mm512_cvtsi512_si32(mm); }
-    template<> INLINE u32 MATH_CALL mm_extract_u32<0>(__m512i mm) { return cast<u32>(_mm512_cvtsi512_si32(mm)); }
+    template<> INLINE f32 __vectorcall mm_extract_f32<0>(__m512  mm) { return _mm512_cvtss_f32(mm); }
+    template<> INLINE s32 __vectorcall mm_extract_s32<0>(__m512i mm) { return _mm512_cvtsi512_si32(mm); }
+    template<> INLINE u32 __vectorcall mm_extract_u32<0>(__m512i mm) { return cast<u32>(_mm512_cvtsi512_si32(mm)); }
 #endif
 
-template<u8 index> INLINE __m128  MATH_CALL mm_insert_f32(__m128  mm, f32 val) { return xmm(_mm_insert_epi32(xmm(mm).i, reg32(val).i, index)).f; }
-template<u8 index> INLINE __m128i MATH_CALL mm_insert_s32(__m128i mm, s32 val) { return _mm_insert_epi32(mm, val, index); }
-template<u8 index> INLINE __m128i MATH_CALL mm_insert_u32(__m128i mm, u32 val) { return _mm_insert_epi32(mm, val, index); }
+template<u8 index> INLINE __m128  __vectorcall mm_insert_f32(__m128  mm, f32 val) { return xmm(_mm_insert_epi32(xmm(mm).i, reg32(val).i, index)).f; }
+template<u8 index> INLINE __m128i __vectorcall mm_insert_s32(__m128i mm, s32 val) { return _mm_insert_epi32(mm, val, index); }
+template<u8 index> INLINE __m128i __vectorcall mm_insert_u32(__m128i mm, u32 val) { return _mm_insert_epi32(mm, val, index); }
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX
-    template<u8 index> INLINE __m256  MATH_CALL mm_insert_f32(__m256  mm, f32 val) { return ymm(_mm256_insert_epi32(ymm(mm).i, reg32(val).i, index)).f; }
-    template<u8 index> INLINE __m256i MATH_CALL mm_insert_s32(__m256i mm, s32 val) { return _mm256_insert_epi32(mm, val, index); }
-    template<u8 index> INLINE __m256i MATH_CALL mm_insert_u32(__m256i mm, u32 val) { return _mm256_insert_epi32(mm, val, index); }
+    template<u8 index> INLINE __m256  __vectorcall mm_insert_f32(__m256  mm, f32 val) { return ymm(_mm256_insert_epi32(ymm(mm).i, reg32(val).i, index)).f; }
+    template<u8 index> INLINE __m256i __vectorcall mm_insert_s32(__m256i mm, s32 val) { return _mm256_insert_epi32(mm, val, index); }
+    template<u8 index> INLINE __m256i __vectorcall mm_insert_u32(__m256i mm, u32 val) { return _mm256_insert_epi32(mm, val, index); }
 #endif
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     template<u8 index>
-    INLINE __m512 MATH_CALL mm_insert_f32(__m512 mm, f32 val)
+    INLINE __m512 __vectorcall mm_insert_f32(__m512 mm, f32 val)
     {
         __m128 paste = _mm512_extractf32x4_ps(mm, index / 4);
         paste = xmm(_mm_insert_epi32(xmm(paste).i, reg32(val).i, index % 4)).f;
@@ -286,7 +286,7 @@ template<u8 index> INLINE __m128i MATH_CALL mm_insert_u32(__m128i mm, u32 val) {
     }
 
     template<u8 index>
-    INLINE __m512i MATH_CALL mm_insert_s32(__m512i mm, s32 val)
+    INLINE __m512i __vectorcall mm_insert_s32(__m512i mm, s32 val)
     {
         __m128i paste = _mm512_extracti32x4_epi32(mm, index / 4);
         paste = _mm_insert_epi32(paste, val, index % 4);
@@ -294,7 +294,7 @@ template<u8 index> INLINE __m128i MATH_CALL mm_insert_u32(__m128i mm, u32 val) {
     }
 
     template<u8 index>
-    INLINE __m512i MATH_CALL mm_insert_u32(__m512i mm, u32 val)
+    INLINE __m512i __vectorcall mm_insert_u32(__m512i mm, u32 val)
     {
         __m128i paste = _mm512_extracti32x4_epi32(mm, index / 4);
         paste = _mm_insert_epi32(paste, val, index % 4);

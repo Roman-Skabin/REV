@@ -11,14 +11,23 @@ typedef struct WorkQueueThread
     u32        id;
 } WorkQueueThread;
 
-WorkQueue *WorkQueue::Create(in Memory& memory, in const Logger& logger)
+WorkQueue *WorkQueue::s_WorkQueue = null;
+
+WorkQueue *WorkQueue::Create(in const Logger& logger)
 {
-    WorkQueue *work_queue = memory.PushToPA<WorkQueue>();
-    *work_queue = WorkQueue(memory, logger);
-    return work_queue;
+    CheckM(!s_WorkQueue, "Work queue is already created. Use WorkQueue::Get() function instead");
+    s_WorkQueue  = Memory::Get()->PushToPA<WorkQueue>();
+    *s_WorkQueue = WorkQueue(logger);
+    return s_WorkQueue;
 }
 
-WorkQueue::WorkQueue(in Memory& memory, in const Logger& logger)
+WorkQueue *WorkQueue::Get()
+{
+    CheckM(s_WorkQueue, "Work queue is not created yet");
+    return s_WorkQueue;
+}
+
+WorkQueue::WorkQueue(in const Logger& logger)
     : m_Semaphore(null),
       m_CompletionGoal(0),
       m_EntriesCompleted(0),
@@ -32,7 +41,7 @@ WorkQueue::WorkQueue(in Memory& memory, in const Logger& logger)
     s32 cpu_virtual_threads_count = info.dwNumberOfProcessors - 1; // minus main thread
     if (cpu_virtual_threads_count <= 0) cpu_virtual_threads_count = 1;
 
-    WorkQueueThread *threads = memory.PushToPA<WorkQueueThread>(cpu_virtual_threads_count);
+    WorkQueueThread *threads = Memory::Get()->PushToPA<WorkQueueThread>(cpu_virtual_threads_count);
 
     m_Semaphore = CreateSemaphoreExA(0, 0, cpu_virtual_threads_count, 0, 0, SEMAPHORE_ALL_ACCESS);
     Check(m_Semaphore);
@@ -127,8 +136,6 @@ WorkQueue& WorkQueue::operator=(in WorkQueue&& other) noexcept
 
 u32 WINAPI ThreadProc(in void *arg)
 {
-    DebugResult(SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL));
-
     WorkQueueThread *thread = (WorkQueueThread *)arg;
     while (true)
     {

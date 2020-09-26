@@ -7,6 +7,8 @@
 #include "core/pch.h"
 #include "core/rtti.hpp"
 
+#pragma warning(disable: 4251)
+
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     #define ENGINE_DEFAULT_ALIGNMENT sizeof(__m512)
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
@@ -54,8 +56,6 @@
 #define ENGINE_FUN   ENGINE_IMPEXP
 #define ENGINE_DATA  ENGINE_IMPEXP
 #define ENGINE_CLASS ENGINE_IMPEXP
-
-#define MATH_CALL __vectorcall
 
 #if DEVDEBUG
     #define INLINE ENGINE_NOINLINE inline

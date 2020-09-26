@@ -96,12 +96,12 @@ if !COMPILE_SANDBOX! == 1 (
     set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
     set LANGUAGE= -Zc:wchar_t- -Zc:inline -std:c++17
     set DIAGNOSTICS= -W3
-    set IMPORT_LIBS= User32.lib bin\engine.lib
-    set LINKING=
+    set IMPORT_LIBS= bin\engine.lib
     set LINKER= -link
+    set LINKING=
     set INPUT_FILES=
     set PREPROCESSOR= -Iengine
-    set MISCELLANEOUS= -MP -TP
+    set MISCELLANEOUS= -TP
     set OUTPUT_FILES= -Fo:bin\obj\sandbox\ -Fe:bin\sandbox.exe
 
     for /F %%i in ('dir /A-D /S /B ..\sandbox\*.cpp') do (
@@ -127,7 +127,7 @@ if !COMPILE_SANDBOX! == 1 (
 
     pushd ..
         echo ==========================    Compiling sandbox...    ==========================
-        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! !DIAGNOSTICS! !LINKING! !INPUT_FILES! !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
+        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! !LINKING! !DIAGNOSTICS! !INPUT_FILES! !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
     popd
 
     ctime -end sandbox.time

@@ -5,7 +5,6 @@
 #pragma once
 
 #include "core/core.h"
-#include <corecrt_math.h>
 
 #define f64_E         2.71828182845904523536   // e
 #define f64_LOG2E     1.44269504088896340736   // log2(e)
@@ -35,7 +34,7 @@
 #define f32_SQRT2    CSTRCAT(f64_SQRT2, f)
 #define f32_1_SQRT_2 CSTRCAT(f64_1_SQRT_2, f)
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(4) reg32
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(4) reg32 final
 {
     f32 f;
     s32 s;
@@ -50,20 +49,20 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(4) reg32
     reg32(const reg32& v) : f(v.f)  {}
     reg32(reg32&&      v) : f(v.f)  {}
 
-    MATH_CALL operator f32() const { return f; }
-    MATH_CALL operator s32() const { return s; }
-    MATH_CALL operator u32() const { return u; }
-    MATH_CALL operator int() const { return i; }
+    __vectorcall operator f32() const { return f; }
+    __vectorcall operator s32() const { return s; }
+    __vectorcall operator u32() const { return u; }
+    __vectorcall operator int() const { return i; }
 
-    reg32& MATH_CALL operator=(f32          v) { f = v;   return *this; }
-    reg32& MATH_CALL operator=(s32          v) { s = v;   return *this; }
-    reg32& MATH_CALL operator=(u32          v) { u = v;   return *this; }
-    reg32& MATH_CALL operator=(int          v) { i = v;   return *this; }
-    reg32& MATH_CALL operator=(const reg32& v) { f = v.f; return *this; }
-    reg32& MATH_CALL operator=(reg32&&      v) { f = v.f; return *this; }
+    reg32& __vectorcall operator=(f32          v) { f = v;   return *this; }
+    reg32& __vectorcall operator=(s32          v) { s = v;   return *this; }
+    reg32& __vectorcall operator=(u32          v) { u = v;   return *this; }
+    reg32& __vectorcall operator=(int          v) { i = v;   return *this; }
+    reg32& __vectorcall operator=(const reg32& v) { f = v.f; return *this; }
+    reg32& __vectorcall operator=(reg32&&      v) { f = v.f; return *this; }
 };
 
-union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) reg64
+union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) reg64 final
 {
     f64   f;
     s64   s;
@@ -76,29 +75,29 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) reg64
     reg64(const reg64& v) : f(v.f) {}
     reg64(reg64&&      v) : f(v.f) {}
 
-    MATH_CALL operator   f64() const { return f; }
-    MATH_CALL operator   s64() const { return s; }
-    MATH_CALL operator   u64() const { return u; }
+    __vectorcall operator f64() const { return f; }
+    __vectorcall operator s64() const { return s; }
+    __vectorcall operator u64() const { return u; }
 
-    reg64& MATH_CALL operator=(f64          v) { f = v;   return *this; }
-    reg64& MATH_CALL operator=(s64          v) { s = v;   return *this; }
-    reg64& MATH_CALL operator=(u64          v) { u = v;   return *this; }
-    reg64& MATH_CALL operator=(const reg64& v) { f = v.f; return *this; }
-    reg64& MATH_CALL operator=(reg64&&      v) { f = v.f; return *this; }
+    reg64& __vectorcall operator=(f64          v) { f = v;   return *this; }
+    reg64& __vectorcall operator=(s64          v) { s = v;   return *this; }
+    reg64& __vectorcall operator=(u64          v) { u = v;   return *this; }
+    reg64& __vectorcall operator=(const reg64& v) { f = v.f; return *this; }
+    reg64& __vectorcall operator=(reg64&&      v) { f = v.f; return *this; }
 };
 
 template<typename T, typename = RTTI::enable_if_t<RTTI::is_floating_point_v<T>>>
-INLINE T MATH_CALL lerp(T start, T end, T percent)
+INLINE T __vectorcall lerp(T start, T end, T percent)
 {
     percent = __max(0, __min(1, percent));
     return (end - start) * percent + start;
 }
 
 template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>>
-INLINE T MATH_CALL clamp(T val, T min, T max)
+INLINE T __vectorcall clamp(T val, T min, T max)
 {
     return __max(min, __min(max, val));
 }
 
 // value <= 20
-ENGINE_FUN u64 MATH_CALL fact(u8 value);
+ENGINE_FUN u64 __vectorcall fact(u8 value);

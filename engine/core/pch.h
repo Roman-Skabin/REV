@@ -18,13 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
-//
-// CEngine includes
-//
-
-#include "core/core.h"
-#include "math/math.h"
+#include <corecrt_math.h>
 
 //
 // Platform independent intrinsics activation

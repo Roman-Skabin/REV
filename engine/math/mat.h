@@ -35,18 +35,18 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) m2 final
     m2(const m2& m                       ) : mm(m.mm)                                {}
     m2(m2&& m                            ) : mm(m.mm)                                {}
 
-    m2& MATH_CALL operator=(f32 val    ) { mm = _mm_set_ps1(val); return *this; }
-    m2& MATH_CALL operator=(f32 arr[4] ) { mm = _mm_load_ps(arr); return *this; }
-    m2& MATH_CALL operator=(__m128 _mm ) { mm = _mm;              return *this; }
-    m2& MATH_CALL operator=(const m2& m) { mm = m.mm;             return *this; }
-    m2& MATH_CALL operator=(m2&& m     ) { mm = m.mm;             return *this; }
+    m2& __vectorcall operator=(f32 val    ) { mm = _mm_set_ps1(val); return *this; }
+    m2& __vectorcall operator=(f32 arr[4] ) { mm = _mm_load_ps(arr); return *this; }
+    m2& __vectorcall operator=(__m128 _mm ) { mm = _mm;              return *this; }
+    m2& __vectorcall operator=(const m2& m) { mm = m.mm;             return *this; }
+    m2& __vectorcall operator=(m2&& m     ) { mm = m.mm;             return *this; }
 
-    f32 MATH_CALL det() const
+    f32 __vectorcall det() const
     {
         return e00 * e11 - e01 * e10;
     }
 
-    m2 MATH_CALL inverse() const
+    m2 __vectorcall inverse() const
     {
         __m128 vdet = _mm_set_ps1(e00 * e11 - e01 * e10);
         __m128 mult = _mm_setr_ps(1.0f, -1.0f, -1.0f, 1.0f);
@@ -54,24 +54,24 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) m2 final
         return m2(_mm_div_ps(_mm_mul_ps(cof, mult), vdet));
     }
 
-    m2 MATH_CALL transpose() const
+    m2 __vectorcall transpose() const
     {
         return m2(_mm_shuffle_ps(mm, mm, cast<s32>(MM_SHUFFLE::XZYW)));
     }
 
-    static m2 MATH_CALL identity()
+    static m2 __vectorcall identity()
     {
         return m2(1.0f, 0.0f,
                   0.0f, 1.0f);
     }
 
-    static m2 MATH_CALL scaling(f32 nx, f32 ny)
+    static m2 __vectorcall scaling(f32 nx, f32 ny)
     {
         return m2(  nx, 0.0f,
                   0.0f,   ny);
     }
 
-    static m2 MATH_CALL rotation_z(rad angle)
+    static m2 __vectorcall rotation_z(rad angle)
     {
         f32 s = sinf(angle);
         f32 c = cosf(angle);
@@ -79,34 +79,34 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) m2 final
                   s, c);
     }
 
-    static m2 MATH_CALL reflection_x()
+    static m2 __vectorcall reflection_x()
     {
         return m2(-1.0f, 0.0f,
                    0.0f, 1.0f);
     }
 
-    static m2 MATH_CALL reflection_y()
+    static m2 __vectorcall reflection_y()
     {
         return m2(1.0f,  0.0f,
                   0.0f, -1.0f);
     }
 
-    static m2 MATH_CALL reflection_xy()
+    static m2 __vectorcall reflection_xy()
     {
         return m2(-1.0f,  0.0f,
                    0.0f, -1.0f);
     }
 
-    static m2 MATH_CALL shearing(f32 shx, f32 shy)
+    static m2 __vectorcall shearing(f32 shx, f32 shy)
     {
         return m2(1.0f,  shx,
                    shy, 1.0f);
     }
 
-    m2& MATH_CALL operator+=(m2 r) { mm = _mm_add_ps(mm, r.mm); return *this; }
-    m2& MATH_CALL operator-=(m2 r) { mm = _mm_sub_ps(mm, r.mm); return *this; }
+    m2& __vectorcall operator+=(m2 r) { mm = _mm_add_ps(mm, r.mm); return *this; }
+    m2& __vectorcall operator-=(m2 r) { mm = _mm_sub_ps(mm, r.mm); return *this; }
 
-    m2& MATH_CALL operator*=(m2 r)
+    m2& __vectorcall operator*=(m2 r)
     {
         // e00 = l.e00 * r.e00 + l.e01 * r.e10;
         // e01 = l.e00 * r.e01 + l.e01 * r.e11;
@@ -125,16 +125,16 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) m2 final
         return *this;
     }
 
-    m2& MATH_CALL operator+=(f32 r) { mm = _mm_add_ps(mm, _mm_set_ps1(r)); return *this; }
-    m2& MATH_CALL operator-=(f32 r) { mm = _mm_sub_ps(mm, _mm_set_ps1(r)); return *this; }
-    m2& MATH_CALL operator*=(f32 r) { mm = _mm_mul_ps(mm, _mm_set_ps1(r)); return *this; }
-    m2& MATH_CALL operator/=(f32 r) { mm = _mm_div_ps(mm, _mm_set_ps1(r)); return *this; }
+    m2& __vectorcall operator+=(f32 r) { mm = _mm_add_ps(mm, _mm_set_ps1(r)); return *this; }
+    m2& __vectorcall operator-=(f32 r) { mm = _mm_sub_ps(mm, _mm_set_ps1(r)); return *this; }
+    m2& __vectorcall operator*=(f32 r) { mm = _mm_mul_ps(mm, _mm_set_ps1(r)); return *this; }
+    m2& __vectorcall operator/=(f32 r) { mm = _mm_div_ps(mm, _mm_set_ps1(r)); return *this; }
 };
 
-INLINE m2 MATH_CALL operator+(m2 l, m2 r) { return m2(_mm_add_ps(l.mm, r.mm)); }
-INLINE m2 MATH_CALL operator-(m2 l, m2 r) { return m2(_mm_sub_ps(l.mm, r.mm)); }
+INLINE m2 __vectorcall operator+(m2 l, m2 r) { return m2(_mm_add_ps(l.mm, r.mm)); }
+INLINE m2 __vectorcall operator-(m2 l, m2 r) { return m2(_mm_sub_ps(l.mm, r.mm)); }
 
-INLINE m2 MATH_CALL operator*(m2 l, m2 r)
+INLINE m2 __vectorcall operator*(m2 l, m2 r)
 {
     // e00 = l.e00 * r.e00 + l.e01 * r.e10;
     // e01 = l.e00 * r.e01 + l.e01 * r.e11;
@@ -152,12 +152,12 @@ INLINE m2 MATH_CALL operator*(m2 l, m2 r)
     return m2(_mm_add_ps(left, right));
 }
 
-INLINE m2 MATH_CALL operator+(f32 l, m2 r) { return m2(_mm_add_ps(_mm_set_ps1(l), r.mm)); }
-INLINE m2 MATH_CALL operator-(m2 l, f32 r) { return m2(_mm_sub_ps(l.mm, _mm_set_ps1(r))); }
-INLINE m2 MATH_CALL operator*(f32 l, m2 r) { return m2(_mm_mul_ps(_mm_set_ps1(l), r.mm)); }
-INLINE m2 MATH_CALL operator/(m2 l, f32 r) { return m2(_mm_div_ps(l.mm, _mm_set_ps1(r))); }
+INLINE m2 __vectorcall operator+(f32 l, m2 r) { return m2(_mm_add_ps(_mm_set_ps1(l), r.mm)); }
+INLINE m2 __vectorcall operator-(m2 l, f32 r) { return m2(_mm_sub_ps(l.mm, _mm_set_ps1(r))); }
+INLINE m2 __vectorcall operator*(f32 l, m2 r) { return m2(_mm_mul_ps(_mm_set_ps1(l), r.mm)); }
+INLINE m2 __vectorcall operator/(m2 l, f32 r) { return m2(_mm_div_ps(l.mm, _mm_set_ps1(r))); }
 
-INLINE v2 MATH_CALL operator*(m2 l, v2 r)
+INLINE v2 __vectorcall operator*(m2 l, v2 r)
 {
     // x = l.e00 * r.x
     //   + l.e01 * r.y;
@@ -171,7 +171,7 @@ INLINE v2 MATH_CALL operator*(m2 l, v2 r)
     return v2(mm_extract_f32<0>(vres), mm_extract_f32<1>(vres));
 }
 
-INLINE bool MATH_CALL operator==(m2 l, m2 r)
+INLINE bool __vectorcall operator==(m2 l, m2 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 == _mm_cmpeq_epi64_mask(*cast<__m128i *>(&l.mm),
@@ -183,7 +183,7 @@ INLINE bool MATH_CALL operator==(m2 l, m2 r)
 #endif
 }
 
-INLINE bool MATH_CALL operator!=(m2 l, m2 r)
+INLINE bool __vectorcall operator!=(m2 l, m2 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return 0b11 != _mm_cmpeq_epi64_mask(*cast<__m128i *>(&l.mm),
@@ -335,7 +335,7 @@ union ENGINE_INTRIN_TYPE m3 final
     {
     }
 
-    m3& MATH_CALL operator=(f32 val)
+    m3& __vectorcall operator=(f32 val)
     {
         __m128 vval = _mm_setr_ps(val, val, val, 0.0f);
     #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -349,7 +349,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3& MATH_CALL operator=(f32 arr[9])
+    m3& __vectorcall operator=(f32 arr[9])
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX
         mm0 = _mm256_setr_ps(*arr,   arr[1], arr[2], 0.0f,
@@ -363,7 +363,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3& MATH_CALL operator=(const m3& m)
+    m3& __vectorcall operator=(const m3& m)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX
         mm0 = m.mm0;
@@ -376,7 +376,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3& MATH_CALL operator=(m3&& m)
+    m3& __vectorcall operator=(m3&& m)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX
         mm0 = m.mm0;
@@ -389,7 +389,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3 MATH_CALL transpose() const
+    m3 __vectorcall transpose() const
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX
         return m3(_mm256_setr_ps(e00, e10, e20, 0.0f,
@@ -402,7 +402,7 @@ union ENGINE_INTRIN_TYPE m3 final
     #endif
     }
 
-    f32 MATH_CALL det() const
+    f32 __vectorcall det() const
     {
         // return e00 * (e11 * e22 - e12 * 21)
         //      - e01 * (e10 * e22 - e12 * 20)
@@ -423,7 +423,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return _mm_cvtss_f32(res);
     }
 
-    m3 MATH_CALL inverse() const
+    m3 __vectorcall inverse() const
     {
         __m128 col_1 = _mm_sub_ps(_mm_mul_ps(_mm_setr_ps(e11, e12, e10, 0.0f),
                                              _mm_setr_ps(e22, e20, e21, 0.0f)),
@@ -451,21 +451,21 @@ union ENGINE_INTRIN_TYPE m3 final
                   mm_extract_f32<2>(col_1), mm_extract_f32<2>(col_2), mm_extract_f32<2>(col_3));
     }
 
-    static m3 MATH_CALL identity()
+    static m3 __vectorcall identity()
     {
         return m3(1.0f, 0.0f, 0.0f,
                   0.0f, 1.0f, 0.0f,
                   0.0f, 0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL scaling(f32 nx, f32 ny)
+    static m3 __vectorcall scaling(f32 nx, f32 ny)
     {
         return m3(  nx, 0.0f, 0.0f,
                   0.0f,   ny, 0.0f,
                   0.0f, 0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL rotation_z(rad angle)
+    static m3 __vectorcall rotation_z(rad angle)
     {
         f32 s = sinf(angle);
         f32 c = cosf(angle);
@@ -475,56 +475,56 @@ union ENGINE_INTRIN_TYPE m3 final
                   0.0f, 0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL reflection_x()
+    static m3 __vectorcall reflection_x()
     {
         return m3(-1.0f, 0.0f, 0.0f,
                    0.0f, 1.0f, 0.0f,
                    0.0f, 0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL reflection_y()
+    static m3 __vectorcall reflection_y()
     {
         return m3(1.0f,  0.0f, 0.0f,
                   0.0f, -1.0f, 0.0f,
                   0.0f,  0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL reflection_xy()
+    static m3 __vectorcall reflection_xy()
     {
         return m3(-1.0f,  0.0f, 0.0f,
                    0.0f, -1.0f, 0.0f,
                    0.0f,  0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL shearing(f32 shx, f32 shy)
+    static m3 __vectorcall shearing(f32 shx, f32 shy)
     {
         return m3(1.0f,  shx, 0.0f,
                    shy, 1.0f, 0.0f,
                   0.0f, 0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL translation(f32 dx, f32 dy)
+    static m3 __vectorcall translation(f32 dx, f32 dy)
     {
         return m3(1.0f, 0.0f,   dx,
                   0.0f, 1.0f,   dy,
                   0.0f, 0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL translation(v3 v)
+    static m3 __vectorcall translation(v3 v)
     {
         return m3(1.0f, 0.0f,  v.x,
                   0.0f, 1.0f,  v.y,
                   0.0f, 0.0f, 1.0f);
     }
 
-    static m3 MATH_CALL ortho(f32 left, f32 right, f32 bottom, f32 top)
+    static m3 __vectorcall ortho(f32 left, f32 right, f32 bottom, f32 top)
     {
         return m3(2.0f/(right-left),              0.0f, -(right+left)/(right-left),
                                0.0f, 2.0f/(top-bottom), -(top+bottom)/(top-bottom),
                                0.0f,              0.0f,                       1.0f);
     }
 
-    m3& MATH_CALL operator+=(m3 r)
+    m3& __vectorcall operator+=(m3 r)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX
         mm0 = _mm256_add_ps(mm0, r.mm0);
@@ -537,7 +537,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3& MATH_CALL operator-=(m3 r)
+    m3& __vectorcall operator-=(m3 r)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX
         mm0 = _mm256_sub_ps(mm0, r.mm0);
@@ -550,7 +550,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3& MATH_CALL operator*=(m3 r)
+    m3& __vectorcall operator*=(m3 r)
     {
         __m128 r_c0 = _mm_setr_ps(r.e00, r.e10, r.e20, 0.0f);
         __m128 r_c1 = _mm_setr_ps(r.e01, r.e11, r.e21, 0.0f);
@@ -569,7 +569,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
     
-    m3& MATH_CALL operator+=(f32 r)
+    m3& __vectorcall operator+=(f32 r)
     {
         __m128 vval = _mm_setr_ps(r, r, r, 0.0f);
     #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -583,7 +583,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3& MATH_CALL operator-=(f32 r)
+    m3& __vectorcall operator-=(f32 r)
     {
         __m128 vval = _mm_setr_ps(r, r, r, 0.0f);
     #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -597,7 +597,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3& MATH_CALL operator*=(f32 r)
+    m3& __vectorcall operator*=(f32 r)
     {
         __m128 vval = _mm_setr_ps(r, r, r, 0.0f);
     #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -611,7 +611,7 @@ union ENGINE_INTRIN_TYPE m3 final
         return *this;
     }
 
-    m3& MATH_CALL operator/=(f32 r)
+    m3& __vectorcall operator/=(f32 r)
     {
         __m128 vval = _mm_setr_ps(r, r, r, 0.0f);
     #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -626,7 +626,7 @@ union ENGINE_INTRIN_TYPE m3 final
     }
 };
 
-INLINE m3 MATH_CALL operator+(m3 l, m3 r)
+INLINE m3 __vectorcall operator+(m3 l, m3 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX
     return m3(_mm256_add_ps(l.mm0, r.mm0),
@@ -638,7 +638,7 @@ INLINE m3 MATH_CALL operator+(m3 l, m3 r)
 #endif
 }
 
-INLINE m3 MATH_CALL operator-(m3 l, m3 r)
+INLINE m3 __vectorcall operator-(m3 l, m3 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX
     return m3(_mm256_sub_ps(l.mm0, r.mm0),
@@ -650,7 +650,7 @@ INLINE m3 MATH_CALL operator-(m3 l, m3 r)
 #endif
 }
 
-INLINE m3 MATH_CALL operator*(m3 l, m3 r)
+INLINE m3 __vectorcall operator*(m3 l, m3 r)
 {
     __m128 r_c0 = _mm_setr_ps(r.e00, r.e10, r.e20, 0.0f);
     __m128 r_c1 = _mm_setr_ps(r.e01, r.e11, r.e21, 0.0f);
@@ -667,7 +667,7 @@ INLINE m3 MATH_CALL operator*(m3 l, m3 r)
 #endif
 }
 
-INLINE m3 MATH_CALL operator+(f32 l, m3 r)
+INLINE m3 __vectorcall operator+(f32 l, m3 r)
 {
     __m128 vval = _mm_setr_ps(l, l, l, 0.0f);
 #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -680,7 +680,7 @@ INLINE m3 MATH_CALL operator+(f32 l, m3 r)
 #endif
 }
 
-INLINE m3 MATH_CALL operator-(m3 l, f32 r)
+INLINE m3 __vectorcall operator-(m3 l, f32 r)
 {
     __m128 vval = _mm_setr_ps(r, r, r, 0.0f);
 #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -693,7 +693,7 @@ INLINE m3 MATH_CALL operator-(m3 l, f32 r)
 #endif
 }
 
-INLINE m3 MATH_CALL operator*(f32 l, m3 r)
+INLINE m3 __vectorcall operator*(f32 l, m3 r)
 {
     __m128 vval = _mm_setr_ps(l, l, l, 0.0f);
 #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -706,7 +706,7 @@ INLINE m3 MATH_CALL operator*(f32 l, m3 r)
 #endif
 }
 
-INLINE m3 MATH_CALL operator/(m3 l, f32 r)
+INLINE m3 __vectorcall operator/(m3 l, f32 r)
 {
     __m128 vval = _mm_setr_ps(r, r, r, 0.0f);
 #if ENGINE_ISA >= ENGINE_ISA_AVX
@@ -719,14 +719,14 @@ INLINE m3 MATH_CALL operator/(m3 l, f32 r)
 #endif
 }
 
-INLINE v3 MATH_CALL operator*(m3 l, v3 r)
+INLINE v3 __vectorcall operator*(m3 l, v3 r)
 {
     return v3(_mm_cvtss_f32(_mm_dp_ps(l.r0.mm, r.mm, 0x71)),
               _mm_cvtss_f32(_mm_dp_ps(l.r1.mm, r.mm, 0x71)),
               _mm_cvtss_f32(_mm_dp_ps(l.r2.mm, r.mm, 0x71)));
 }
 
-INLINE bool MATH_CALL operator==(m3 l, m3 r)
+INLINE bool __vectorcall operator==(m3 l, m3 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX
     return mm256_equals(&l.mm0, &r.mm0)
@@ -738,7 +738,7 @@ INLINE bool MATH_CALL operator==(m3 l, m3 r)
 #endif
 }
 
-INLINE bool MATH_CALL operator!=(m3 l, m3 r)
+INLINE bool __vectorcall operator!=(m3 l, m3 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX
     return !(   mm256_equals(&l.mm0, &r.mm0)
@@ -929,7 +929,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
     {
     }
 
-    m4& MATH_CALL operator=(f32 val)
+    m4& __vectorcall operator=(f32 val)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = _mm512_set1_ps(val);
@@ -945,7 +945,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4& MATH_CALL operator=(f32 arr[16])
+    m4& __vectorcall operator=(f32 arr[16])
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = _mm512_load_ps(arr);
@@ -961,7 +961,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4& MATH_CALL operator=(const m4& m)
+    m4& __vectorcall operator=(const m4& m)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = m.zmm;
@@ -977,7 +977,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4& MATH_CALL operator=(m4&& m)
+    m4& __vectorcall operator=(m4&& m)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = m.zmm;
@@ -993,7 +993,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4 MATH_CALL transpose() const
+    m4 __vectorcall transpose() const
     {
         return m4(e00, e10, e20, e30,
                   e01, e11, e21, e31,
@@ -1001,7 +1001,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   e03, e13, e23, e33);
     }
 
-    f32 MATH_CALL det() const
+    f32 __vectorcall det() const
     {
         // return m.e00 * (  m.e11 * (m.e22 * m.e33 - m.e23 * m.e32)
         //                 - m.e12 * (m.e21 * m.e33 - m.e23 * m.e31)
@@ -1107,7 +1107,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
     #endif
     }
 
-    m4 MATH_CALL inverse() const
+    m4 __vectorcall inverse() const
     {
         f32 c00 = m3(e11, e12, e13, e21, e22, e23, e31, e32, e33).det();
         f32 c01 = m3(e10, e12, e13, e20, e22, e23, e30, e32, e33).det();
@@ -1146,7 +1146,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
     #endif
     }
 
-    static m4 MATH_CALL identity()
+    static m4 __vectorcall identity()
     {
         return m4(1.0f, 0.0f, 0.0f, 0.0f,
                   0.0f, 1.0f, 0.0f, 0.0f,
@@ -1154,7 +1154,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL scaling(f32 nx, f32 ny, f32 nz)
+    static m4 __vectorcall scaling(f32 nx, f32 ny, f32 nz)
     {
         return m4(  nx, 0.0f, 0.0f, 0.0f,
                   0.0f,   ny, 0.0f, 0.0f,
@@ -1162,7 +1162,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL rotation_x(rad angle)
+    static m4 __vectorcall rotation_x(rad angle)
     {
         f32 s = sinf(angle);
         f32 c = cosf(angle);
@@ -1173,7 +1173,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL rotation_y(rad angle)
+    static m4 __vectorcall rotation_y(rad angle)
     {
         f32 s = sinf(angle);
         f32 c = cosf(angle);
@@ -1184,7 +1184,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL rotation_z(rad angle)
+    static m4 __vectorcall rotation_z(rad angle)
     {
         f32 s = sinf(angle);
         f32 c = cosf(angle);
@@ -1195,7 +1195,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL rotation(v4 v, rad angle)
+    static m4 __vectorcall rotation(v4 v, rad angle)
     {
         // x*x*(1.0f-c)+  c     x*y*(1.0f-c)-z*s     x*z*(1.0-c)+y*s     0.0f
         // y*x*(1.0f-c)+z*s     y*y*(1.0f-c)+  c     y*z*(1.0-c)-x*s     0.0f
@@ -1276,7 +1276,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
     #endif
     }
 
-    static m4 MATH_CALL reflection_x()
+    static m4 __vectorcall reflection_x()
     {
         return m4(-1.0f, 0.0f, 0.0f, 0.0f,
                    0.0f, 1.0f, 0.0f, 0.0f,
@@ -1284,7 +1284,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                    0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL reflection_y()
+    static m4 __vectorcall reflection_y()
     {
         return m4(1.0f,  0.0f, 0.0f, 0.0f,
                   0.0f, -1.0f, 0.0f, 0.0f,
@@ -1292,7 +1292,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f,  0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL reflection_z()
+    static m4 __vectorcall reflection_z()
     {
         return m4(1.0f, 0.0f,  0.0f, 0.0f,
                   0.0f, 1.0f,  0.0f, 0.0f,
@@ -1300,7 +1300,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f,  0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL reflection_xy()
+    static m4 __vectorcall reflection_xy()
     {
         return m4(-1.0f,  0.0f, 0.0f, 0.0f,
                    0.0f, -1.0f, 0.0f, 0.0f,
@@ -1308,7 +1308,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                    0.0f,  0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL reflection_xz()
+    static m4 __vectorcall reflection_xz()
     {
         return m4(-1.0f, 0.0f,  0.0f, 0.0f,
                    0.0f, 1.0f,  0.0f, 0.0f,
@@ -1316,7 +1316,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                    0.0f, 0.0f,  0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL reflection_yz()
+    static m4 __vectorcall reflection_yz()
     {
         return m4(1.0f,  0.0f,  0.0f, 0.0f,
                   0.0f, -1.0f,  0.0f, 0.0f,
@@ -1324,7 +1324,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f,  0.0f,  0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL reflection_xyz()
+    static m4 __vectorcall reflection_xyz()
     {
         return m4(-1.0f,  0.0f,  0.0f, 0.0f,
                    0.0f, -1.0f,  0.0f, 0.0f,
@@ -1332,7 +1332,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                    0.0f,  0.0f,  0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL shearing_x(f32 shy, f32 shz)
+    static m4 __vectorcall shearing_x(f32 shy, f32 shz)
     {
         return m4(1.0f, 0.0f, 0.0f, 0.0f,
                    shy, 1.0f, 0.0f, 0.0f,
@@ -1340,7 +1340,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL shearing_y(f32 shx, f32 shz)
+    static m4 __vectorcall shearing_y(f32 shx, f32 shz)
     {
         return m4(1.0f,  shx, 0.0f, 0.0f,
                   0.0f, 1.0f, 0.0f, 0.0f,
@@ -1348,7 +1348,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL shearing_z(f32 shx, f32 shy)
+    static m4 __vectorcall shearing_z(f32 shx, f32 shy)
     {
         return m4(1.0f, 0.0f,  shx, 0.0f,
                   0.0f, 1.0f,  shy, 0.0f,
@@ -1356,7 +1356,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL shearing(f32 shxy, f32 shxz, f32 shyx, f32 shyz, f32 shzx, f32 shzy)
+    static m4 __vectorcall shearing(f32 shxy, f32 shxz, f32 shyx, f32 shyz, f32 shzx, f32 shzy)
     {
         return m4(1.0f, shyx, shzx, 0.0f,
                   shxy, 1.0f, shzy, 0.0f,
@@ -1364,7 +1364,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL translation(f32 dx, f32 dy, f32 dz)
+    static m4 __vectorcall translation(f32 dx, f32 dy, f32 dz)
     {
         return m4(1.0f, 0.0f, 0.0f,   dx,
                   0.0f, 1.0f, 0.0f,   dy,
@@ -1372,7 +1372,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL translation(v4 dv)
+    static m4 __vectorcall translation(v4 dv)
     {
         return m4(1.0f, 0.0f, 0.0f, dv.x,
                   0.0f, 1.0f, 0.0f, dv.y,
@@ -1380,7 +1380,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
-    static m4 MATH_CALL ortho_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
+    static m4 __vectorcall ortho_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
     {
         return m4(2.0f/(right-left),              0.0f,            0.0f, (-right-left)/(right-left),
                                0.0f, 2.0f/(top-bottom),            0.0f, (-top-bottom)/(top-bottom),
@@ -1388,7 +1388,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                                0.0f,              0.0f,            0.0f,                       1.0f);
     }
 
-    static m4 MATH_CALL ortho_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
+    static m4 __vectorcall ortho_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
     {
         return m4(2.0f/(right-left),              0.0f,             0.0f, (-right-left)/(right-left),
                                0.0f, 2.0f/(top-bottom),             0.0f, (-top-bottom)/(top-bottom),
@@ -1396,7 +1396,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                                0.0f,              0.0f,             0.0f,                       1.0f);
     }
 
-    static m4 MATH_CALL persp_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
+    static m4 __vectorcall persp_lh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
     {
         return m4(2.0f*near/(right-left),                   0.0f,                  0.0f,                        0.0f,
                                     0.0f, 2.0f*near/(top-bottom),                  0.0f,                        0.0f,
@@ -1404,7 +1404,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                                     0.0f,                   0.0f,                  1.0f,                        0.0f);
     }
 
-    static m4 MATH_CALL persp_lh(f32 aspect, deg fov, f32 near, f32 far) // returns z = [-1; 1]
+    static m4 __vectorcall persp_lh(f32 aspect, deg fov, f32 near, f32 far) // returns z = [-1; 1]
     {
         f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
 
@@ -1414,7 +1414,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                                    0.0f,         0.0f,                  1.0f,                        0.0f);
     }
 
-    static m4 MATH_CALL persp_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
+    static m4 __vectorcall persp_rh(f32 left, f32 right, f32 bottom, f32 top, f32 near, f32 far) // returns z = [-1; 1]
     {
         return m4(2.0f*near/(right-left),                   0.0f,                  0.0f,                       0.0f,
                                     0.0f, 2.0f*near/(top-bottom),                  0.0f,                       0.0f,
@@ -1422,7 +1422,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                                     0.0f,                   0.0f,                 -1.0f,                       0.0f);
     }
 
-    static m4 MATH_CALL persp_rh(f32 aspect, deg fov, f32 near, f32 far) // returns z = [-1; 1]
+    static m4 __vectorcall persp_rh(f32 aspect, deg fov, f32 near, f32 far) // returns z = [-1; 1]
     {
         f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
         
@@ -1432,7 +1432,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
                                    0.0f,         0.0f,                 -1.0f,                       0.0f);
     }
 
-    m4& MATH_CALL operator+=(m4 r)
+    m4& __vectorcall operator+=(m4 r)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = _mm512_add_ps(zmm, r.zmm);
@@ -1448,7 +1448,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4& MATH_CALL operator-=(m4 r)
+    m4& __vectorcall operator-=(m4 r)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = _mm512_sub_ps(zmm, r.zmm);
@@ -1464,7 +1464,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4& MATH_CALL operator*=(m4 r)
+    m4& __vectorcall operator*=(m4 r)
     {
         __m128 r_c0 = _mm_setr_ps(r.e00, r.e10, r.e20, r.e30);
         __m128 r_c1 = _mm_setr_ps(r.e01, r.e11, r.e21, r.e31);
@@ -1491,7 +1491,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
     
-    m4& MATH_CALL operator+=(f32 r)
+    m4& __vectorcall operator+=(f32 r)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = _mm512_add_ps(zmm, _mm512_set1_ps(r));
@@ -1509,7 +1509,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4& MATH_CALL operator-=(f32 r)
+    m4& __vectorcall operator-=(f32 r)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = _mm512_sub_ps(zmm, _mm512_set1_ps(r));
@@ -1527,7 +1527,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4& MATH_CALL operator*=(f32 r)
+    m4& __vectorcall operator*=(f32 r)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = _mm512_mul_ps(zmm, _mm512_set1_ps(r));
@@ -1545,7 +1545,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         return *this;
     }
 
-    m4& MATH_CALL operator/=(f32 r)
+    m4& __vectorcall operator/=(f32 r)
     {
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
         zmm = _mm512_div_ps(zmm, _mm512_set1_ps(r));
@@ -1564,7 +1564,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
     }
 };
 
-INLINE m4 MATH_CALL operator+(m4 l, m4 r)
+INLINE m4 __vectorcall operator+(m4 l, m4 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return m4(_mm512_add_ps(l.zmm, r.zmm));
@@ -1579,7 +1579,7 @@ INLINE m4 MATH_CALL operator+(m4 l, m4 r)
 #endif
 }
 
-INLINE m4 MATH_CALL operator-(m4 l, m4 r)
+INLINE m4 __vectorcall operator-(m4 l, m4 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return m4(_mm512_sub_ps(l.zmm, r.zmm));
@@ -1594,7 +1594,7 @@ INLINE m4 MATH_CALL operator-(m4 l, m4 r)
 #endif
 }
 
-INLINE m4 MATH_CALL operator*(m4 l, m4 r)
+INLINE m4 __vectorcall operator*(m4 l, m4 r)
 {
     __m128 r_c0 = _mm_setr_ps(r.e00, r.e10, r.e20, r.e30);
     __m128 r_c1 = _mm_setr_ps(r.e01, r.e11, r.e21, r.e31);
@@ -1607,7 +1607,7 @@ INLINE m4 MATH_CALL operator*(m4 l, m4 r)
               _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c3, 0x71)));
 }
 
-INLINE m4 MATH_CALL operator+(f32 l, m4 r)
+INLINE m4 __vectorcall operator+(f32 l, m4 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return m4(_mm512_add_ps(_mm512_set1_ps(l), r.zmm));
@@ -1624,7 +1624,7 @@ INLINE m4 MATH_CALL operator+(f32 l, m4 r)
 #endif
 }
 
-INLINE m4 MATH_CALL operator-(m4 l, f32 r)
+INLINE m4 __vectorcall operator-(m4 l, f32 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return m4(_mm512_sub_ps(l.zmm, _mm512_set1_ps(r)));
@@ -1641,7 +1641,7 @@ INLINE m4 MATH_CALL operator-(m4 l, f32 r)
 #endif
 }
 
-INLINE m4 MATH_CALL operator*(f32 l, m4 r)
+INLINE m4 __vectorcall operator*(f32 l, m4 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return m4(_mm512_mul_ps(_mm512_set1_ps(l), r.zmm));
@@ -1658,7 +1658,7 @@ INLINE m4 MATH_CALL operator*(f32 l, m4 r)
 #endif
 }
 
-INLINE m4 MATH_CALL operator/(m4 l, f32 r)
+INLINE m4 __vectorcall operator/(m4 l, f32 r)
 {
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
     return m4(_mm512_div_ps(l.zmm, _mm512_set1_ps(r)));
@@ -1675,7 +1675,7 @@ INLINE m4 MATH_CALL operator/(m4 l, f32 r)
 #endif
 }
 
-INLINE v4 MATH_CALL operator*(m4 l, v3 r)
+INLINE v4 __vectorcall operator*(m4 l, v3 r)
 {
     return v4(_mm_cvtss_f32(_mm_dp_ps(l.xmm0, r.mm, 0x71)),
               _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r.mm, 0x71)),
@@ -1683,19 +1683,19 @@ INLINE v4 MATH_CALL operator*(m4 l, v3 r)
               _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r.mm, 0x71)));
 }
 
-INLINE bool MATH_CALL operator==(m4 l, m4 r)
+INLINE bool __vectorcall operator==(m4 l, m4 r)
 {
     return mm512_equals(&l, &r);
 }
 
-INLINE bool MATH_CALL operator!=(m4 l, m4 r)
+INLINE bool __vectorcall operator!=(m4 l, m4 r)
 {
     return !mm512_equals(&l, &r);
 }
 
 // @TODO(Roman): Move to the camera class.
 
-INLINE m4 MATH_CALL CameraToWorldLH(v4 camera, v4 target, v4 up)
+INLINE m4 __vectorcall CameraToWorldLH(v4 camera, v4 target, v4 up)
 {
     __m128 z_axis     = _mm_sub_ps(target.mm, camera.mm);
     __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x7F));
@@ -1724,7 +1724,7 @@ INLINE m4 MATH_CALL CameraToWorldLH(v4 camera, v4 target, v4 up)
                                    0.0f,                      0.0f,                      0.0f,                         1.0f);
 }
 
-INLINE m4 MATH_CALL CameraToWorldRH(v4 camera, v4 target, v4 up)
+INLINE m4 __vectorcall CameraToWorldRH(v4 camera, v4 target, v4 up)
 {
     __m128 z_axis     = _mm_sub_ps(camera.mm, target.mm);
     __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x7F));

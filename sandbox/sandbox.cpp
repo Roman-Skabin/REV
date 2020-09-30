@@ -1,16 +1,16 @@
 #include "sandbox.h"
 
 Sandbox::Sandbox()
-    : Application("Sandbox"),
+    : Application("Sandbox", GRAPHICS_API::D3D12),
       m_Logger("Sandbox logger", "../log/sandbox.log", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_DemoLevel(m_Logger)
 {
-    PushLevels(&m_DemoLevel);
+    AttachLevels(&m_DemoLevel);
 }
 
 Sandbox::~Sandbox()
 {
-    PopLevels(&m_DemoLevel);
+    DetachAllLevels();
 }
 
 int main(int argc, char **argv)

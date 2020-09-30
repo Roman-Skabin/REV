@@ -3,10 +3,10 @@
 #include "core/level.h"
 #include "tools/logger.h"
 
-class DemoLevel : public Level
+class DemoLevel final : public Level
 {
 public:
-    DemoLevel(const Logger& logger);
+    DemoLevel(in const Logger& logger);
     ~DemoLevel();
 
     virtual void OnAttach() override;
@@ -17,4 +17,5 @@ public:
 private:
     Application *m_Application;
     Logger       m_Logger;
+    char         m_OriginalWindowTitle[128];
 };

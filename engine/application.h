@@ -11,6 +11,8 @@
 #include "core/input.h"
 #include "core/level.h"
 
+#include "renderer/gpu_manager.h"
+
 #include "tools/logger.h"
 #include "tools/work_queue.h"
 #include "tools/timer.h"
@@ -22,23 +24,29 @@ public:
     static Application *Get();
 
 protected:
-    explicit Application(const char *name = "Application");
+    explicit Application(const char *name = "Application", GRAPHICS_API api = GRAPHICS_API::D3D12);
 
 public:
     virtual ~Application();
 
     template<typename ...LevelsPointers, typename = RTTI::enable_if_t<RTTI::are_base_of_v<Level, RTTI::remove_pointer_t<LevelsPointers>...>>>
-    void PushLevels(LevelsPointers... levels)
+    void AttachLevels(LevelsPointers... levels)
     {
         m_Levels.PushBack(cast<Level *>(levels)...);
         (..., levels->OnAttach());
     }
 
     template<typename ...LevelsPointers, typename = RTTI::enable_if_t<RTTI::are_base_of_v<Level, RTTI::remove_pointer_t<LevelsPointers>...>>>
-    void PopLevels(LevelsPointers... levels)
+    void DetachLevels(LevelsPointers... levels)
     {
-        (..., m_Levels.Erase(m_Levels.Find(levels)));
         (..., levels->OnDetach());
+        (..., m_Levels.Erase(m_Levels.Find(levels)));
+    }
+
+    void DetachAllLevels()
+    {
+        for (Level *level : m_Levels) level->OnDetach();
+        m_Levels.Clear();
     }
 
     const Memory           *GetMemory()    const { return m_Memory;    }
@@ -67,7 +75,7 @@ private:
     Application& operator=(Application&&)      = delete;
 
 private:
-    Logger            m_Logger;
+    Logger           m_Logger;
 
 protected:
     Memory          *m_Memory;
@@ -77,9 +85,10 @@ protected:
     Input           *m_Input;
     Timer            m_Timer;
     Buffer<Level *>  m_Levels;
-
-    static Application *s_Application;
+    IGPUManager     *m_GPUManager;
 
 private:
+    static Application *s_Application;
+
     friend int main(int argc, char **argv);
 };

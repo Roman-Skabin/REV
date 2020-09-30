@@ -5,6 +5,7 @@
 #include "core/pch.h"
 #include "core/window.h"
 #include "core/input.h"
+#include "renderer/gpu_manager.h"
 
 //
 // Monitor
@@ -41,11 +42,7 @@ Monitor::Monitor(Monitor&& other) noexcept
 
 Monitor::~Monitor()
 {
-    if (m_Handle)
-    {
-        CloseHandle(m_Handle);
-        m_Handle = null;
-    }
+    m_Handle = null;
     m_Pos  = 0L;
     m_Size = 0L;
 }
@@ -82,23 +79,24 @@ Monitor& Monitor::operator=(Monitor&& other) noexcept
 // Window
 //
 
-Window::Window(const Logger& logger,
-               OnResizeProc *OnResize,
-               const char   *title,
-               v2s           size,
-               v2s           pos)
+Window::Window(in const Logger& logger,
+               in const char   *title,
+               in v2s           size,
+               in v2s           pos)
     : m_Monitor(),
       m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
       m_Handle(null),
       m_Context(null),
-      m_Title(title),
+      m_Title(),
       m_Pos(pos),
       m_Size(size),
       m_Flags(FLAGS::CLOSED),
-      m_Logger(logger),
-      OnResizeCallback(OnResize)
+      m_Logger(logger)
 {
-    // CheckM(OnResize, "OnResize can't be null");
+    Check(strlen(title) < sizeof(m_Title));
+
+    strcpy(m_Title, title);
+    strcpy(m_ClassName, m_Title);
 
     WNDCLASSA wca     = {0};
     wca.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
@@ -106,7 +104,7 @@ Window::Window(const Logger& logger,
     wca.hInstance     = m_Instance;
     wca.hCursor       = LoadCursorA(0, IDC_ARROW);
     wca.hbrBackground = GetSysColorBrush(COLOR_BACKGROUND);
-    wca.lpszClassName = m_Title;
+    wca.lpszClassName = m_ClassName;
     DebugResult(RegisterClassA(&wca));
 
     s32 width  = m_Size.w;
@@ -137,13 +135,13 @@ Window::Window(Window&& other) noexcept
       m_Instance(other.m_Instance),
       m_Handle(other.m_Handle),
       m_Context(other.m_Context),
-      m_Title(other.m_Title),
       m_Pos(other.m_Pos),
       m_Size(other.m_Size),
       m_Flags(other.m_Flags),
-      m_Logger(RTTI::move(other.m_Logger)),
-      OnResizeCallback(other.OnResizeCallback)
+      m_Logger(RTTI::move(other.m_Logger))
 {
+    strcpy(m_Title, other.m_Title);
+    strcpy(m_ClassName, other.m_ClassName);
     other.m_Instance = null;
     other.m_Handle   = null;
     other.m_Context  = null;
@@ -153,7 +151,7 @@ Window::~Window()
 {
     if (m_Instance)
     {
-        DebugResult(UnregisterClassA(m_Title, m_Instance));
+        DebugResult(UnregisterClassA(m_ClassName, m_Instance));
         m_Instance = null;
         m_Logger.LogInfo("Window \"%s\" has been destroyed", m_Title);
     }
@@ -192,6 +190,13 @@ void Window::Show()
     m_Flags &= ~FLAGS::CLOSED;
 }
 
+void Window::SetTitle(const char *title)
+{
+    Check(strlen(title) < sizeof(m_Title));
+    DebugResult(SetWindowTextA(m_Handle, title));
+    strcpy(m_Title, title);
+}
+
 bool Window::Closed() const
 {
     return (m_Flags & FLAGS::CLOSED) != FLAGS::NONE;
@@ -207,27 +212,31 @@ bool Window::Fullscreened() const
     return (m_Flags & FLAGS::FULLSCREENED) != FLAGS::NONE;
 }
 
+bool Window::Minimized() const
+{
+    return (m_Flags & FLAGS::MINIMIZED) != FLAGS::NONE;
+}
+
 Window& Window::operator=(Window&& other) noexcept
 {
     if (this != &other)
     {
-        m_Monitor        = RTTI::move(other.m_Monitor);
-        m_Instance       = other.m_Instance;
-        m_Handle         = other.m_Handle;
-        m_Context        = other.m_Context;
-        m_Title          = other.m_Title;
-        m_Pos            = RTTI::move(other.m_Pos);
-        m_Size           = RTTI::move(other.m_Size);
-        m_Flags          = other.m_Flags;
-        m_Logger         = RTTI::move(other.m_Logger);
-        OnResizeCallback = other.OnResizeCallback;
+        m_Monitor  = RTTI::move(other.m_Monitor);
+        m_Instance = other.m_Instance;
+        m_Handle   = other.m_Handle;
+        m_Context  = other.m_Context;
+        m_Pos      = RTTI::move(other.m_Pos);
+        m_Size     = RTTI::move(other.m_Size);
+        m_Flags    = other.m_Flags;
+        m_Logger   = RTTI::move(other.m_Logger);
 
-        other.m_Instance       = null;
-        other.m_Handle         = null;
-        other.m_Context        = null;
-        other.m_Title          = null;
-        other.m_Flags          = FLAGS::NONE;
-        other.OnResizeCallback = null;
+        strcpy(m_Title, other.m_Title);
+        strcpy(m_ClassName, other.m_ClassName);
+
+        other.m_Instance = null;
+        other.m_Handle   = null;
+        other.m_Context  = null;
+        other.m_Flags    = FLAGS::NONE;
     }
     return *this;
 }
@@ -279,29 +288,22 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
 
             if ((window->m_Size.w != new_size.w || window->m_Size.h != new_size.h) && wparam != SIZE_MINIMIZED)
             {
-                // @TODO(Roman): Move to the OnResizeCallback.
-            #if 0
-            #if 0
-                ResizeGPUBuffers(engine);
-            #else
-                DXGI_MODE_DESC mode_desc;
-                mode_desc.Width                   = new_size.w;
-                mode_desc.Height                  = new_size.h;
-                mode_desc.RefreshRate.Numerator   = 0;
-                mode_desc.RefreshRate.Denominator = 1;
-                mode_desc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
-                mode_desc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-                mode_desc.Scaling                 = DXGI_MODE_SCALING_STRETCHED;
-                gpu_manager.error = gpu_manager.swap_chain->lpVtbl->ResizeTarget(gpu_manager.swap_chain, &mode_desc);
-                Check(SUCCEEDED(gpu_manager.error));
-            #endif
-            #endif
-
-                if (window->OnResizeCallback) window->OnResizeCallback(new_size);
-
                 window->m_Size = new_size;
-                window->m_Flags |= Window::FLAGS::RESIZED;
+
+            #if 0
+                GetGPUManager()->ResizeBuffers();
+            #else
+                GetGPUManager()->ResizeTarget();
+            #endif
+
+                window->m_Flags &= ~Window::FLAGS::MINIMIZED;
+                window->m_Flags |=  Window::FLAGS::RESIZED;
+
                 window->m_Logger.LogInfo("Window \"%s\" has been resized", window->m_Title);
+            }
+            else if (wparam == SIZE_MINIMIZED)
+            {
+                window->m_Flags |= Window::FLAGS::MINIMIZED;
             }
         } break;
 

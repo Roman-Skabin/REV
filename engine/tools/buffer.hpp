@@ -164,6 +164,7 @@ public:
         ZeroMemory(m_Header->data, m_Header->count * sizeof(T));
 
         m_Header->count = 0;
+        Resize();
     }
 
     u64 Find(const T& what) const

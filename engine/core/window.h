@@ -45,20 +45,18 @@ public:
         CLOSED                     = BIT(0),
         RESIZED                    = BIT(1),
         FULLSCREENED               = BIT(2),
+        MINIMIZED                  = BIT(3),
 
         // @NOTE(Roman): Internal
-        _FULLSCREEN_SET_REQUESTED   = BIT(3),
-        _FULLSCREEN_UNSET_REQUESTED = BIT(4),
+        _FULLSCREEN_SET_REQUESTED   = BIT(30),
+        _FULLSCREEN_UNSET_REQUESTED = BIT(31),
     };
 
-    typedef void OnResizeProc(v2s new_size);
-
 public:
-    Window(const Logger& logger,
-           OnResizeProc *OnResize,
-           const char   *title,
-           v2s           size = S32_MIN,
-           v2s           pos  = S32_MIN
+    Window(in const Logger& logger,
+           in const char   *title,
+           in v2s           size = S32_MIN,
+           in v2s           pos  = S32_MIN
     );
     Window(Window&& other) noexcept;
 
@@ -71,13 +69,16 @@ public:
 
     void Show();
 
+    void SetTitle(const char *title);
+
     const char *Title()    const { return m_Title; }
     v2s         Position() const { return m_Pos;   }
     v2s         Size()     const { return m_Size;  }
 
-    bool Closed() const;
-    bool Resized() const;
+    bool Closed()       const;
+    bool Resized()      const;
     bool Fullscreened() const;
+    bool Minimized()    const;
 
     Window& operator=(Window&& other) noexcept;
 
@@ -92,20 +93,21 @@ private:
 private:
     // @TODO(Roman): Reorganize and clean up data.
 
-    Monitor       m_Monitor;
-    HINSTANCE     m_Instance;
-    HWND          m_Handle;
-    HDC           m_Context;
-    const char   *m_Title;
-    v2s           m_Pos;
-    v2s           m_Size;
-    FLAGS         m_Flags;
-    Logger        m_Logger;
-    OnResizeProc *OnResizeCallback;
+    Monitor   m_Monitor;
+    HINSTANCE m_Instance;
+    HWND      m_Handle;
+    HDC       m_Context;
+    v2s       m_Pos;
+    v2s       m_Size;
+    FLAGS     m_Flags;
+    Logger    m_Logger;
+    char      m_Title[128];
+    char      m_ClassName[128];
 
     friend class Monitor;
     friend class Input;
     friend class Application;
+    friend class D3D12GPUManager;
 };
 
 ENUM_CLASS_OPERATORS(Window::FLAGS);

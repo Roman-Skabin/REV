@@ -267,7 +267,7 @@ ENGINE_FUN void __cdecl ShowDebugMessage(
     opt ...
 );
 
-#if DEVDEBUG && !defined(ENGINE_NO_CHECKS)
+#if DEVDEBUG && !defined(_ENGINE_NO_CHECKS)
 
     #define CheckM(expr, message, ...) if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); __debugbreak(); ExitProcess(1); }
     #define Check(expr)                if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); __debugbreak(); ExitProcess(1); }
@@ -276,7 +276,7 @@ ENGINE_FUN void __cdecl ShowDebugMessage(
     #define DebugResult(expr)                Check(expr)
     #define DebugResultM(expr, message, ...) CheckM(expr, message, __VA_ARGS__)
 
-#elif !defined(ENGINE_NO_CHECKS)
+#elif !defined(_ENGINE_NO_CHECKS)
 
     #define CheckM(expr, message, ...) if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); ExitProcess(1); }
     #define Check(expr)                if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); ExitProcess(1); }

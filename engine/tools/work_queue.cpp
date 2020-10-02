@@ -51,7 +51,7 @@ WorkQueue::WorkQueue(in const Logger& logger)
         WorkQueueThread *thread = threads + i;
         thread->id    = i + 1;
         thread->queue = this;
-        DebugResult(CloseHandle(CreateThread(0, 0, ThreadProc, thread, 0, 0)));
+        DebugResult(CloseHandle(CreateThread(null, 0, ThreadProc, thread, 0, null)));
         logger.LogInfo("Thread has been created: id = %I32u, queue = 0x%p", thread->id, thread->queue);
     }
 

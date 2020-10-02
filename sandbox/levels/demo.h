@@ -6,7 +6,7 @@
 class DemoLevel final : public Level
 {
 public:
-    DemoLevel(in const Logger& logger);
+    DemoLevel();
     ~DemoLevel();
 
     virtual void OnAttach() override;
@@ -16,6 +16,5 @@ public:
 
 private:
     Application *m_Application;
-    Logger       m_Logger;
     char         m_OriginalWindowTitle[128];
 };

@@ -5,15 +5,47 @@
 #pragma once
 
 #include "core/pch.h"
-#include "platform/d3d12/d3d12_gpu_manager.h"
+#include "platform/d3d12_renderer.h"
 
-D3D12GPUManager::D3D12GPUManager(Window *window, const Logger& logger)
-    : m_Logger(logger, "GPU Manager Logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
+namespace D3D12 {
+
+Renderer::Renderer(Window *window, const Logger& logger)
+    : m_Logger(logger, "GPU Manager logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_Window(window),
+#if DEBUG
+      m_Debug(null),
+      m_DXGIDebug(null),
+      m_InfoQueue(null),
+#endif
+      m_Factory(null),
+      m_Adapter(null),
+      m_Device(null),
+      m_GraphicsQueue(null),
+      m_SwapChain(null),
+      m_RTVHeapDesc(null),
+      m_RTVCPUDescHandle(),
+      m_RTVDescSize(0),
+      m_CurrentBuffer(0),
+      m_DSVHeapDesc(null),
+      m_DSBuffer(null),
+      m_DSVCPUDescHandle(),
+      m_Fences(),
+      m_FencesValues(),
+      m_FenceEvent(null),
       m_Flags(FLAGS::FIRST_FRAME),
+      m_Features(),
+#if DEBUG
+      m_LoggingEvent("StopLoggingEvent", Event::FLAGS::RESETTABLE),
+      m_StopLogging(false),
+#endif
       m_Error(S_OK)
 {
     CreateDebugLayer();
+
+#if DEBUG
+    DebugResult(CloseHandle(CreateThread(null, 0, LogInfoQueueMessages, this, 0, null)));
+#endif
+
     CreateFactory();
     CreateAdapterAndDevice();
     GetInfoAboutFeatures();
@@ -23,77 +55,13 @@ D3D12GPUManager::D3D12GPUManager(Window *window, const Logger& logger)
     CreateDepthBuffer();
     CreateFences();
     
-    m_Logger.LogSuccess("GPUManager has been created");
+    m_Logger.LogSuccess("Renderer has been created");
 }
 
-D3D12GPUManager::D3D12GPUManager(D3D12GPUManager&& other) noexcept
-    : m_Logger(RTTI::move(other.m_Logger)),
-      m_Window(other.m_Window),
-#if DEBUG
-      m_Debug(other.m_Debug),
-      m_DXGIDebug(other.m_DXGIDebug),
-      m_InfoQueue(other.m_InfoQueue),
-#endif
-      m_Factory(other.m_Factory),
-      m_Adapter(other.m_Adapter),
-      m_Device(other.m_Device),
-      m_GraphicsQueue(other.m_GraphicsQueue),
-      m_SwapChain(other.m_SwapChain),
-      m_RTVHeapDesc(other.m_RTVHeapDesc),
-      m_RTVCPUDescHandle(other.m_RTVCPUDescHandle),
-      m_RTVDescSize(other.m_RTVDescSize),
-      m_CurrentBuffer(other.m_CurrentBuffer),
-      m_DSVHeapDesc(other.m_DSVHeapDesc),
-      m_DSBuffer(other.m_DSBuffer),
-      m_DSVCPUDescHandle(other.m_DSVCPUDescHandle),
-      m_FenceEvent(other.m_FenceEvent),
-      m_Flags(other.m_Flags),
-      m_Features(other.m_Features),
-      m_Error(other.m_Error)
+Renderer::~Renderer()
 {
-    other.m_Window        = null;
-#if DEBUG
-    other.m_Debug         = null;
-    other.m_DXGIDebug     = null;
-    other.m_InfoQueue     = null;
-#endif
-    other.m_Factory       = null;
-    other.m_Adapter       = null;
-    other.m_Device        = null;
-    other.m_GraphicsQueue = null;
-    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-    {
-        m_GraphicsAllocators[i] = other.m_GraphicsAllocators[i];
-        m_GraphicsLists[i]      = other.m_GraphicsLists[i];
-#if DEBUG
-        m_DebugGraphicsLists[i] = other.m_DebugGraphicsLists[i];
-#endif
-        m_RTBuffers[i]          = other.m_RTBuffers[i];
-        m_Fences[i]             = other.m_Fences[i];
-        m_FencesValues[i]       = other.m_FencesValues[i];
+    FlushGPU();
 
-        other.m_GraphicsAllocators[i] = null;
-        other.m_GraphicsLists[i]      = null;
-#if DEBUG
-        other.m_DebugGraphicsLists[i] = null;
-#endif
-        other.m_RTBuffers[i]          = null;
-        other.m_Fences[i]             = null;
-    }
-    other.m_SwapChain   = null;
-    other.m_RTVHeapDesc = null;
-    other.m_DSVHeapDesc = null;
-    other.m_DSBuffer    = null;
-    other.m_FenceEvent  = null;
-}
-
-D3D12GPUManager::~D3D12GPUManager()
-{
-    Destroy();
-}
-
-void D3D12GPUManager::Destroy()
-{
     if (m_FenceEvent) DebugResult(CloseHandle(m_FenceEvent));
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
@@ -122,63 +90,27 @@ void D3D12GPUManager::Destroy()
         m_Error = m_DXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, cast<DXGI_DEBUG_RLO_FLAGS>(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
         Check(SUCCEEDED(m_Error));
 
-        // @TODO(Roman): ...
-        // LogDirectXMessages(engine);
-
         m_DXGIDebug->DisableLeakTrackingForThread();
     }
+
+    m_StopLogging = true;
+    m_LoggingEvent.Wait();
 
     SafeRelease(m_InfoQueue);
     SafeRelease(m_DXGIDebug);
     SafeRelease(m_Debug);
 #endif
 
-    m_Logger.LogInfo("GPUManager has been destroyed");
+    m_Logger.LogInfo("Renderer has been destroyed");
 }
 
-void D3D12GPUManager::WaitForGPU()
+void Renderer::Destroy()
 {
-    ID3D12Fence *current_fence       = m_Fences[m_CurrentBuffer];
-    u64          current_fence_value = m_FencesValues[m_CurrentBuffer];
-
-    m_GraphicsQueue->Signal(current_fence, current_fence_value);
-
-    u64 value = current_fence->GetCompletedValue();
-    if (value < current_fence_value)
-    {
-        m_Error = current_fence->SetEventOnCompletion(current_fence_value, m_FenceEvent);
-        Check(SUCCEEDED(m_Error));
-
-        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, false) != WAIT_OBJECT_0)
-        {
-        }
-    }
-
-    m_FencesValues[m_CurrentBuffer] = current_fence_value + 1;
+    // @NOTE(Roman): Necessary for destructing vtable from the interface (IRenderer).
+    this->~Renderer();
 }
 
-void D3D12GPUManager::FlushGPU()
-{
-    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-    {
-        ID3D12Fence *fence       = m_Fences[i];
-        u64          fence_value = m_FencesValues[i];
-
-        m_Error = m_GraphicsQueue->Signal(fence, fence_value);
-        Check(SUCCEEDED(m_Error));
-
-        m_Error = fence->SetEventOnCompletion(fence_value, m_FenceEvent);
-        Check(SUCCEEDED(m_Error));
-
-        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, false) != WAIT_OBJECT_0)
-        {
-        }
-
-        ++m_FencesValues[i];
-    }
-}
-
-void D3D12GPUManager::ResizeBuffers()
+void Renderer::ResizeBuffers()
 {
     // Wait for the GPU, release swap chain buffers buffers
     FlushGPU();
@@ -272,7 +204,7 @@ void D3D12GPUManager::ResizeBuffers()
     m_Flags |= FLAGS::FIRST_FRAME;
 }
 
-void D3D12GPUManager::ResizeTarget()
+void Renderer::ResizeTarget()
 {
     DXGI_MODE_DESC mode_desc;
     mode_desc.Width                   = m_Window->Size().w;
@@ -287,7 +219,7 @@ void D3D12GPUManager::ResizeTarget()
     Check(SUCCEEDED(m_Error));
 }
 
-void D3D12GPUManager::StartFrame()
+void Renderer::StartFrame()
 {
     ID3D12CommandAllocator    *graphics_allocator = m_GraphicsAllocators[m_CurrentBuffer];
     ID3D12GraphicsCommandList *graphics_list      = m_GraphicsLists[m_CurrentBuffer];
@@ -363,7 +295,7 @@ void D3D12GPUManager::StartFrame()
                                          0, null);
 }
 
-void D3D12GPUManager::EndFrame()
+void Renderer::EndFrame()
 {
     ID3D12GraphicsCommandList *graphics_list = m_GraphicsLists[m_CurrentBuffer];
 
@@ -389,10 +321,6 @@ void D3D12GPUManager::EndFrame()
 
     // Close and execute lists
     m_Error = graphics_list->Close();
-#if DEBUG
-    // @TODO(Roman): ...
-    // LogDirectXMessages();
-#endif
     Check(SUCCEEDED(m_Error));
 
     ID3D12CommandList *command_lists[] =
@@ -400,12 +328,6 @@ void D3D12GPUManager::EndFrame()
         graphics_list,
     };
     m_GraphicsQueue->ExecuteCommandLists(cast<UINT>(ArrayCount(command_lists)), command_lists);
-    Check(SUCCEEDED(m_Error));
-
-#if DEBUG
-    // @TODO(Roman): ...
-    // LogDirectXMessages(engine);
-#endif
 
     // Present
     u32 vsync         = 1;
@@ -433,11 +355,6 @@ void D3D12GPUManager::EndFrame()
     m_Error = m_SwapChain->Present(vsync, present_flags);
     Check(SUCCEEDED(m_Error));
 
-#if DEBUG
-    // @TODO(Roman): ...
-    // LogDirectXMessages(engine);
-#endif
-
     // Swap buffers
     m_CurrentBuffer = m_SwapChain->GetCurrentBackBufferIndex();
 
@@ -445,85 +362,25 @@ void D3D12GPUManager::EndFrame()
     m_RTVCPUDescHandle.ptr += m_CurrentBuffer * m_RTVDescSize;
 }
 
-D3D12GPUManager& D3D12GPUManager::operator=(D3D12GPUManager&& other) noexcept
+bool Renderer::VSyncEnabled()
 {
-    if (this != &other)
-    {
-        *cast<u64 *>(this)   = *cast<u64 *>(&other);
-        *cast<u64 *>(&other) = 0;
-
-        m_Logger           = RTTI::move(other.m_Logger);
-        m_Window           = other.m_Window;
-    #if DEBUG
-        m_Debug            = other.m_Debug;
-        m_DXGIDebug        = other.m_DXGIDebug;
-        m_InfoQueue        = other.m_InfoQueue;
-    #endif
-        m_Factory          = other.m_Factory;
-        m_Adapter          = other.m_Adapter;
-        m_Device           = other.m_Device;
-        m_GraphicsQueue    = other.m_GraphicsQueue;
-        m_SwapChain        = other.m_SwapChain;
-        m_RTVHeapDesc      = other.m_RTVHeapDesc;
-        m_RTVCPUDescHandle = other.m_RTVCPUDescHandle;
-        m_RTVDescSize      = other.m_RTVDescSize;
-        m_CurrentBuffer    = other.m_CurrentBuffer;
-        m_DSVHeapDesc      = other.m_DSVHeapDesc;
-        m_DSBuffer         = other.m_DSBuffer;
-        m_DSVCPUDescHandle = other.m_DSVCPUDescHandle;
-        m_FenceEvent       = other.m_FenceEvent;
-        m_Flags            = other.m_Flags;
-        m_Features         = other.m_Features;
-        m_Error            = other.m_Error;
-
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-        {
-            m_GraphicsAllocators[i] = other.m_GraphicsAllocators[i];
-            m_GraphicsLists[i]      = other.m_GraphicsLists[i];
-    #if DEBUG
-            m_DebugGraphicsLists[i] = other.m_DebugGraphicsLists[i];
-    #endif
-            m_RTBuffers[i]          = other.m_RTBuffers[i];
-            m_Fences[i]             = other.m_Fences[i];
-            m_FencesValues[i]       = other.m_FencesValues[i];
-
-            other.m_GraphicsAllocators[i] = null;
-            other.m_GraphicsLists[i]      = null;
-    #if DEBUG
-            other.m_DebugGraphicsLists[i] = null;
-    #endif
-            other.m_RTBuffers[i]          = null;
-            other.m_Fences[i]             = null;
-        }
-
-        other.m_Window        = null;
-    #if DEBUG
-        other.m_Debug         = null;
-        other.m_DXGIDebug     = null;
-        other.m_InfoQueue     = null;
-    #endif
-        other.m_Factory       = null;
-        other.m_Adapter       = null;
-        other.m_Device        = null;
-        other.m_GraphicsQueue = null;
-        
-        other.m_SwapChain     = null;
-        other.m_RTVHeapDesc   = null;
-        other.m_DSVHeapDesc   = null;
-        other.m_DSBuffer      = null;
-        other.m_FenceEvent    = null;
-    }
-    return *this;
+    return (m_Flags & FLAGS::VSYNC_ENABLED) != FLAGS::NONE;
 }
 
-void D3D12GPUManager::CreateDebugLayer()
+void Renderer::SetVSync(bool enable)
+{
+    if (enable) m_Flags |=  FLAGS::VSYNC_ENABLED;
+    else        m_Flags &= ~FLAGS::VSYNC_ENABLED;
+}
+
+void Renderer::CreateDebugLayer()
 {
 #if DEBUG
     m_Error = D3D12GetDebugInterface(IID_PPV_ARGS(&m_Debug));
     Check(SUCCEEDED(m_Error));
 
     m_Debug->EnableDebugLayer();
-    // m_Debug->SetEnableGPUBasedValidation(true);
+//  m_Debug->SetEnableGPUBasedValidation(true);
     m_Debug->SetEnableSynchronizedCommandQueueValidation(true);
 
     m_Error = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&m_DXGIDebug));
@@ -536,7 +393,7 @@ void D3D12GPUManager::CreateDebugLayer()
 #endif
 }
 
-void D3D12GPUManager::CreateFactory()
+void Renderer::CreateFactory()
 {
     UINT factory_create_flags = 0;
 #if DEBUG
@@ -547,7 +404,7 @@ void D3D12GPUManager::CreateFactory()
     Check(SUCCEEDED(m_Error));
 }
 
-void D3D12GPUManager::CreateAdapterAndDevice()
+void Renderer::CreateAdapterAndDevice()
 {
     SIZE_T             max_vram      = 0;
     UINT               adapter_index = 0;
@@ -613,7 +470,7 @@ void D3D12GPUManager::CreateAdapterAndDevice()
     }
 }
 
-void D3D12GPUManager::GetInfoAboutFeatures()
+void Renderer::GetInfoAboutFeatures()
 {
     m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &m_Features.options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS));
     Check(SUCCEEDED(m_Error));
@@ -652,7 +509,7 @@ void D3D12GPUManager::GetInfoAboutFeatures()
     Check(SUCCEEDED(m_Error));
 }
 
-void D3D12GPUManager::CreateGraphicsQueueAllocatorsAndLists()
+void Renderer::CreateGraphicsQueueAllocatorsAndLists()
 {
     D3D12_COMMAND_QUEUE_DESC graphics_queue_desc;
     graphics_queue_desc.Type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -702,7 +559,7 @@ void D3D12GPUManager::CreateGraphicsQueueAllocatorsAndLists()
     }
 }
 
-void D3D12GPUManager::CreateSwapChain()
+void Renderer::CreateSwapChain()
 {
     IDXGIFactory5 *factory5 = null;
     m_Error = m_Factory->QueryInterface(&factory5);
@@ -742,7 +599,7 @@ void D3D12GPUManager::CreateSwapChain()
 
     IDXGISwapChain1 *swap_chain1 = null;
     m_Error = m_Factory->CreateSwapChainForHwnd(m_GraphicsQueue,
-                                                m_Window->m_Handle,
+                                                m_Window->Handle(),
                                                 &swap_chain_desc1,
                                                 &swap_chain_fullscreen_desc,
                                                 null,
@@ -760,7 +617,7 @@ void D3D12GPUManager::CreateSwapChain()
 #endif
 }
 
-void D3D12GPUManager::GetSwapChainRenderTargets()
+void Renderer::GetSwapChainRenderTargets()
 {
     D3D12_DESCRIPTOR_HEAP_DESC rtv_desc_heap_desc;
     rtv_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -789,7 +646,7 @@ void D3D12GPUManager::GetSwapChainRenderTargets()
     m_CurrentBuffer         = m_SwapChain->GetCurrentBackBufferIndex();
 }
 
-void D3D12GPUManager::CreateDepthBuffer()
+void Renderer::CreateDepthBuffer()
 {
     D3D12_DESCRIPTOR_HEAP_DESC dsv_desc_heap_desc;
     dsv_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
@@ -844,7 +701,7 @@ void D3D12GPUManager::CreateDepthBuffer()
     m_Device->CreateDepthStencilView(m_DSBuffer, &dsv_desc, m_DSVCPUDescHandle);
 }
 
-void D3D12GPUManager::CreateFences()
+void Renderer::CreateFences()
 {
     for (u64 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
@@ -857,4 +714,152 @@ void D3D12GPUManager::CreateFences()
     }
 
     DebugResult(m_FenceEvent = CreateEventExA(null, "Fence Event", 0, EVENT_ALL_ACCESS));
+}
+
+void Renderer::WaitForGPU()
+{
+    ID3D12Fence *current_fence       = m_Fences[m_CurrentBuffer];
+    u64          current_fence_value = m_FencesValues[m_CurrentBuffer];
+
+    m_Error = m_GraphicsQueue->Signal(current_fence, current_fence_value);
+    Check(SUCCEEDED(m_Error));
+
+    u64 value = current_fence->GetCompletedValue();
+    if (value < current_fence_value)
+    {
+        m_Error = current_fence->SetEventOnCompletion(current_fence_value, m_FenceEvent);
+        Check(SUCCEEDED(m_Error));
+
+        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
+        {
+        }
+    }
+
+    m_FencesValues[m_CurrentBuffer] = current_fence_value + 1;
+}
+
+void Renderer::FlushGPU()
+{
+    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+    {
+        ID3D12Fence *fence       = m_Fences[i];
+        u64          fence_value = m_FencesValues[i];
+
+        m_Error = m_GraphicsQueue->Signal(fence, fence_value);
+        Check(SUCCEEDED(m_Error));
+
+        m_Error = fence->SetEventOnCompletion(fence_value, m_FenceEvent);
+        Check(SUCCEEDED(m_Error));
+
+        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
+        {
+        }
+
+        ++m_FencesValues[i];
+    }
+}
+
+template<u64 cstr_len>
+internal INLINE void AddCSTR(char *message, u64& message_len, const char (&cstr)[cstr_len])
+{
+    CopyMemory(message + message_len, cstr, cstr_len - 1);
+    message_len += cstr_len - 1;
+}
+
+template<u64 cat_len>
+internal INLINE void AddCategory(char *message, u64& message_len, const char (&category)[cat_len], int id)
+{
+    message_len += sprintf(message + message_len,
+                           " [%.*s MESSAGE, MESSAGE_ID = %I32d]",
+                           cast<int>(cat_len - 1),
+                           category,
+                           id);
+}
+
+u32 WINAPI LogInfoQueueMessages(void *arg)
+{
+#if DEBUG
+    Renderer *renderer = cast<Renderer *>(arg);
+
+    Memory *memory = Memory::Get();
+
+    while (!renderer->m_StopLogging)
+    {
+        renderer->m_LoggingEvent.Reset();
+
+        u64 num_messages = renderer->m_InfoQueue->GetNumStoredMessages(DXGI_DEBUG_ALL);
+        if (num_messages)
+        {
+            char composed_message[1024] = {0};
+            u64  composed_message_len   = 0;
+
+            for (u64 i = 0; i < num_messages; ++i)
+            {
+                u64 message_length = 0;
+                renderer->m_Error = renderer->m_InfoQueue->GetMessage(DXGI_DEBUG_ALL, i, null, &message_length);
+                Check(SUCCEEDED(renderer->m_Error));
+
+                DXGI_INFO_QUEUE_MESSAGE *message = cast<DXGI_INFO_QUEUE_MESSAGE *>(memory->PushToTransientArea(message_length));
+                renderer->m_Error = renderer->m_InfoQueue->GetMessage(DXGI_DEBUG_ALL, i, message, &message_length);
+                Check(SUCCEEDED(renderer->m_Error));
+
+                composed_message_len = 0;
+
+                /**/ if (mm_equals(&message->Producer, &DXGI_DEBUG_D3D12)) AddCSTR(composed_message, composed_message_len, "D3D12 ");
+                else if (mm_equals(&message->Producer, &DXGI_DEBUG_DXGI))  AddCSTR(composed_message, composed_message_len, "DXGI ");
+                else if (mm_equals(&message->Producer, &DXGI_DEBUG_APP))   AddCSTR(composed_message, composed_message_len, "APP ");
+                else                                                       AddCSTR(composed_message, composed_message_len, "<UNKNOWN> ");
+
+                switch (message->Severity)
+                {
+                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION: AddCSTR(composed_message, composed_message_len, "CORRUPTION: "); break;
+                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR:      AddCSTR(composed_message, composed_message_len, "ERROR: ");      break;
+                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING:    AddCSTR(composed_message, composed_message_len, "WARNING: ");    break;
+                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_INFO:       AddCSTR(composed_message, composed_message_len, "INFO: ");       break;
+                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_MESSAGE:    AddCSTR(composed_message, composed_message_len, "MESSAGE: ");    break;
+                }
+
+                while (isspace(*message->pDescription))
+                {
+                    ++message->pDescription;
+                    --message->DescriptionByteLength;
+                }
+
+                CopyMemory(composed_message + composed_message_len, message->pDescription, message->DescriptionByteLength);
+                composed_message_len += message->DescriptionByteLength;
+
+                switch (message->Category)
+                {
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_UNKNOWN:               AddCategory(composed_message, composed_message_len, "UNKNOWN", message->ID);               break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_MISCELLANEOUS:         AddCategory(composed_message, composed_message_len, "MISCELLANEOUS", message->ID);         break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_INITIALIZATION:        AddCategory(composed_message, composed_message_len, "INITIALIZATION", message->ID);        break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_CLEANUP:               AddCategory(composed_message, composed_message_len, "CLEANUP", message->ID);               break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_COMPILATION:           AddCategory(composed_message, composed_message_len, "COMPILATION", message->ID);           break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_STATE_CREATION:        AddCategory(composed_message, composed_message_len, "STATE CREATION", message->ID);        break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_STATE_SETTING:         AddCategory(composed_message, composed_message_len, "STATE SETTING", message->ID);         break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_STATE_GETTING:         AddCategory(composed_message, composed_message_len, "STATE GETTING", message->ID);         break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_RESOURCE_MANIPULATION: AddCategory(composed_message, composed_message_len, "RESOURCE MANIPULATION", message->ID); break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_EXECUTION:             AddCategory(composed_message, composed_message_len, "EXECUTION", message->ID);             break;
+                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_SHADER:                AddCategory(composed_message, composed_message_len, "SHADER", message->ID);                break;
+                };
+
+                switch (message->Severity)
+                {
+                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR:   renderer->m_Logger.LogError(  "%.*s", composed_message_len, composed_message); break;
+                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING: renderer->m_Logger.LogWarning("%.*s", composed_message_len, composed_message); break;
+                    default:                                       renderer->m_Logger.LogInfo(   "%.*s", composed_message_len, composed_message); break;
+                }
+
+                ZeroMemory(composed_message, composed_message_len);
+            }
+
+            renderer->m_InfoQueue->ClearStoredMessages(DXGI_DEBUG_ALL);
+        }
+
+        renderer->m_LoggingEvent.Set();
+    }
+#endif
+    return 0;
+}
+
 }

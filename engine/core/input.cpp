@@ -383,7 +383,7 @@ Input *Input::Get()
 }
 
 Input::Input(const Window& window, const Logger& logger)
-    : m_Mouse(logger, window.m_Handle),
+    : m_Mouse(logger, window.Handle()),
       m_Gamepad(logger),
       m_Keyboard()
 {

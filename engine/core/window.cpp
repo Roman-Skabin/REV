@@ -5,7 +5,7 @@
 #include "core/pch.h"
 #include "core/window.h"
 #include "core/input.h"
-#include "renderer/gpu_manager.h"
+#include "renderer/graphics_api.h"
 
 //
 // Monitor
@@ -20,7 +20,7 @@ Monitor::Monitor()
 
 Monitor::Monitor(const Window& window, const Logger& logger)
 {
-    DebugResult(m_Handle = MonitorFromWindow(window.m_Handle, MONITOR_DEFAULTTONEAREST));
+    DebugResult(m_Handle = MonitorFromWindow(window.Handle(), MONITOR_DEFAULTTONEAREST));
 
     MONITORINFO info = {0};
     info.cbSize = sizeof(MONITORINFO);
@@ -43,14 +43,14 @@ Monitor::Monitor(Monitor&& other) noexcept
 Monitor::~Monitor()
 {
     m_Handle = null;
-    m_Pos  = 0L;
-    m_Size = 0L;
+    m_Pos    = 0L;
+    m_Size   = 0L;
 }
 
 void Monitor::OnMonitorChange(const Window& window, const Logger& logger)
 {
     CloseHandle(m_Handle);
-    DebugResult(m_Handle = MonitorFromWindow(window.m_Handle, MONITOR_DEFAULTTONEAREST));
+    DebugResult(m_Handle = MonitorFromWindow(window.Handle(), MONITOR_DEFAULTTONEAREST));
 
     MONITORINFO info;
     info.cbSize = sizeof(MONITORINFO);
@@ -291,9 +291,9 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
                 window->m_Size = new_size;
 
             #if 0
-                GetGPUManager()->ResizeBuffers();
+                GraphicsAPI::GetRenderer()->ResizeBuffers();
             #else
-                GetGPUManager()->ResizeTarget();
+                GraphicsAPI::GetRenderer()->ResizeTarget();
             #endif
 
                 window->m_Flags &= ~Window::FLAGS::MINIMIZED;

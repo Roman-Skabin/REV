@@ -11,7 +11,7 @@
 #include "core/input.h"
 #include "core/level.h"
 
-#include "renderer/gpu_manager.h"
+#include "renderer/graphics_api.h"
 
 #include "tools/logger.h"
 #include "tools/work_queue.h"
@@ -24,7 +24,7 @@ public:
     static Application *Get();
 
 protected:
-    explicit Application(const char *name = "Application", GRAPHICS_API api = GRAPHICS_API::D3D12);
+    explicit Application(const char *name = "Application", GraphicsAPI::API api = GraphicsAPI::API::D3D12);
 
 public:
     virtual ~Application();
@@ -34,18 +34,24 @@ public:
     {
         m_Levels.PushBack(cast<Level *>(levels)...);
         (..., levels->OnAttach());
+        (..., m_Logger.LogInfo("%s has been attached", levels->GetName()));
     }
 
     template<typename ...LevelsPointers, typename = RTTI::enable_if_t<RTTI::are_base_of_v<Level, RTTI::remove_pointer_t<LevelsPointers>...>>>
     void DetachLevels(LevelsPointers... levels)
     {
         (..., levels->OnDetach());
+        (..., m_Logger.LogInfo("%s has been detached", levels->GetName()));
         (..., m_Levels.Erase(m_Levels.Find(levels)));
     }
 
     void DetachAllLevels()
     {
-        for (Level *level : m_Levels) level->OnDetach();
+        for (Level *level : m_Levels)
+        {
+            level->OnDetach();
+            m_Logger.LogInfo("%s has been detached", level->GetName());
+        }
         m_Levels.Clear();
     }
 
@@ -75,17 +81,18 @@ private:
     Application& operator=(Application&&)      = delete;
 
 private:
-    Logger           m_Logger;
+    Logger             m_Logger;
 
 protected:
-    Memory          *m_Memory;
-    Allocator        m_Allocator;
-    WorkQueue       *m_WorkQueue;
-    Window           m_Window;
-    Input           *m_Input;
-    Timer            m_Timer;
-    Buffer<Level *>  m_Levels;
-    IGPUManager     *m_GPUManager;
+    Memory            *m_Memory;
+    Allocator          m_Allocator;
+    WorkQueue         *m_WorkQueue;
+    Window             m_Window;
+    Input             *m_Input;
+    Timer              m_Timer;
+    Buffer<Level *>    m_Levels;
+    IRenderer         *m_Renderer;
+    IGPUMemoryManager *m_GPUMemoryManager;
 
 private:
     static Application *s_Application;

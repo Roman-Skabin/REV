@@ -71,9 +71,10 @@ public:
 
     void SetTitle(const char *title);
 
-    const char *Title()    const { return m_Title; }
-    v2s         Position() const { return m_Pos;   }
-    v2s         Size()     const { return m_Size;  }
+    HWND        Handle()   const { return m_Handle; }
+    const char *Title()    const { return m_Title;  }
+    v2s         Position() const { return m_Pos;    }
+    v2s         Size()     const { return m_Size;   }
 
     bool Closed()       const;
     bool Resized()      const;
@@ -104,10 +105,7 @@ private:
     char      m_Title[128];
     char      m_ClassName[128];
 
-    friend class Monitor;
-    friend class Input;
     friend class Application;
-    friend class D3D12GPUManager;
 };
 
 ENUM_CLASS_OPERATORS(Window::FLAGS);

@@ -1,10 +1,9 @@
 #include "levels/demo.h"
 #include "application.h"
 
-DemoLevel::DemoLevel(const Logger& logger)
+DemoLevel::DemoLevel()
     : Level("DemoLevel"),
-      m_Application(Application::Get()),
-      m_Logger(logger, "DemoLevel logger")
+      m_Application(Application::Get())
 {
     strcpy(m_OriginalWindowTitle, m_Application->GetWindow().Title());
 }
@@ -15,12 +14,10 @@ DemoLevel::~DemoLevel()
 
 void DemoLevel::OnAttach()
 {
-    m_Logger.LogInfo("%s has been attached", m_Name);
 }
 
 void DemoLevel::OnDetach()
 {
-    m_Logger.LogInfo("%s has been detached", m_Name);
 }
 
 void DemoLevel::OnUpdateAndRender()

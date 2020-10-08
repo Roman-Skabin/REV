@@ -179,13 +179,13 @@ template<typename T, u64 count> constexpr u64 ArrayCount(in T (&)[count]) { retu
 #define StructFieldOffset(_struct, _field)  cast<u64>(&(cast<_struct *>(null)->_field))
 
 template<typename T, typename U, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
-constexpr RTTI::max_size_t<T, U> AlignUp(in T x, in U a)
+constexpr RTTI::max_size_t<T, U> AlignUp(in T x, in U a = ENGINE_DEFAULT_ALIGNMENT)
 {
     return cast<RTTI::max_size_t<T, U>>((x + (a - 1)) & ~(a - 1));
 }
 
 template<typename T, typename U, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
-constexpr RTTI::max_size_t<T, U> AlignDown(in T x, in U a)
+constexpr RTTI::max_size_t<T, U> AlignDown(in T x, in U a = ENGINE_DEFAULT_ALIGNMENT)
 {
     return cast<RTTI::max_size_t<T, U>>(x & ~(a - 1));
 }

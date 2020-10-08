@@ -34,7 +34,7 @@ Application::Application(const char *name, GraphicsAPI::API api)
 
     GraphicsAPI::SetGraphicsAPI(api);
     m_Renderer         = GraphicsAPI::CreateRenderer(&m_Window, m_Logger);
-    m_GPUMemoryManager = GraphicsAPI::CreateGPUMemoryManager(&m_Allocator);
+    m_GPUMemoryManager = GraphicsAPI::CreateGPUMemoryManager(&m_Allocator, m_Logger, GB(2ui64));
 }
 
 Application::~Application()
@@ -43,6 +43,11 @@ Application::~Application()
     {
         m_Renderer->Destroy();
         m_Renderer = null;
+    }
+    if (m_GPUMemoryManager)
+    {
+        m_GPUMemoryManager->Destroy();
+        m_GPUMemoryManager = null;
     }
     s_Application = null;
 }

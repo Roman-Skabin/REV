@@ -30,7 +30,7 @@ public:
         : m_Header(null)
     {
         m_Header = cast<Header *>(other.m_Header->allocator->AllocateAligned(sizeof(Header) + other.m_Header->capacity * sizeof(T),
-                                                                                    other.m_Header->alignment_in_bytes));
+                                                                             other.m_Header->alignment_in_bytes));
         CopyMemory(m_Header, other.m_Header, sizeof(Header) + other.m_Header->count * sizeof(T));
     }
 
@@ -49,25 +49,7 @@ public:
         }
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>>
-    void Insert(in u64 where, in const U&... elements)
-    {
-        u64 old_count = m_Header->count;
-
-        m_Header->count += sizeof...(elements);
-        Resize();
-
-        if (where != old_count)
-        {
-            MoveMemory(m_Header->data + where + sizeof...(elements),
-                       m_Header->data + where,
-                       (old_count - where) * sizeof(T));
-        }
-
-        (..., (m_Header->data[where++] = elements));
-    }
-
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>>
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>>
     void Insert(in u64 where, in U&&... elements)
     {
         u64 old_count = m_Header->count;
@@ -85,31 +67,31 @@ public:
         (..., (m_Header->data[where++] = RTTI::move(elements)));
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushBack(in const U&... elements) { Insert(m_Header->count, elements...);                   }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushBack(in U&&... elements)      { Insert(m_Header->count, RTTI::forward<U>(elements)...); }
-
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushFront(in const U&... elements) { Insert(0, elements...);                   }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushFront(in U&&... elements)      { Insert(0, RTTI::forward<U>(elements)...); }
-
-    template<typename ...ConstructorArgs>
-    void Emplace(in u64 where, in const ConstructorArgs&... args)
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>>
+    void Insert(in u64 where, in const U&... elements)
     {
         u64 old_count = m_Header->count;
 
-        ++m_Header->count;
+        m_Header->count += sizeof...(elements);
         Resize();
 
         if (where != old_count)
         {
-            MoveMemory(m_Header->data + where + 1,
+            MoveMemory(m_Header->data + where + sizeof...(elements),
                        m_Header->data + where,
                        (old_count - where) * sizeof(T));
         }
 
-        *m_Header->data = T(args...);
+        (..., (m_Header->data[where++] = elements));
     }
 
-    template<typename ...ConstructorArgs>
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> constexpr void PushBack(in U&&... elements)  { Insert(m_Header->count, RTTI::forward<U>(elements)...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> constexpr void PushFront(in U&&... elements) { Insert(0,               RTTI::forward<U>(elements)...); }
+
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> constexpr void PushBack(in const U&... elements)  { Insert(m_Header->count, elements...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> constexpr void PushFront(in const U&... elements) { Insert(0,               elements...); }
+
+    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>>
     void Emplace(in u64 where, in ConstructorArgs&&... args)
     {
         u64 old_count = m_Header->count;
@@ -127,11 +109,8 @@ public:
         *m_Header->data = T(RTTI::forward<ConstructorArgs>(args)...);
     }
 
-    template<typename ...ConstructorArgs> void EmplaceBack(in const ConstructorArgs&... args) { Emplace(m_Header->count, args...);                                 }
-    template<typename ...ConstructorArgs> void EmplaceBack(in ConstructorArgs&&... args)      { Emplace(m_Header->count, RTTI::forward<ConstructorArgs>(args)...); }
-
-    template<typename ...ConstructorArgs> void EmplaceFront(in const ConstructorArgs&... args) { Emplace(0, args...);                                 }
-    template<typename ...ConstructorArgs> void EmplaceFront(in ConstructorArgs&&... args)      { Emplace(0, RTTI::forward<ConstructorArgs>(args)...); }
+    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr void EmplaceBack(in ConstructorArgs&&... args)  { Emplace(m_Header->count, RTTI::forward<ConstructorArgs>(args)...); }
+    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr void EmplaceFront(in ConstructorArgs&&... args) { Emplace(0,               RTTI::forward<ConstructorArgs>(args)...); }
 
     void Erase(u64 from, u64 to = npos)
     {
@@ -140,9 +119,12 @@ public:
 
         // @NOTE(Roman): Duh, we gotta do that because of destructors.
         //               In C we'd just ZeroMemory this region.
-        for (T *it = m_Header->data + from; it < m_Header->data + to; ++it)
+        if constexpr (RTTI::is_destructible_v<T>)
         {
-            it->~T();
+            for (T *it = m_Header->data + from; it < m_Header->data + to; ++it)
+            {
+                it->~T();
+            }
         }
 
         if (from < m_Header->count - 1)
@@ -179,26 +161,26 @@ public:
         return npos;
     }
 
-    u64 Count()     const { return m_Header->count;             }
-    u64 Capacity()  const { return m_Header->capacity;          }
-    u64 Alignment() const { return m_Header->alinment_in_bytes; }
+    constexpr u64 Count()     const { return m_Header->count;             }
+    constexpr u64 Capacity()  const { return m_Header->capacity;          }
+    constexpr u64 Alignment() const { return m_Header->alinment_in_bytes; }
 
-    const T *Data() const { return m_Header->data; }
-          T *Data()       { return m_Header->data; }
+    constexpr const T *Data() const { return m_Header->data; }
+    constexpr       T *Data()       { return m_Header->data; }
 
-    bool Empty() const { return m_Header->count == 0; }
+    constexpr bool Empty() const { return m_Header->count == 0; }
 
-    const T *begin() const { return m_Header->data;                   }
-    const T *end()   const { return m_Header->data + m_Header->count; }
+    constexpr const T *begin() const { return m_Header->data;                   }
+    constexpr const T *end()   const { return m_Header->data + m_Header->count; }
 
-    T *begin() { return m_Header->data;                   }
-    T *end()   { return m_Header->data + m_Header->count; }
+    constexpr T *begin() { return m_Header->data;                   }
+    constexpr T *end()   { return m_Header->data + m_Header->count; }
 
-    const T& First() const { return *m_Header->data;                     }
-    const T& Last()  const { return m_Header->data[m_Header->count - 1]; }
+    constexpr const T& First() const { return *m_Header->data;                     }
+    constexpr const T& Last()  const { return m_Header->data[m_Header->count - 1]; }
 
-    T& First() { return *m_Header->data;                     }
-    T& Last()  { return m_Header->data[m_Header->count - 1]; }
+    constexpr T& First() { return *m_Header->data;                     }
+    constexpr T& Last()  { return m_Header->data[m_Header->count - 1]; }
 
     Buffer& operator=(in const Buffer& other)
     {
@@ -259,9 +241,12 @@ private:
 
     void DestroyAll()
     {
-        for (T *it = m_Header->data; it < m_Header->data + m_Header->count; ++it)
+        if constexpr (RTTI::is_destructible_v<T>)
         {
-            it->~T();
+            for (T *it = m_Header->data; it < m_Header->data + m_Header->count; ++it)
+            {
+                it->~T();
+            }
         }
     }
 

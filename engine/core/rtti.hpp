@@ -22,6 +22,8 @@ namespace RTTI
     using true_constant  = bool_constant<true>;
     using false_constant = bool_constant<false>;
 
+    template<bool val> inline constexpr bool bool_constant_v = bool_constant<val>::value;
+
     template<bool cond, typename T = void> struct enable_if          {                 };
     template<typename T>                   struct enable_if<true, T> { using type = T; };
 
@@ -197,6 +199,43 @@ namespace RTTI
     template<typename T> struct remove_pointer<T *const volatile> { using type = T; };
 
     template<typename T> using remove_pointer_t = typename remove_pointer<T>::type;
+
+    template<typename T, bool = is_enum_v<T>> struct underlying_type           { using type = __underlying_type(T); };
+    template<typename T>                      struct underlying_type<T, false> {};
+
+    template<typename T> using underlying_type_t = typename underlying_type<T>::type;
+
+    template<typename T, typename ...ConstructorArgs> inline constexpr bool is_constructible_v = __is_constructible(T, ConstructorArgs...);
+
+    template<typename T, typename ...ConstructorArgs> using is_constructible = bool_constant<__is_constructible(T, ConstructorArgs...)>;
+
+    template<typename T> inline constexpr bool is_default_constructible_v = __is_constructible(T);
+
+    template<typename T> using is_default_constructible = bool_constant<__is_constructible(T)>;
+
+    template<typename T> inline constexpr bool is_copy_constructible_v = __is_constructible(T, const T&);
+
+    template<typename T> using is_copy_constructible = bool_constant<__is_constructible(T, const T&)>;
+
+    template<typename T> inline constexpr bool is_move_constructible_v = __is_constructible(T, T);
+
+    template<typename T> using is_move_constructible = bool_constant<__is_constructible(T, T)>;
+
+    template<typename To, typename From> inline constexpr bool is_assignable_v = __is_assignable(To, From);
+
+    template<typename To, typename From> using is_assignable = bool_constant<__is_assignable(To, From)>;
+
+    template<typename T> inline constexpr bool is_copy_assignable_v = __is_assignable(T&, const T&);
+
+    template<typename T> using is_copy_assignable = bool_constant<__is_assignable(T&, const T&)>;
+
+    template<typename T> inline constexpr bool is_move_assignable_v = __is_assignable(T&, T);
+
+    template<typename T> using is_move_assignable = bool_constant<__is_assignable(T&, T)>;
+
+    template<typename T> inline constexpr bool is_destructible_v = __is_destructible(T);
+
+    template<typename T> using is_destructible = bool_constant<__is_destructible(T)>;
 
 #if 0
     template<typename T> constexpr remove_ref_t<T>&  to_lvalue(remove_ref_t<T>& x)  { return x; }

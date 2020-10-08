@@ -17,7 +17,7 @@ namespace D3D12
         SWAP_CHAIN_BUFFERS_COUNT = 2,
     };
 
-    class Renderer final : public IRenderer
+    class ENGINE_IMPEXP Renderer final : public IRenderer
     {
     public:
         enum class FLAGS
@@ -125,14 +125,17 @@ namespace D3D12
             D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT virtual_address;
         } m_Features;
 
-        // @Issue(Roman): Suspend/Resume thread while moving? (When to suspend and when to resume?)
-        //                Events for what? For waiting for logging cycle completion?
-        //                What about moving manager (on create and on API change)? How should I synchronize LogInfoQueueMessages with moving a Renderer?
-        //                Ok, what about creating a manager with another API? Kill thread? Store thread handle then?
+        // @Issue(Roman): Ok, what about creating a manager with another API? Kill thread? Store thread handle then?
     #if DEBUG
         Event                        m_LoggingEvent;
         bool                         m_StopLogging;
     #endif
+
+        // @TODO(Roman): Deal with all these friend classes. This is not normal.
+        friend class GPUMemoryManager;
+        friend class GPUResourceMemory;
+        friend class GPUResource;
+        friend class GPUDescHeapMemory;
     };
 
     ENUM_CLASS_OPERATORS(Renderer::FLAGS);

@@ -3,7 +3,7 @@
 //
 
 #include "core/pch.h"
-#include "tools/work_queue.h"
+#include "core/work_queue.h"
 
 typedef struct WorkQueueThread
 {

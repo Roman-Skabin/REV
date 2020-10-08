@@ -44,7 +44,7 @@ IRenderer *GraphicsAPI::CreateRenderer(in Window *window, in const Logger& logge
     }
 }
 
-IGPUMemoryManager *GraphicsAPI::CreateGPUMemoryManager(in Allocator *allocator)
+IGPUMemoryManager *GraphicsAPI::CreateGPUMemoryManager(in Allocator *allocator, in const Logger& logger, in u64 gpu_memory_capacity)
 {
     switch (s_API)
     {
@@ -52,7 +52,7 @@ IGPUMemoryManager *GraphicsAPI::CreateGPUMemoryManager(in Allocator *allocator)
         {
             local D3D12::GPUMemoryManager *manager = null;
             CheckM(!manager, "GPU Memory Manager is already created. Use GraphicsAPI::GetGPUMemoryManager() function instead");
-            manager = new D3D12::GPUMemoryManager(allocator);
+            manager = new D3D12::GPUMemoryManager(allocator, logger, gpu_memory_capacity);
             s_GPUMemoryManager = manager;
             return s_GPUMemoryManager;
         } break;

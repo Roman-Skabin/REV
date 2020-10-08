@@ -2,18 +2,15 @@
     - Move to C++ because of bad D3D12 compatibility with C.
 
 - Core
-    - Make engine's user pointer and sandbox thread safety
     - More significant logs. Have to be almost everywhere, BUT DO NOT TRASH THE CODE!
-    - Include all slightly changes files in pch.h
     - Complete core\platform.h
-    - BIG ISSUE: Do I really need all these Checks in my code,
-                 especially at the beginning of functions?
-                 Doesn't it stupid or useless, huh?
     - Move all STD includes from platform.h to pch.h?
-    - Level system (not a "System" actualy but kinda).
+    - Get rid of the interface stuff and swith to function pointers?
+    - ACS (Application Component System)
 
 - Tools
     - Several simultaneous read operations under the same file?
+    - Hash table
 
 - Build
     - [Pre?]build system. Build only edited files
@@ -22,21 +19,18 @@
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
 
-- Math
-    - Adapt to different ISA vec.h and mat.h
-
 - GPU
-    - TODOs in cengine/gpu/gpu_memory_manager.h
-    - Clean up GPUMemoryManager and GPUProgramManager
-    - Print D3D12/DXGI messages in separate "while true" thread
+    - TODOs in engine/platform/d3d12_gpu_memory_manager.h
+    - Clean up GPUMemoryManager and GPUProgramManager and Renderer
     - Save shaders bytecode in some files and compile only shaders that
       source file change time > bytecode file change time?
-    - Do ResizeGPUBuffers when we choose another screen dimension. (After UI will be implemented)
+    - Do ResizeGPUBuffers when we choose another screen dimension. (After UI implementation)
     - Custom compute shader's parser and ComputeProgram generation
     - User-side GPU command lists and bundles?
-    - Several adapters support
+    - Several adapters support?
 
 - Graphics
+    - Do I really need custom shaders???
     - Custom graphics shader's parser and GraphicsProgram generation
         - SRVs, UAVs, static samplers, tables (, constants?)
         - Hash table for interns
@@ -49,7 +43,7 @@
     - Support triangle strips (define topology in shaders?)
     - Support stream output (define it in shaders too?)
     - SubTextures
-    - Entity system
+    - Entity (component?) system
     - Particle system
     - TextRenderer (DirectWrite + D2D)
 
@@ -61,4 +55,4 @@
 - Editor
     - UI (ImGUI or Nuklear or write my own?)
     - Vertex and index buffer generation.
-    - Ability to choose render targets' (framebuffers') dimension.
+    - Ability to choose render targets' (framebuffers') dimension. // What I meant by that??

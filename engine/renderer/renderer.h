@@ -16,6 +16,6 @@ interface ENGINE_IMPEXP IRenderer
     virtual void StartFrame() = 0;
     virtual void EndFrame()   = 0;
 
-    virtual bool VSyncEnabled() = 0;
+    virtual bool VSyncEnabled()        = 0;
     virtual void SetVSync(bool enable) = 0;
 };

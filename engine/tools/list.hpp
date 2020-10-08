@@ -5,30 +5,192 @@
 #pragma once
 
 #include "core/allocator.h"
+#include "tools/function.hpp"
+
+template<typename, bool, typename>
+class List;
 
 template<typename T, typename Allocator_t = Allocator>
-class List final
+class DLinkedListNode final
 {
 public:
     using Type = T;
 
-    class Node final
+    DLinkedListNode()
+        : m_Prev(null),
+          m_Next(null),
+          m_Data()
     {
-        Node *Prev() { return m_Prev; }
-        Node *Next() { return m_Next; }
-        T&    Data() { return m_Data; }
+    }
 
-        const Node *Prev() const { return m_Prev; }
-        const Node *Next() const { return m_Next; }
-        const T&    Data() const { return m_Data; }
+    DLinkedListNode(const DLinkedListNode& other)
+        : m_Prev(other.m_Prev),
+          m_Next(other.m_Next),
+          m_Data(other.m_Data)
+    {
+    }
 
-    private:
-        Node *m_Prev;
-        Node *m_Next;
-        T     m_Data;
+    DLinkedListNode(DLinkedListNode&& other) noexcept
+        : m_Prev(other.m_Prev),
+          m_Next(other.m_Next),
+          m_Data(RTTI::move(other.m_Data))
+    {
+        other.m_Prev = null;
+        other.m_Next = null;
+    }
 
-        friend class List;
-    };
+    ~DLinkedListNode()
+    {
+        m_Prev = null;
+        m_Next = null;
+    }
+
+    constexpr DLinkedListNode *Prev() { return m_Prev; }
+    constexpr DLinkedListNode *Next() { return m_Next; }
+    constexpr T&               Data() { return m_Data; }
+
+    constexpr const DLinkedListNode *Prev() const { return m_Prev; }
+    constexpr const DLinkedListNode *Next() const { return m_Next; }
+    constexpr const T&               Data() const { return m_Data; }
+
+    DLinkedListNode& operator=(const DLinkedListNode& other)
+    {
+        if (this != &other)
+        {
+            m_Prev = other.m_Prev;
+            m_Next = other.m_Next;
+            m_Data = other.m_Data;
+        }
+        return *this;
+    }
+
+    DLinkedListNode& operator=(DLinkedListNode&& other) noexcept
+    {
+        if (this != &other)
+        {
+            m_Prev = other.m_Prev;
+            m_Next = other.m_Next;
+            m_Data = RTTI::move(other.m_Data);
+
+            other.m_Prev = null;
+            other.m_Next = null;
+        }
+        return *this;
+    }
+
+private:
+    DLinkedListNode *m_Prev;
+    DLinkedListNode *m_Next;
+    T                m_Data;
+
+    friend class List<T, true, Allocator_t>;
+};
+
+template<typename T>
+INLINE auto operator==(const DLinkedListNode<T>& left, const DLinkedListNode<T>& right)
+    -> decltype(left.Data() == right.Data())
+{
+    return left.Prev() == right.Prev()
+        && left.Next() == right.Next()
+        && left.Data() == right.Data();
+}
+
+template<typename T>
+INLINE auto operator!=(const DLinkedListNode<T>& left, const DLinkedListNode<T>& right)
+    -> decltype(left.Data() != right.Data())
+{
+    return left.Prev() != right.Prev()
+        || left.Next() != right.Next()
+        || left.Data() != right.Data();
+}
+
+template<typename T, typename Allocator_t = Allocator>
+class SLinkedListNode final
+{
+public:
+    using Type = T;
+
+    SLinkedListNode()
+        : m_Next(null),
+          m_Data()
+    {
+    }
+
+    SLinkedListNode(const SLinkedListNode& other)
+        : m_Next(other.m_Next),
+          m_Data(other.m_Data)
+    {
+    }
+
+    SLinkedListNode(SLinkedListNode&& other) noexcept
+        : m_Next(other.m_Next),
+          m_Data(RTTI::move(other.m_Data))
+    {
+        other.m_Next = null;
+    }
+
+    ~SLinkedListNode()
+    {
+        m_Next = null;
+    }
+
+    constexpr SLinkedListNode *Next() { return m_Next; }
+    constexpr T&               Data() { return m_Data; }
+
+    constexpr const SLinkedListNode *Next() const { return m_Next; }
+    constexpr const T&               Data() const { return m_Data; }
+
+    SLinkedListNode& operator=(const SLinkedListNode& other)
+    {
+        if (this != &other)
+        {
+            m_Next = other.m_Next;
+            m_Data = other.m_Data;
+        }
+        return *this;
+    }
+
+    SLinkedListNode& operator=(SLinkedListNode&& other) noexcept
+    {
+        if (this != &other)
+        {
+            m_Next = other.m_Next;
+            m_Data = RTTI::move(other.m_Data);
+
+            other.m_Next = null;
+        }
+        return *this;
+    }
+
+private:
+    SLinkedListNode *m_Next;
+    T                m_Data;
+
+    friend class List<T, false, Allocator_t>;
+};
+
+template<typename T>
+INLINE auto operator==(const SLinkedListNode<T>& left, const SLinkedListNode<T>& right)
+    -> decltype(left.Data() == right.Data())
+{
+    return left.Next() == right.Next()
+        && left.Data() == right.Data();
+}
+
+template<typename T>
+INLINE auto operator!=(const SLinkedListNode<T>& left, const SLinkedListNode<T>& right)
+    -> decltype(left.Data() != right.Data())
+{
+    return left.Next() != right.Next()
+        || left.Data() != right.Data();
+}
+
+template<typename T, bool doubly_linked = false, typename Allocator_t = Allocator>
+class List final
+{
+public:
+    using Type = T;
+    using Node = RTTI::conditional_t<doubly_linked, DLinkedListNode<T, Allocator_t>, SLinkedListNode<T, Allocator_t>>;
 
 public:
     List(in Allocator_t *allocator)
@@ -39,8 +201,9 @@ public:
         Check(allocator);
     }
 
+    template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>>
     List(in const List& other)
-        : m_Allocator(other..m_Allocator),
+        : m_Allocator(other.m_Allocator),
           m_First(null),
           m_Last(null)
     {
@@ -50,13 +213,14 @@ public:
         }
     }
 
-    List(in List&& other)
-        : m_Allocator(other..m_Allocator),
+    List(in List&& other) noexcept
+        : m_Allocator(other.m_Allocator),
           m_First(other.m_First),
           m_Last(other.m_Last)
     {
-        other.m_First = null;
-        other.m_Last  = null;
+        other.m_Allocator = null;
+        other.m_First     = null;
+        other.m_Last      = null;
     }
 
     ~List()
@@ -65,18 +229,17 @@ public:
         m_Allocator = null;
     }
 
-    u64 Count() const { return m_Count; }
+    constexpr u64 Count() const { return m_Count; }
     
-    bool Empty() const { return m_Count == 0; }
+    constexpr bool Empty() const { return m_Count == 0; }
 
-    const Node *First() const { return m_First; }
-          Node *First()       { return m_First; }
+    constexpr const Node *First() const { return m_First; }
+    constexpr       Node *First()       { return m_First; }
 
-    const Node *Last() const { return m_Last; }
-          Node *Last()       { return m_Last; }
+    constexpr const Node *Last() const { return m_Last; }
+    constexpr       Node *Last()       { return m_Last; }
 
-    template<typename T>
-    void ForEach(T&& callback) const
+    void ForEach(Function<void(const Node *)>&& callback) const
     {
         for (const Node *it = m_First; it; it = it->m_Next)
         {
@@ -84,8 +247,7 @@ public:
         }
     }
 
-    template<typename T>
-    void ForEach(T&& callback)
+    void ForEach(Function<void(Node *)>&& callback)
     {
         for (Node *it = m_First; it; it = it->m_Next)
         {
@@ -93,41 +255,62 @@ public:
         }
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>>
-    void Insert(in Node *where, in const U&... elements)
+    void ForEachR(Function<void(const Node *)>&& callback) const
     {
-        (..., (InsertOne(where)->m_Data = elements));
+        if constexpr (doubly_linked)
+        {
+            for (const Node *it = m_Last; it; it = it->m_Prev)
+            {
+                callback(it);
+            }
+        }
+        else
+        {
+            static_assert(false, "Use DLinkedListNode as ListNode to be able to use ForEachR");
+        }
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>>
+    void ForEachR(Function<void(Node *)>&& callback)
+    {
+        if constexpr (doubly_linked)
+        {
+            for (Node *it = m_Last; it; it = it->m_Prev)
+            {
+                callback(it);
+            }
+        }
+        else
+        {
+            static_assert(false, "Use DLinkedListNode as ListNode to be able to use ForEachR");
+        }
+    }
+
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>>
     void Insert(in Node *where, in U&&... elements)
     {
         (..., (InsertOne(where)->m_Data = RTTI::move(elements)));
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushFront(in const U&... elements) { Insert(m_First, elements...); }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushBack(in const U&... elements)  { Insert(null,    elements...); }
-
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushFront(in U&&... elements) { Insert(m_First, RTTI::forward<U>(elements)...); }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...>>> void PushBack(in U&&... elements)  { Insert(null,    RTTI::forward<U>(elements)...); }
-
-    template<typename ...ConstructorArgs>
-    void Emplace(in Node *where, in const ConstructorArgs&... args)
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>>
+    void Insert(in Node *where, in const U&... elements)
     {
-        InsertOne(where)->m_Data = T(args...);
+        (..., (InsertOne(where)->m_Data = elements));
     }
 
-    template<typename ...ConstructorArgs>
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> constexpr void PushFront(in U&&... elements) { Insert(m_First, RTTI::forward<U>(elements)...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> constexpr void PushBack(in U&&... elements)  { Insert(null,    RTTI::forward<U>(elements)...); }
+
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> constexpr void PushFront(in const U&... elements) { Insert(m_First, elements...); }
+    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> constexpr void PushBack(in const U&... elements)  { Insert(null,    elements...); }
+
+    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>>
     void Emplace(in Node *where, in ConstructorArgs&&... args)
     {
         InsertOne(where)->m_Data = T(RTTI::forward<ConstructorArgs>(args)...);
     }
 
-    template<typename ...ConstructorArgs> void EmplaceFront(in const ConstructorArgs&... args) { Emplace(m_First, args...); }
-    template<typename ...ConstructorArgs> void EmplaceBack(in const ConstructorArgs&... args)  { Emplace(null,    args...); }
-
-    template<typename ...ConstructorArgs> void EmplaceFront(in ConstructorArgs&&... args) { Emplace(m_First, RTTI::forward<ConstructorArgs>(args)...); }
-    template<typename ...ConstructorArgs> void EmplaceBack(in ConstructorArgs&&... args)  { Emplace(null,    RTTI::forward<ConstructorArgs>(args)...); }
+    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr void EmplaceFront(in ConstructorArgs&&... args) { Emplace(m_First, RTTI::forward<ConstructorArgs>(args)...); }
+    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr void EmplaceBack(in ConstructorArgs&&... args)  { Emplace(null,    RTTI::forward<ConstructorArgs>(args)...); }
 
     template<typename ...Nodes, typename = RTTI::enable_if_t<RTTI::are_same_v<Node, Nodes...>>>
     void Erase(in Nodes *... what)
@@ -135,14 +318,17 @@ public:
         (..., EraseOne(what));
     }
 
-    void EraseFront() { EraseOne(m_First); }
-    void EraseBack()  { EraseOne(m_Back);  }
+    constexpr void EraseFront() { EraseOne(m_First); }
+    constexpr void EraseBack()  { EraseOne(m_Back);  }
 
     void Clear()
     {
         for (Node *it = m_First; it; )
         {
-            it->m_Data.~T();
+            if constexpr (RTTI::is_destructible_v<T>)
+            {
+                it->m_Data.~T();
+            }
 
             Node *next = it->m_Next;
             m_Allocator->DeAlloc(it);
@@ -154,6 +340,7 @@ public:
         m_Last  = null;
     }
 
+    template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>>
     List& operator=(in const List& other)
     {
         if (this != &other)
@@ -168,7 +355,7 @@ public:
         return *this;
     }
 
-    List& operator=(in List&& other)
+    List& operator=(in List&& other) noexcept
     {
         if (this != &other)
         {
@@ -210,33 +397,94 @@ public:
 private:
     Node *InsertOne(Node *where)
     {
-        Node *node = m_Allocator->Alloc<Node>();
-        ++m_Count;
+        if constexpr (doubly_linked)
+        {
+            Node *node = m_Allocator->Alloc<Node>();
+            ++m_Count;
 
-        node->m_Prev = where ? where->m_Prev : m_Last;
-        node->m_Next = where;
+            node->m_Prev = where ? where->m_Prev : m_Last;
+            node->m_Next = where;
 
-        if (node->m_Prev    ) node->m_Prev->m_Next = node;
-        if (where           ) where->m_Prev        = node;
-        if (where == m_First) m_First              = node;
-        if (!where          ) m_Last               = node;
+            if (node->m_Prev    ) node->m_Prev->m_Next = node;
+            if (where           ) where->m_Prev        = node;
+            else                  m_Last               = node;
+            if (where == m_First) m_First              = node;
 
-        return node;
+            return node;
+        }
+        else
+        {
+            Node *node = m_Allocator->Alloc<Node>();
+            ++m_Count;
+
+            node->m_Next = where;
+
+            if (!where)
+            {
+                m_Last->m_Next = node;
+                m_Last         = node;
+            }
+            else
+            {
+                Node *prev = nullptr;
+                for (Node *it = m_First; it && it != where; prev = it, it = it->m_Next)
+                {
+                }
+                prev->m_Next = node;
+            }
+
+            if (where == m_First)
+            {
+                m_First = node;
+            }
+
+            return node;
+        }
     }
 
     void EraseOne(Node *what)
     {
-        Node *prev = what->m_Prev;
-        Node *next = what->m_Next;
+        if constexpr (doubly_linked)
+        {
+            Node *prev = what->m_Prev;
+            Node *next = what->m_Next;
 
-        if (prev) prev->m_Next = next;
-        if (next) next->m_Prev = prev;
+            if (prev) prev->m_Next = next;
+            if (next) next->m_Prev = prev;
 
-        if (what == m_First) m_First = next;
-        if (what == m_Last ) m_Last  = prev;
+            if (what == m_First) m_First = next;
+            if (what == m_Last ) m_Last  = prev;
 
-        m_Allocator->DeAlloc(what);
-        --m_Count;
+            if constexpr (RTTI::is_destructible_v<T>)
+            {
+                what->m_Data.~T();
+            }
+
+            m_Allocator->DeAlloc(what);
+            --m_Count;
+        }
+        else
+        {
+            Node *prev = nullptr;
+            for (Node *it = m_First; it && it != what; prev = it, it = it->m_Next)
+            {
+            }
+
+            Node *next = what->m_Next;
+
+            if (prev) prev->m_Next = next;
+
+            if (what == m_First) m_First = next;
+            if (what == m_Last ) m_Last  = prev;
+
+            if constexpr (RTTI::is_destructible_v<T>)
+            {
+                what->m_Data.~T();
+            }
+
+            m_Allocator->DeAlloc(what);
+            --m_Count;
+        }
     }
 
 private:

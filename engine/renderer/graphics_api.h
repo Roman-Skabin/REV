@@ -26,7 +26,7 @@ public:
     
 private:
     static IRenderer         *CreateRenderer(in Window *window, in const Logger& logger);
-    static IGPUMemoryManager *CreateGPUMemoryManager(in Allocator *allocator);
+    static IGPUMemoryManager *CreateGPUMemoryManager(in Allocator *allocator, in const Logger& logger, in u64 gpu_memory_capacity);
 
 public:
     static IRenderer         *GetRenderer();

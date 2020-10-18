@@ -310,6 +310,9 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3 final
     v3& __vectorcall operator-=(f32 r) { mm = _mm_sub_ps(mm, _mm_setr_ps(r, r, r, 0.0f)); return *this; }
     v3& __vectorcall operator*=(f32 r) { mm = _mm_mul_ps(mm, _mm_setr_ps(r, r, r, 0.0f)); return *this; }
     v3& __vectorcall operator/=(f32 r) { mm = _mm_div_ps(mm, _mm_setr_ps(r, r, r, 0.0f)); return *this; }
+
+    f32  __vectorcall operator[](u8 i) const { Check(i < 3); return mm.m128_f32[i]; }
+    f32& __vectorcall operator[](u8 i)       { Check(i < 3); return mm.m128_f32[i]; }
 };
 
 INLINE v3 __vectorcall operator+(v3 l, v3 r) { return v3(_mm_add_ps(l.mm, r.mm)); }
@@ -431,6 +434,9 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3s final
     v3s& __vectorcall operator-=(s32 r) { mm = _mm_sub_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
     v3s& __vectorcall operator*=(s32 r) { mm = _mm_mul_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
     v3s& __vectorcall operator/=(s32 r) { mm = _mm_div_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
+
+    s32  __vectorcall operator[](u8 i) const { Check(i < 3); return            mm.m128i_i32[i];  }
+    s32& __vectorcall operator[](u8 i)       { Check(i < 3); return cast<s32&>(mm.m128i_i32[i]); }
 };
 
 INLINE v3s __vectorcall operator+(v3s l, v3s r) { return v3s(_mm_add_epi32(l.mm, r.mm)); }
@@ -550,6 +556,9 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v3u final
     v3u& __vectorcall operator-=(u32 r) { mm = _mm_sub_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
     v3u& __vectorcall operator*=(u32 r) { mm = _mm_mul_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
     v3u& __vectorcall operator/=(u32 r) { mm = _mm_div_epi32(mm, _mm_setr_epi32(r, r, r, 0)); return *this; }
+
+    u32  __vectorcall operator[](u8 i) const { Check(i < 3); return cast<u32 >(mm.m128i_i32[i]); }
+    u32& __vectorcall operator[](u8 i)       { Check(i < 3); return cast<u32&>(mm.m128i_i32[i]); }
 };
 
 INLINE v3u __vectorcall operator+(v3u l, v3u r) { return v3u(_mm_add_epi32(l.mm, r.mm)); }
@@ -612,23 +621,23 @@ INLINE v3s __vectorcall v3u_to_v3s(v3u v) { return v3s(                v.mm ); }
 
 union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4 final
 {
-    struct { f32 x, y, z, w; };
-    struct { f32 r, g, b, a; };
-    v2 xy;
-    v2 rg;
+    struct { f32 x,  y,  z, w; };
+    struct { f32 r,  g,  b, a; };
+    struct { v2  xy, wh; };
     v3 xyz;
     v3 rgb;
     __m128 mm;
 
-    v4(                          ) : mm(_mm_setzero_ps())              {}
-    v4(f32 val                   ) : mm(_mm_set_ps1(val))              {}
-    v4(f32 x, f32 y, f32 z, f32 w) : mm(_mm_setr_ps(x, y, z, w))       {}
-    v4(f32 arr[4]                ) : mm(_mm_load_ps(arr))              {}
-    v4(v2 xy, f32 z, f32 w       ) : mm(_mm_setr_ps(xy.x, xy.y, z, w)) {}
-    v4(v3 xyz, f32 w             ) : mm(mm_insert_f32<3>(xyz.mm, w))   {}
-    v4(__m128 _mm                ) : mm(_mm)                           {}
-    v4(const v4& v               ) : mm(v.mm)                          {}
-    v4(v4&& v                    ) : mm(v.mm)                          {}
+    v4(                          ) : mm(_mm_setzero_ps())                    {}
+    v4(f32 val                   ) : mm(_mm_set_ps1(val))                    {}
+    v4(f32 x, f32 y, f32 z, f32 w) : mm(_mm_setr_ps(x, y, z, w))             {}
+    v4(f32 arr[4]                ) : mm(_mm_load_ps(arr))                    {}
+    v4(v2 xy, f32 z, f32 w       ) : mm(_mm_setr_ps(xy.x, xy.y, z, w))       {}
+    v4(v2 xy, v2 wh              ) : mm(_mm_setr_ps(xy.x, xy.y, wh.w, wh.h)) {}
+    v4(v3 xyz, f32 w             ) : mm(mm_insert_f32<3>(xyz.mm, w))         {}
+    v4(__m128 _mm                ) : mm(_mm)                                 {}
+    v4(const v4& v               ) : mm(v.mm)                                {}
+    v4(v4&& v                    ) : mm(v.mm)                                {}
 
     v4& __vectorcall operator=(f32 val    ) { mm = _mm_set_ps1(val); return *this; }
     v4& __vectorcall operator=(f32 arr[4] ) { mm = _mm_load_ps(arr); return *this; }
@@ -698,6 +707,9 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4 final
     v4& __vectorcall operator-=(f32 r) { mm = _mm_sub_ps(mm, _mm_set_ps1(r)); return *this; }
     v4& __vectorcall operator*=(f32 r) { mm = _mm_mul_ps(mm, _mm_set_ps1(r)); return *this; }
     v4& __vectorcall operator/=(f32 r) { mm = _mm_div_ps(mm, _mm_set_ps1(r)); return *this; }
+
+    f32  __vectorcall operator[](u8 i) const { Check(i < 4); return mm.m128_f32[i]; }
+    f32& __vectorcall operator[](u8 i)       { Check(i < 4); return mm.m128_f32[i]; }
 };
 
 INLINE v4 __vectorcall operator+(v4 l, v4 r) { return v4(_mm_add_ps(l.mm, r.mm)); }
@@ -750,23 +762,23 @@ INLINE bool __vectorcall operator> (v4 l, v4 r) { return l.length_sq() >  r.leng
 
 union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4s final
 {
-    struct { s32 x, y, z, w; };
-    struct { s32 r, g, b, a; };
-    v2s xy;
-    v2s rg;
+    struct { s32 x,  y,  z, w; };
+    struct { s32 r,  g,  b, a; };
+    struct { v2s xy, wh; };
     v3s xyz;
     v3s rgb;
     __m128i mm;
 
-    v4s(                          ) : mm(_mm_setzero_si128())                  {}
-    v4s(s32 val                   ) : mm(_mm_set1_epi32(val))                  {}
-    v4s(s32 x, s32 y, s32 z, s32 w) : mm(_mm_setr_epi32(x, y, z, w))           {}
-    v4s(s32 arr[4]                ) : mm(_mm_load_si128(cast<__m128i *>(arr))) {}
-    v4s(v2s xy, s32 z, s32 w      ) : mm(_mm_setr_epi32(xy.x, xy.y, z, w))     {}
-    v4s(v3s xyz, s32 w            ) : mm(_mm_insert_epi32(xyz.mm, w, 3))       {}
-    v4s(__m128i _mm               ) : mm(_mm)                                  {}
-    v4s(const v4s& v              ) : mm(v.mm)                                 {}
-    v4s(v4s&& v                   ) : mm(v.mm)                                 {}
+    v4s(                          ) : mm(_mm_setzero_si128())                    {}
+    v4s(s32 val                   ) : mm(_mm_set1_epi32(val))                    {}
+    v4s(s32 x, s32 y, s32 z, s32 w) : mm(_mm_setr_epi32(x, y, z, w))             {}
+    v4s(s32 arr[4]                ) : mm(_mm_load_si128(cast<__m128i *>(arr)))   {}
+    v4s(v2s xy, s32 z, s32 w      ) : mm(_mm_setr_epi32(xy.x, xy.y, z, w))       {}
+    v4s(v2s xy, v2s wh            ) : mm(_mm_setr_epi32(xy.x, xy.y, wh.w, wh.h)) {}
+    v4s(v3s xyz, s32 w            ) : mm(_mm_insert_epi32(xyz.mm, w, 3))         {}
+    v4s(__m128i _mm               ) : mm(_mm)                                    {}
+    v4s(const v4s& v              ) : mm(v.mm)                                   {}
+    v4s(v4s&& v                   ) : mm(v.mm)                                   {}
 
     v4s& __vectorcall operator=(s32 val     ) { mm = _mm_set1_epi32(val);                  return *this; }
     v4s& __vectorcall operator=(s32 arr[4]  ) { mm = _mm_load_si128(cast<__m128i *>(arr)); return *this; }
@@ -823,6 +835,9 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4s final
     v4s& __vectorcall operator-=(s32 r) { mm = _mm_sub_epi32(mm, _mm_set1_epi32(r)); return *this; }
     v4s& __vectorcall operator*=(s32 r) { mm = _mm_mul_epi32(mm, _mm_set1_epi32(r)); return *this; }
     v4s& __vectorcall operator/=(s32 r) { mm = _mm_div_epi32(mm, _mm_set1_epi32(r)); return *this; }
+
+    s32  __vectorcall operator[](u8 i) const { Check(i < 4); return            mm.m128i_i32[i];  }
+    s32& __vectorcall operator[](u8 i)       { Check(i < 4); return cast<s32&>(mm.m128i_i32[i]); }
 };
 
 INLINE v4s __vectorcall operator+(v4s l, v4s r) { return v4s(_mm_add_epi32(l.mm, r.mm)); }
@@ -873,23 +888,23 @@ INLINE bool __vectorcall operator> (v4s l, v4s r) { return l.length_sq() >  r.le
 
 union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4u final
 {
-    struct { u32 x, y, z, w; };
-    struct { u32 r, g, b, a; };
-    v2u xy;
-    v2u rg;
+    struct { u32 x,  y,  z, w; };
+    struct { u32 r,  g,  b, a; };
+    struct { v2u xy, wh; };
     v3u xyz;
     v3u rgb;
     __m128i mm;
 
-    v4u(                          ) : mm(_mm_setzero_si128())                  {}
-    v4u(u32 val                   ) : mm(_mm_set1_epi32(val))                  {}
-    v4u(u32 x, u32 y, u32 z, u32 w) : mm(_mm_setr_epi32(x, y, z, w))           {}
-    v4u(u32 arr[4]                ) : mm(_mm_load_si128(cast<__m128i *>(arr))) {}
-    v4u(v2u xy, u32 z, u32 w      ) : mm(_mm_setr_epi32(xy.x, xy.y, z, w))     {}
-    v4u(v3u xyz, u32 w            ) : mm(_mm_insert_epi32(xyz.mm, w, 3))       {}
-    v4u(__m128i _mm               ) : mm(_mm)                                  {}
-    v4u(const v4u& v              ) : mm(v.mm)                                 {}
-    v4u(v4u&& v                   ) : mm(v.mm)                                 {}
+    v4u(                          ) : mm(_mm_setzero_si128())                    {}
+    v4u(u32 val                   ) : mm(_mm_set1_epi32(val))                    {}
+    v4u(u32 x, u32 y, u32 z, u32 w) : mm(_mm_setr_epi32(x, y, z, w))             {}
+    v4u(u32 arr[4]                ) : mm(_mm_load_si128(cast<__m128i *>(arr)))   {}
+    v4u(v2u xy, u32 z, u32 w      ) : mm(_mm_setr_epi32(xy.x, xy.y, z, w))       {}
+    v4u(v2u xy, v2u wh            ) : mm(_mm_setr_epi32(xy.x, xy.y, wh.w, wh.h)) {}
+    v4u(v3u xyz, u32 w            ) : mm(_mm_insert_epi32(xyz.mm, w, 3))         {}
+    v4u(__m128i _mm               ) : mm(_mm)                                    {}
+    v4u(const v4u& v              ) : mm(v.mm)                                   {}
+    v4u(v4u&& v                   ) : mm(v.mm)                                   {}
 
     v4u& __vectorcall operator=(u32 val     ) { mm = _mm_set1_epi32(val);                  return *this; }
     v4u& __vectorcall operator=(u32 arr[4]  ) { mm = _mm_load_si128(cast<__m128i *>(arr)); return *this; }
@@ -946,6 +961,9 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) v4u final
     v4u& __vectorcall operator-=(u32 r) { mm = _mm_sub_epi32(mm, _mm_set1_epi32(r)); return *this; }
     v4u& __vectorcall operator*=(u32 r) { mm = _mm_mul_epi32(mm, _mm_set1_epi32(r)); return *this; }
     v4u& __vectorcall operator/=(u32 r) { mm = _mm_div_epi32(mm, _mm_set1_epi32(r)); return *this; }
+
+    u32  __vectorcall operator[](u8 i) const { Check(i < 4); return cast<u32 >(mm.m128i_i32[i]); }
+    u32& __vectorcall operator[](u8 i)       { Check(i < 4); return cast<u32&>(mm.m128i_i32[i]); }
 };
 
 INLINE v4u __vectorcall operator+(v4u l, v4u r) { return v4u(_mm_add_epi32(l.mm, r.mm)); }

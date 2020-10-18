@@ -8,44 +8,38 @@
 internal INLINE void QPF(s64& val) { QueryPerformanceFrequency(cast<LARGE_INTEGER *>(&val)); }
 internal INLINE void QPC(s64& val) { QueryPerformanceCounter(cast<LARGE_INTEGER *>(&val));   }
 
+internal INLINE s64 QPF() { s64 val = 0; QueryPerformanceFrequency(cast<LARGE_INTEGER *>(&val)); return val; }
+internal INLINE s64 QPC() { s64 val = 0; QueryPerformanceCounter(cast<LARGE_INTEGER *>(&val));   return val; }
+
 //
 // Timer
 //
 
-Timer::Timer(in const char *name, in_opt u64 name_len)
+Timer::Timer(const StaticString<256>& name)
+    : m_TicksPerSecond(QPF()),
+      m_InitialTicks(QPC()),
+      m_Ticks(0),
+      m_DeltaTicks(0),
+      m_StopBegin(m_InitialTicks),
+      m_StopDuration(0),
+      m_StopLastDuration(0),
+      m_Seconds(0.0f),
+      m_DeltaSeconds(0.0f),
+      m_TotalSeconds(0.0f),
+      m_Stopped(true),
+      m_Name(name)
 {
-    Check(name);
-
-    if (!name_len) name_len = strlen(name);
-    CheckM(name_len && name_len < ArrayCount(m_Name),
-           "Timer name is too long. Max length is %I64u",
-           ArrayCount(m_Name) - 1);
-
-    ZeroMemory(this, sizeof(Timer));
-
-    QPF(m_TicksPerSecond);
-    QPC(m_InitialTicks);
-
-    m_Stopped   = true;
-    m_StopBegin = m_InitialTicks;
-
-    CopyMemory(m_Name, name, name_len);
-    m_Name[name_len] = '\0';
 }
 
 Timer::Timer(const Timer& other)
+    : m_Name(other.m_Name)
 {
-    CopyMemory(this, &other, sizeof(Timer));
-}
-
-Timer::Timer(Timer&& other) noexcept
-{
-    CopyMemory(this, &other, sizeof(Timer));
+    CopyMemory(this, &other, StructFieldOffset(Timer, m_Name));
 }
 
 Timer::~Timer()
 {
-    ZeroMemory(this, sizeof(Timer));
+    ZeroMemory(this, StructFieldOffset(Timer, m_Name));
 }
 
 void Timer::Tick()
@@ -91,16 +85,8 @@ Timer& Timer::operator=(const Timer& other)
 {
     if (this != &other)
     {
-        CopyMemory(this, &other, sizeof(Timer));
-    }
-    return *this;
-}
-
-Timer& Timer::operator=(Timer&& other) noexcept
-{
-    if (this != &other)
-    {
-        CopyMemory(this, &other, sizeof(Timer));
+        CopyMemory(this, &other, StructFieldOffset(Timer, m_Name));
+        m_Name = other.m_Name;
     }
     return *this;
 }
@@ -109,8 +95,8 @@ Timer& Timer::operator=(Timer&& other) noexcept
 // ProfilingTimer
 //
 
-ProfilingTimer::ProfilingTimer(in const char *name, in_opt u64 name_len)
-    : m_Timer(name, name_len)
+ProfilingTimer::ProfilingTimer(const StaticString<256>& name)
+    : m_Timer(name)
 {
     m_Timer.Start();
 }
@@ -119,7 +105,7 @@ ProfilingTimer::~ProfilingTimer()
 {
 }
 
-void ProfilingTimer::StopProfiling(in const Logger& logger)
+void ProfilingTimer::StopProfiling(const Logger& logger)
 {
     m_Timer.Tick();
     m_Timer.Stop();

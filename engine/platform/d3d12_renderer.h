@@ -29,13 +29,13 @@ namespace D3D12
         };
 
     public:
-        Renderer(Window *window, const Logger& logger);
+        Renderer(Window *window, const Logger& logger, v2 render_target_size);
         ~Renderer();
 
         virtual void Destroy() override;
 
-        virtual void ResizeBuffers() override;
-        virtual void ResizeTarget()  override;
+        virtual void ResizeBuffers(v2 render_target_size) override;
+        virtual void SetFullscreen(bool set)              override;
 
         virtual void StartFrame() override;
         virtual void EndFrame()   override;
@@ -43,8 +43,24 @@ namespace D3D12
         virtual bool VSyncEnabled() override;
         virtual void SetVSync(bool enable) override;
 
+        virtual void WaitForGPU() override;
+        virtual void FlushGPU() override;
+
         void *operator new(size_t) { return Memory::Get()->PushToPA<Renderer>(); }
         void  operator delete(void *) {}
+
+        constexpr const ID3D12Device              *Device()              const { return m_Device;                         }
+        constexpr const ID3D12CommandQueue        *GraphicsQueue()       const { return m_GraphicsQueue;                  }
+        constexpr const ID3D12GraphicsCommandList *CurrentGraphicsList() const { return m_GraphicsLists[m_CurrentBuffer]; }
+
+        constexpr ID3D12Device              *Device()              { return m_Device;                         }
+        constexpr ID3D12CommandQueue        *GraphicsQueue()       { return m_GraphicsQueue;                  }
+        constexpr ID3D12GraphicsCommandList *CurrentGraphicsList() { return m_GraphicsLists[m_CurrentBuffer]; }
+
+        constexpr bool                       HalfPrecisionSupported()      const { return m_Features.options.MinPrecisionSupport & D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT; }
+        constexpr D3D_ROOT_SIGNATURE_VERSION HighestRootSignatureVersion() const { return m_Features.root_signature.HighestVersion; }
+        constexpr u32                        CurrentBuffer()               const { return m_CurrentBuffer; }
+        constexpr D3D12_RESOURCE_HEAP_TIER   ResourceHeapTier()            const { return m_Features.options.ResourceHeapTier; }
 
     private:
         void CreateDebugLayer();
@@ -57,9 +73,6 @@ namespace D3D12
         void CreateDepthBuffer();
         void CreateFences();
 
-        void WaitForGPU();
-        void FlushGPU();
-
         friend u32 WINAPI LogInfoQueueMessages(void *arg);
 
         Renderer(const Renderer&) = delete;
@@ -71,6 +84,7 @@ namespace D3D12
     private:
         Logger                       m_Logger;
         Window                      *m_Window;
+        v2                           m_RenderTargetSize;
 
     #if DEBUG
         ID3D12Debug1                *m_Debug;
@@ -103,7 +117,6 @@ namespace D3D12
         D3D12_CPU_DESCRIPTOR_HANDLE  m_DSVCPUDescHandle;
 
         ID3D12Fence                 *m_Fences[SWAP_CHAIN_BUFFERS_COUNT];
-        u64                          m_FencesValues[SWAP_CHAIN_BUFFERS_COUNT];
         HANDLE                       m_FenceEvent;
 
         FLAGS                        m_Flags;
@@ -130,12 +143,6 @@ namespace D3D12
         Event                        m_LoggingEvent;
         bool                         m_StopLogging;
     #endif
-
-        // @TODO(Roman): Deal with all these friend classes. This is not normal.
-        friend class GPUMemoryManager;
-        friend class GPUResourceMemory;
-        friend class GPUResource;
-        friend class GPUDescHeapMemory;
     };
 
     ENUM_CLASS_OPERATORS(Renderer::FLAGS);

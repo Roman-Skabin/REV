@@ -8,33 +8,7 @@
 #include "core/memory.h"
 #include "math/vec.h"
 #include "tools/logger.h"
-
-class Window;
-
-class ENGINE_IMPEXP Monitor final
-{
-public:
-    Monitor();
-    Monitor(const Window& window, const Logger& logger);
-    Monitor(Monitor&& other) noexcept;
-
-    ~Monitor();
-
-    void OnMonitorChange(const Window& window, const Logger& logger);
-
-    Monitor& operator=(Monitor&& other) noexcept;
-
-private:
-    Monitor(const Monitor&) = delete;
-    Monitor& operator=(const Monitor&) = delete;
-
-private:
-    HMONITOR m_Handle;
-    v2s      m_Pos;
-    v2s      m_Size;
-
-    friend class Window;
-};
+#include "tools/static_string.hpp"
 
 class ENGINE_IMPEXP Window final
 {
@@ -53,12 +27,10 @@ public:
     };
 
 public:
-    Window(in const Logger& logger,
-           in const char   *title,
-           in v2s           size = S32_MIN,
-           in v2s           pos  = S32_MIN
+    Window(const Logger&            logger,
+           const StaticString<128>& title,
+           v4s                      xywh = S32_MIN
     );
-    Window(Window&& other) noexcept;
 
     ~Window();
 
@@ -69,41 +41,39 @@ public:
 
     void Show();
 
-    void SetTitle(const char *title);
+    void SetTitle(const StaticString<128>& new_title);
 
-    HWND        Handle()   const { return m_Handle; }
-    const char *Title()    const { return m_Title;  }
-    v2s         Position() const { return m_Pos;    }
-    v2s         Size()     const { return m_Size;   }
+    constexpr const HWND               Handle()   const { return m_Handle;  }
+    constexpr const StaticString<128>& Title()    const { return m_Title;   }
+    constexpr const v2s&               Position() const { return m_XYWH.xy; }
+    constexpr const v2s&               Size()     const { return m_XYWH.wh; }
+    constexpr const v4s&               XYWH()     const { return m_XYWH;    }
 
-    bool Closed()       const;
-    bool Resized()      const;
-    bool Fullscreened() const;
-    bool Minimized()    const;
-
-    Window& operator=(Window&& other) noexcept;
+    constexpr bool Closed()       const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::CLOSED);       }
+    constexpr bool Resized()      const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::RESIZED);      }
+    constexpr bool Fullscreened() const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::FULLSCREENED); }
+    constexpr bool Minimized()    const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::MINIMIZED);    }
 
 private:
     void ApplyFullscreenRequst();
 
     friend LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lparam);
 
-    Window(const Window&) = delete;
+    Window(const Window&)  = delete;
+    Window(Window&& other) = delete;
+
     Window& operator=(const Window&) = delete;
+    Window& operator=(Window&&)      = delete;
 
 private:
-    // @TODO(Roman): Reorganize and clean up data.
-
-    Monitor   m_Monitor;
-    HINSTANCE m_Instance;
-    HWND      m_Handle;
-    HDC       m_Context;
-    v2s       m_Pos;
-    v2s       m_Size;
-    FLAGS     m_Flags;
-    Logger    m_Logger;
-    char      m_Title[128];
-    char      m_ClassName[128];
+    HINSTANCE         m_Instance;
+    HWND              m_Handle;
+    HDC               m_Context;
+    v4s               m_XYWH;
+    FLAGS             m_Flags;
+    Logger            m_Logger;
+    StaticString<128> m_Title;
+    StaticString<128> m_ClassName;
 
     friend class Application;
 };

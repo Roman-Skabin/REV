@@ -1,0 +1,10 @@
+struct VSOutput
+{
+    float4 pos : SV_Position;
+    float4 col : COLOR;
+};
+
+float4 PSMain(VSOutput vs_output) : SV_Target
+{
+    return vs_output.col;
+}

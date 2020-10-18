@@ -8,7 +8,7 @@
 
 SRWLOCK Logger::s_SRWLock = SRWLOCK_INIT;
 
-Logger::Logger(in const char *name, opt const char *filename, in TARGET target)
+Logger::Logger(const char *name, const char *filename, TARGET target)
     : m_Name(name),
       m_File(null),
       m_Console(null),
@@ -49,7 +49,7 @@ Logger::Logger(in const char *name, opt const char *filename, in TARGET target)
     LogSuccess("%s has been created", m_Name);
 }
 
-Logger::Logger(in const Logger& other, opt const char *name, opt TARGET target)
+Logger::Logger(const Logger& other, const char *name, TARGET target)
     : m_Name(name ? name : other.m_Name),
       m_File(null),
       m_Console(null),
@@ -97,7 +97,7 @@ Logger::Logger(in const Logger& other, opt const char *name, opt TARGET target)
     LogSuccess("%s has been duplicated from %s", m_Name, other.m_Name);
 }
 
-Logger::Logger(in Logger&& other) noexcept
+Logger::Logger(Logger&& other) noexcept
     : m_Name(other.m_Name),
       m_File(other.m_File),
       m_Console(other.m_Console),
@@ -130,7 +130,7 @@ Logger::~Logger()
     m_Attribs.full = 0;
 }
 
-void Logger::LogVA(in MESSAGE_KIND message_kind, in const char *format, opt va_list args) const
+void Logger::LogVA(MESSAGE_KIND message_kind, const char *format, va_list args) const
 {
     if (m_Target != TARGET::NONE)
     {
@@ -217,7 +217,7 @@ void Logger::LogVA(in MESSAGE_KIND message_kind, in const char *format, opt va_l
     }
 }
 
-Logger& Logger::operator=(in const Logger& other)
+Logger& Logger::operator=(const Logger& other)
 {
     if (this != &other)
     {
@@ -240,7 +240,7 @@ Logger& Logger::operator=(in const Logger& other)
     return *this;
 }
 
-Logger& Logger::operator=(in Logger&& other) noexcept
+Logger& Logger::operator=(Logger&& other) noexcept
 {
     if (this != &other)
     {

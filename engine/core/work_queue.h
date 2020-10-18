@@ -24,6 +24,8 @@ enum
     MAX_ENTRIES       = MAX_ENTRIES_BYTES / sizeof(WorkQueueEntry),
 };
 
+// @TODO(Roman): Any function to AddEntry
+
 class ENGINE_IMPEXP WorkQueue final
 {
 public:
@@ -31,23 +33,23 @@ public:
     static WorkQueue *Get();
 
 private:
-    WorkQueue(in const Logger& logger);
+    WorkQueue(const Logger& logger);
 
 public:
-    WorkQueue(in WorkQueue&& other) noexcept;
+    WorkQueue(WorkQueue&& other) noexcept;
 
     ~WorkQueue();
 
-    void AddEntry(in WorkQueueEntryProc *Proc, in void *arg);
+    void AddEntry(WorkQueueEntryProc *Proc, void *arg);
     void Wait();
 
-    WorkQueue& operator=(in WorkQueue&&) noexcept;
+    WorkQueue& operator=(WorkQueue&&) noexcept;
 
 private:
-    friend u32 WINAPI ThreadProc(in void *arg);
+    friend u32 WINAPI ThreadProc(void *arg);
 
-    WorkQueue(in const WorkQueue&) = delete;
-    WorkQueue& operator=(in const WorkQueue&) = delete;
+    WorkQueue(const WorkQueue&) = delete;
+    WorkQueue& operator=(const WorkQueue&) = delete;
 
 private:
     HANDLE         m_Semaphore;

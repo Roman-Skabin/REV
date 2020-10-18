@@ -5,36 +5,31 @@
 #include "core/pch.h"
 #include "tools/async_file.h"
 
-AsyncFile::AsyncFile(in const char *filename, in_opt u64 filename_len, in FILE_FLAG flags)
-    : m_Flags(flags),
+AsyncFile::AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags)
+    : m_Handle(null),
+      m_Flags(flags),
       m_Offset(0),
-      m_Overlapped{0}
+      m_Size(0),
+      m_Overlapped{0},
+      m_Name(filename)
 {
-    Check(filename);
-    Check(flags != FILE_FLAG::NONE);
-
-    if (!filename_len) filename_len = strlen(filename);
-    CheckM(filename_len && filename_len < ArrayCount(m_Name),
-           "Filename is too long. Max length is %I64u",
-           ArrayCount(m_Name) - 1);
+    Check(flags != FLAGS::NONE);
 
     m_Overlapped.hEvent = CreateEventExA(null, null, CREATE_EVENT_INITIAL_SET, EVENT_ALL_ACCESS);
-    CopyMemory(m_Name, filename, filename_len);
-    m_Name[filename_len] = '\0';
 
     u32 desired_access       = 0;
     u32 shared_mode          = 0;
     u32 creation_disposition = 0;
     u32 flags_and_attributes = 0;
 
-    if ((m_Flags & FILE_FLAG::READ) != FILE_FLAG::NONE)
+    if ((m_Flags & FLAGS::READ) != FLAGS::NONE)
     {
         desired_access       = GENERIC_READ;
         shared_mode          = FILE_SHARE_READ;
         creation_disposition = OPEN_EXISTING;
         flags_and_attributes = FILE_ATTRIBUTE_READONLY;
     }
-    if ((m_Flags & FILE_FLAG::WRITE) != FILE_FLAG::NONE)
+    if ((m_Flags & FLAGS::WRITE) != FLAGS::NONE)
     {
         desired_access       |= GENERIC_WRITE;
         shared_mode          |= FILE_SHARE_WRITE;
@@ -54,17 +49,16 @@ AsyncFile::AsyncFile(in const char *filename, in_opt u64 filename_len, in FILE_F
                            null);
 
     CheckM(m_Handle != INVALID_HANDLE_VALUE,
-           "AsyncFile doesn't exists or some error has been occurred.\n"
+           "AsyncFile doesn't exists or some unknown error has been occurred.\n"
            "Function args:\n"
-           "    filename:     \"%s\"\n"
-           "    filename_len: 0x%I64u\n"
-           "    flags:        0x%I32X\n",
-           filename, filename_len, flags);
+           "    filename: \"%s\"\n"
+           "    flags:    0x%I32X\n",
+           filename, flags);
 
     m_Size = GetFileSize(m_Handle, null);
 }
 
-AsyncFile::AsyncFile(in const AsyncFile& other)
+AsyncFile::AsyncFile(const AsyncFile& other)
 {
     other.Wait();
 
@@ -72,7 +66,7 @@ AsyncFile::AsyncFile(in const AsyncFile& other)
     m_Offset            = other.m_Offset;
     m_Size              = other.m_Size;
     m_Overlapped.hEvent = CreateEventExA(null, null, CREATE_EVENT_INITIAL_SET, EVENT_ALL_ACCESS);
-    CopyMemory(m_Name, other.m_Name, sizeof(m_Name));
+    m_Name              = other.m_Name;
 
     HANDLE current_process = GetCurrentProcess();
     DebugResult(DuplicateHandle(current_process,
@@ -84,9 +78,11 @@ AsyncFile::AsyncFile(in const AsyncFile& other)
                                 DUPLICATE_SAME_ACCESS));
 }
 
-AsyncFile::AsyncFile(in AsyncFile&& other) noexcept
+AsyncFile::AsyncFile(AsyncFile&& other) noexcept
 {
-    CopyMemory(this, &other, sizeof(AsyncFile));
+    CopyMemory(this, &other, StructFieldOffset(AsyncFile, m_Name));
+    m_Name = other.m_Name;
+
     m_Handle            = null;
     m_Overlapped.hEvent = null;
 }
@@ -105,7 +101,7 @@ AsyncFile::~AsyncFile()
         DebugResult(CloseHandle(m_Overlapped.hEvent));
     }
 
-    ZeroMemory(this, sizeof(AsyncFile));
+    ZeroMemory(this, StructFieldOffset(AsyncFile, m_Name));
 }
 
 void AsyncFile::Clear()
@@ -119,9 +115,9 @@ void AsyncFile::Clear()
     m_Size = 0;
 }
 
-void AsyncFile::Read(out void *buffer, in u32 buffer_bytes) const
+void AsyncFile::Read(void *buffer, u32 buffer_bytes) const
 {
-    CheckM((m_Flags & FILE_FLAG::READ) != FILE_FLAG::NONE, "You have no rights to read this file");
+    CheckM((m_Flags & FLAGS::READ) != FLAGS::NONE, "You have no rights to read this file");
     Check(buffer);
     CheckM(buffer_bytes, "Buffer size must be more than 0");
 
@@ -137,11 +133,13 @@ void AsyncFile::Read(out void *buffer, in u32 buffer_bytes) const
                            buffer_bytes,
                            &m_Overlapped,
                            OverlappedReadCompletionRoutine));
+
+    m_Flags &= ~FLAGS::_WWEC;
 }
 
-void AsyncFile::Write(in const void *buffer, in u32 buffer_bytes)
+void AsyncFile::Write(const void *buffer, u32 buffer_bytes)
 {
-    CheckM((m_Flags & FILE_FLAG::WRITE) != FILE_FLAG::NONE, "You have no rights to write to this file");
+    CheckM((m_Flags & FLAGS::WRITE) != FLAGS::NONE, "You have no rights to write to this file");
     Check(buffer);
     CheckM(buffer_bytes, "Buffer size must be more than 0");
 
@@ -157,11 +155,13 @@ void AsyncFile::Write(in const void *buffer, in u32 buffer_bytes)
                             buffer_bytes,
                             &m_Overlapped,
                             OverlappedWriteCompletionRoutine));
+    
+    m_Flags &= ~FLAGS::_WWEC;
 }
 
-void AsyncFile::Append(in const void *buffer, in u32 buffer_bytes)
+void AsyncFile::Append(const void *buffer, u32 buffer_bytes)
 {
-    CheckM((m_Flags & FILE_FLAG::WRITE) != FILE_FLAG::NONE, "You have no rights to write to this file");
+    CheckM((m_Flags & FLAGS::WRITE) != FLAGS::NONE, "You have no rights to write to this file");
     Check(buffer);
     CheckM(buffer_bytes, "Buffer size must be more than 0");
 
@@ -179,23 +179,30 @@ void AsyncFile::Append(in const void *buffer, in u32 buffer_bytes)
                             buffer_bytes,
                             &m_Overlapped,
                             OverlappedWriteCompletionRoutine));
+
+    m_Flags &= ~FLAGS::_WWEC;
 }
 
 void AsyncFile::Wait() const
 {
-    u32 res = WAIT_FAILED;
-    do
+    if ((m_Flags & FLAGS::_WWEC) == FLAGS::NONE)
     {
-        res = WaitForSingleObjectEx(m_Overlapped.hEvent, INFINITE, true);
-    } while (res != WAIT_OBJECT_0 && res != WAIT_IO_COMPLETION);
+        u32 res = WAIT_FAILED;
+        do
+        {
+            res = WaitForSingleObjectEx(m_Overlapped.hEvent, INFINITE, true);
+        } while (res != WAIT_OBJECT_0 && res != WAIT_IO_COMPLETION);
+
+        m_Flags |= FLAGS::_WWEC;
+    }
 }
 
-void AsyncFile::SetOffset(in u32 offset)
+void AsyncFile::SetOffset(u32 offset)
 {
     m_Offset = offset > m_Size ? m_Size : offset;
 }
 
-AsyncFile& AsyncFile::operator=(in const AsyncFile& other)
+AsyncFile& AsyncFile::operator=(const AsyncFile& other)
 {
     if (this != &other)
     {
@@ -210,7 +217,7 @@ AsyncFile& AsyncFile::operator=(in const AsyncFile& other)
         m_Flags  = other.m_Flags;
         m_Offset = other.m_Offset;
         m_Size   = other.m_Size;
-        CopyMemory(m_Name, other.m_Name, sizeof(m_Name));
+        m_Name   = other.m_Name;
 
         HANDLE current_process = GetCurrentProcess();
         DebugResult(DuplicateHandle(current_process,
@@ -224,11 +231,13 @@ AsyncFile& AsyncFile::operator=(in const AsyncFile& other)
     return *this;
 }
 
-AsyncFile& AsyncFile::operator=(in AsyncFile&& other) noexcept
+AsyncFile& AsyncFile::operator=(AsyncFile&& other) noexcept
 {
     if (this != &other)
     {
-        CopyMemory(this, &other, sizeof(AsyncFile));
+        CopyMemory(this, &other, StructFieldOffset(AsyncFile, m_Name));
+        m_Name = other.m_Name;
+
         m_Handle            = null;
         m_Overlapped.hEvent = null;
     }
@@ -236,29 +245,29 @@ AsyncFile& AsyncFile::operator=(in AsyncFile&& other) noexcept
 }
 
 void WINAPI OverlappedReadCompletionRoutine(
-    in     u32         error_code,
-    in     u32         number_of_bytes_transfered,
-    in_out OVERLAPPED *overlapped)
+    u32         error_code,
+    u32         bytes_transfered,
+    OVERLAPPED *overlapped)
 {
     // @Important(Roman): NOT SAFETY!!!
     AsyncFile *file = cast<AsyncFile *>(cast<byte *>(overlapped)
                     - StructFieldOffset(AsyncFile, m_Overlapped));
 
-    file->m_Offset += number_of_bytes_transfered;
+    file->m_Offset += bytes_transfered;
 
     DebugResult(SetEvent(file->m_Overlapped.hEvent));
 }
 
 void WINAPI OverlappedWriteCompletionRoutine(
-    in     u32         error_code,
-    in     u32         number_of_bytes_transfered,
-    in_out OVERLAPPED *overlapped)
+    u32         error_code,
+    u32         bytes_transfered,
+    OVERLAPPED *overlapped)
 {
     // @Important(Roman): NOT SAFETY!!!
     AsyncFile *file = cast<AsyncFile *>(cast<byte *>(overlapped)
                     - StructFieldOffset(AsyncFile, m_Overlapped));
 
-    file->m_Offset += number_of_bytes_transfered;
+    file->m_Offset += bytes_transfered;
 
     if (file->m_Offset > file->m_Size)
     {

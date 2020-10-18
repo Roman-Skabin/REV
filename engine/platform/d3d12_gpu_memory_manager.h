@@ -21,7 +21,48 @@
 //               AllocateSampler
 // @TOOD(Roman): Move Draw (and Bind probably) stuff somewhere.
 //               This functionality doesn't belong to memory management.
-// @TODO(Roman): Add ID3D12Fences to the GPUResoucre to be shure the copy operation is completed?
+
+// @Issue(Roman): It's not efficient to preallocate so much memory
+//                even for using the fastest way of resource allocation D3D12
+//                (Using placed resources with preallocated heaps for them).
+//                Because ID3D12Heap is an interface used to manage PHYSICAL memory, NOT virtual.
+//                And when we trying to allocate x bytes we're commiting ALL the memory we want to reserve.
+//
+//                Double Bufferisation:
+//                     1 GB ->  3 GB
+//                     2 GB ->  6 GB
+//                     4 GB -> 12 GB
+//                     8 GB -> 24 GB
+//                    16 GB -> 48 GB
+//                    24 GB -> 72 GB
+//
+//                Triple Bufferisation:
+//                     1 GB ->  4 GB
+//                     2 GB ->  8 GB
+//                     4 GB -> 16 GB
+//                     8 GB -> 32 GB
+//                    16 GB -> 64 GB
+//                    24 GB -> 96 GB
+//
+//                Placed resources can be overlapped, so if we'll find a way
+//                to "place" upload resources from different frames into one memory,
+//                entire_bytes will be equals to:
+//
+//                                      buffers         textures
+//                                     def    upl      def    upl
+//                     entire_bytes = (0.4x + 0.4x) + (0.6x + 0.6x).
+//                     entire_bytes = 2x;
+//
+//                And it's seems much better than it is now:
+//
+//                     N = D3D12::SWAP_CHAIN_BUFFERS_COUNT.
+//                                       buffers          textures
+//                                     def     upl       def    upl
+//                     entire_bytes = (0.4x + 0.4Nx) + (0.6x + 0.6Nx).
+//                     entire_bytes = (1+N)x.
+//
+//                The first variant is to use fences to check is our work from previous frame with resource is completed.
+//                But won't it slow down all the performance I want to achieve?
 
 namespace D3D12
 {
@@ -51,8 +92,23 @@ namespace D3D12
         GPUResource();
         ~GPUResource();
 
-        virtual void SetName(in const char *name, in_opt u32 name_len) override;
-        virtual void SetData(in const void *data) override;
+        virtual void SetName(const StaticString<64>& name) override;
+        virtual void SetData(const void *data) override;
+        virtual void SetDataImmediate(const void *data) override;
+
+        constexpr const ID3D12Resource      *Handle()       const { return m_DefaultResource;   }
+        constexpr const GPUDescHeap         *DescHeap()     const { return m_DescHeap;          }
+        constexpr       KIND                 Kind()         const { return m_Kind;              }
+        constexpr const StaticString<64>&    Name()         const { return m_Name;              }
+        constexpr       u32                  VertexCount()  const { return m_VertexIndexCount;  }
+        constexpr       u32                  IndexCount()   const { return m_VertexIndexCount;  }
+        constexpr       u32                  VertexStride() const { return m_VertexIndexStride; }
+        constexpr       u32                  IndexStride()  const { return m_VertexIndexStride; }
+        constexpr const D3D12_RESOURCE_DESC& Desc()         const { return m_ResourceDesc;      }
+
+        constexpr ID3D12Resource      *Handle()   { return m_DefaultResource; }
+        constexpr GPUDescHeap         *DescHeap() { return m_DescHeap;        }
+        constexpr D3D12_RESOURCE_DESC& Desc()     { return m_ResourceDesc;    }
 
         GPUResource& operator=(GPUResource&& other) noexcept;
 
@@ -63,19 +119,22 @@ namespace D3D12
         GPUResource& operator=(const GPUResource&) = delete;
 
     private:
-        ID3D12Resource        *m_DefaultResource;
-        ID3D12Resource        *m_UploadResources[SWAP_CHAIN_BUFFERS_COUNT];
-        void                  *m_UploadPointers[SWAP_CHAIN_BUFFERS_COUNT];
-        KIND                   m_Kind;
-        ALLOCATION_STATE       m_AllocationState;
-        GPUDescHeap           *m_DescHeap;
-        u32                    m_VertexIndexCount;
-        u32                    m_VertexIndexStride;
-        D3D12_RESOURCE_STATES  m_InitialState;
-        u32                    m_NameLen;
-        char                   m_Name[64];
-        GPUResource           *m_NextFree;
-        D3D12_RESOURCE_DESC    m_ResourceDesc;
+        ID3D12Resource            *m_DefaultResource;
+        ID3D12Resource            *m_UploadResources[SWAP_CHAIN_BUFFERS_COUNT];
+        void                      *m_UploadPointers[SWAP_CHAIN_BUFFERS_COUNT];
+        KIND                       m_Kind;
+        ALLOCATION_STATE           m_AllocationState;
+        GPUDescHeap               *m_DescHeap;
+        u32                        m_VertexIndexCount;
+        u32                        m_VertexIndexStride;
+        D3D12_RESOURCE_STATES      m_InitialState;
+        StaticString<64>           m_Name;
+        GPUResource               *m_NextFree;
+        ID3D12CommandAllocator    *m_CommandAllocator;
+        ID3D12GraphicsCommandList *m_CommandList;
+        ID3D12Fence               *m_Fence;
+        Event                      m_FenceEvent;
+        D3D12_RESOURCE_DESC        m_ResourceDesc;
 
         friend class GPUResourceMemory;
         friend class GPUDescHeapMemory;
@@ -94,6 +153,12 @@ namespace D3D12
 
         GPUDescHeap();
         ~GPUDescHeap();
+
+        constexpr const ID3D12DescriptorHeap *Handle()   const { return m_Handle;   }
+        constexpr const GPUResource          *Resource() const { return m_Resource; }
+
+        constexpr ID3D12DescriptorHeap *Handle()   { return m_Handle;   }
+        constexpr GPUResource          *Resource() { return m_Resource; }
 
         GPUDescHeap& operator=(GPUDescHeap&& other) noexcept;
 
@@ -131,7 +196,7 @@ namespace D3D12
         GPUResource *FindOrAllocateResource(const D3D12_RESOURCE_DESC& resource_desc, bool& allocated);
         void         CreateGPUResource(GPUResource *resource);
 
-        GPUResource *FindGPUResource(const char *name, u32 name_len);
+        GPUResource *FindGPUResource(const StaticString<64>& name);
     
     private:
         GPUResourceMemory(const GPUResourceMemory&) = delete;
@@ -189,11 +254,12 @@ namespace D3D12
 
         virtual void Destroy() override;
 
-        virtual IGPUResource *AllocateVB(in u32 vertex_count, in u32 stride) override;
-        virtual IGPUResource *AllocateIB(in u32 indecies_count) override;
-        virtual IGPUResource *AllocateCB(in u32 bytes, in const char *name, in u32 name_len) override;
+        virtual IGPUResource *AllocateVB(u32 vertex_count, u32 stride)            override;
+        virtual IGPUResource *AllocateIB(u32 indecies_count)                      override;
+        virtual IGPUResource *AllocateCB(u32 bytes, const StaticString<64>& name) override;
 
-        virtual void SetGPUResourceData(in const char *name, in_opt u32 name_len, in const void *data) override;
+        virtual void SetGPUResourceData(const StaticString<64>& name, const void *data) override;
+        virtual void SetGPUResourceDataImmediate(const StaticString<64>& name, const void *data) override;
 
         virtual void Reset() override;
         virtual void Release() override;

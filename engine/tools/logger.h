@@ -27,19 +27,19 @@ public:
 
 public:
     Logger(
-        in  const char *name,
-        opt const char *filename, // @NOTE(Roman): Required if you are logging to the file
-        in  TARGET      target
+         const char *name,
+        const char *filename, // @NOTE(Roman): Required if you are logging to the file
+         TARGET      target
     );
 
-    Logger(in const Logger& other, opt const char *name = null, opt TARGET target = TARGET::NONE);
-    Logger(in Logger&& other) noexcept;
+    Logger(const Logger& other, const char *name = null, TARGET target = TARGET::NONE);
+    Logger(Logger&& other) noexcept;
 
     ~Logger();
 
-    void LogVA(in MESSAGE_KIND message_kind, in const char *format, opt va_list args) const;
+    void LogVA(MESSAGE_KIND message_kind, const char *format, va_list args) const;
 
-    void __cdecl Log(in MESSAGE_KIND message_kind, in const char *format, opt ...) const
+    void __cdecl Log(MESSAGE_KIND message_kind, const char *format, ...) const
     {
         va_list args;
         va_start(args, format);
@@ -47,7 +47,7 @@ public:
         va_end(args);
     }
 
-    void __cdecl LogInfo(in const char *format, opt ...) const
+    void __cdecl LogInfo(const char *format, ...) const
     {
         va_list args;
         va_start(args, format);
@@ -55,7 +55,7 @@ public:
         va_end(args);
     }
 
-    void __cdecl LogSuccess(in const char *format, opt ...) const
+    void __cdecl LogSuccess(const char *format, ...) const
     {
         va_list args;
         va_start(args, format);
@@ -63,7 +63,7 @@ public:
         va_end(args);
     }
 
-    void __cdecl LogWarning(in const char *format, opt ...) const
+    void __cdecl LogWarning(const char *format, ...) const
     {
         va_list args;
         va_start(args, format);
@@ -71,7 +71,7 @@ public:
         va_end(args);
     }
 
-    void __cdecl LogError(in const char *format, opt ...) const
+    void __cdecl LogError(const char *format, ...) const
     {
         va_list args;
         va_start(args, format);
@@ -79,8 +79,8 @@ public:
         va_end(args);
     }
 
-    Logger& operator=(in const Logger& other);
-    Logger& operator=(in Logger&& other) noexcept;
+    Logger& operator=(const Logger& other);
+    Logger& operator=(Logger&& other) noexcept;
 
 private:
     const char *m_Name;

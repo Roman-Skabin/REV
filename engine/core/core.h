@@ -97,14 +97,6 @@
     #define interface struct
 #endif
 
-#define in
-#define out
-#define opt // @NOTE(Roman): sometimes opt means may_be_null
-#define in_out
-#define in_opt
-#define out_opt
-#define in_out_opt
-
 //
 // Types
 //
@@ -163,35 +155,35 @@ typedef u8 byte;
 #define BYTE_MAX U8_MAX
 #define BYTE_MIN U8_MIN
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr T KB(in T x) { return    x  * 1024; }
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr T MB(in T x) { return KB(x) * 1024; }
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr T GB(in T x) { return MB(x) * 1024; }
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr T TB(in T x) { return GB(x) * 1024; }
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr T KB(T x) { return    x  * 1024; }
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr T MB(T x) { return KB(x) * 1024; }
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr T GB(T x) { return MB(x) * 1024; }
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr T TB(T x) { return GB(x) * 1024; }
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr T BIT(in T x) { return 1 << x; }
+template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr T BIT(T x) { return 1 << x; }
 
-template<typename To, typename From> constexpr To cast(in From x) { return (To)x; }
+template<typename To, typename From> constexpr To cast(From x) { return (To)x; }
 
-template<typename T, u64 count> constexpr u64 ArrayCount(in T (&)[count]) { return count; }
+template<typename T, u64 count> constexpr u64 ArrayCount(T (&)[count]) { return count; }
 
 #define ArrayCountInStruct(_struct, _field) ArrayCount(cast<_struct *>(null)->_field)
 #define StructFieldSize(_struct, _field)    sizeof(cast<_struct *>(null)->_field)
 #define StructFieldOffset(_struct, _field)  cast<u64>(&(cast<_struct *>(null)->_field))
 
 template<typename T, typename U, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
-constexpr RTTI::max_size_t<T, U> AlignUp(in T x, in U a = ENGINE_DEFAULT_ALIGNMENT)
+constexpr RTTI::max_size_t<T, U> AlignUp(T x, U a = ENGINE_DEFAULT_ALIGNMENT)
 {
     return cast<RTTI::max_size_t<T, U>>((x + (a - 1)) & ~(a - 1));
 }
 
 template<typename T, typename U, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
-constexpr RTTI::max_size_t<T, U> AlignDown(in T x, in U a = ENGINE_DEFAULT_ALIGNMENT)
+constexpr RTTI::max_size_t<T, U> AlignDown(T x, U a = ENGINE_DEFAULT_ALIGNMENT)
 {
     return cast<RTTI::max_size_t<T, U>>(x & ~(a - 1));
 }
 
 template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>>
-constexpr bool IsPowOf2(in T x)
+constexpr bool IsPowOf2(T x)
 {
     return x && ((x & (x - 1)) == 0);
 }
@@ -204,25 +196,25 @@ template<>         struct GetEnumIntTypeBySize<8> { using type = s64; };
 template<typename Enum> using GetEnumIntType = typename GetEnumIntTypeBySize<sizeof(Enum)>::type;
 
 #define ENUM_CLASS_OPERATORS(ENUM_CLASS)                                                                                                                                                                                                                                                              \
-                                                                               constexpr ENUM_CLASS  operator| (in     ENUM_CLASS  left, in ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) |  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-                                                                               constexpr ENUM_CLASS  operator& (in     ENUM_CLASS  left, in ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) &  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-                                                                               constexpr ENUM_CLASS  operator^ (in     ENUM_CLASS  left, in ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) ^  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-                                                                               constexpr ENUM_CLASS  operator~ (in     ENUM_CLASS  left                     ) { return (ENUM_CLASS )(~((GetEnumIntType<ENUM_CLASS> )left)                                       ); } \
-                                                                               constexpr ENUM_CLASS& operator|=(in_out ENUM_CLASS& left, in ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) |= ((GetEnumIntType<ENUM_CLASS>)right)); } \
-                                                                               constexpr ENUM_CLASS& operator&=(in_out ENUM_CLASS& left, in ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) &= ((GetEnumIntType<ENUM_CLASS>)right)); } \
-                                                                               constexpr ENUM_CLASS& operator^=(in_out ENUM_CLASS& left, in ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) ^= ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator| (in     ENUM_CLASS  left, in T          right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) |  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator| (in     T           left, in ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) |  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator& (in     ENUM_CLASS  left, in T          right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) &  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator& (in     T           left, in ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) &  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator^ (in     ENUM_CLASS  left, in T          right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) ^  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator^ (in     T           left, in ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) ^  ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator|=(in_out ENUM_CLASS& left, in T          right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) |= ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator|=(in_out T&          left, in ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) |= ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator&=(in_out ENUM_CLASS& left, in T          right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) &= ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator&=(in_out T&          left, in ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) &= ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator^=(in_out ENUM_CLASS& left, in T          right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) ^= ((GetEnumIntType<ENUM_CLASS>)right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator^=(in_out T&          left, in ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) ^= ((GetEnumIntType<ENUM_CLASS>)right)); }
+                                                                               constexpr ENUM_CLASS  operator| (    ENUM_CLASS  left, ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) |  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+                                                                               constexpr ENUM_CLASS  operator& (    ENUM_CLASS  left, ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) &  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+                                                                               constexpr ENUM_CLASS  operator^ (    ENUM_CLASS  left, ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) ^  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+                                                                               constexpr ENUM_CLASS  operator~ (    ENUM_CLASS  left                     ) { return (ENUM_CLASS )(~((GetEnumIntType<ENUM_CLASS> )left)                                       ); } \
+                                                                               constexpr ENUM_CLASS& operator|=(ENUM_CLASS& left, ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) |= ((GetEnumIntType<ENUM_CLASS>)right)); } \
+                                                                               constexpr ENUM_CLASS& operator&=(ENUM_CLASS& left, ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) &= ((GetEnumIntType<ENUM_CLASS>)right)); } \
+                                                                               constexpr ENUM_CLASS& operator^=(ENUM_CLASS& left, ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) ^= ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator| (    ENUM_CLASS  left, T          right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) |  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator| (    T           left, ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) |  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator& (    ENUM_CLASS  left, T          right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) &  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator& (    T           left, ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) &  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator^ (    ENUM_CLASS  left, T          right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) ^  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS  operator^ (    T           left, ENUM_CLASS right) { return (ENUM_CLASS )( ((GetEnumIntType<ENUM_CLASS> )left) ^  ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator|=(ENUM_CLASS& left, T          right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) |= ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator|=(T&          left, ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) |= ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator&=(ENUM_CLASS& left, T          right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) &= ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator&=(T&          left, ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) &= ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator^=(ENUM_CLASS& left, T          right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) ^= ((GetEnumIntType<ENUM_CLASS>)right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr ENUM_CLASS& operator^=(T&          left, ENUM_CLASS right) { return (ENUM_CLASS&)( ((GetEnumIntType<ENUM_CLASS>&)left) ^= ((GetEnumIntType<ENUM_CLASS>)right)); }
 
 //
 // Debugging
@@ -254,17 +246,17 @@ enum class DEBUG_COLOR : u16
     SUCCESS = 0xA,
 };
 
-ENGINE_FUN void __cdecl DebugF(in DEBUG_IN debug_in, in const char *format, opt ...);
-ENGINE_FUN void __cdecl DebugFC(in DEBUG_IN debug_in, in DEBUG_COLOR color, in const char *format, opt ...);
-ENGINE_FUN void __cdecl MessageF(in MESSAGE_TYPE type, in const char *format, opt ...);
+ENGINE_FUN void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
+ENGINE_FUN void __cdecl DebugFC(DEBUG_IN debug_in, DEBUG_COLOR color, const char *format, ...);
+ENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
 ENGINE_FUN void __cdecl ShowDebugMessage(
-    in  b32         message_is_expr,
-    in  const char *file,
-    in  u64         line,
-    in  const char *function,
-    in  const char *title,
-    in  const char *format,
-    opt ...
+     b32         message_is_expr,
+     const char *file,
+     u64         line,
+     const char *function,
+     const char *title,
+     const char *format,
+    ...
 );
 
 #if DEVDEBUG && !defined(_ENGINE_NO_CHECKS)

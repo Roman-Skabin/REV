@@ -7,108 +7,29 @@
 #include "core/input.h"
 #include "renderer/graphics_api.h"
 
-//
-// Monitor
-//
-
-Monitor::Monitor()
-    : m_Handle(null),
-      m_Pos(0, 0),
-      m_Size(0, 0)
-{
-}
-
-Monitor::Monitor(const Window& window, const Logger& logger)
-{
-    DebugResult(m_Handle = MonitorFromWindow(window.Handle(), MONITOR_DEFAULTTONEAREST));
-
-    MONITORINFO info = {0};
-    info.cbSize = sizeof(MONITORINFO);
-    DebugResult(GetMonitorInfoA(m_Handle, &info));
-
-    m_Pos  = v2s(info.rcMonitor.left, info.rcMonitor.top);
-    m_Size = v2s(info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top);
-
-    logger.LogSuccess("Monitor has been created");
-}
-
-Monitor::Monitor(Monitor&& other) noexcept
-    : m_Handle(other.m_Handle),
-      m_Pos(other.m_Pos),
-      m_Size(other.m_Size)
-{
-    other.m_Handle = null;
-}
-
-Monitor::~Monitor()
-{
-    m_Handle = null;
-    m_Pos    = 0L;
-    m_Size   = 0L;
-}
-
-void Monitor::OnMonitorChange(const Window& window, const Logger& logger)
-{
-    CloseHandle(m_Handle);
-    DebugResult(m_Handle = MonitorFromWindow(window.Handle(), MONITOR_DEFAULTTONEAREST));
-
-    MONITORINFO info;
-    info.cbSize = sizeof(MONITORINFO);
-    DebugResult(GetMonitorInfoA(m_Handle, &info));
-
-    m_Pos  = v2s(info.rcMonitor.left, info.rcMonitor.top);
-    m_Size = v2s(info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top);
-
-    logger.LogInfo("Monitor has been changed");
-}
-
-Monitor& Monitor::operator=(Monitor&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_Handle = other.m_Handle;
-        m_Pos    = other.m_Pos;
-        m_Size   = other.m_Size;
-
-        other.m_Handle = null;
-    }
-    return *this;
-}
-
-//
-// Window
-//
-
-Window::Window(in const Logger& logger,
-               in const char   *title,
-               in v2s           size,
-               in v2s           pos)
-    : m_Monitor(),
-      m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
+Window::Window(const Logger&            logger,
+               const StaticString<128>& title,
+               v4s                      xywh)
+    : m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
       m_Handle(null),
       m_Context(null),
-      m_Title(),
-      m_Pos(pos),
-      m_Size(size),
+      m_XYWH(xywh),
       m_Flags(FLAGS::CLOSED),
-      m_Logger(logger)
+      m_Logger(logger),
+      m_Title(title),
+      m_ClassName(title)
 {
-    Check(strlen(title) < sizeof(m_Title));
-
-    strcpy(m_Title, title);
-    strcpy(m_ClassName, m_Title);
-
     WNDCLASSA wca     = {0};
     wca.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
     wca.lpfnWndProc   = WindowProc;
     wca.hInstance     = m_Instance;
     wca.hCursor       = LoadCursorA(0, IDC_ARROW);
-    wca.hbrBackground = GetSysColorBrush(COLOR_BACKGROUND);
+    // wca.hbrBackground = GetSysColorBrush(COLOR_BACKGROUND);
     wca.lpszClassName = m_ClassName;
     DebugResult(RegisterClassA(&wca));
 
-    s32 width  = m_Size.w;
-    s32 height = m_Size.h;
+    s32 width  = m_XYWH.z;
+    s32 height = m_XYWH.w;
 
     if (width != S32_MIN && height != S32_MIN)
     {
@@ -120,31 +41,12 @@ Window::Window(in const Logger& logger,
         }
     }
 
-    DebugResult(m_Handle = CreateWindowA(wca.lpszClassName, m_Title, WS_OVERLAPPEDWINDOW, m_Pos.x, m_Pos.y, width, height, null, null, wca.hInstance, 0));
+    DebugResult(m_Handle = CreateWindowA(wca.lpszClassName, m_Title, WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wca.hInstance, 0));
     DebugResult(m_Context = GetDC(m_Handle));
 
     m_Logger.LogSuccess("Window \"%s\" has been created", m_Title);
 
-    m_Monitor = Monitor(*this, m_Logger);
-
     SetWindowLongPtrA(m_Handle, GWLP_USERDATA, cast<LONG_PTR>(this));
-}
-
-Window::Window(Window&& other) noexcept
-    : m_Monitor(RTTI::move(other.m_Monitor)),
-      m_Instance(other.m_Instance),
-      m_Handle(other.m_Handle),
-      m_Context(other.m_Context),
-      m_Pos(other.m_Pos),
-      m_Size(other.m_Size),
-      m_Flags(other.m_Flags),
-      m_Logger(RTTI::move(other.m_Logger))
-{
-    strcpy(m_Title, other.m_Title);
-    strcpy(m_ClassName, other.m_ClassName);
-    other.m_Instance = null;
-    other.m_Handle   = null;
-    other.m_Context  = null;
 }
 
 Window::~Window()
@@ -159,9 +61,12 @@ Window::~Window()
 
 void Window::RequstFullscreen(bool set)
 {
-    if (set && (m_Flags & FLAGS::FULLSCREENED) == FLAGS::NONE)
+    if (set)
     {
-        m_Flags |= FLAGS::_FULLSCREEN_SET_REQUESTED;
+        if ((m_Flags & FLAGS::FULLSCREENED) == FLAGS::NONE)
+        {
+            m_Flags |= FLAGS::_FULLSCREEN_SET_REQUESTED;
+        }
     }
     else if ((m_Flags & FLAGS::FULLSCREENED) != FLAGS::NONE)
     {
@@ -190,83 +95,27 @@ void Window::Show()
     m_Flags &= ~FLAGS::CLOSED;
 }
 
-void Window::SetTitle(const char *title)
+void Window::SetTitle(const StaticString<128>& new_title)
 {
-    Check(strlen(title) < sizeof(m_Title));
-    DebugResult(SetWindowTextA(m_Handle, title));
-    strcpy(m_Title, title);
-}
-
-bool Window::Closed() const
-{
-    return (m_Flags & FLAGS::CLOSED) != FLAGS::NONE;
-}
-
-bool Window::Resized() const
-{
-    return (m_Flags & FLAGS::RESIZED) != FLAGS::NONE;
-}
-
-bool Window::Fullscreened() const
-{
-    return (m_Flags & FLAGS::FULLSCREENED) != FLAGS::NONE;
-}
-
-bool Window::Minimized() const
-{
-    return (m_Flags & FLAGS::MINIMIZED) != FLAGS::NONE;
-}
-
-Window& Window::operator=(Window&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_Monitor  = RTTI::move(other.m_Monitor);
-        m_Instance = other.m_Instance;
-        m_Handle   = other.m_Handle;
-        m_Context  = other.m_Context;
-        m_Pos      = RTTI::move(other.m_Pos);
-        m_Size     = RTTI::move(other.m_Size);
-        m_Flags    = other.m_Flags;
-        m_Logger   = RTTI::move(other.m_Logger);
-
-        strcpy(m_Title, other.m_Title);
-        strcpy(m_ClassName, other.m_ClassName);
-
-        other.m_Instance = null;
-        other.m_Handle   = null;
-        other.m_Context  = null;
-        other.m_Flags    = FLAGS::NONE;
-    }
-    return *this;
+    DebugResult(SetWindowTextA(m_Handle, new_title));
+    m_Title = new_title;
 }
 
 void Window::ApplyFullscreenRequst()
 {
-    local RECT wr;
-
     if ((m_Flags & FLAGS::_FULLSCREEN_SET_REQUESTED) != FLAGS::NONE)
     {
-        DebugResult(GetWindowRect(m_Handle, &wr));
-        SetWindowLongPtrA(m_Handle, GWL_STYLE,
-                          GetWindowLongPtrA(m_Handle, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-        DebugResult(SetWindowPos(m_Handle, HWND_TOP,
-                                 m_Monitor.m_Pos.x, m_Monitor.m_Pos.y,
-                                 m_Monitor.m_Size.w, m_Monitor.m_Size.h,
-                                 SWP_ASYNCWINDOWPOS | SWP_FRAMECHANGED | SWP_DEFERERASE | SWP_NOCOPYBITS | SWP_NOREDRAW));
         m_Flags &= ~FLAGS::_FULLSCREEN_SET_REQUESTED;
         m_Flags |= FLAGS::FULLSCREENED;
+
+        GraphicsAPI::GetRenderer()->SetFullscreen(true);
     }
     else if ((m_Flags & FLAGS::_FULLSCREEN_UNSET_REQUESTED) != FLAGS::NONE)
     {
-        SetWindowLongPtrA(m_Handle, GWL_STYLE,
-                          GetWindowLongPtrA(m_Handle, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
-        DebugResult(SetWindowPos(m_Handle, HWND_TOP,
-                                 wr.left, wr.top,
-                                 wr.right - wr.left, wr.bottom - wr.top,
-                                 SWP_ASYNCWINDOWPOS | SWP_FRAMECHANGED | SWP_DEFERERASE | SWP_NOCOPYBITS | SWP_NOREDRAW));
         m_Flags &= ~FLAGS::_FULLSCREEN_UNSET_REQUESTED;
         m_Flags &= ~FLAGS::FULLSCREENED;
+
+        GraphicsAPI::GetRenderer()->SetFullscreen(false);
     }
 }
 
@@ -286,18 +135,11 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
         {
             v2s new_size = v2s(cast<s32>(lparam & 0xFFFF), cast<s32>(lparam >> 16));
 
-            if ((window->m_Size.w != new_size.w || window->m_Size.h != new_size.h) && wparam != SIZE_MINIMIZED)
+            if ((window->m_XYWH.z != new_size.w || window->m_XYWH.z != new_size.h) && wparam != SIZE_MINIMIZED)
             {
-                window->m_Size = new_size;
-
-            #if 0
-                GraphicsAPI::GetRenderer()->ResizeBuffers();
-            #else
-                GraphicsAPI::GetRenderer()->ResizeTarget();
-            #endif
-
-                window->m_Flags &= ~Window::FLAGS::MINIMIZED;
-                window->m_Flags |=  Window::FLAGS::RESIZED;
+                window->m_XYWH.wh  = new_size;
+                window->m_Flags   &= ~Window::FLAGS::MINIMIZED;
+                window->m_Flags   |=  Window::FLAGS::RESIZED;
 
                 window->m_Logger.LogInfo("Window \"%s\" has been resized", window->m_Title);
             }
@@ -305,11 +147,6 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             {
                 window->m_Flags |= Window::FLAGS::MINIMIZED;
             }
-        } break;
-
-        case WM_DISPLAYCHANGE: // 0x007E
-        {
-            window->m_Monitor.OnMonitorChange(*window, window->m_Logger);
         } break;
 
         case WM_INPUT: // 0x00FF

@@ -13,50 +13,50 @@ class ENGINE_IMPEXP Allocator final
 {
 public:
     Allocator(
-        in_opt void *base_address,
-        in     u64   capacity,
-        in     b32   clear_memory // @NOTE(Roman): There is a sence to use it only if base_address != null.
+        void *base_address,
+            u64   capacity,
+            b32   clear_memory // @NOTE(Roman): There is a sence to use it only if base_address != null.
     );
-    Allocator(in Allocator&& other) noexcept;
+    Allocator(Allocator&& other) noexcept;
     ~Allocator();
 
-    void *Allocate(in u64 bytes);
-    void  DeAllocate(in_out_opt void *&mem);
+    void *Allocate(u64 bytes);
+    void  DeAllocate(void *&mem);
     void *ReAllocate(
-        in_out_opt void *&mem,  // @NOTE(Roman): if mem = null then Allocate returns.
-        in_opt     u64    bytes // @NOTE(Roman): if bytes = 0 then mem will be deallocated.
+        void *&mem,  // @NOTE(Roman): if mem = null then Allocate returns.
+            u64    bytes // @NOTE(Roman): if bytes = 0 then mem will be deallocated.
     );
 
-    void *AllocateAligned(in u64 bytes, in_opt u64 alignment);
-    void  DeAllocateAligned(in_out_opt void *&mem);
+    void *AllocateAligned(u64 bytes, u64 alignment);
+    void  DeAllocateAligned(void *&mem);
     void *ReAllocateAligned(
-        in_out_opt void *&mem,      // @NOTE(Roman): if mem = null then AllocateAligned returns.
-        in_opt     u64    bytes,    // @NOTE(Roman): if bytes = 0 then mem will be deallocated.
-        in_opt     u64    alignment // @NOTE(Roman): if alignment < ENGINE_DEFAULT_ALIGNMENT then alignment = ENGINE_DEFAULT_ALIGNMENT
+        void *&mem,      // @NOTE(Roman): if mem = null then AllocateAligned returns.
+            u64    bytes,    // @NOTE(Roman): if bytes = 0 then mem will be deallocated.
+            u64    alignment // @NOTE(Roman): if alignment < ENGINE_DEFAULT_ALIGNMENT then alignment = ENGINE_DEFAULT_ALIGNMENT
     );
 
-    template<typename T> constexpr T    *Alloc(in u64 count = 1)                       { return cast<T *>(Allocate(count * sizeof(T)));                              }
-    template<typename T> constexpr void  DeAlloc(in_out_opt T *&mem)                   { DeAllocate(cast<void *&>(mem));                                             }
-    template<typename T> constexpr T    *ReAlloc(in_out_opt T *&mem, in_opt u64 count) { return cast<T *>(ReAllocate(cast<void *&>(mem), count * sizeof(T))); }
+    template<typename T> constexpr T    *Alloc(u64 count = 1)                       { return cast<T *>(Allocate(count * sizeof(T)));                              }
+    template<typename T> constexpr void  DeAlloc(T *&mem)                   { DeAllocate(cast<void *&>(mem));                                             }
+    template<typename T> constexpr T    *ReAlloc(T *&mem, u64 count) { return cast<T *>(ReAllocate(cast<void *&>(mem), count * sizeof(T))); }
     
-    template<typename T> constexpr T    *AllocA(in u64 count = 1, in_opt u64 alignment = 0)                       { return cast<T *>(AllocateAligned(count * sizeof(T), alignment));                              }
-    template<typename T> constexpr void  DeAllocA(in_out_opt T *&mem)                                             { DeAllocateAligned(cast<void *&>(mem));                                                        }
-    template<typename T> constexpr T    *ReAllocA(in_out_opt T *&mem, in_opt u64 count, in_opt u64 alignment = 0) { return cast<T *>(ReAllocateAligned(cast<void *&>(mem), count * sizeof(T), alignment)); }
+    template<typename T> constexpr T    *AllocA(u64 count = 1, u64 alignment = 0)                       { return cast<T *>(AllocateAligned(count * sizeof(T), alignment));                              }
+    template<typename T> constexpr void  DeAllocA(T *&mem)                                             { DeAllocateAligned(cast<void *&>(mem));                                                        }
+    template<typename T> constexpr T    *ReAllocA(T *&mem, u64 count, u64 alignment = 0) { return cast<T *>(ReAllocateAligned(cast<void *&>(mem), count * sizeof(T), alignment)); }
 
-    template<typename T> constexpr bool ContainsPointer(in T *ptr) const { return MemInAllocatorRange(this, cast<void *>(ptr)); }
+    template<typename T> constexpr bool ContainsPointer(T *ptr) const { return MemInAllocatorRange(this, cast<void *>(ptr)); }
 
-    Allocator& operator=(in Allocator&& other) noexcept;
+    Allocator& operator=(Allocator&& other) noexcept;
 
 private:
-    BlockHeader *FindBestMatch(in u64 bytes);
-    void MergeNearbyBlocksInFreeList(in BlockHeader *header);
-    BlockHeader *ReAllocateInplace(in BlockHeader *header, in u64 bytes);
+    BlockHeader *FindBestMatch(u64 bytes);
+    void MergeNearbyBlocksInFreeList(BlockHeader *header);
+    BlockHeader *ReAllocateInplace(BlockHeader *header, u64 bytes);
 
-    Allocator(in const Allocator&) = delete;
-    Allocator& operator=(in const Allocator&) = delete;
+    Allocator(const Allocator&) = delete;
+    Allocator& operator=(const Allocator&) = delete;
 
-    bool MemInAllocatorRange(in void *mem);
-    bool BlockInAllocatorRange(in BlockHeader *block);
+    bool MemInAllocatorRange(void *mem);
+    bool BlockInAllocatorRange(BlockHeader *block);
 
 private:
     BlockHeader *m_FreeList;

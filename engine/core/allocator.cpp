@@ -24,7 +24,7 @@ struct BlockHeader
     byte         data[0];
 };
 
-Allocator::Allocator(opt void *base_address, in u64 capacity, in b32 clear_memory)
+Allocator::Allocator(void *base_address, u64 capacity, b32 clear_memory)
     : m_FreeList(null),
       m_First(null),
       m_LastAllocated(null),
@@ -54,7 +54,7 @@ Allocator::Allocator(opt void *base_address, in u64 capacity, in b32 clear_memor
     m_LastAllocated = m_First;
 }
 
-Allocator::Allocator(in Allocator&& other) noexcept
+Allocator::Allocator(Allocator&& other) noexcept
     : m_FreeList(other.m_FreeList),
       m_First(other.m_First),
       m_LastAllocated(other.m_LastAllocated),
@@ -79,7 +79,7 @@ Allocator::~Allocator()
 #if DEBUG
     else if (m_AllocationsCount > m_DeAllocationsCount)
     {
-        DebugFC(DEBUG_IN::CONSOLE, DEBUG_COLOR::ERROR, "Memory leak detected in allocator!!!:\n");
+        DebugFC(DEBUG_IN::CONSOLE, DEBUG_COLOR::ERROR, "Memory leak detected allocator!!!:\n");
         DebugF(DEBUG_IN::CONSOLE, "    Allocations overall: %I64u\n", m_AllocationsCount);
         DebugF(DEBUG_IN::CONSOLE, "    Reallocations overall: %I64u\n", m_ReAllocationsCount);
         DebugF(DEBUG_IN::CONSOLE, "    Deallocations overall: %I64u\n", m_DeAllocationsCount);
@@ -88,7 +88,7 @@ Allocator::~Allocator()
     ZeroMemory(this, sizeof(Allocator));
 }
 
-BlockHeader *Allocator::FindBestMatch(in u64 bytes)
+BlockHeader *Allocator::FindBestMatch(u64 bytes)
 {
     BlockHeader *best_in_list  = null;
     BlockHeader *first_in_list = null;
@@ -182,7 +182,7 @@ BlockHeader *Allocator::FindBestMatch(in u64 bytes)
     return null;
 }
 
-void *Allocator::Allocate(in u64 bytes)
+void *Allocator::Allocate(u64 bytes)
 {
     CheckM(bytes, "bytes can't be 0")
 
@@ -212,7 +212,7 @@ void *Allocator::Allocate(in u64 bytes)
     return header->data;
 }
 
-void Allocator::MergeNearbyBlocksInFreeList(in BlockHeader *header)
+void Allocator::MergeNearbyBlocksInFreeList(BlockHeader *header)
 {
     BlockHeader *next_header = cast<BlockHeader *>(header->data + header->data_bytes);
     BlockHeader *prev_header = header->prev;
@@ -235,8 +235,8 @@ void Allocator::MergeNearbyBlocksInFreeList(in BlockHeader *header)
             if (BlockInAllocatorRange(nexts_next))
             {
                 CheckM(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
-                       "Next's next block can't be in free list because next block is already in free list. "
-                       "There's some error in MergeNearbyBlocksInFreeList or in ReallocateInplace.");
+                       "Next's next block can't be free list because next block is already free list. "
+                       "There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.");
 
                 if (nexts_next->block_state != BLOCK_STATE::NONE)
                 {
@@ -292,7 +292,7 @@ void Allocator::MergeNearbyBlocksInFreeList(in BlockHeader *header)
     }
 }
 
-void Allocator::DeAllocate(in out void *&mem)
+void Allocator::DeAllocate(void *&mem)
 {
     if (mem)
     {
@@ -322,7 +322,7 @@ void Allocator::DeAllocate(in out void *&mem)
     }
 }
 
-BlockHeader *Allocator::ReAllocateInplace(in BlockHeader *header, in u64 bytes)
+BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
 {
     BlockHeader *res_header  = null;
     BlockHeader *next_header = cast<BlockHeader *>(header->data + header->data_bytes);
@@ -350,8 +350,8 @@ BlockHeader *Allocator::ReAllocateInplace(in BlockHeader *header, in u64 bytes)
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     CheckM(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
-                           "Next's next block can't be in free list because next block is already in free list. "
-                           "There's some error in MergeNearbyBlocksInFreeList or in ReallocateInplace.");
+                           "Next's next block can't be free list because next block is already free list. "
+                           "There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.");
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
                     {
@@ -385,8 +385,8 @@ BlockHeader *Allocator::ReAllocateInplace(in BlockHeader *header, in u64 bytes)
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     CheckM(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
-                           "Next's next block can't be in free list because next block is already in free list. "
-                           "There's some error in MergeNearbyBlocksInFreeList or in ReallocateInplace.");
+                           "Next's next block can't be free list because next block is already free list. "
+                           "There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.");
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
                     {
@@ -420,8 +420,8 @@ BlockHeader *Allocator::ReAllocateInplace(in BlockHeader *header, in u64 bytes)
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     CheckM(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
-                           "Next's next block can't be in free list because next block is already in free list. "
-                           "There's some error in MergeNearbyBlocksInFreeList or in ReallocateInplace.");
+                           "Next's next block can't be free list because next block is already free list. "
+                           "There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.");
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
                     {
@@ -461,7 +461,7 @@ BlockHeader *Allocator::ReAllocateInplace(in BlockHeader *header, in u64 bytes)
     return res_header;
 }
 
-void *Allocator::ReAllocate(out opt void *&mem, opt u64 bytes)
+void *Allocator::ReAllocate(void *&mem, u64 bytes)
 {
     if (!mem)
     {
@@ -532,26 +532,26 @@ void *Allocator::ReAllocate(out opt void *&mem, opt u64 bytes)
     return new_header->data;
 }
 
-void *Allocator::AllocateAligned(in u64 bytes, opt u64 alignment)
+void *Allocator::AllocateAligned(u64 bytes, u64 alignment)
 {
     if (alignment < ENGINE_DEFAULT_ALIGNMENT) alignment = ENGINE_DEFAULT_ALIGNMENT;
     CheckM(IsPowOf2(alignment), "Alignment must be power of 2");
     return Allocate(AlignUp(bytes, alignment));
 }
 
-void Allocator::DeAllocateAligned(in void *&mem)
+void Allocator::DeAllocateAligned(void *&mem)
 {
     DeAllocate(mem);
 }
 
-void *Allocator::ReAllocateAligned(opt out void *&mem, opt u64 bytes, opt u64 alignment)
+void *Allocator::ReAllocateAligned(void *&mem, u64 bytes, u64 alignment)
 {
     if (alignment < ENGINE_DEFAULT_ALIGNMENT) alignment = ENGINE_DEFAULT_ALIGNMENT;
     CheckM(IsPowOf2(alignment), "Alignment must be power of 2");
     return ReAllocate(mem, AlignUp(bytes, alignment));
 }
 
-Allocator& Allocator::operator=(in Allocator&& other) noexcept
+Allocator& Allocator::operator=(Allocator&& other) noexcept
 {
     if (this != &other)
     {
@@ -561,12 +561,12 @@ Allocator& Allocator::operator=(in Allocator&& other) noexcept
     return *this;
 }
 
-bool Allocator::MemInAllocatorRange(in void *mem)
+bool Allocator::MemInAllocatorRange(void *mem)
 {
     return m_First->data <= mem && mem < cast<byte *>(m_First) + m_Capacity;
 }
 
-bool Allocator::BlockInAllocatorRange(in BlockHeader *block)
+bool Allocator::BlockInAllocatorRange(BlockHeader *block)
 {
     return m_First <= block && block < cast<BlockHeader *>(cast<byte *>(m_First) + m_Capacity - sizeof(BlockHeader));
 }

@@ -120,11 +120,15 @@ namespace RTTI
 
     template<bool cond, typename True, typename False> using conditional_t = typename conditional<cond, True, False>::type;
 
-    template<typename T> constexpr bool greater(T a, T b) { return a > b; }
-    template<typename T> constexpr bool less(T a, T b)    { return a < b; }
+    template<typename T, typename U> constexpr auto cmpe(T  a, U b) -> decltype(a == b) { return a == b; }
+    template<typename T, typename U> constexpr auto cmpne(T a, U b) -> decltype(a != b) { return a != b; }
+    template<typename T, typename U> constexpr auto cmpl(T  a, U b) -> decltype(a <  b) { return a <  b; }
+    template<typename T, typename U> constexpr auto cmpg(T  a, U b) -> decltype(a >  b) { return a >  b; }
+    template<typename T, typename U> constexpr auto cmple(T a, U b) -> decltype(a <= b) { return a <= b; }
+    template<typename T, typename U> constexpr auto cmpge(T a, U b) -> decltype(a >= b) { return a >= b; }
 
-    template<typename T, typename U> using max_size_t = conditional_t<greater(sizeof(T), sizeof(U)), T, U>;
-    template<typename T, typename U> using min_size_t = conditional_t<less(sizeof(T), sizeof(U)), T, U>;
+    template<typename T, typename U> using min_size_t = conditional_t<cmpl(sizeof(T), sizeof(U)), T, U>;
+    template<typename T, typename U> using max_size_t = conditional_t<cmpg(sizeof(T), sizeof(U)), T, U>;
 
     template<typename Base, typename Derived> inline constexpr bool is_base_of_v = __is_base_of(Base, Derived);
 

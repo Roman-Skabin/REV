@@ -11,6 +11,7 @@
 - Tools
     - Several simultaneous read operations under the same file?
     - Hash table
+    - AsyncFileGroup (see engine/tools/async_file.h)
 
 - Build
     - [Pre?]build system. Build only edited files
@@ -18,10 +19,13 @@
 
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
+    - Fix fullscreen transition
 
 - GPU
     - TODOs in engine/platform/d3d12_gpu_memory_manager.h
+    - Switch from Placed Resources to Reserved Resources?
     - Clean up GPUMemoryManager and GPUProgramManager and Renderer
+    - Batch rendering.
     - Save shaders bytecode in some files and compile only shaders that
       source file change time > bytecode file change time?
     - Do ResizeGPUBuffers when we choose another screen dimension. (After UI implementation)

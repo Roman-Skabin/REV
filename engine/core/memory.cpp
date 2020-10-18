@@ -16,7 +16,7 @@ Memory::Area::Area()
 {
 }
 
-Memory::Area::Area(in Area&& other) noexcept
+Memory::Area::Area(Area&& other) noexcept
     : base(other.base),
       size(other.size),
       capacity(other.capacity)
@@ -26,7 +26,7 @@ Memory::Area::Area(in Area&& other) noexcept
     other.capacity = 0;
 }
 
-Memory::Area& Memory::Area::operator=(in Area&& other) noexcept
+Memory::Area& Memory::Area::operator=(Area&& other) noexcept
 {
     if (this != &other)
     {
@@ -47,7 +47,7 @@ Memory::Area& Memory::Area::operator=(in Area&& other) noexcept
 
 Memory *Memory::s_Memory = null;
 
-Memory *Memory::Create(in u64 transient_area_capacity, in u64 permanent_area_capacity)
+Memory *Memory::Create(u64 transient_area_capacity, u64 permanent_area_capacity)
 {
     CheckM(!s_Memory, "Memory is already created. Use Memory::Get() function instead");
     local Memory memory(transient_area_capacity, permanent_area_capacity);
@@ -61,7 +61,7 @@ Memory *Memory::Get()
     return s_Memory;
 }
 
-Memory::Memory(in u64 transient_area_capacity, in u64 permanent_area_capacity)
+Memory::Memory(u64 transient_area_capacity, u64 permanent_area_capacity)
 {
     CheckM(transient_area_capacity, "Transient area capacity must be greater than 0");
     CheckM(permanent_area_capacity, "Permanent area capacity must be greater than 0");
@@ -103,7 +103,7 @@ Memory::~Memory()
     }
 }
 
-void *Memory::PushToTransientArea(in u64 bytes)
+void *Memory::PushToTransientArea(u64 bytes)
 {
     CheckM(bytes, "0 bytes has been passed");
 
@@ -120,7 +120,7 @@ void *Memory::PushToTransientArea(in u64 bytes)
     return retptr;
 }
 
-void *Memory::PushToTransientAreaAligned(in u64 bytes, opt u64 alignment)
+void *Memory::PushToTransientAreaAligned(u64 bytes, u64 alignment)
 {
     CheckM(bytes, "0 bytes was passed");
 
@@ -148,7 +148,7 @@ void Memory::ResetTransientArea()
     m_TransientArea.size = 0;
 }
 
-void *Memory::PushToPermanentArea(in u64 bytes)
+void *Memory::PushToPermanentArea(u64 bytes)
 {
     CheckM(bytes, "0 bytes was passed");
 
@@ -165,7 +165,7 @@ void *Memory::PushToPermanentArea(in u64 bytes)
     return retptr;
 }
 
-void *Memory::PushToPermanentAreaAligned(in u64 bytes, opt u64 alignment)
+void *Memory::PushToPermanentAreaAligned(u64 bytes, u64 alignment)
 {
     CheckM(bytes, "0 bytes was passed");
 

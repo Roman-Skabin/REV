@@ -24,15 +24,35 @@ GPUResource::GPUResource()
       m_VertexIndexCount(0),
       m_VertexIndexStride(0),
       m_InitialState(D3D12_RESOURCE_STATE_COMMON),
-      m_NameLen(0),
-      m_Name{'\0'},
+      m_Name(),
       m_NextFree(null),
+      m_CommandAllocator(null),
+      m_CommandList(null),
+      m_Fence(null),
+      m_FenceEvent(),
       m_ResourceDesc()
 {
+    Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
+
+    HRESULT error = renderer->Device()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_CommandAllocator));
+    Check(SUCCEEDED(error));
+
+    error = renderer->Device()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator, null, IID_PPV_ARGS(&m_CommandList));
+    Check(SUCCEEDED(error));
+
+    error = m_CommandList->Close();
+    Check(SUCCEEDED(error));
+
+    error = renderer->Device()->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_Fence));
+    Check(SUCCEEDED(error));
 }
 
 GPUResource::~GPUResource()
 {
+    SafeRelease(m_CommandAllocator);
+    SafeRelease(m_CommandList);
+    SafeRelease(m_Fence);
+
     SafeRelease(m_DefaultResource);
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
@@ -47,46 +67,33 @@ GPUResource::~GPUResource()
     m_NextFree        = null;
 }
 
-void GPUResource::SetName(in const char *name, in_opt u32 name_len)
+void GPUResource::SetName(const StaticString<64>& name)
 {
-    Check(name);
+    m_Name = name;
 
-    if (!name_len) name_len = cast<u32>(strlen(name));
-    CheckM(name_len < sizeof(m_Name), "Too long name, max name length is %I32u.", sizeof(m_Name));
-
-    if (m_NameLen > name_len)
-    {
-        ZeroMemory(m_Name + name_len, m_NameLen - name_len);
-    }
-
-    m_NameLen = name_len;
-    CopyMemory(m_Name, name, m_NameLen);
-
-    char ext_name[16 + sizeof(m_Name)] = {'\0'};
+    char ext_name[16 + 64] = {'\0'};
     CopyMemory(ext_name, "__default__", CSTRLEN("__default__"));
-    CopyMemory(ext_name + CSTRLEN("__default__"), m_Name, m_NameLen);
+    CopyMemory(ext_name + CSTRLEN("__default__"), m_Name, m_Name.Length());
 
-    HRESULT error = m_DefaultResource->SetPrivateData(WKPDID_D3DDebugObjectName, cast<u32>(CSTRLEN("__default__") + m_NameLen), ext_name);
+    HRESULT error = m_DefaultResource->SetPrivateData(WKPDID_D3DDebugObjectName, cast<u32>(CSTRLEN("__default__") + m_Name.Length()), ext_name);
     Check(SUCCEEDED(error));
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
         s32 len = sprintf(ext_name, "__upload_%I32u__", i);
 
-        CopyMemory(ext_name + len, m_Name, m_NameLen);
-        len += m_NameLen;
+        CopyMemory(ext_name + len, m_Name, m_Name.Length());
+        len += cast<s32>(m_Name.Length());
 
         error = m_UploadResources[i]->SetPrivateData(WKPDID_D3DDebugObjectName, len, ext_name);
         Check(SUCCEEDED(error));
     }
 }
 
-void GPUResource::SetData(in const void *data)
+void GPUResource::SetData(const void *data)
 {
     Renderer                  *renderer      = cast<Renderer *>(GraphicsAPI::GetRenderer());
-    ID3D12GraphicsCommandList *graphics_list = renderer->m_GraphicsLists[renderer->m_CurrentBuffer];
-
-    // @TODO(Roman): Use fences?
+    ID3D12GraphicsCommandList *graphics_list = renderer->CurrentGraphicsList();
 
     if (!data)
     {
@@ -97,7 +104,7 @@ void GPUResource::SetData(in const void *data)
         discard_region.NumSubresources  = 1;
 
         graphics_list->DiscardResource(m_DefaultResource, &discard_region);
-        graphics_list->DiscardResource(m_UploadResources[renderer->m_CurrentBuffer], &discard_region);
+        graphics_list->DiscardResource(m_UploadResources[renderer->CurrentBuffer()], &discard_region);
     }
     else
     {
@@ -105,7 +112,7 @@ void GPUResource::SetData(in const void *data)
                           * m_ResourceDesc.Height
                           * m_ResourceDesc.DepthOrArraySize;
 
-        CopyMemory(m_UploadPointers[renderer->m_CurrentBuffer], data, resource_size);
+        CopyMemory(m_UploadPointers[renderer->CurrentBuffer()], data, resource_size);
 
         D3D12_RESOURCE_BARRIER resource_barrier;
         resource_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -117,7 +124,7 @@ void GPUResource::SetData(in const void *data)
 
         graphics_list->ResourceBarrier(1, &resource_barrier);
 
-        graphics_list->CopyResource(m_DefaultResource, m_UploadResources[renderer->m_CurrentBuffer]);
+        graphics_list->CopyResource(m_DefaultResource, m_UploadResources[renderer->CurrentBuffer()]);
 
         resource_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         resource_barrier.Transition.StateAfter  = m_InitialState;
@@ -126,18 +133,92 @@ void GPUResource::SetData(in const void *data)
     }
 }
 
+void GPUResource::SetDataImmediate(const void *data)
+{
+    Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
+
+    HRESULT error = m_CommandAllocator->Reset();
+    Check(SUCCEEDED(error));
+
+    error = m_CommandList->Reset(m_CommandAllocator, null);
+    Check(SUCCEEDED(error));
+
+    if (!data)
+    {
+        D3D12_DISCARD_REGION discard_region;
+        discard_region.NumRects         = 0;
+        discard_region.pRects           = null;
+        discard_region.FirstSubresource = 0;
+        discard_region.NumSubresources  = 1;
+
+        m_CommandList->DiscardResource(m_DefaultResource, &discard_region);
+        m_CommandList->DiscardResource(m_UploadResources[renderer->CurrentBuffer()], &discard_region);
+    }
+    else
+    {
+        u64 resource_size = m_ResourceDesc.Width
+                          * m_ResourceDesc.Height
+                          * m_ResourceDesc.DepthOrArraySize;
+
+        CopyMemory(m_UploadPointers[renderer->CurrentBuffer()], data, resource_size);
+
+        D3D12_RESOURCE_BARRIER resource_barrier;
+        resource_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        resource_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        resource_barrier.Transition.pResource   = m_DefaultResource;
+        resource_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        resource_barrier.Transition.StateBefore = m_InitialState;
+        resource_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
+
+        m_CommandList->ResourceBarrier(1, &resource_barrier);
+
+        m_CommandList->CopyResource(m_DefaultResource, m_UploadResources[renderer->CurrentBuffer()]);
+
+        resource_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+        resource_barrier.Transition.StateAfter  = m_InitialState;
+
+        m_CommandList->ResourceBarrier(1, &resource_barrier);
+    }
+
+    error = m_CommandList->Close();
+    Check(SUCCEEDED(error));
+
+    ID3D12CommandList *command_lists[] = { m_CommandList };
+    renderer->GraphicsQueue()->ExecuteCommandLists(cast<u32>(ArrayCount(command_lists)), command_lists);
+
+    u64 fence_value = m_Fence->GetCompletedValue() + 1;
+
+    error = renderer->GraphicsQueue()->Signal(m_Fence, fence_value);
+    Check(SUCCEEDED(error));
+
+    if (m_Fence->GetCompletedValue() < fence_value)
+    {
+        error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent);
+        Check(SUCCEEDED(error));
+
+        m_FenceEvent.Wait(INFINITE, true);
+    }
+}
+
 GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
 {
     if (this != &other)
     {
+        // moving vtable
+        *cast<u64 *>(this)   = *cast<u64 *>(&other);
+        *cast<u64 *>(&other) = 0;
+
         m_DefaultResource = other.m_DefaultResource;
         for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
         {
-            m_UploadResources[i] = other.m_UploadResources[i];
-            m_UploadPointers[i]  = other.m_UploadPointers[i];
+            ID3D12Resource *& other_upload_resource = other.m_UploadResources[i];
+            void           *& other_upload_pointer  = other.m_UploadPointers[i];
 
-            other.m_UploadResources[i] = null;
-            other.m_UploadPointers[i]  = null;
+            m_UploadResources[i] = other_upload_resource;
+            m_UploadPointers[i]  = other_upload_pointer;
+
+            other_upload_resource = null;
+            other_upload_pointer  = null;
         }
         m_Kind              = other.m_Kind;
         m_AllocationState   = other.m_AllocationState;
@@ -145,14 +226,20 @@ GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
         m_VertexIndexCount  = other.m_VertexIndexCount;
         m_VertexIndexStride = other.m_VertexIndexStride;
         m_InitialState      = other.m_InitialState;
-        m_NameLen           = other.m_NameLen;
-        CopyMemory(m_Name, other.m_Name, m_NameLen);
+        m_Name              = other.m_Name;
         m_NextFree          = other.m_NextFree;
+        m_CommandAllocator  = other.m_CommandAllocator;
+        m_CommandList       = other.m_CommandList;
+        m_Fence             = other.m_Fence;
+        m_FenceEvent        = RTTI::move(other.m_FenceEvent);
         m_ResourceDesc      = other.m_ResourceDesc;
 
-        other.m_DefaultResource = null;
-        other.m_DescHeap        = null;
-        other.m_NextFree        = null;
+        other.m_DefaultResource  = null;
+        other.m_DescHeap         = null;
+        other.m_NextFree         = null;
+        other.m_CommandAllocator = null;
+        other.m_CommandList      = null;
+        other.m_Fence            = null;
     }
     return *this;
 }
@@ -235,7 +322,7 @@ void GPUResourceMemory::Create(const D3D12_HEAP_DESC& default_desc, const D3D12_
     {
         m_DefaultCapacity = default_desc.SizeInBytes;
 
-        HRESULT error = renderer->m_Device->CreateHeap(&default_desc, IID_PPV_ARGS(&m_DefaultHeap));
+        HRESULT error = renderer->Device()->CreateHeap(&default_desc, IID_PPV_ARGS(&m_DefaultHeap));
         CheckM(error != E_OUTOFMEMORY, "There is no enough GPU memory to create Default Buffer Heap. Requested capacity: %I64u", m_DefaultCapacity);
         Check(SUCCEEDED(error));
 
@@ -251,7 +338,7 @@ void GPUResourceMemory::Create(const D3D12_HEAP_DESC& default_desc, const D3D12_
 
             ID3D12Heap **upload_heap = m_UploadHeaps + i;
 
-            error = renderer->m_Device->CreateHeap(&upload_desc, IID_PPV_ARGS(upload_heap));
+            error = renderer->Device()->CreateHeap(&upload_desc, IID_PPV_ARGS(upload_heap));
             CheckM(error != E_OUTOFMEMORY, "There is no enough GPU memory to create Upload Buffer Heap. Requested capacity: %I64u", upload_desc.SizeInBytes);
             Check(SUCCEEDED(error));
 
@@ -264,7 +351,7 @@ void GPUResourceMemory::Create(const D3D12_HEAP_DESC& default_desc, const D3D12_
     {
         m_DefaultCapacity = default_desc.SizeInBytes;
 
-        HRESULT error = renderer->m_Device->CreateHeap(&default_desc, IID_PPV_ARGS(&m_DefaultHeap));
+        HRESULT error = renderer->Device()->CreateHeap(&default_desc, IID_PPV_ARGS(&m_DefaultHeap));
         CheckM(error != E_OUTOFMEMORY, "There is no enough GPU memory to create Default Texture Heap. Requested capacity: %I64u", m_DefaultCapacity);
         Check(SUCCEEDED(error));
 
@@ -280,7 +367,7 @@ void GPUResourceMemory::Create(const D3D12_HEAP_DESC& default_desc, const D3D12_
 
             ID3D12Heap **upload_heap = m_UploadHeaps + i;
 
-            error = renderer->m_Device->CreateHeap(&upload_desc, IID_PPV_ARGS(upload_heap));
+            error = renderer->Device()->CreateHeap(&upload_desc, IID_PPV_ARGS(upload_heap));
             CheckM(error != E_OUTOFMEMORY, "There is no enough GPU memory to create Upload Texture Heap. Requested capacity: %I64u", upload_desc.SizeInBytes);
             Check(SUCCEEDED(error));
 
@@ -373,15 +460,13 @@ void GPUResourceMemory::CreateGPUResource(GPUResource *resource)
 
     Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
 
-    ID3D12GraphicsCommandList *graphics_list = renderer->m_GraphicsLists[renderer->m_CurrentBuffer];
-
     D3D12_DISCARD_REGION discard_region;
     discard_region.NumRects         = 0;
     discard_region.pRects           = null;
     discard_region.FirstSubresource = 0;
     discard_region.NumSubresources  = 1;
 
-    HRESULT error = renderer->m_Device->CreatePlacedResource(m_DefaultHeap,
+    HRESULT error = renderer->Device()->CreatePlacedResource(m_DefaultHeap,
                                                              m_DefaultOffset,
                                                              &resource->m_ResourceDesc,
                                                              resource->m_InitialState,
@@ -397,14 +482,14 @@ void GPUResourceMemory::CreateGPUResource(GPUResource *resource)
                     *  resource->m_ResourceDesc.DepthOrArraySize;
     m_DefaultOffset  = AlignUp(m_DefaultOffset, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
-    graphics_list->DiscardResource(resource->m_DefaultResource, &discard_region);
-
     if (m_AllowOnlyBuffers)
     {
         for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
         {
-            error = renderer->m_Device->CreatePlacedResource(m_UploadHeaps[i],
-                                                             m_UploadOffsets[i],
+            u64& upload_offset = m_UploadOffsets[i];
+
+            error = renderer->Device()->CreatePlacedResource(m_UploadHeaps[i],
+                                                             upload_offset,
                                                              &resource->m_ResourceDesc,
                                                              D3D12_RESOURCE_STATE_GENERIC_READ,
                                                              null,
@@ -412,12 +497,10 @@ void GPUResourceMemory::CreateGPUResource(GPUResource *resource)
             CheckM(error != E_OUTOFMEMORY, "Upload Buffer Memory Overflow");
             Check(SUCCEEDED(error));
 
-            m_UploadOffsets[i] += resource->m_ResourceDesc.Width
-                               *  resource->m_ResourceDesc.Height
-                               *  resource->m_ResourceDesc.DepthOrArraySize;
-            m_UploadOffsets[i]  = AlignUp(m_UploadOffsets[i], D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
-
-            graphics_list->DiscardResource(resource->m_UploadResources[i], &discard_region);
+            upload_offset += resource->m_ResourceDesc.Width
+                          *  resource->m_ResourceDesc.Height
+                          *  resource->m_ResourceDesc.DepthOrArraySize;
+            upload_offset  = AlignUp(upload_offset, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
             D3D12_RANGE read_range = { 0, 0 };
             error = resource->m_UploadResources[i]->Map(0, &read_range, resource->m_UploadPointers + i);
@@ -428,8 +511,10 @@ void GPUResourceMemory::CreateGPUResource(GPUResource *resource)
     {
         for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
         {
-            error = renderer->m_Device->CreatePlacedResource(m_UploadHeaps[i],
-                                                             m_UploadOffsets[i],
+            u64& upload_offset = m_UploadOffsets[i];
+
+            error = renderer->Device()->CreatePlacedResource(m_UploadHeaps[i],
+                                                             upload_offset,
                                                              &resource->m_ResourceDesc,
                                                              D3D12_RESOURCE_STATE_GENERIC_READ,
                                                              null,
@@ -437,12 +522,10 @@ void GPUResourceMemory::CreateGPUResource(GPUResource *resource)
             CheckM(error != E_OUTOFMEMORY, "Upload Texture Memory Overflow");
             Check(SUCCEEDED(error));
 
-            m_UploadOffsets[i] += resource->m_ResourceDesc.Width
-                               *  resource->m_ResourceDesc.Height
-                               *  resource->m_ResourceDesc.DepthOrArraySize;
-            m_UploadOffsets[i]  = AlignUp(m_UploadOffsets[i], D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
-
-            graphics_list->DiscardResource(resource->m_UploadResources[i], &discard_region);
+            upload_offset += resource->m_ResourceDesc.Width
+                          *  resource->m_ResourceDesc.Height
+                          *  resource->m_ResourceDesc.DepthOrArraySize;
+            upload_offset  = AlignUp(upload_offset, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
             D3D12_RANGE read_range = { 0, 0 };
             error = resource->m_UploadResources[i]->Map(0, &read_range, resource->m_UploadPointers + i);
@@ -451,15 +534,12 @@ void GPUResourceMemory::CreateGPUResource(GPUResource *resource)
     }
 }
 
-GPUResource *GPUResourceMemory::FindGPUResource(const char *name, u32 name_len)
+GPUResource *GPUResourceMemory::FindGPUResource(const StaticString<64>& name)
 {
-    if (!name_len) name_len = cast<u32>(strlen(name));
-    CheckM(name_len < StructFieldSize(GPUResource, m_Name), "Too long name, max name length is %I32u.", StructFieldSize(GPUResource, m_Name));
-
     for (GPUResourceList::Node *it = m_Resources.First(); it; it = it->Next())
     {
         GPUResource& resource = it->Data();
-        if (resource.m_NameLen == name_len && RtlEqualMemory(resource.m_Name, name, name_len))
+        if (resource.m_Name == name)
         {
             return &resource;
         }
@@ -522,14 +602,14 @@ void GPUDescHeapMemory::CreateDescHeapForCB(GPUDescHeap *desc_heap, GPUResource 
 {
     Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
     
-    HRESULT error = renderer->m_Device->CreateDescriptorHeap(&desc_heap->m_DescHeapDesc, IID_PPV_ARGS(&desc_heap->m_Handle));
+    HRESULT error = renderer->Device()->CreateDescriptorHeap(&desc_heap->m_DescHeapDesc, IID_PPV_ARGS(&desc_heap->m_Handle));
     Check(SUCCEEDED(error));
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc;
     cbv_desc.BufferLocation = resource->m_DefaultResource->GetGPUVirtualAddress();
     cbv_desc.SizeInBytes    = cast<u32>(resource->m_ResourceDesc.Width);
 
-    renderer->m_Device->CreateConstantBufferView(&cbv_desc, desc_heap->m_Handle->GetCPUDescriptorHandleForHeapStart());
+    renderer->Device()->CreateConstantBufferView(&cbv_desc, desc_heap->m_Handle->GetCPUDescriptorHandleForHeapStart());
 }
 
 //
@@ -547,7 +627,7 @@ GPUMemoryManager::GPUMemoryManager(Allocator *allocator, const Logger& logger, u
 
     Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
 
-    m_Logger.LogInfo("GPU Resource Heap Tier: D3D12_RESOURCE_HEAP_TIER_%I32d", renderer->m_Features.options.ResourceHeapTier);
+    m_Logger.LogInfo("GPU Resource Heap Tier: D3D12_RESOURCE_HEAP_TIER_%I32d", renderer->ResourceHeapTier());
 
     gpu_memory_capacity = AlignUp(gpu_memory_capacity, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 
@@ -610,7 +690,7 @@ void GPUMemoryManager::Destroy()
     this->~GPUMemoryManager();
 }
 
-IGPUResource *GPUMemoryManager::AllocateVB(in u32 vertex_count, in u32 stride)
+IGPUResource *GPUMemoryManager::AllocateVB(u32 vertex_count, u32 stride)
 {
     Check(vertex_count);
     Check(stride);
@@ -630,7 +710,7 @@ IGPUResource *GPUMemoryManager::AllocateVB(in u32 vertex_count, in u32 stride)
 
 #if 0
     CheckM(1 <= resource_desc.Width && resource_desc.Width <= .features.virtual_address.MaxGPUVirtualAddressBitsPerResource,
-           "Too big vertex buffer. Required vertex buffer size in bytes = [1, %I32u], got: %I32u",
+           "Too big vertex buffer. Required vertex buffer size bytes = [1, %I32u], got: %I32u",
            .features.virtual_address.MaxGPUVirtualAddressBitsPerResource,
            resource_desc.Width);
 #endif
@@ -638,8 +718,6 @@ IGPUResource *GPUMemoryManager::AllocateVB(in u32 vertex_count, in u32 stride)
     bool         allocated = false;
     GPUResource *resource  = m_BufferMemory.FindOrAllocateResource(resource_desc, allocated);
 
-    ZeroMemory(resource->m_Name, sizeof(resource->m_Name));
-    resource->m_NameLen           = 0;
     resource->m_DescHeap          = null;
     resource->m_Kind              = GPUResource::KIND::VB;
     resource->m_VertexIndexCount  = vertex_count;
@@ -654,7 +732,7 @@ IGPUResource *GPUMemoryManager::AllocateVB(in u32 vertex_count, in u32 stride)
     return resource;
 }
 
-IGPUResource *GPUMemoryManager::AllocateIB(in u32 indecies_count)
+IGPUResource *GPUMemoryManager::AllocateIB(u32 indecies_count)
 {
     Check(indecies_count);
 
@@ -665,7 +743,7 @@ IGPUResource *GPUMemoryManager::AllocateIB(in u32 indecies_count)
     resource_desc.Height             = 1;
     resource_desc.DepthOrArraySize   = 1;
     resource_desc.MipLevels          = 1;
-    resource_desc.Format             = DXGI_FORMAT_R32_UINT;
+    resource_desc.Format             = DXGI_FORMAT_UNKNOWN;
     resource_desc.SampleDesc.Count   = 1;
     resource_desc.SampleDesc.Quality = 0;
     resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
@@ -673,7 +751,7 @@ IGPUResource *GPUMemoryManager::AllocateIB(in u32 indecies_count)
 
 #if 0
     CheckM(1 <= resource_desc.Width && resource_desc.Width <= .features.virtual_address.MaxGPUVirtualAddressBitsPerResource,
-           "Too big index buffer. Required indices buffer size in bytes = [1, %I32u], got: %I32u",
+           "Too big index buffer. Required indices buffer size bytes = [1, %I32u], got: %I32u",
            .features.virtual_address.MaxGPUVirtualAddressBitsPerResource,
            resource_desc.Width);
 #endif
@@ -681,8 +759,6 @@ IGPUResource *GPUMemoryManager::AllocateIB(in u32 indecies_count)
     bool         allocated = false;
     GPUResource *resource  = m_BufferMemory.FindOrAllocateResource(resource_desc, allocated);
 
-    ZeroMemory(resource->m_Name, sizeof(resource->m_Name));
-    resource->m_NameLen           = 0;
     resource->m_DescHeap          = null;
     resource->m_Kind              = GPUResource::KIND::IB;
     resource->m_VertexIndexCount  = indecies_count;
@@ -697,13 +773,13 @@ IGPUResource *GPUMemoryManager::AllocateIB(in u32 indecies_count)
     return resource;
 }
 
-IGPUResource *GPUMemoryManager::AllocateCB(in u32 bytes, in const char *name, in u32 name_len)
+IGPUResource *GPUMemoryManager::AllocateCB(u32 bytes, const StaticString<64>& name)
 {
     Check(bytes && bytes <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
 
 #if 0
     CheckM(1 <= bytes && bytes <= .features.virtual_address.MaxGPUVirtualAddressBitsPerResource,
-           "Too big constant buffer. Required constant buffer size in bytes = [1, %I32u], got: %I32u",
+           "Too big constant buffer. Required constant buffer size bytes = [1, %I32u], got: %I32u",
            .features.virtual_address.MaxGPUVirtualAddressBitsPerResource,
            bytes);
 #endif
@@ -724,8 +800,6 @@ IGPUResource *GPUMemoryManager::AllocateCB(in u32 bytes, in const char *name, in
     bool         allocated = false;
     GPUResource *resource  = m_BufferMemory.FindOrAllocateResource(resource_desc, allocated);
 
-    ZeroMemory(resource->m_Name, sizeof(resource->m_Name));
-    resource->m_NameLen           = 0;
     resource->m_DescHeap          = null;
     resource->m_Kind              = GPUResource::KIND::CB;
     resource->m_VertexIndexCount  = 0;
@@ -737,7 +811,7 @@ IGPUResource *GPUMemoryManager::AllocateCB(in u32 bytes, in const char *name, in
         m_BufferMemory.CreateGPUResource(resource);
     }
 
-    resource->SetName(name, name_len);
+    resource->SetName(name);
 
     D3D12_DESCRIPTOR_HEAP_DESC desc_heap_desc;
     desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -758,13 +832,22 @@ IGPUResource *GPUMemoryManager::AllocateCB(in u32 bytes, in const char *name, in
     return resource;
 }
 
-void GPUMemoryManager::SetGPUResourceData(in const char *name, in_opt u32 name_len, in const void *data)
+void GPUMemoryManager::SetGPUResourceData(const StaticString<64>& name, const void *data)
 {
-    IGPUResource *resource = m_BufferMemory.FindGPUResource(name, name_len);
-    if (!resource) resource = m_TextureMemory.FindGPUResource(name, name_len);
+    IGPUResource *resource = m_BufferMemory.FindGPUResource(name);
+    if (!resource) resource = m_TextureMemory.FindGPUResource(name);
 
     if (resource) resource->SetData(data);
-    else          m_Logger.LogError("There is no buffer nor texture with the name \"%.*s\"", name_len, name);
+    else          m_Logger.LogError("There is no buffer nor texture with the name \"%s\"", name);
+}
+
+void GPUMemoryManager::SetGPUResourceDataImmediate(const StaticString<64>& name, const void *data)
+{
+    IGPUResource *resource = m_BufferMemory.FindGPUResource(name);
+    if (!resource) resource = m_TextureMemory.FindGPUResource(name);
+
+    if (resource) resource->SetDataImmediate(data);
+    else          m_Logger.LogError("There is no buffer nor texture with the name \"%s\"", name);
 }
 
 void GPUMemoryManager::Reset()

@@ -3,16 +3,15 @@
 Sandbox::Sandbox()
     : Application("Sandbox"),
       m_Logger("Sandbox logger", "../log/sandbox.log", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
-      m_DemoLevel()
+      m_DemoComponent()
 {
-    m_Renderer->SetVSync(true);
-    m_Window.RequstFullscreen(true);
-    AttachLevels(&m_DemoLevel);
+    // GraphicsAPI::GetRenderer()->SetVSync(true);
+    AttacComponents(&m_DemoComponent);
 }
 
 Sandbox::~Sandbox()
 {
-    DetachAllLevels();
+    DetachAllComponents();
 }
 
 int main(int argc, char **argv)

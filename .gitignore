@@ -6,5 +6,6 @@ log/
 bin/
 nsight/
 NEW_CHANGES.txt
+assets_old/
 engine_old/
 gpu_stuff.bmp

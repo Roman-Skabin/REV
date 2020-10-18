@@ -5,64 +5,74 @@
 #pragma once
 
 #include "core/core.h"
-
-enum class FILE_FLAG
-{
-    NONE  = 0,
-
-    READ  = BIT(0),
-    WRITE = BIT(1),
-};
-ENUM_CLASS_OPERATORS(FILE_FLAG);
+#include "tools/static_string.hpp"
 
 // @Issue(Roman): Several simultaneous read operations under the same file?
+
+// @TODO(Roman): Make an AsyncFileGroup (or kinda, maybe better or another name)
+//               that contains several files that will be read or written.
+//               The reason is to be able to wait for several files simultaneously,
+//               not sequentially.
+
+// @TODO(Roman): Replace StaticString with const char *?
 
 class ENGINE_IMPEXP AsyncFile final
 {
 public:
-    // @NOTE(Roman): It would be better if you pass non-null filename_len,
-    //               otherwise strlen will be used.
-    AsyncFile(in const char *filename, in_opt u64 filename_len, in FILE_FLAG flags);
-    AsyncFile(in const AsyncFile& other);
-    AsyncFile(in AsyncFile&& other) noexcept;
+    enum class FLAGS
+    {
+        NONE  = 0,
+        READ  = BIT(0),
+        WRITE = BIT(1),
+
+        // @NOTE(Roman): Internal
+        _WWEC = BIT(31),
+    };
+
+public:
+    AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags);
+    AsyncFile(const AsyncFile& other);
+    AsyncFile(AsyncFile&& other) noexcept;
 
     ~AsyncFile();
 
     void Clear();
 
-    void Read(out void *buffer, in u32 buffer_bytes) const;
-    void Write(in const void *buffer, in u32 buffer_bytes);
-    void Append(in const void *buffer, in u32 buffer_bytes);
+    void Read(void *buffer, u32 buffer_bytes) const;
+    void Write(const void *buffer, u32 buffer_bytes);
+    void Append(const void *buffer, u32 buffer_bytes);
 
     void Wait() const;
 
-    void SetOffset(in u32 offset);
+    void SetOffset(u32 offset);
 
-    u32         GetOffset() const { return m_Offset; }
-    u32         GetSize()   const { return m_Size;   }
-    const char *GetName()   const { return m_Name;   }
+    constexpr       u32                     Offset() const { return m_Offset; }
+    constexpr       u32                     Size()   const { return m_Size;   }
+    constexpr const StaticString<MAX_PATH>& Name()   const { return m_Name;   }
 
-    AsyncFile& operator=(in const AsyncFile& other);
-    AsyncFile& operator=(in AsyncFile&& other) noexcept;
+    AsyncFile& operator=(const AsyncFile& other);
+    AsyncFile& operator=(AsyncFile&& other) noexcept;
 
 private:
     friend void WINAPI OverlappedReadCompletionRoutine(
-        in     u32         error_code,
-        in     u32         number_of_bytes_transfered,
-        in_out OVERLAPPED *overlapped
+        u32         error_code,
+        u32         bytes_transfered,
+        OVERLAPPED *overlapped
     );
 
     friend void WINAPI OverlappedWriteCompletionRoutine(
-        in     u32         error_code,
-        in     u32         number_of_bytes_transfered,
-        in_out OVERLAPPED *overlapped
+        u32         error_code,
+        u32         bytes_transfered,
+        OVERLAPPED *overlapped
     );
 
 private:
-    HANDLE             m_Handle;
-    FILE_FLAG          m_Flags;
-    u32                m_Offset;
-    u32                m_Size;
-    mutable OVERLAPPED m_Overlapped;
-    char               m_Name[_MAX_PATH];
+    HANDLE                 m_Handle;
+    FLAGS                  m_Flags;
+    u32                    m_Offset;
+    u32                    m_Size;
+    mutable OVERLAPPED     m_Overlapped;
+    StaticString<MAX_PATH> m_Name;
 };
+
+ENUM_CLASS_OPERATORS(AsyncFile::FLAGS);

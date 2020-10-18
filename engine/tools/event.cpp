@@ -16,8 +16,6 @@ Event::Event(const Event& other)
     : m_Handle(null),
       m_Flags(other.m_Flags)
 {
-    other.Wait();
-
     HANDLE current_process = GetCurrentProcess();
     DebugResult(DuplicateHandle(current_process,
                                 other.m_Handle,
@@ -37,7 +35,6 @@ Event::Event(Event&& other) noexcept
 
 Event::~Event()
 {
-    Wait();
     if (m_Handle) DebugResult(CloseHandle(m_Handle));
 }
 
@@ -48,18 +45,16 @@ bool Event::Set()
 
 bool Event::Reset()
 {
-    if (m_Handle && (m_Flags & FLAGS::RESETTABLE) != FLAGS::NONE)
-    {
-        return ResetEvent(m_Handle);
-    }
-    return false;
+    return m_Handle && (m_Flags & FLAGS::RESETTABLE) != FLAGS::NONE
+         ? ResetEvent(m_Handle)
+         : false;
 }
 
-void Event::Wait() const
+void Event::Wait(u32 milliseconds, bool alerable) const
 {
     if (m_Handle)
     {
-        while (WaitForSingleObjectEx(m_Handle, INFINITE, false) != WAIT_OBJECT_0)
+        while (WaitForSingleObjectEx(m_Handle, milliseconds, alerable) != WAIT_OBJECT_0)
         {
         }
     }
@@ -69,8 +64,6 @@ Event& Event::operator=(const Event& other)
 {
     if (this != &other)
     {
-        other.Wait();
-
         m_Flags = other.m_Flags;
 
         HANDLE current_process = GetCurrentProcess();

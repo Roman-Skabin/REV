@@ -1,7 +1,7 @@
 #pragma once
 
 #include "application.h"
-#include "levels/demo.h"
+#include "components/demo.h"
 
 class Sandbox final : public Application
 {
@@ -20,6 +20,6 @@ private:
           Logger& GetLogger()       { return m_Logger; }
 
 private:
-    Logger    m_Logger;
-    DemoLevel m_DemoLevel;
+    Logger        m_Logger;
+    DemoComponent m_DemoComponent;
 };

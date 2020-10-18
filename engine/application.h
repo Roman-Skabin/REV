@@ -10,13 +10,14 @@
 #include "core/work_queue.h"
 #include "core/window.h"
 #include "core/input.h"
-#include "core/level.h"
+#include "core/app_component.h"
 
 #include "renderer/graphics_api.h"
 
 #include "tools/logger.h"
 #include "tools/timer.h"
 #include "tools/buffer.hpp"
+#include "tools/static_string.hpp"
 
 class ENGINE_IMPEXP Application
 {
@@ -24,52 +25,52 @@ public:
     static Application *Get();
 
 protected:
-    explicit Application(const char *name = "Application", GraphicsAPI::API api = GraphicsAPI::API::D3D12);
+    explicit Application(const StaticString<128>& name = "Application", GraphicsAPI::API api = GraphicsAPI::API::D3D12);
 
 public:
     virtual ~Application();
 
-    template<typename ...LevelsPointers, typename = RTTI::enable_if_t<RTTI::are_base_of_v<Level, RTTI::remove_pointer_t<LevelsPointers>...>>>
-    void AttachLevels(LevelsPointers... levels)
+    template<typename ...AppComponentPointers, typename = RTTI::enable_if_t<RTTI::are_base_of_v<AppComponent, RTTI::remove_pointer_t<AppComponentPointers>...>>>
+    void AttacComponents(AppComponentPointers... components)
     {
-        m_Levels.PushBack(cast<Level *>(levels)...);
-        (..., levels->OnAttach());
-        (..., m_Logger.LogInfo("%s has been attached", levels->GetName()));
+        m_AppComponents.PushBack(cast<AppComponent *>(components)...);
+        (..., components->OnAttach());
+        (..., m_Logger.LogInfo("%s component has been attached", components->GetName()));
     }
 
-    template<typename ...LevelsPointers, typename = RTTI::enable_if_t<RTTI::are_base_of_v<Level, RTTI::remove_pointer_t<LevelsPointers>...>>>
-    void DetachLevels(LevelsPointers... levels)
+    template<typename ...AppComponentPointers, typename = RTTI::enable_if_t<RTTI::are_base_of_v<AppComponent, RTTI::remove_pointer_t<AppComponentPointers>...>>>
+    void DetachComponents(AppComponentPointers... components)
     {
-        (..., levels->OnDetach());
-        (..., m_Logger.LogInfo("%s has been detached", levels->GetName()));
-        (..., m_Levels.Erase(m_Levels.Find(levels)));
+        (..., components->OnDetach());
+        (..., m_Logger.LogInfo("%s component has been detached", components->GetName()));
+        (..., m_AppComponents.Erase(m_AppComponents.Find(components)));
     }
 
-    void DetachAllLevels()
+    void DetachAllComponents()
     {
-        for (Level *level : m_Levels)
+        for (AppComponent *component : m_AppComponents)
         {
-            level->OnDetach();
-            m_Logger.LogInfo("%s has been detached", level->GetName());
+            component->OnDetach();
+            m_Logger.LogInfo("%s component has been detached", component->GetName());
         }
-        m_Levels.Clear();
+        m_AppComponents.Clear();
     }
 
-    const Memory           *GetMemory()    const { return m_Memory;    }
-    const Allocator&        GetAllocator() const { return m_Allocator; }
-    const WorkQueue        *GetWorkQueue() const { return m_WorkQueue; }
-    const Window&           GetWindow()    const { return m_Window;    }
-    const Input            *GetInput()     const { return m_Input;     }
-    const Timer&            GetTimer()     const { return m_Timer;     }
-    const Buffer<Level *>&  GetLevels()    const { return m_Levels;    }
+    const Memory                  *GetMemory()        const { return m_Memory;        }
+    const Allocator&               GetAllocator()     const { return m_Allocator;     }
+    const WorkQueue               *GetWorkQueue()     const { return m_WorkQueue;     }
+    const Window&                  GetWindow()        const { return m_Window;        }
+    const Input                   *GetInput()         const { return m_Input;         }
+    const Timer&                   GetTimer()         const { return m_Timer;         }
+    const Buffer<AppComponent *>&  GetAppComponents() const { return m_AppComponents; }
 
-    Memory           *GetMemory()    { return m_Memory;    }
-    Allocator&        GetAllocator() { return m_Allocator; }
-    WorkQueue        *GetWorkQueue() { return m_WorkQueue; }
-    Window&           GetWindow()    { return m_Window;    }
-    Input            *GetInput()     { return m_Input;     }
-    Timer&            GetTimer()     { return m_Timer;     }
-    Buffer<Level *>&  GetLevels()    { return m_Levels;    }
+    Memory                  *GetMemory()        { return m_Memory;        }
+    Allocator&               GetAllocator()     { return m_Allocator;     }
+    WorkQueue               *GetWorkQueue()     { return m_WorkQueue;     }
+    Window&                  GetWindow()        { return m_Window;        }
+    Input                   *GetInput()         { return m_Input;         }
+    Timer&                   GetTimer()         { return m_Timer;         }
+    Buffer<AppComponent *>&  GetAppComponents() { return m_AppComponents; }
 
 private:
     void Run();
@@ -81,18 +82,16 @@ private:
     Application& operator=(Application&&)      = delete;
 
 private:
-    Logger             m_Logger;
+    Logger                  m_Logger;
 
 protected:
-    Memory            *m_Memory;
-    Allocator          m_Allocator;
-    WorkQueue         *m_WorkQueue;
-    Window             m_Window;
-    Input             *m_Input;
-    Timer              m_Timer;
-    Buffer<Level *>    m_Levels;
-    IRenderer         *m_Renderer;
-    IGPUMemoryManager *m_GPUMemoryManager;
+    Memory                 *m_Memory;
+    Allocator               m_Allocator;
+    WorkQueue              *m_WorkQueue;
+    Window                  m_Window;
+    Input                  *m_Input;
+    Timer                   m_Timer;
+    Buffer<AppComponent *>  m_AppComponents;
 
 private:
     static Application *s_Application;

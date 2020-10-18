@@ -101,13 +101,13 @@ void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...)
 }
 
 void __cdecl ShowDebugMessage(
-    in  b32         message_is_expr,
-    in  const char *file,
-    in  u64         line,
-    in  const char *function,
-    in  const char *title,
-    in  const char *format,
-    opt ...)
+     b32         message_is_expr,
+     const char *file,
+     u64         line,
+     const char *function,
+     const char *title,
+     const char *format,
+    ...)
 {
     // @Important(Roman): last_error has to be placed
     //                    before everything else.

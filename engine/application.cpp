@@ -13,18 +13,17 @@ Application *Application::Get()
     return s_Application;
 }
 
-Application::Application(const char *name, GraphicsAPI::API api)
+Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
     : m_Logger("Engine logger", "../log/cengine.log", Logger::TARGET::FILE),
       m_Memory(Memory::Get()),
       m_Allocator(m_Memory->PushToPermanentArea(GB(1)), GB(1), false),
       m_WorkQueue(WorkQueue::Create(m_Logger)),
       m_Window(m_Logger,
                name,
-               v2s(960, 540),
-               v2s(10, 10)),
+               v4s(10, 10, 960, 540)),
       m_Input(Input::Create(m_Window, m_Logger)),
-      m_Timer("EngineMainTimer", CSTRLEN("EngineMainTimer")),
-      m_Levels(&m_Allocator)
+      m_Timer("EngineMainTimer"),
+      m_AppComponents(&m_Allocator)
 {
     CheckM(!s_Application,
            "Only one application alowed. "
@@ -33,27 +32,23 @@ Application::Application(const char *name, GraphicsAPI::API api)
     s_Application = this;
 
     GraphicsAPI::SetGraphicsAPI(api);
-    m_Renderer         = GraphicsAPI::CreateRenderer(&m_Window, m_Logger);
-    m_GPUMemoryManager = GraphicsAPI::CreateGPUMemoryManager(&m_Allocator, m_Logger, GB(2ui64));
+    GraphicsAPI::CreateRenderer(&m_Window, m_Logger, v2(1920.0f, 1080.0f));
+    GraphicsAPI::CreateGPUMemoryManager(&m_Allocator, m_Logger, GB(2ui64));
+    GraphicsAPI::CreateGPUProgramManager(&m_Allocator);
 }
 
 Application::~Application()
 {
-    if (m_Renderer)
-    {
-        m_Renderer->Destroy();
-        m_Renderer = null;
-    }
-    if (m_GPUMemoryManager)
-    {
-        m_GPUMemoryManager->Destroy();
-        m_GPUMemoryManager = null;
-    }
+    GraphicsAPI::GetGPUProgramManager()->Destroy();
+    GraphicsAPI::GetGPUMemoryManager()->Destroy();
+    GraphicsAPI::GetRenderer()->Destroy();
     s_Application = null;
 }
 
 void Application::Run()
 {
+    IRenderer *renderer = GraphicsAPI::GetRenderer();
+
     m_Timer.Start();
 
     m_Window.Show();
@@ -71,14 +66,15 @@ void Application::Run()
             m_Timer.Tick();
             m_Window.ApplyFullscreenRequst();
 
-            m_Renderer->StartFrame();
-            for (Level *level : m_Levels)
+            renderer->StartFrame();
+            for (AppComponent *component : m_AppComponents) // @TODO(Roman): MT?
             {
-                level->OnUpdateAndRender();
+                component->OnUpdate();
             }
-            m_Renderer->EndFrame();
+            renderer->EndFrame();
         }
     }
 
     m_Timer.Stop();
+    renderer->FlushGPU();
 }

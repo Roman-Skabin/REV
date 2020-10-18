@@ -40,7 +40,7 @@ internal INLINE void memset_f32_avx512(f32 *mem, f32 val, u64 count)
 
     mem = cast<f32 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -69,7 +69,7 @@ internal INLINE void memset_f32_avx(f32 *mem, f32 val, u64 count)
 
     mem = cast<f32 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -90,7 +90,7 @@ internal INLINE void memset_f32_sse(f32 *mem, f32 val, u64 count)
 
     mem = cast<f32 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -144,7 +144,7 @@ internal INLINE void memset_f64_avx512(f64 *mem, f64 val, u64 count)
 
     mem = cast<f64 *>(mm128_mem);
 
-    if (index <= count)
+    if (index < count)
     {
         *mem++ = val;
         ++index;
@@ -173,7 +173,7 @@ internal INLINE void memset_f64_avx(f64 *mem, f64 val, u64 count)
 
     mem = cast<f64 *>(mm128_mem);
 
-    if (index <= count)
+    if (index < count)
     {
         *mem++ = val;
         ++index;
@@ -194,7 +194,7 @@ internal INLINE void memset_f64_sse(f64 *mem, f64 val, u64 count)
 
     mem = cast<f64 *>(mm128_mem);
 
-    if (index <= count)
+    if (index < count)
     {
         *mem++ = val;
         ++index;
@@ -210,6 +210,110 @@ void memset_f64(f64 *mem, f64 val, u64 count)
     memset_f64_avx(mem, val, count);
 #else
     memset_f64_sse(mem, val, count)
+#endif
+}
+
+//
+// memset_char
+//
+
+#if ENGINE_ISA >= ENGINE_ISA_AVX512
+internal INLINE void memset_char_avx512(char *mem, char val, u64 count)
+{
+    __m512i *mm512_mem = cast<__m512i *>(mem);
+    __m512i  mm512_val = _mm512_set1_epi8(val);
+
+    u64 index = 0;
+    while (index + 64 <= count)
+    {
+        *mm512_mem++ = mm512_val;
+        index += 64;
+    }
+
+    __m256i *mm256_mem = cast<__m256i *>(mm512_mem);
+
+    if (index + 32 <= count)
+    {
+        *mm256_mem++ = _mm256_set1_epi8(val);
+        index += 32;
+    }
+
+    __m128i *mm128_mem = cast<__m128i *>(mm256_mem);
+
+    if (index + 16 <= count)
+    {
+        *mm128_mem++ = _mm_set1_epi8(val);
+        index += 16;
+    }
+
+    mem = cast<char *>(mm128_mem);
+
+    while (index < count)
+    {
+        *mem++ = val;
+        ++index;
+    }
+}
+#elif ENGINE_ISA >= ENGINE_ISA_AVX
+internal INLINE void memset_char_avx(char *mem, char val, u64 count)
+{
+    __m256i *mm256_mem = cast<__m256i *>(mem);
+    __m256i  mm256_val = _mm256_set1_epi8(val);
+
+    u64 index = 0;
+    while (index + 32 <= count)
+    {
+        *mm256_mem++ = mm256_val;
+        index += 32;
+    }
+
+    __m128i *mm128_mem = cast<__m128i *>(mm256_mem);
+
+    if (index + 16 <= count)
+    {
+        *mm128_mem++ = _mm_set1_epi8(val);
+        index += 16;
+    }
+
+    mem = cast<char *>(mm128_mem);
+
+    while (index < count)
+    {
+        *mem++ = val;
+        ++index;
+    }
+}
+#else
+internal INLINE void memset_char_sse(char *mem, char val, u64 count)
+{
+    __m128i *mm128_mem = cast<__m128i *>(mem);
+    __m128i  mm128_val = _mm_set1_epi8(val);
+
+    u64 index = 0;
+    while (index + 16 <= count)
+    {
+        *mm128_mem++ = mm128_val;
+        index += 16;
+    }
+
+    mem = cast<char *>(mm128_mem);
+
+    while (index < count)
+    {
+        *mem++ = val;
+        ++index;
+    }
+}
+#endif
+
+void memset_char(char *mem, char val, u64 count)
+{
+#if ENGINE_ISA >= ENGINE_ISA_AVX512
+    memset_char_avx512(mem, val, count);
+#elif ENGINE_ISA >= ENGINE_ISA_AVX
+    memset_char_avx(mem, val, count);
+#else
+    memset_char_sse(mem, val, count)
 #endif
 }
 
@@ -248,7 +352,7 @@ internal INLINE void memset_s8_avx512(s8 *mem, s8 val, u64 count)
 
     mem = cast<s8 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -277,7 +381,7 @@ internal INLINE void memset_s8_avx(s8 *mem, s8 val, u64 count)
 
     mem = cast<s8 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -298,7 +402,7 @@ internal INLINE void memset_s8_sse(s8 *mem, s8 val, u64 count)
 
     mem = cast<s8 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -352,7 +456,7 @@ internal INLINE void memset_s16_avx512(s16 *mem, s16 val, u64 count)
 
     mem = cast<s16 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -381,7 +485,7 @@ internal INLINE void memset_s16_avx(s16 *mem, s16 val, u64 count)
 
     mem = cast<s16 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -402,7 +506,7 @@ internal INLINE void memset_s16_sse(s16 *mem, s16 val, u64 count)
 
     mem = cast<s16 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -456,7 +560,7 @@ internal INLINE void memset_s32_avx512(s32 *mem, s32 val, u64 count)
 
     mem = cast<s32 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -485,7 +589,7 @@ internal INLINE void memset_s32_avx(s32 *mem, s32 val, u64 count)
 
     mem = cast<s32 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -506,7 +610,7 @@ internal INLINE void memset_s32_sse(s32 *mem, s32 val, u64 count)
 
     mem = cast<s32 *>(mm128_mem);
 
-    while (index <= count)
+    while (index < count)
     {
         *mem++ = val;
         ++index;
@@ -560,7 +664,7 @@ internal INLINE void memset_s64_avx512(s64 *mem, s64 val, u64 count)
 
     mem = cast<s64 *>(mm128_mem);
 
-    if (index <= count)
+    if (index < count)
     {
         *mem++ = val;
         ++index;
@@ -589,7 +693,7 @@ internal INLINE void memset_s64_avx(s64 *mem, s64 val, u64 count)
 
     mem = cast<s64 *>(mm128_mem);
 
-    if (index <= count)
+    if (index < count)
     {
         *mem++ = val;
         ++index;
@@ -610,7 +714,7 @@ internal INLINE void memset_s64_sse(s64 *mem, s64 val, u64 count)
 
     mem = cast<s64 *>(mm128_mem);
 
-    if (index <= count)
+    if (index < count)
     {
         *mem++ = val;
         ++index;

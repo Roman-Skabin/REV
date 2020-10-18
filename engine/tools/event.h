@@ -16,16 +16,18 @@ public:
         INITIAL_SET = CREATE_EVENT_INITIAL_SET,
     };
 
-    Event(const char *name, FLAGS flags);
+    Event(const char *name = null, FLAGS flags = FLAGS::NONE);
     Event(const Event& other);
     Event(Event&& other) noexcept;
+
+    constexpr operator HANDLE() const { return m_Handle; }
 
     ~Event();
 
     bool Set();
     bool Reset();
 
-    void Wait() const;
+    void Wait(u32 milliseconds = INFINITE, bool alerable = false) const;
 
     Event& operator=(const Event& other);
     Event& operator=(Event&& other) noexcept;

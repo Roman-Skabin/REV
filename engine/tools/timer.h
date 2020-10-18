@@ -5,15 +5,13 @@
 #pragma once
 
 #include "tools/logger.h"
+#include "tools/static_string.hpp"
 
 class ENGINE_IMPEXP Timer final
 {
 public:
-    // @NOTE(Roman): It would be better if you pass non-null name_len,
-    //               otherwise strlen will be used.
-    Timer(in const char *name, in_opt u64 name_len = 0);
+    Timer(const StaticString<256>& name);
     Timer(const Timer& other);
-    Timer(Timer&& other) noexcept;
 
     ~Timer();
 
@@ -38,10 +36,13 @@ public:
 
     b32 Stopped() const { return m_Stopped; }
 
-    const char *Name() const { return m_Name; }
+    const StaticString<256>& Name() const { return m_Name; }
 
     Timer& operator=(const Timer& other);
-    Timer& operator=(Timer&& other) noexcept;
+
+private:
+    Timer(Timer&&) = delete;
+    Timer& operator=(Timer&&) = delete;
 
 private:
     s64 m_TicksPerSecond;
@@ -60,7 +61,7 @@ private:
 
     b32 m_Stopped;
 
-    char m_Name[256];
+    StaticString<256> m_Name;
 
     friend class ScopeTimer;
     friend class ProfilingTimer;
@@ -69,12 +70,10 @@ private:
 class ENGINE_IMPEXP ProfilingTimer final
 {
 public:
-    // @NOTE(Roman): It would be better if you pass non-null name_len,
-    //               otherwise strlen will be used.
-    ProfilingTimer(in const char *name, in_opt u64 name_len = 0);
+    ProfilingTimer(const StaticString<256>& name);
     ~ProfilingTimer();
 
-    void StopProfiling(in const Logger& logger);
+    void StopProfiling(const Logger& logger);
 
     s64 TicksPerSecond() const { return m_Timer.m_TicksPerSecond; }
     s64 InitialTicks()   const { return m_Timer.m_InitialTicks;   }
@@ -92,12 +91,13 @@ public:
 
     b32 Stopped() const { return m_Timer.m_Stopped; }
 
-    const char *Name() const { return m_Timer.m_Name; }
+    const StaticString<256>& Name() const { return m_Timer.m_Name; }
 
-    ProfilingTimer(in const ProfilingTimer&)            = delete;
-    ProfilingTimer(in ProfilingTimer&&)                 = delete;
-    ProfilingTimer& operator=(in const ProfilingTimer&) = delete;
-    ProfilingTimer& operator=(in ProfilingTimer&&)      = delete;
+private:
+    ProfilingTimer(const ProfilingTimer&)            = delete;
+    ProfilingTimer(ProfilingTimer&&)                 = delete;
+    ProfilingTimer& operator=(const ProfilingTimer&) = delete;
+    ProfilingTimer& operator=(ProfilingTimer&&)      = delete;
 
 private:
     Timer m_Timer;

@@ -13,7 +13,7 @@ typedef struct WorkQueueThread
 
 WorkQueue *WorkQueue::s_WorkQueue = null;
 
-WorkQueue *WorkQueue::Create(in const Logger& logger)
+WorkQueue *WorkQueue::Create(const Logger& logger)
 {
     CheckM(!s_WorkQueue, "Work queue is already created. Use WorkQueue::Get() function instead");
     s_WorkQueue  = Memory::Get()->PushToPA<WorkQueue>();
@@ -27,7 +27,7 @@ WorkQueue *WorkQueue::Get()
     return s_WorkQueue;
 }
 
-WorkQueue::WorkQueue(in const Logger& logger)
+WorkQueue::WorkQueue(const Logger& logger)
     : m_Semaphore(null),
       m_CompletionGoal(0),
       m_EntriesCompleted(0),
@@ -59,7 +59,7 @@ WorkQueue::WorkQueue(in const Logger& logger)
     logger.LogInfo("Additional threads count = %I32u", cpu_virtual_threads_count);
 }
 
-WorkQueue::WorkQueue(in WorkQueue&& other) noexcept
+WorkQueue::WorkQueue(WorkQueue&& other) noexcept
 {
     CopyMemory(m_Entries, &other, sizeof(WorkQueue));
     ZeroMemory(&other, sizeof(WorkQueue));
@@ -70,7 +70,7 @@ WorkQueue::~WorkQueue()
     if (m_Semaphore) ZeroMemory(this, sizeof(WorkQueue));
 }
 
-void WorkQueue::AddEntry(in WorkQueueEntryProc *Proc, in void *arg)
+void WorkQueue::AddEntry(WorkQueueEntryProc *Proc, void *arg)
 {
     while (true)
     {
@@ -124,7 +124,7 @@ void WorkQueue::Wait()
     m_CompletionGoal   = 0;
 }
 
-WorkQueue& WorkQueue::operator=(in WorkQueue&& other) noexcept
+WorkQueue& WorkQueue::operator=(WorkQueue&& other) noexcept
 {
     if (this != &other)
     {
@@ -134,7 +134,7 @@ WorkQueue& WorkQueue::operator=(in WorkQueue&& other) noexcept
     return *this;
 }
 
-u32 WINAPI ThreadProc(in void *arg)
+u32 WINAPI ThreadProc(void *arg)
 {
     WorkQueueThread *thread = (WorkQueueThread *)arg;
     while (true)

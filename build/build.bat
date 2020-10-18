@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-rem use: build [engine|sandbox] [release]
+rem use: build [engine|sandbox] [release|nsight]
 
 cls
 
@@ -9,6 +9,9 @@ set PROJECT=%1
 set BUILD_TYPE=%2
 
 if /I "!PROJECT!" == "release" (
+    set BUILD_TYPE=!PROJECT!
+    set PROJECT=
+) else if /I "!PROJECT!" == "nsight" (
     set BUILD_TYPE=!PROJECT!
     set PROJECT=
 )
@@ -70,6 +73,11 @@ if !COMPILE_CENGINE! == 1 (
         REM Temporary, added for debuging release build
         set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\engine.pdb
         set LANGUAGE= !LANGUAGE! -Zi
+    ) else if /I "!BUILD_TYPE!" == "nsight" (
+        set OPTIMIZATION= !OPTIMIZATION! -Od
+        set LINKING= !LINKING! -MT -LD
+        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\engine.pdb
+        set LANGUAGE= !LANGUAGE! -Zi
     ) else (
         set OPTIMIZATION= !OPTIMIZATION! -Od
         set LINKING= !LINKING! -MTd -LDd
@@ -114,6 +122,11 @@ if !COMPILE_SANDBOX! == 1 (
         set LINKING= !LINKING! -MT
         set LINKER= !LINKER! -incremental:no -opt:ref
         REM Temporary, added for debuging release build
+        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\sandbox.pdb
+        set LANGUAGE= !LANGUAGE! -Zi
+    ) else if /I "!BUILD_TYPE!" == "nsight" (
+        set OPTIMIZATION= !OPTIMIZATION! -Od
+        set LINKING= !LINKING! -MT
         set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\sandbox.pdb
         set LANGUAGE= !LANGUAGE! -Zi
     ) else (

@@ -9,9 +9,10 @@
 
 namespace D3D12 {
 
-Renderer::Renderer(Window *window, const Logger& logger)
+Renderer::Renderer(Window *window, const Logger& logger, v2 render_target_size)
     : m_Logger(logger, "GPU Manager logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_Window(window),
+      m_RenderTargetSize(render_target_size),
 #if DEBUG
       m_Debug(null),
       m_DXGIDebug(null),
@@ -30,7 +31,6 @@ Renderer::Renderer(Window *window, const Logger& logger)
       m_DSBuffer(null),
       m_DSVCPUDescHandle(),
       m_Fences(),
-      m_FencesValues(),
       m_FenceEvent(null),
       m_Flags(FLAGS::FIRST_FRAME),
       m_Features(),
@@ -110,8 +110,10 @@ void Renderer::Destroy()
     this->~Renderer();
 }
 
-void Renderer::ResizeBuffers()
+void Renderer::ResizeBuffers(v2 render_target_size)
 {
+    m_RenderTargetSize = render_target_size;
+
     // Wait for the GPU, release swap chain buffers buffers
     FlushGPU();
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
@@ -127,16 +129,11 @@ void Renderer::ResizeBuffers()
         flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
-    UINT      node_masks[]     = { 0, 0 };
-    IUnknown *present_queues[] = { m_GraphicsQueue, m_GraphicsQueue };
-
-    m_Error = m_SwapChain->ResizeBuffers1(SWAP_CHAIN_BUFFERS_COUNT,
-                                          m_Window->Size().w,
-                                          m_Window->Size().h,
-                                          DXGI_FORMAT_R8G8B8A8_UNORM,
-                                          flags,
-                                          node_masks,
-                                          present_queues);
+    m_Error = m_SwapChain->ResizeBuffers(SWAP_CHAIN_BUFFERS_COUNT,
+                                         cast<u32>(m_RenderTargetSize.w),
+                                         cast<u32>(m_RenderTargetSize.h),
+                                         DXGI_FORMAT_R8G8B8A8_UNORM,
+                                         flags);
     Check(SUCCEEDED(m_Error));
 
     // Recreate RT buffer & RTV
@@ -148,7 +145,7 @@ void Renderer::ResizeBuffers()
         m_Error = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(rt_buffer));
         Check(SUCCEEDED(m_Error));
 
-        m_Device->CreateRenderTargetView(m_RTBuffers[i], 0, m_RTVCPUDescHandle);
+        m_Device->CreateRenderTargetView(m_RTBuffers[i], null, m_RTVCPUDescHandle);
 
         m_RTVCPUDescHandle.ptr += m_RTVDescSize;
     }
@@ -170,8 +167,8 @@ void Renderer::ResizeBuffers()
     D3D12_RESOURCE_DESC ds_resource_desc;
     ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     ds_resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-    ds_resource_desc.Width              = m_Window->Size().w;
-    ds_resource_desc.Height             = m_Window->Size().h;
+    ds_resource_desc.Width              = cast<u32>(m_RenderTargetSize.w);
+    ds_resource_desc.Height             = cast<u32>(m_RenderTargetSize.h);
     ds_resource_desc.DepthOrArraySize   = 1;
     ds_resource_desc.MipLevels          = 1;
     ds_resource_desc.Format             = DXGI_FORMAT_D32_FLOAT;
@@ -188,7 +185,7 @@ void Renderer::ResizeBuffers()
     m_Error = m_Device->CreateCommittedResource(&ds_heap_properties,
                                                 D3D12_HEAP_FLAG_SHARED,
                                                 &ds_resource_desc,
-                                                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
                                                 &ds_clear_value,
                                                 IID_PPV_ARGS(&m_DSBuffer));
     Check(SUCCEEDED(m_Error));
@@ -204,19 +201,12 @@ void Renderer::ResizeBuffers()
     m_Flags |= FLAGS::FIRST_FRAME;
 }
 
-void Renderer::ResizeTarget()
+void Renderer::SetFullscreen(bool set)
 {
-    DXGI_MODE_DESC mode_desc;
-    mode_desc.Width                   = m_Window->Size().w;
-    mode_desc.Height                  = m_Window->Size().h;
-    mode_desc.RefreshRate.Numerator   = 0;
-    mode_desc.RefreshRate.Denominator = 1;
-    mode_desc.Format                  = DXGI_FORMAT_R8G8B8A8_UNORM;
-    mode_desc.ScanlineOrdering        = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-    mode_desc.Scaling                 = DXGI_MODE_SCALING_STRETCHED;
-
-    m_Error = m_SwapChain->ResizeTarget(&mode_desc);
+    m_Error = m_SwapChain->SetFullscreenState(set, null);
     Check(SUCCEEDED(m_Error));
+
+    ResizeBuffers(v2s_to_v2(m_Window->Size()));
 }
 
 void Renderer::StartFrame()
@@ -235,8 +225,8 @@ void Renderer::StartFrame()
     D3D12_VIEWPORT viewport;
     viewport.TopLeftX = 0.0f;
     viewport.TopLeftY = 0.0f;
-    viewport.Width    = cast<f32>(m_Window->Size().w);
-    viewport.Height   = cast<f32>(m_Window->Size().h);
+    viewport.Width    = m_RenderTargetSize.w;
+    viewport.Height   = m_RenderTargetSize.h;
     viewport.MinDepth = -1.0f;
     viewport.MaxDepth =  1.0f;
 
@@ -246,8 +236,8 @@ void Renderer::StartFrame()
     D3D12_RECT scissor_rect;
     scissor_rect.left   = 0;
     scissor_rect.top    = 0;
-    scissor_rect.right  = m_Window->Size().w;
-    scissor_rect.bottom = m_Window->Size().h;
+    scissor_rect.right  = cast<u32>(m_RenderTargetSize.w);
+    scissor_rect.bottom = cast<u32>(m_RenderTargetSize.h);
 
     graphics_list->RSSetScissorRects(1, &scissor_rect);
 
@@ -266,26 +256,19 @@ void Renderer::StartFrame()
     rt_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
     rt_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-    if ((m_Flags & FLAGS::FIRST_FRAME) != FLAGS::NONE)
-    {
-        graphics_list->ResourceBarrier(1, &rt_barrier);
-    }
-    else
-    {
-        D3D12_RESOURCE_BARRIER ds_barrier;
-        ds_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        ds_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        ds_barrier.Transition.pResource   = m_DSBuffer;
-        ds_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        ds_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-        ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    D3D12_RESOURCE_BARRIER ds_barrier;
+    ds_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    ds_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    ds_barrier.Transition.pResource   = m_DSBuffer;
+    ds_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    ds_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
-        D3D12_RESOURCE_BARRIER begin_barriers[] = { rt_barrier, ds_barrier };
-        graphics_list->ResourceBarrier(cast<UINT>(ArrayCount(begin_barriers)), begin_barriers);
-    }
+    D3D12_RESOURCE_BARRIER begin_barriers[] = { rt_barrier, ds_barrier };
+    graphics_list->ResourceBarrier(cast<UINT>(ArrayCount(begin_barriers)), begin_barriers);
 
     // Clear
-    f32 clear_color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    f32 clear_color[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
     graphics_list->ClearRenderTargetView(m_RTVCPUDescHandle,
                                          clear_color,
                                          0, null);
@@ -330,12 +313,12 @@ void Renderer::EndFrame()
     m_GraphicsQueue->ExecuteCommandLists(cast<UINT>(ArrayCount(command_lists)), command_lists);
 
     // Present
-    u32 vsync         = 1;
+    u32 sync_interval = 1;
     u32 present_flags = 0;
 
     if ((m_Flags & FLAGS::VSYNC_ENABLED) == FLAGS::NONE)
     {
-        vsync          = 0;
+        sync_interval  = 0;
         present_flags |= DXGI_PRESENT_DO_NOT_WAIT;
 
         if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE)
@@ -347,12 +330,12 @@ void Renderer::EndFrame()
     {
         m_Flags &= ~FLAGS::FIRST_FRAME;
     }
-    else
+    if ((m_Flags & FLAGS::VSYNC_ENABLED) != FLAGS::NONE)
     {
         present_flags |= DXGI_PRESENT_DO_NOT_SEQUENCE;
     }
 
-    m_Error = m_SwapChain->Present(vsync, present_flags);
+    m_Error = m_SwapChain->Present(sync_interval, present_flags);
     Check(SUCCEEDED(m_Error));
 
     // Swap buffers
@@ -371,6 +354,47 @@ void Renderer::SetVSync(bool enable)
 {
     if (enable) m_Flags |=  FLAGS::VSYNC_ENABLED;
     else        m_Flags &= ~FLAGS::VSYNC_ENABLED;
+}
+
+void Renderer::WaitForGPU()
+{
+    ID3D12Fence *current_fence       = m_Fences[m_CurrentBuffer];
+    u64          current_fence_value = current_fence->GetCompletedValue() + 1;
+
+    m_Error = m_GraphicsQueue->Signal(current_fence, current_fence_value);
+    Check(SUCCEEDED(m_Error));
+
+    if (current_fence->GetCompletedValue() < current_fence_value)
+    {
+        m_Error = current_fence->SetEventOnCompletion(current_fence_value, m_FenceEvent);
+        Check(SUCCEEDED(m_Error));
+
+        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
+        {
+        }
+    }
+}
+
+void Renderer::FlushGPU()
+{
+    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+    {
+        ID3D12Fence *fence       = m_Fences[i];
+        u64          fence_value = fence->GetCompletedValue() + 1;
+
+        m_Error = m_GraphicsQueue->Signal(fence, fence_value);
+        Check(SUCCEEDED(m_Error));
+
+        if (fence->GetCompletedValue() < fence_value)
+        {
+            m_Error = fence->SetEventOnCompletion(fence_value, m_FenceEvent);
+            Check(SUCCEEDED(m_Error));
+
+            while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
+            {
+            }
+        }
+    }
 }
 
 void Renderer::CreateDebugLayer()
@@ -567,13 +591,17 @@ void Renderer::CreateSwapChain()
 
     b32 tearing_supported = false;
     m_Error = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearing_supported, sizeof(b32));
+    if (tearing_supported)
+    {
+        m_Flags |= FLAGS::TEARING_SUPPORTED;
+    }
     Check(SUCCEEDED(m_Error));
 
     SafeRelease(factory5);
 
     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1;
-    swap_chain_desc1.Width              = m_Window->Size().w;
-    swap_chain_desc1.Height             = m_Window->Size().h;
+    swap_chain_desc1.Width              = cast<u32>(m_RenderTargetSize.w);
+    swap_chain_desc1.Height             = cast<u32>(m_RenderTargetSize.h);
     swap_chain_desc1.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
     swap_chain_desc1.Stereo             = false;
     swap_chain_desc1.SampleDesc.Count   = 1;
@@ -584,9 +612,8 @@ void Renderer::CreateSwapChain()
     swap_chain_desc1.SwapEffect         = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swap_chain_desc1.AlphaMode          = DXGI_ALPHA_MODE_UNSPECIFIED;
     swap_chain_desc1.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-    if (tearing_supported)
+    if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE)
     {
-        m_Flags                |= FLAGS::TEARING_SUPPORTED;
         swap_chain_desc1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
@@ -611,7 +638,7 @@ void Renderer::CreateSwapChain()
 
     SafeRelease(swap_chain1);
 
-#if 0 // We'are already suppressing Alt+Enter in WindowProc
+#if 0 // We'are already suppressing Alt+Enter WindowProc
     m_Error = m_Factory->MakeWindowAssociation(m_Window->m_Handle, DXGI_MWA_NO_ALT_ENTER);
     Check(SUCCEEDED(m_Error));
 #endif
@@ -669,8 +696,8 @@ void Renderer::CreateDepthBuffer()
     D3D12_RESOURCE_DESC ds_resource_desc;
     ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     ds_resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-    ds_resource_desc.Width              = m_Window->Size().w;
-    ds_resource_desc.Height             = m_Window->Size().h;
+    ds_resource_desc.Width              = cast<u32>(m_RenderTargetSize.w);
+    ds_resource_desc.Height             = cast<u32>(m_RenderTargetSize.h);
     ds_resource_desc.DepthOrArraySize   = 1;
     ds_resource_desc.MipLevels          = 0;
     ds_resource_desc.Format             = DXGI_FORMAT_D32_FLOAT;
@@ -687,7 +714,7 @@ void Renderer::CreateDepthBuffer()
     m_Error = m_Device->CreateCommittedResource(&ds_heap_properties,
                                                 D3D12_HEAP_FLAG_SHARED,
                                                 &ds_resource_desc,
-                                                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
                                                 &ds_clear_value,
                                                 IID_PPV_ARGS(&m_DSBuffer));
     Check(SUCCEEDED(m_Error));
@@ -707,56 +734,11 @@ void Renderer::CreateFences()
     {
         ID3D12Fence **fence = m_Fences + i;
 
-        m_Error = m_Device->CreateFence(m_FencesValues[i], D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(fence));
+        m_Error = m_Device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(fence));
         Check(SUCCEEDED(m_Error));
-
-        ++m_FencesValues[i];
     }
 
     DebugResult(m_FenceEvent = CreateEventExA(null, "Fence Event", 0, EVENT_ALL_ACCESS));
-}
-
-void Renderer::WaitForGPU()
-{
-    ID3D12Fence *current_fence       = m_Fences[m_CurrentBuffer];
-    u64          current_fence_value = m_FencesValues[m_CurrentBuffer];
-
-    m_Error = m_GraphicsQueue->Signal(current_fence, current_fence_value);
-    Check(SUCCEEDED(m_Error));
-
-    u64 value = current_fence->GetCompletedValue();
-    if (value < current_fence_value)
-    {
-        m_Error = current_fence->SetEventOnCompletion(current_fence_value, m_FenceEvent);
-        Check(SUCCEEDED(m_Error));
-
-        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
-        {
-        }
-    }
-
-    m_FencesValues[m_CurrentBuffer] = current_fence_value + 1;
-}
-
-void Renderer::FlushGPU()
-{
-    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-    {
-        ID3D12Fence *fence       = m_Fences[i];
-        u64          fence_value = m_FencesValues[i];
-
-        m_Error = m_GraphicsQueue->Signal(fence, fence_value);
-        Check(SUCCEEDED(m_Error));
-
-        m_Error = fence->SetEventOnCompletion(fence_value, m_FenceEvent);
-        Check(SUCCEEDED(m_Error));
-
-        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
-        {
-        }
-
-        ++m_FencesValues[i];
-    }
 }
 
 template<u64 cstr_len>

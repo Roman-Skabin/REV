@@ -26,25 +26,23 @@ namespace D3D12
             VSYNC_ENABLED     = BIT(0),
             FIRST_FRAME       = BIT(1),
             TEARING_SUPPORTED = BIT(2),
+            FULLSCREEN        = BIT(3),
         };
 
     public:
-        Renderer(Window *window, const Logger& logger, v2 render_target_size);
+        Renderer(Window *window, const Logger& logger, v2s rt_size);
         ~Renderer();
 
         virtual void Destroy() override;
 
-        virtual void ResizeBuffers(v2 render_target_size) override;
-        virtual void SetFullscreen(bool set)              override;
-
         virtual void StartFrame() override;
         virtual void EndFrame()   override;
 
-        virtual bool VSyncEnabled() override;
+        virtual bool VSyncEnabled()        override;
         virtual void SetVSync(bool enable) override;
 
         virtual void WaitForGPU() override;
-        virtual void FlushGPU() override;
+        virtual void FlushGPU()   override;
 
         void *operator new(size_t) { return Memory::Get()->PushToPA<Renderer>(); }
         void  operator delete(void *) {}
@@ -62,6 +60,10 @@ namespace D3D12
         constexpr u32                        CurrentBuffer()               const { return m_CurrentBuffer; }
         constexpr D3D12_RESOURCE_HEAP_TIER   ResourceHeapTier()            const { return m_Features.options.ResourceHeapTier; }
 
+        constexpr bool FirstFrame()       const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::FIRST_FRAME);       }
+        constexpr bool TearingSupported() const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::TEARING_SUPPORTED); }
+        constexpr bool InFullscreenMode() const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::FULLSCREEN);        }
+
     private:
         void CreateDebugLayer();
         void CreateFactory();
@@ -72,6 +74,10 @@ namespace D3D12
         void GetSwapChainRenderTargets();
         void CreateDepthBuffer();
         void CreateFences();
+
+        void ResizeBuffers();
+
+        virtual void SetFullscreenMode(bool set) override;
 
         friend u32 WINAPI LogInfoQueueMessages(void *arg);
 
@@ -84,7 +90,8 @@ namespace D3D12
     private:
         Logger                       m_Logger;
         Window                      *m_Window;
-        v2                           m_RenderTargetSize;
+        v2s                          m_RTSize;
+        v2s                          m_ActualRTSize; // @NOTE(Roman): In windowed mode = m_RTSize, in fullscreen mode = m_Window->Size().
 
     #if DEBUG
         ID3D12Debug1                *m_Debug;

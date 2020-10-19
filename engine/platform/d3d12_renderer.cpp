@@ -9,10 +9,11 @@
 
 namespace D3D12 {
 
-Renderer::Renderer(Window *window, const Logger& logger, v2 render_target_size)
+Renderer::Renderer(Window *window, const Logger& logger, v2s rt_size)
     : m_Logger(logger, "GPU Manager logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_Window(window),
-      m_RenderTargetSize(render_target_size),
+      m_RTSize(rt_size),
+      m_ActualRTSize(m_RTSize),
 #if DEBUG
       m_Debug(null),
       m_DXGIDebug(null),
@@ -60,6 +61,12 @@ Renderer::Renderer(Window *window, const Logger& logger, v2 render_target_size)
 
 Renderer::~Renderer()
 {
+    if ((m_Flags & FLAGS::FULLSCREEN) != FLAGS::NONE)
+    {
+        m_Error = m_SwapChain->SetFullscreenState(false, null);
+        Check(SUCCEEDED(m_Error));
+    }
+
     FlushGPU();
 
     if (m_FenceEvent) DebugResult(CloseHandle(m_FenceEvent));
@@ -110,105 +117,6 @@ void Renderer::Destroy()
     this->~Renderer();
 }
 
-void Renderer::ResizeBuffers(v2 render_target_size)
-{
-    m_RenderTargetSize = render_target_size;
-
-    // Wait for the GPU, release swap chain buffers buffers
-    FlushGPU();
-    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-    {
-        SafeRelease(m_RTBuffers[i]);
-    }
-    SafeRelease(m_DSBuffer);
-
-    // Resize buffers
-    u32 flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-    if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE)
-    {
-        flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-    }
-
-    m_Error = m_SwapChain->ResizeBuffers(SWAP_CHAIN_BUFFERS_COUNT,
-                                         cast<u32>(m_RenderTargetSize.w),
-                                         cast<u32>(m_RenderTargetSize.h),
-                                         DXGI_FORMAT_R8G8B8A8_UNORM,
-                                         flags);
-    Check(SUCCEEDED(m_Error));
-
-    // Recreate RT buffer & RTV
-    m_RTVCPUDescHandle = m_RTVHeapDesc->GetCPUDescriptorHandleForHeapStart();
-
-    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-    {
-        ID3D12Resource **rt_buffer = m_RTBuffers + i;
-        m_Error = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(rt_buffer));
-        Check(SUCCEEDED(m_Error));
-
-        m_Device->CreateRenderTargetView(m_RTBuffers[i], null, m_RTVCPUDescHandle);
-
-        m_RTVCPUDescHandle.ptr += m_RTVDescSize;
-    }
-
-    m_RTVCPUDescHandle.ptr -= SWAP_CHAIN_BUFFERS_COUNT * m_RTVDescSize;
-    m_CurrentBuffer         = m_SwapChain->GetCurrentBackBufferIndex();
-    m_RTVCPUDescHandle.ptr += m_CurrentBuffer * m_RTVDescSize;
-
-    // Recreate DS buffer & DSV
-    m_DSVCPUDescHandle = m_DSVHeapDesc->GetCPUDescriptorHandleForHeapStart();
-
-    D3D12_HEAP_PROPERTIES ds_heap_properties;
-    ds_heap_properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
-    ds_heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    ds_heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    ds_heap_properties.CreationNodeMask     = 0;
-    ds_heap_properties.VisibleNodeMask      = 0;
-
-    D3D12_RESOURCE_DESC ds_resource_desc;
-    ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    ds_resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-    ds_resource_desc.Width              = cast<u32>(m_RenderTargetSize.w);
-    ds_resource_desc.Height             = cast<u32>(m_RenderTargetSize.h);
-    ds_resource_desc.DepthOrArraySize   = 1;
-    ds_resource_desc.MipLevels          = 1;
-    ds_resource_desc.Format             = DXGI_FORMAT_D32_FLOAT;
-    ds_resource_desc.SampleDesc.Count   = 1;
-    ds_resource_desc.SampleDesc.Quality = 0;
-    ds_resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    ds_resource_desc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-    D3D12_CLEAR_VALUE ds_clear_value;
-    ds_clear_value.Format               = DXGI_FORMAT_D32_FLOAT;
-    ds_clear_value.DepthStencil.Depth   = 1.0f;
-    ds_clear_value.DepthStencil.Stencil = 0;
-
-    m_Error = m_Device->CreateCommittedResource(&ds_heap_properties,
-                                                D3D12_HEAP_FLAG_SHARED,
-                                                &ds_resource_desc,
-                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                                                &ds_clear_value,
-                                                IID_PPV_ARGS(&m_DSBuffer));
-    Check(SUCCEEDED(m_Error));
-
-    D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
-    dsv_desc.Format             = DXGI_FORMAT_D32_FLOAT;
-    dsv_desc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
-    dsv_desc.Flags              = D3D12_DSV_FLAG_READ_ONLY_DEPTH;
-    dsv_desc.Texture2D.MipSlice = 1;
-
-    m_Device->CreateDepthStencilView(m_DSBuffer, &dsv_desc, m_DSVCPUDescHandle);
-
-    m_Flags |= FLAGS::FIRST_FRAME;
-}
-
-void Renderer::SetFullscreen(bool set)
-{
-    m_Error = m_SwapChain->SetFullscreenState(set, null);
-    Check(SUCCEEDED(m_Error));
-
-    ResizeBuffers(v2s_to_v2(m_Window->Size()));
-}
-
 void Renderer::StartFrame()
 {
     ID3D12CommandAllocator    *graphics_allocator = m_GraphicsAllocators[m_CurrentBuffer];
@@ -225,8 +133,8 @@ void Renderer::StartFrame()
     D3D12_VIEWPORT viewport;
     viewport.TopLeftX = 0.0f;
     viewport.TopLeftY = 0.0f;
-    viewport.Width    = m_RenderTargetSize.w;
-    viewport.Height   = m_RenderTargetSize.h;
+    viewport.Width    = cast<f32>(m_ActualRTSize.w);
+    viewport.Height   = cast<f32>(m_ActualRTSize.h);
     viewport.MinDepth = -1.0f;
     viewport.MaxDepth =  1.0f;
 
@@ -236,8 +144,8 @@ void Renderer::StartFrame()
     D3D12_RECT scissor_rect;
     scissor_rect.left   = 0;
     scissor_rect.top    = 0;
-    scissor_rect.right  = cast<u32>(m_RenderTargetSize.w);
-    scissor_rect.bottom = cast<u32>(m_RenderTargetSize.h);
+    scissor_rect.right  = m_ActualRTSize.w;
+    scissor_rect.bottom = m_ActualRTSize.h;
 
     graphics_list->RSSetScissorRects(1, &scissor_rect);
 
@@ -321,7 +229,7 @@ void Renderer::EndFrame()
         sync_interval  = 0;
         present_flags |= DXGI_PRESENT_DO_NOT_WAIT;
 
-        if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE)
+        if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE && !m_Window->Fullscreened())
         {
             present_flags |= DXGI_PRESENT_ALLOW_TEARING;
         }
@@ -600,8 +508,8 @@ void Renderer::CreateSwapChain()
     SafeRelease(factory5);
 
     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1;
-    swap_chain_desc1.Width              = cast<u32>(m_RenderTargetSize.w);
-    swap_chain_desc1.Height             = cast<u32>(m_RenderTargetSize.h);
+    swap_chain_desc1.Width              = m_ActualRTSize.w;
+    swap_chain_desc1.Height             = m_ActualRTSize.h;
     swap_chain_desc1.Format             = DXGI_FORMAT_R8G8B8A8_UNORM;
     swap_chain_desc1.Stereo             = false;
     swap_chain_desc1.SampleDesc.Count   = 1;
@@ -638,10 +546,8 @@ void Renderer::CreateSwapChain()
 
     SafeRelease(swap_chain1);
 
-#if 0 // We'are already suppressing Alt+Enter WindowProc
-    m_Error = m_Factory->MakeWindowAssociation(m_Window->m_Handle, DXGI_MWA_NO_ALT_ENTER);
+    m_Error = m_Factory->MakeWindowAssociation(m_Window->Handle(), DXGI_MWA_NO_ALT_ENTER);
     Check(SUCCEEDED(m_Error));
-#endif
 }
 
 void Renderer::GetSwapChainRenderTargets()
@@ -696,8 +602,8 @@ void Renderer::CreateDepthBuffer()
     D3D12_RESOURCE_DESC ds_resource_desc;
     ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     ds_resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-    ds_resource_desc.Width              = cast<u32>(m_RenderTargetSize.w);
-    ds_resource_desc.Height             = cast<u32>(m_RenderTargetSize.h);
+    ds_resource_desc.Width              = m_ActualRTSize.w;
+    ds_resource_desc.Height             = m_ActualRTSize.h;
     ds_resource_desc.DepthOrArraySize   = 1;
     ds_resource_desc.MipLevels          = 0;
     ds_resource_desc.Format             = DXGI_FORMAT_D32_FLOAT;
@@ -739,6 +645,117 @@ void Renderer::CreateFences()
     }
 
     DebugResult(m_FenceEvent = CreateEventExA(null, "Fence Event", 0, EVENT_ALL_ACCESS));
+}
+
+void Renderer::ResizeBuffers()
+{
+    // Wait for the GPU, release swap chain buffers buffers
+    FlushGPU();
+    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+    {
+        SafeRelease(m_RTBuffers[i]);
+    }
+    SafeRelease(m_DSBuffer);
+
+    // Resize buffers
+    u32 flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+    if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE)
+    {
+        flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    }
+
+    m_Error = m_SwapChain->ResizeBuffers(SWAP_CHAIN_BUFFERS_COUNT,
+                                         m_ActualRTSize.w,
+                                         m_ActualRTSize.h,
+                                         DXGI_FORMAT_R8G8B8A8_UNORM,
+                                         flags);
+    Check(SUCCEEDED(m_Error));
+
+    // Recreate RT buffer & RTV
+    m_RTVCPUDescHandle = m_RTVHeapDesc->GetCPUDescriptorHandleForHeapStart();
+
+    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+    {
+        ID3D12Resource **rt_buffer = m_RTBuffers + i;
+        m_Error = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(rt_buffer));
+        Check(SUCCEEDED(m_Error));
+
+        m_Device->CreateRenderTargetView(m_RTBuffers[i], null, m_RTVCPUDescHandle);
+
+        m_RTVCPUDescHandle.ptr += m_RTVDescSize;
+    }
+
+    m_RTVCPUDescHandle.ptr -= SWAP_CHAIN_BUFFERS_COUNT * m_RTVDescSize;
+    m_CurrentBuffer         = m_SwapChain->GetCurrentBackBufferIndex();
+    m_RTVCPUDescHandle.ptr += m_CurrentBuffer * m_RTVDescSize;
+
+    // Recreate DS buffer & DSV
+    m_DSVCPUDescHandle = m_DSVHeapDesc->GetCPUDescriptorHandleForHeapStart();
+
+    D3D12_HEAP_PROPERTIES ds_heap_properties;
+    ds_heap_properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    ds_heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    ds_heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    ds_heap_properties.CreationNodeMask     = 0;
+    ds_heap_properties.VisibleNodeMask      = 0;
+
+    D3D12_RESOURCE_DESC ds_resource_desc;
+    ds_resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    ds_resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    ds_resource_desc.Width              = m_ActualRTSize.w;
+    ds_resource_desc.Height             = m_ActualRTSize.h;
+    ds_resource_desc.DepthOrArraySize   = 1;
+    ds_resource_desc.MipLevels          = 0;
+    ds_resource_desc.Format             = DXGI_FORMAT_D32_FLOAT;
+    ds_resource_desc.SampleDesc.Count   = 1;
+    ds_resource_desc.SampleDesc.Quality = 0;
+    ds_resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    ds_resource_desc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+    D3D12_CLEAR_VALUE ds_clear_value;
+    ds_clear_value.Format               = DXGI_FORMAT_D32_FLOAT;
+    ds_clear_value.DepthStencil.Depth   = 1.0f;
+    ds_clear_value.DepthStencil.Stencil = 0;
+
+    m_Error = m_Device->CreateCommittedResource(&ds_heap_properties,
+                                                D3D12_HEAP_FLAG_SHARED,
+                                                &ds_resource_desc,
+                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                                                &ds_clear_value,
+                                                IID_PPV_ARGS(&m_DSBuffer));
+    Check(SUCCEEDED(m_Error));
+
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+    dsv_desc.Format             = DXGI_FORMAT_D32_FLOAT;
+    dsv_desc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
+    dsv_desc.Flags              = D3D12_DSV_FLAG_READ_ONLY_DEPTH;
+    dsv_desc.Texture2D.MipSlice = 0;
+
+    m_Device->CreateDepthStencilView(m_DSBuffer, &dsv_desc, m_DSVCPUDescHandle);
+
+    m_Flags |= FLAGS::FIRST_FRAME;
+}
+
+void Renderer::SetFullscreenMode(bool set)
+{
+    if (set ^ ((m_Flags & FLAGS::FULLSCREEN) != FLAGS::NONE))
+    {
+        m_Error = m_SwapChain->SetFullscreenState(set, null);
+        Check(SUCCEEDED(m_Error));
+
+        if (set)
+        {
+            m_ActualRTSize = m_Window->Size();
+            ResizeBuffers();
+            m_Flags |= FLAGS::FULLSCREEN;
+        }
+        else
+        {
+            m_ActualRTSize = m_RTSize;
+            ResizeBuffers();
+            m_Flags &= ~FLAGS::FULLSCREEN;
+        }
+    }
 }
 
 template<u64 cstr_len>

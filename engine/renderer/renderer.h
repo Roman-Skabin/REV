@@ -10,9 +10,6 @@ interface ENGINE_IMPEXP IRenderer
 {
     virtual void Destroy() = 0;
 
-    virtual void ResizeBuffers(v2 render_target_size) = 0;
-    virtual void SetFullscreen(bool set)              = 0;
-
     virtual void StartFrame() = 0;
     virtual void EndFrame()   = 0;
 
@@ -21,4 +18,9 @@ interface ENGINE_IMPEXP IRenderer
 
     virtual void WaitForGPU() = 0;
     virtual void FlushGPU()   = 0;
+
+private:
+    virtual void SetFullscreenMode(bool set) = 0;
+
+    friend class Window;
 };

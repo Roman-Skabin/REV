@@ -32,7 +32,7 @@ Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
     s_Application = this;
 
     GraphicsAPI::SetGraphicsAPI(api);
-    GraphicsAPI::CreateRenderer(&m_Window, m_Logger, v2(1920.0f, 1080.0f));
+    GraphicsAPI::CreateRenderer(&m_Window, m_Logger, v2s(1920, 1080));
     GraphicsAPI::CreateGPUMemoryManager(&m_Allocator, m_Logger, GB(2ui64));
     GraphicsAPI::CreateGPUProgramManager(&m_Allocator);
 }
@@ -64,7 +64,7 @@ void Application::Run()
         {
             m_Input->Update(m_Logger);
             m_Timer.Tick();
-            m_Window.ApplyFullscreenRequst();
+            m_Window.ApplyFullscreenRequest();
 
             renderer->StartFrame();
             for (AppComponent *component : m_AppComponents) // @TODO(Roman): MT?

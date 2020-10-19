@@ -21,7 +21,7 @@ void GraphicsAPI::SetGraphicsAPI(API api)
     s_API = api;
 }
 
-IRenderer *GraphicsAPI::CreateRenderer(Window *window, const Logger& logger, v2 render_target_size)
+IRenderer *GraphicsAPI::CreateRenderer(Window *window, const Logger& logger, v2s rt_size)
 {
     switch (s_API)
     {
@@ -29,7 +29,7 @@ IRenderer *GraphicsAPI::CreateRenderer(Window *window, const Logger& logger, v2 
         {
             local D3D12::Renderer *renderer = null;
             CheckM(!renderer, "Renderer is already created. Use GraphicsAPI::GetRenderer() function instead");
-            renderer = new D3D12::Renderer(window, logger, render_target_size);
+            renderer = new D3D12::Renderer(window, logger, rt_size);
             s_Renderer = renderer;
             return s_Renderer;
         } break;

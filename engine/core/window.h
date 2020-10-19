@@ -17,9 +17,10 @@ public:
     {
         NONE                       = 0,
         CLOSED                     = BIT(0),
-        RESIZED                    = BIT(1),
-        FULLSCREENED               = BIT(2),
-        MINIMIZED                  = BIT(3),
+        MOVED                      = BIT(1),
+        RESIZED                    = BIT(2),
+        FULLSCREENED               = BIT(3),
+        MINIMIZED                  = BIT(4),
 
         // @NOTE(Roman): Internal
         _FULLSCREEN_SET_REQUESTED   = BIT(30),
@@ -50,12 +51,13 @@ public:
     constexpr const v4s&               XYWH()     const { return m_XYWH;    }
 
     constexpr bool Closed()       const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::CLOSED);       }
+    constexpr bool Moved()        const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::MOVED);        }
     constexpr bool Resized()      const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::RESIZED);      }
     constexpr bool Fullscreened() const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::FULLSCREENED); }
     constexpr bool Minimized()    const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::MINIMIZED);    }
 
 private:
-    void ApplyFullscreenRequst();
+    void ApplyFullscreenRequest();
 
     friend LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lparam);
 

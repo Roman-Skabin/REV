@@ -19,7 +19,6 @@
 
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
-    - Fix fullscreen transition
 
 - GPU
     - TODOs in engine/platform/d3d12_gpu_memory_manager.h

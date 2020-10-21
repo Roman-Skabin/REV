@@ -21,6 +21,12 @@ public:
         memset_char(m_Data, '\0', aligned_capacity);
     }
 
+    StaticString(nullptr_t)
+        : m_Length(0)
+    {
+        memset_char(m_Data, '\0', aligned_capacity);
+    }
+
     template<u64 count>
     StaticString(const char (&array)[count])
     {
@@ -89,7 +95,7 @@ public:
         const char *_begin = m_Data;
         const char *_end   = m_Data + m_Length;
 
-        for (char *it = _begin; it < _end; ++it)
+        for (const char *it = _begin; it < _end; ++it)
         {
             if (*it == what)
             {
@@ -105,7 +111,7 @@ public:
         const char *first = m_Data;
         const char *last  = m_Data + m_Length - 1;
 
-        for (char *it = last; it > first; --it)
+        for (const char *it = last; it > first; --it)
         {
             if (*it == what)
             {
@@ -157,13 +163,17 @@ public:
 
     StaticString& operator=(const char *string)
     {
-        if (this != &other)
-        {
-            m_Length = strlen(string);
-            CheckM(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
-            CopyMemory(m_Data, string, m_Length);
-            memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
-        }
+        m_Length = strlen(string);
+        CheckM(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
+        CopyMemory(m_Data, string, m_Length);
+        memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
+        return *this;
+    }
+
+    StaticString& operator=(nullptr_t)
+    {
+        memset_char(m_Data, '\0', m_Length);
+        m_Length = 0;
         return *this;
     }
 
@@ -176,6 +186,45 @@ public:
             CopyMemory(m_Data, other.m_Data, m_Length);
             memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
         }
+        return *this;
+    }
+
+    template<u64 other_capacity, u64 other_aligned_capacity = AlignUp(other_capacity, CACHE_LINE_SIZE)>
+    StaticString& operator+=(const StaticString<other_capacity, other_aligned_capacity>& other)
+    {
+        u64 entire_length = m_Length + other.m_Length;
+        CheckM(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
+        CopyMemory(m_Data + m_Length, other.m_Data, other.m_Length);
+        m_Length = entire_length;
+        return *this;
+    }
+
+    template<u64 count>
+    StaticString& operator+=(const char (&arr)[count])
+    {
+        u64 entire_length = m_Length + count - 1;
+        CheckM(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
+        CopyMemory(m_Data + m_Length, arr, count - 1);
+        m_Length = entire_length;
+        return *this;
+    }
+
+    StaticString& operator+=(const char *cstring)
+    {
+        u64 cstring_len = strlen(cstring);
+        u64 entire_length = m_Length + cstring_len;
+        CheckM(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
+        CopyMemory(m_Data + m_Length, cstring, cstring_len);
+        m_Length = entire_length;
+        return *this;
+    }
+
+    StaticString& operator+=(char symbol)
+    {
+        u64 entire_length = m_Length + 1;
+        CheckM(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
+        m_Data[m_Length] = symbol;
+        m_Length = entire_length;
         return *this;
     }
 

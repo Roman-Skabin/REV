@@ -11,7 +11,8 @@
 - Tools
     - Several simultaneous read operations under the same file?
     - Hash table
-    - AsyncFileGroup (see engine/tools/async_file.h)
+    - String
+    - StaticStringBuilder, StringBuilder
 
 - Build
     - [Pre?]build system. Build only edited files
@@ -33,7 +34,7 @@
     - Several adapters support?
 
 - Graphics
-    - Do I really need custom shaders???
+    - Do I really need custom shaders??? UPD: Yes, probably
     - Custom graphics shader's parser and GraphicsProgram generation
         - SRVs, UAVs, static samplers, tables (, constants?)
         - Hash table for interns

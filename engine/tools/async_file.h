@@ -9,13 +9,6 @@
 
 // @Issue(Roman): Several simultaneous read operations under the same file?
 
-// @TODO(Roman): Make an AsyncFileGroup (or kinda, maybe better or another name)
-//               that contains several files that will be read or written.
-//               The reason is to be able to wait for several files simultaneously,
-//               not sequentially.
-
-// @TODO(Roman): Replace StaticString with const char *?
-
 class ENGINE_IMPEXP AsyncFile final
 {
 public:
@@ -38,11 +31,32 @@ public:
 
     void Clear();
 
+    void Move(const StaticString<MAX_PATH>& to_filename);
+    void Copy(const StaticString<MAX_PATH>& to_filename) const;
+    void Copy(const StaticString<MAX_PATH>& to_filename, AsyncFile& to_file, FLAGS to_flags = FLAGS::NONE) const;
+
     void Read(void *buffer, u32 buffer_bytes) const;
     void Write(const void *buffer, u32 buffer_bytes);
     void Append(const void *buffer, u32 buffer_bytes);
 
     void Wait() const;
+
+    template<typename ...AsyncFiles, typename = RTTI::enable_if_t<RTTI::are_same_v<AsyncFile, AsyncFiles...>>>
+    static void WaitForAll(AsyncFiles& ...async_files)
+    {
+        HANDLE m_Events[sizeof...(async_files)] = {null};
+
+        u32 events_count = 0;
+        (..., ((async_files.m_Flags & AsyncFile::FLAGS::_WWEC) == AsyncFile::FLAGS::NONE ? m_Events[events_count++] = async_files.m_Overlapped.hEvent : 0));
+
+        u32 res = WAIT_FAILED;
+        do
+        {
+            res = WaitForMultipleObjectsEx(events_count, m_Events, true, INFINITE, true);
+        } while (res != WAIT_OBJECT_0 && res != WAIT_IO_COMPLETION);
+
+        (..., (async_files.m_Flags |= FLAGS::_WWEC));
+    }
 
     void SetOffset(u32 offset);
 

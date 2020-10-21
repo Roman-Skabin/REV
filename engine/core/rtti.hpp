@@ -119,7 +119,24 @@ namespace RTTI
     template<           typename True, typename False> struct conditional<false, True, False> { using type = False; };
 
     template<bool cond, typename True, typename False> using conditional_t = typename conditional<cond, True, False>::type;
+/*
+    template<bool cond, auto true_val, auto false_val>
+    struct _conditional_v
+    {
+        using type = decltype(True);
+        static constexpr type val = true_val;
+    };
 
+    template<auto true_val, auto false_val>
+    struct _conditional_v<false, true_val, false_val>
+    {
+        using type = decltype(false_val);
+        static constexpr type val = false_val;
+    };
+
+    template<bool cond, auto true_val, auto false_val>
+    inline constexpr bool conditional_v = typename conditional<cond, true_val, false_val>::val;
+*/
     template<typename T, typename U> constexpr auto cmpe(T  a, U b) -> decltype(a == b) { return a == b; }
     template<typename T, typename U> constexpr auto cmpne(T a, U b) -> decltype(a != b) { return a != b; }
     template<typename T, typename U> constexpr auto cmpl(T  a, U b) -> decltype(a <  b) { return a <  b; }
@@ -240,6 +257,21 @@ namespace RTTI
     template<typename T> inline constexpr bool is_destructible_v = __is_destructible(T);
 
     template<typename T> using is_destructible = bool_constant<__is_destructible(T)>;
+
+    template<typename T, typename U> constexpr auto add(T a, U b) -> decltype(a + b) { return a + b; }
+    template<typename T, typename U> constexpr auto sub(T a, U b) -> decltype(a - b) { return a - b; }
+    template<typename T, typename U> constexpr auto nul(T a, U b) -> decltype(a * b) { return a * b; }
+    template<typename T, typename U> constexpr auto div(T a, U b) -> decltype(a / b) { return a / b; }
+    template<typename T, typename U> constexpr auto mod(T a, U b) -> decltype(a % b) { return a % b; }
+    template<typename T, typename U> constexpr auto and(T a, U b) -> decltype(a & b) { return a & b; }
+    template<typename T, typename U> constexpr auto  or(T a, U b) -> decltype(a | b) { return a | b; }
+    template<typename T, typename U> constexpr auto xor(T a, U b) -> decltype(a ^ b) { return a ^ b; }
+
+    template<typename T> constexpr auto pre_inc(T& a)  -> decltype(++a) { return ++a; }
+    template<typename T> constexpr auto post_inc(T& a) -> decltype(a++) { return a++; }
+
+    template<typename T> constexpr auto pre_dec(T& a)  -> decltype(--a) { return --a; }
+    template<typename T> constexpr auto post_dec(T& a) -> decltype(a--) { return a--; }
 
 #if 0
     template<typename T> constexpr remove_ref_t<T>&  to_lvalue(remove_ref_t<T>& x)  { return x; }

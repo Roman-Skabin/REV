@@ -139,8 +139,7 @@ void GraphicsProgram::AttachMainShaders(const StaticString<MAX_PATH>& vs_filenam
     vs_file.Read(vs, vs_length);
     ps_file.Read(ps, ps_length);
 
-    vs_file.Wait();
-    ps_file.Wait();
+    AsyncFile::WaitForAll(vs_file, ps_file);
 
     m_VertexShader.Compile(vs, vs_length, vs_filename, "VSMain", "vs_5_1");
     m_PixelShader.Compile(ps,  ps_length, ps_filename, "PSMain", "ps_5_1");

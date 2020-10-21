@@ -162,6 +162,7 @@ template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> con
 
 template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr T BIT(T x) { return 1 << x; }
 
+#pragma warning(suppress: 4172)
 template<typename To, typename From> constexpr To cast(From x) { return (To)x; }
 
 template<typename T, u64 count> constexpr u64 ArrayCount(T (&)[count]) { return count; }

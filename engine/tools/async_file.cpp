@@ -115,6 +115,29 @@ void AsyncFile::Clear()
     m_Size = 0;
 }
 
+void AsyncFile::Move(const StaticString<MAX_PATH>& to_filename)
+{
+    Wait();
+
+    if (MoveFileExA(m_Name, to_filename, MOVEFILE_REPLACE_EXISTING))
+    {
+        m_Name = to_filename;
+    }
+}
+
+void AsyncFile::Copy(const StaticString<MAX_PATH>& to_filename) const
+{
+    CopyFileExA(m_Name, to_filename, null, null, null, 0);
+}
+
+void AsyncFile::Copy(const StaticString<MAX_PATH>& to_filename, AsyncFile& to_file, FLAGS to_flags) const
+{
+    if (CopyFileExA(m_Name, to_filename, null, null, null, 0))
+    {
+        to_file = AsyncFile(to_filename, to_flags == FLAGS::NONE ? m_Flags : to_flags);
+    }
+}
+
 void AsyncFile::Read(void *buffer, u32 buffer_bytes) const
 {
     CheckM((m_Flags & FLAGS::READ) != FLAGS::NONE, "You have no rights to read this file");

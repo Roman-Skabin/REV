@@ -113,6 +113,9 @@ namespace D3D12
         GPUResource& operator=(GPUResource&& other) noexcept;
 
     private:
+        void StartImmediateExecution();
+        void EndImmediateExecution();
+
         GPUResource(const GPUResource&) = delete;
         GPUResource(GPUResource&&)      = delete;
 

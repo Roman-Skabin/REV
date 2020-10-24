@@ -19,5 +19,5 @@ private:
     IGraphicsProgram *m_GraphicsProgram;
     IGPUResource     *m_VertexBuffer;
     IGPUResource     *m_IndexBuffer;
-    char              m_OriginalWindowTitle[128];
+    StaticString<128> m_OriginalWindowTitle;
 };

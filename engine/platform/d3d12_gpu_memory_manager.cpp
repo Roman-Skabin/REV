@@ -136,12 +136,8 @@ void GPUResource::SetData(const void *data)
 void GPUResource::SetDataImmediate(const void *data)
 {
     Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
-
-    HRESULT error = m_CommandAllocator->Reset();
-    Check(SUCCEEDED(error));
-
-    error = m_CommandList->Reset(m_CommandAllocator, null);
-    Check(SUCCEEDED(error));
+    
+    StartImmediateExecution();
 
     if (!data)
     {
@@ -180,24 +176,7 @@ void GPUResource::SetDataImmediate(const void *data)
         m_CommandList->ResourceBarrier(1, &resource_barrier);
     }
 
-    error = m_CommandList->Close();
-    Check(SUCCEEDED(error));
-
-    ID3D12CommandList *command_lists[] = { m_CommandList };
-    renderer->GraphicsQueue()->ExecuteCommandLists(cast<u32>(ArrayCount(command_lists)), command_lists);
-
-    u64 fence_value = m_Fence->GetCompletedValue() + 1;
-
-    error = renderer->GraphicsQueue()->Signal(m_Fence, fence_value);
-    Check(SUCCEEDED(error));
-
-    if (m_Fence->GetCompletedValue() < fence_value)
-    {
-        error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent);
-        Check(SUCCEEDED(error));
-
-        m_FenceEvent.Wait(INFINITE, true);
-    }
+    EndImmediateExecution();
 }
 
 GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
@@ -242,6 +221,39 @@ GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
         other.m_Fence            = null;
     }
     return *this;
+}
+
+void GPUResource::StartImmediateExecution()
+{
+    HRESULT error = m_CommandAllocator->Reset();
+    Check(SUCCEEDED(error));
+
+    error = m_CommandList->Reset(m_CommandAllocator, null);
+    Check(SUCCEEDED(error));
+}
+
+void GPUResource::EndImmediateExecution()
+{
+    Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
+
+    HRESULT error = m_CommandList->Close();
+    Check(SUCCEEDED(error));
+
+    ID3D12CommandList *command_lists[] = { m_CommandList };
+    renderer->GraphicsQueue()->ExecuteCommandLists(cast<u32>(ArrayCount(command_lists)), command_lists);
+
+    u64 fence_value = m_Fence->GetCompletedValue() + 1;
+
+    error = renderer->GraphicsQueue()->Signal(m_Fence, fence_value);
+    Check(SUCCEEDED(error));
+
+    if (m_Fence->GetCompletedValue() < fence_value)
+    {
+        error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent);
+        Check(SUCCEEDED(error));
+
+        m_FenceEvent.Wait(INFINITE, true);
+    }
 }
 
 //

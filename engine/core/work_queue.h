@@ -36,20 +36,22 @@ private:
     WorkQueue(const Logger& logger);
 
 public:
-    WorkQueue(WorkQueue&& other) noexcept;
-
     ~WorkQueue();
 
     void AddEntry(WorkQueueEntryProc *Proc, void *arg);
     void Wait();
 
-    WorkQueue& operator=(WorkQueue&&) noexcept;
-
 private:
     friend u32 WINAPI ThreadProc(void *arg);
 
+    void *operator new(size_t)    { return Memory::Get()->PushToPA<WorkQueue>(); }
+    void  operator delete(void *) {}
+
     WorkQueue(const WorkQueue&) = delete;
+    WorkQueue(WorkQueue&&)      = delete;
+
     WorkQueue& operator=(const WorkQueue&) = delete;
+    WorkQueue& operator=(WorkQueue&&)      = delete;
 
 private:
     HANDLE         m_Semaphore;

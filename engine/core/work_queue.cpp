@@ -16,8 +16,7 @@ WorkQueue *WorkQueue::s_WorkQueue = null;
 WorkQueue *WorkQueue::Create(const Logger& logger)
 {
     CheckM(!s_WorkQueue, "Work queue is already created. Use WorkQueue::Get() function instead");
-    s_WorkQueue  = Memory::Get()->PushToPA<WorkQueue>();
-    *s_WorkQueue = WorkQueue(logger);
+    s_WorkQueue = new WorkQueue(logger);
     return s_WorkQueue;
 }
 
@@ -57,12 +56,6 @@ WorkQueue::WorkQueue(const Logger& logger)
 
     logger.LogSuccess("Work queue has been created");
     logger.LogInfo("Additional threads count = %I32u", cpu_virtual_threads_count);
-}
-
-WorkQueue::WorkQueue(WorkQueue&& other) noexcept
-{
-    CopyMemory(m_Entries, &other, sizeof(WorkQueue));
-    ZeroMemory(&other, sizeof(WorkQueue));
 }
 
 WorkQueue::~WorkQueue()
@@ -122,16 +115,6 @@ void WorkQueue::Wait()
 
     m_EntriesCompleted = 0;
     m_CompletionGoal   = 0;
-}
-
-WorkQueue& WorkQueue::operator=(WorkQueue&& other) noexcept
-{
-    if (this != &other)
-    {
-        CopyMemory(this, &other, sizeof(WorkQueue));
-        ZeroMemory(&other, sizeof(WorkQueue));
-    }
-    return *this;
 }
 
 u32 WINAPI ThreadProc(void *arg)

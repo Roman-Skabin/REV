@@ -123,7 +123,7 @@ GraphicsProgram::~GraphicsProgram()
     SafeRelease(m_Signature);
 }
 
-void GraphicsProgram::AttachMainShaders(const StaticString<MAX_PATH>& vs_filename,const StaticString<MAX_PATH>& ps_filename)
+void GraphicsProgram::AttachMainShaders(const StaticString<MAX_PATH>& vs_filename, const StaticString<MAX_PATH>& ps_filename)
 {
     Memory *memory = Memory::Get();
 

@@ -17,18 +17,17 @@ DemoComponent::DemoComponent()
       m_GraphicsProgram(GraphicsAPI::GetGPUProgramManager()->CreateGraphicsProgram("../sandbox/assets/shaders/shader.vert",
                                                                                    "../sandbox/assets/shaders/shader.pixel")),
       m_VertexBuffer(null),
-      m_IndexBuffer(null)
+      m_IndexBuffer(null),
+      m_OriginalWindowTitle(m_Application->GetWindow().Title())
 {
-    strcpy(m_OriginalWindowTitle, m_Application->GetWindow().Title());
-
     IGPUMemoryManager *gpu_memory_manager = GraphicsAPI::GetGPUMemoryManager();
 
     Vertex vertices[] =
     {
-        { v4(-0.5f, -0.5f, 0.0f, 0.0f), v4(1.0f, 0.0f, 0.0f, 1.0f) },
-        { v4(-0.5f,  0.5f, 0.0f, 0.0f), v4(0.0f, 1.0f, 0.0f, 1.0f) },
-        { v4( 0.5f,  0.5f, 0.0f, 0.0f), v4(0.0f, 0.0f, 1.0f, 1.0f) },
-        { v4( 0.5f, -0.5f, 0.0f, 0.0f), v4(0.0f, 0.0f, 0.0f, 1.0f) }
+        { v4(-0.5f, -0.5f, 0.0f, 1.0f), gRedA1    },
+        { v4(-0.5f,  0.5f, 0.0f, 1.0f), gGreenA1  },
+        { v4( 0.5f,  0.5f, 0.0f, 1.0f), gBlueA1   },
+        { v4( 0.5f, -0.5f, 0.0f, 1.0f), gYellowA1 }
     };
     m_VertexBuffer = gpu_memory_manager->AllocateVB(cast<u32>(ArrayCount(vertices)), sizeof(Vertex));
     m_VertexBuffer->SetDataImmediate(vertices);
@@ -66,7 +65,7 @@ void DemoComponent::OnUpdate()
         f32 FPS = timer.TicksPerSecond() / cast<f32>(timer.DeltaTicks());
 
         char buffer[64];
-        sprintf(buffer, "%s - FPS: %f - MSPF: %f", m_OriginalWindowTitle, FPS, 1000.0f / FPS);
+        sprintf(buffer, "%s - FPS: %f - MSPF: %f", m_OriginalWindowTitle.Data(), FPS, 1000.0f / FPS);
 
         window.SetTitle(buffer);
 

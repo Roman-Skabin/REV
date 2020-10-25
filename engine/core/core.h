@@ -251,12 +251,12 @@ ENGINE_FUN void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
 ENGINE_FUN void __cdecl DebugFC(DEBUG_IN debug_in, DEBUG_COLOR color, const char *format, ...);
 ENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
 ENGINE_FUN void __cdecl ShowDebugMessage(
-     b32         message_is_expr,
-     const char *file,
-     u64         line,
-     const char *function,
-     const char *title,
-     const char *format,
+    b32         message_is_expr,
+    const char *file,
+    u64         line,
+    const char *function,
+    const char *title,
+    const char *format,
     ...
 );
 

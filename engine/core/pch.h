@@ -19,6 +19,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <corecrt_math.h>
+#include <vcruntime_typeinfo.h>
 
 //
 // Platform independent intrinsics activation

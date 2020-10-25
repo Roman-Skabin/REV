@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Roman Skabin
+//4 Copyright 2020 Roman Skabin
 //
 
 #pragma once
@@ -23,6 +23,9 @@ namespace RTTI
     using false_constant = bool_constant<false>;
 
     template<bool val> inline constexpr bool bool_constant_v = bool_constant<val>::value;
+
+    template<typename> inline constexpr bool always_true  = true;
+    template<typename> inline constexpr bool always_false = false;
 
     template<bool cond, typename T = void> struct enable_if          {                 };
     template<typename T>                   struct enable_if<true, T> { using type = T; };
@@ -119,24 +122,7 @@ namespace RTTI
     template<           typename True, typename False> struct conditional<false, True, False> { using type = False; };
 
     template<bool cond, typename True, typename False> using conditional_t = typename conditional<cond, True, False>::type;
-/*
-    template<bool cond, auto true_val, auto false_val>
-    struct _conditional_v
-    {
-        using type = decltype(True);
-        static constexpr type val = true_val;
-    };
 
-    template<auto true_val, auto false_val>
-    struct _conditional_v<false, true_val, false_val>
-    {
-        using type = decltype(false_val);
-        static constexpr type val = false_val;
-    };
-
-    template<bool cond, auto true_val, auto false_val>
-    inline constexpr bool conditional_v = typename conditional<cond, true_val, false_val>::val;
-*/
     template<typename T, typename U> constexpr auto cmpe(T  a, U b) -> decltype(a == b) { return a == b; }
     template<typename T, typename U> constexpr auto cmpne(T a, U b) -> decltype(a != b) { return a != b; }
     template<typename T, typename U> constexpr auto cmpl(T  a, U b) -> decltype(a <  b) { return a <  b; }
@@ -297,11 +283,13 @@ namespace RTTI
 
     template<typename ...T> inline constexpr bool are_destructible_v = are_destructible<T...>::value;
 
-#if 0
-    template<typename T> constexpr remove_ref_t<T>&  to_lvalue(remove_ref_t<T>& x)  { return x; }
-    template<typename T> constexpr remove_ref_t<T>&  to_lvalue(remove_ref_t<T>&& x) { return static_cast<T&>(x); }
+    template<typename ...T> inline constexpr unsigned long long sequence_count_v = sizeof...(T);
 
-    template<typename T> constexpr remove_ref_t<T>&& to_rvalue(remove_ref_t<T>&  x) { return static_cast<T&&>(x); }
-    template<typename T> constexpr remove_ref_t<T>&& to_rvalue(remove_ref_t<T>&& x) { return x; }
-#endif
+    template<typename ...T> using sequence_count = base<unsigned long long, sizeof...(T)>;
+
+    template<typename T> struct add_ref      { using type = T&;  };
+    template<typename T> struct add_ref<T&>  { using type = T&&; };
+    template<typename T> struct add_ref<T&&> { using type = T&&; };
+
+    template<typename T> using add_ref_t = typename add_ref<T>::type;
 }

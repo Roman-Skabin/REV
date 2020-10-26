@@ -77,6 +77,7 @@ void Window::RequstFullscreen(bool set)
 void Window::Resset()
 {
     m_Flags &= ~FLAGS::RESIZED;
+    m_Flags &= ~FLAGS::MOVED;
 }
 
 void Window::PollEvents()

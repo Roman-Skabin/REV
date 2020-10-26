@@ -5,12 +5,6 @@
 #include "core/pch.h"
 #include "core/work_queue.h"
 
-typedef struct WorkQueueThread
-{
-    WorkQueue *queue;
-    u32        id;
-} WorkQueueThread;
-
 WorkQueue *WorkQueue::s_WorkQueue = null;
 
 WorkQueue *WorkQueue::Create(const Logger& logger)
@@ -32,7 +26,7 @@ WorkQueue::WorkQueue(const Logger& logger)
       m_EntriesCompleted(0),
       m_NextEntryToRead(0),
       m_NextEntryToWrite(0),
-      m_Entries{null}
+      m_Works{null}
 {
     SYSTEM_INFO info = {0};
     GetNativeSystemInfo(&info);
@@ -40,18 +34,13 @@ WorkQueue::WorkQueue(const Logger& logger)
     s32 cpu_virtual_threads_count = info.dwNumberOfProcessors - 1; // minus main thread
     if (cpu_virtual_threads_count <= 0) cpu_virtual_threads_count = 1;
 
-    WorkQueueThread *threads = Memory::Get()->PushToPA<WorkQueueThread>(cpu_virtual_threads_count);
+    if (cpu_virtual_threads_count > MAX_THREADS) cpu_virtual_threads_count = MAX_THREADS;
 
-    m_Semaphore = CreateSemaphoreExA(0, 0, cpu_virtual_threads_count, 0, 0, SEMAPHORE_ALL_ACCESS);
-    Check(m_Semaphore);
+    DebugResult(m_Semaphore = CreateSemaphoreExA(0, 0, cpu_virtual_threads_count, 0, 0, SEMAPHORE_ALL_ACCESS));
 
     for (s32 i = 0; i < cpu_virtual_threads_count; ++i)
     {
-        WorkQueueThread *thread = threads + i;
-        thread->id    = i + 1;
-        thread->queue = this;
-        DebugResult(CloseHandle(CreateThread(null, 0, ThreadProc, thread, 0, null)));
-        logger.LogInfo("Thread has been created: id = %I32u, queue = 0x%p", thread->id, thread->queue);
+        DebugResult(CloseHandle(CreateThread(null, 0, ThreadProc, this, 0, null)));
     }
 
     logger.LogSuccess("Work queue has been created");
@@ -60,27 +49,25 @@ WorkQueue::WorkQueue(const Logger& logger)
 
 WorkQueue::~WorkQueue()
 {
-    if (m_Semaphore) ZeroMemory(this, sizeof(WorkQueue));
+    ZeroMemory(this, sizeof(WorkQueue));
 }
 
-void WorkQueue::AddEntry(WorkQueueEntryProc *Proc, void *arg)
+void WorkQueue::AddWork(const WorkType& work)
 {
     while (true)
     {
-        s32 old_m_NextEntryToWrite = m_NextEntryToWrite;
-        s32 new_m_NextEntryToWrite = (old_m_NextEntryToWrite + 1) % MAX_ENTRIES;
+        s32 old_next_entry_to_write = m_NextEntryToWrite;
+        s32 new_next_entry_to_write = (old_next_entry_to_write + 1) % MAX_WORKS;
 
-        if (new_m_NextEntryToWrite != m_NextEntryToRead)
+        if (new_next_entry_to_write != m_NextEntryToRead)
         {
-            WorkQueueEntry *entry = m_Entries + old_m_NextEntryToWrite;
-            entry->Proc           = Proc;
-            entry->arg            = arg;
+            m_Works[old_next_entry_to_write] = work;
 
             s32 old = _InterlockedCompareExchange(&m_NextEntryToWrite,
-                                                  new_m_NextEntryToWrite,
-                                                  old_m_NextEntryToWrite);
+                                                  new_next_entry_to_write,
+                                                  old_next_entry_to_write);
 
-            if (old == old_m_NextEntryToWrite)
+            if (old == old_next_entry_to_write)
             {
                 _InterlockedIncrement(&m_CompletionGoal);
                 ReleaseSemaphore(m_Semaphore, 1, 0);
@@ -95,19 +82,18 @@ void WorkQueue::Wait()
 {
     while (m_EntriesCompleted < m_CompletionGoal)
     {
-        s32 old_m_NextEntryToRead = m_NextEntryToRead;
-        s32 new_m_NextEntryToRead = (old_m_NextEntryToRead + 1) % MAX_ENTRIES;
+        s32 old_next_entry_to_read = m_NextEntryToRead;
+        s32 new_next_entry_to_read = (old_next_entry_to_read + 1) % MAX_WORKS;
 
-        if (old_m_NextEntryToRead != m_NextEntryToWrite)
+        if (old_next_entry_to_read != m_NextEntryToWrite)
         {
             s32 old = _InterlockedCompareExchange(&m_NextEntryToRead,
-                                                  new_m_NextEntryToRead,
-                                                  old_m_NextEntryToRead);
+                                                  new_next_entry_to_read,
+                                                  old_next_entry_to_read);
 
-            if (old == old_m_NextEntryToRead)
+            if (old == old_next_entry_to_read)
             {
-                WorkQueueEntry *entry = m_Entries + old;
-                entry->Proc(0, entry->arg);
+                m_Works[old]();
                 _InterlockedIncrement(&m_EntriesCompleted);
             }
         }
@@ -119,28 +105,27 @@ void WorkQueue::Wait()
 
 u32 WINAPI ThreadProc(void *arg)
 {
-    WorkQueueThread *thread = (WorkQueueThread *)arg;
+    WorkQueue *work_queue = cast<WorkQueue *>(arg);
     while (true)
     {
-        s32 old_m_NextEntryToRead = thread->queue->m_NextEntryToRead;
-        s32 new_m_NextEntryToRead = (old_m_NextEntryToRead + 1) % MAX_ENTRIES;
+        s32 old_next_entry_to_read = work_queue->m_NextEntryToRead;
+        s32 new_next_entry_to_read = (old_next_entry_to_read + 1) % WorkQueue::MAX_WORKS;
 
-        if (old_m_NextEntryToRead != thread->queue->m_NextEntryToWrite)
+        if (old_next_entry_to_read != work_queue->m_NextEntryToWrite)
         {
-            s32 old = _InterlockedCompareExchange(&thread->queue->m_NextEntryToRead,
-                                                  new_m_NextEntryToRead,
-                                                  old_m_NextEntryToRead);
+            s32 old = _InterlockedCompareExchange(&work_queue->m_NextEntryToRead,
+                                                  new_next_entry_to_read,
+                                                  old_next_entry_to_read);
 
-            if (old == old_m_NextEntryToRead)
+            if (old == old_next_entry_to_read)
             {
-                WorkQueueEntry *entry = thread->queue->m_Entries + old;
-                entry->Proc(thread->id, entry->arg);
-                _InterlockedIncrement(&thread->queue->m_EntriesCompleted);
+                work_queue->m_Works[old]();
+                _InterlockedIncrement(&work_queue->m_EntriesCompleted);
             }
         }
         else
         {
-            while (WaitForSingleObjectEx(thread->queue->m_Semaphore, INFINITE, false) != WAIT_OBJECT_0)
+            while (WaitForSingleObjectEx(work_queue->m_Semaphore, INFINITE, false) != WAIT_OBJECT_0)
             {
             }
         }

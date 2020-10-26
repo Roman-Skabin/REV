@@ -5,81 +5,12 @@
 #pragma once
 
 #include "core/core.h"
+#include <functional>
 
-template<typename Ret, typename ...Args>
-class Function;
+// @NOTE(Roman): Function has been implemented incorrectly
+//               and I don't want to rewrite it in the near future
+//
+//               P.S. C++ is a terrible language in theese moments.
 
-template<typename Ret, typename ...Args>
-class Function<Ret(Args...)>
-{
-public:
-    using FunctionType = Ret(Args...);
-
-    Function()
-        : m_FunctionPointer(nullptr)
-    {
-    }
-
-    Function(nullptr_t)
-        : m_FunctionPointer(nullptr)
-    {
-    }
-
-    Function(FunctionType *function)
-        : m_FunctionPointer(function)
-    {
-    }
-
-    // @TODO(Roman): Type safety
-    template<typename Lambda>
-    Function(Lambda&& lambda)
-        : m_FunctionPointer(cast<FunctionType *>(&lambda))
-    {
-    }
-
-    Function(const Function& other)
-        : m_FunctionPointer(other.m_FunctionPointer)
-    {
-    }
-
-    Function(Function&& other) noexcept
-        : m_FunctionPointer(other.m_FunctionPointer)
-    {
-        other.m_FunctionPointer = nullptr;
-    }
-
-    ~Function()
-    {
-        m_FunctionPointer = nullptr;
-    }
-
-    Function& operator=(const Function& other)
-    {
-        m_FunctionPointer = other.m_FunctionPointer;
-    }
-
-    Function& operator=(Function&& other) noexcept
-    {
-        m_FunctionPointer       = other.m_FunctionPointer;
-        other.m_FunctionPointer = nullptr;
-    }
-
-    Ret operator()(const Args&... args) const
-    {
-        if (m_FunctionPointer)
-        {
-            return m_FunctionPointer(args...);
-        }
-    }
-
-    Ret operator()(Args&&... args) const
-    {
-        if (m_FunctionPointer)
-        {
-            return m_FunctionPointer(RTTI::forward<Args>(args)...);
-        }
-    }
-
-private:
-    FunctionType *m_FunctionPointer;
-};
+template<typename FunctionType>
+using Function = std::function<FunctionType>;

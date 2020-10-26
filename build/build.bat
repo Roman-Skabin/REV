@@ -70,9 +70,6 @@ if !COMPILE_CENGINE! == 1 (
         set CODE_GENERATION= !CODE_GENERATION! -GL
         set LINKING= !LINKING! -MT -LD
         set LINKER= !LINKER! -incremental:no -opt:ref
-        REM Temporary, added for debuging release build
-        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\engine.pdb
-        set LANGUAGE= !LANGUAGE! -Zi
     ) else if /I "!BUILD_TYPE!" == "nsight" (
         set OPTIMIZATION= !OPTIMIZATION! -Od
         set LINKING= !LINKING! -MT -LD
@@ -121,9 +118,6 @@ if !COMPILE_SANDBOX! == 1 (
         set CODE_GENERATION= !CODE_GENERATION! -GL
         set LINKING= !LINKING! -MT
         set LINKER= !LINKER! -incremental:no -opt:ref
-        REM Temporary, added for debuging release build
-        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\sandbox.pdb
-        set LANGUAGE= !LANGUAGE! -Zi
     ) else if /I "!BUILD_TYPE!" == "nsight" (
         set OPTIMIZATION= !OPTIMIZATION! -Od
         set LINKING= !LINKING! -MT

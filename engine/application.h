@@ -34,25 +34,42 @@ public:
     void AttacComponents(AppComponentPointers... components)
     {
         m_AppComponents.PushBack(cast<AppComponent *>(components)...);
-        (..., components->OnAttach());
-        (..., m_Logger.LogInfo("%s component has been attached", components->GetName()));
+
+        (..., (m_WorkQueue->AddWork([&]
+               {
+                   components->OnAttach();
+                   m_Logger.LogInfo("%s component has been attached", components->GetName());
+               }))
+        );
+
+        m_WorkQueue->Wait();
     }
 
     template<typename ...AppComponentPointers, typename = RTTI::enable_if_t<RTTI::are_base_of_v<AppComponent, RTTI::remove_pointer_t<AppComponentPointers>...>>>
     void DetachComponents(AppComponentPointers... components)
     {
-        (..., components->OnDetach());
-        (..., m_Logger.LogInfo("%s component has been detached", components->GetName()));
-        (..., m_AppComponents.Erase(m_AppComponents.Find(components)));
+        (..., (m_WorkQueue->AddWork([&]
+               {
+                   components->OnDetach();
+                   m_Logger.LogInfo("%s component has been detached", components->GetName());
+                   m_AppComponents.Erase(m_AppComponents.Find(components));
+               }))
+        );
+
+        m_WorkQueue->Wait();
     }
 
     void DetachAllComponents()
     {
         for (AppComponent *component : m_AppComponents)
         {
-            component->OnDetach();
-            m_Logger.LogInfo("%s component has been detached", component->GetName());
+            m_WorkQueue->AddWork([&]
+            {
+                component->OnDetach();
+                m_Logger.LogInfo("%s component has been detached", component->GetName());
+            });
         }
+        m_WorkQueue->Wait();
         m_AppComponents.Clear();
     }
 

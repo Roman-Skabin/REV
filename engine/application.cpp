@@ -54,9 +54,10 @@ void Application::Run()
     m_Window.Show();
     while (!m_Window.Closed())
     {
-        m_Memory->ResetTransientArea();
-        m_Window.Resset();
-        m_Input->Reset();
+        m_WorkQueue->AddWork([this]{ m_Memory->ResetTransientArea(); });
+        m_WorkQueue->AddWork([this]{ m_Window.Resset();              });
+        m_WorkQueue->AddWork([this]{ m_Input->Reset();               });
+        m_WorkQueue->Wait();
 
         m_Window.PollEvents();
 
@@ -67,14 +68,19 @@ void Application::Run()
             m_Window.ApplyFullscreenRequest();
 
             renderer->StartFrame();
-            for (AppComponent *component : m_AppComponents) // @TODO(Roman): MT?
+            for (AppComponent *component : m_AppComponents)
             {
-                component->OnUpdate();
+                m_WorkQueue->AddWork([component]
+                {
+                    component->OnUpdate();
+                });
             }
+            m_WorkQueue->Wait();
             renderer->EndFrame();
         }
     }
 
-    m_Timer.Stop();
-    renderer->FlushGPU();
+    m_WorkQueue->AddWork([this    ]{ m_Timer.Stop();       });
+    m_WorkQueue->AddWork([renderer]{ renderer->FlushGPU(); });
+    m_WorkQueue->Wait();
 }

@@ -40,7 +40,7 @@ AsyncFile::AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags)
     flags_and_attributes |= FILE_FLAG_OVERLAPPED
                          |  FILE_FLAG_RANDOM_ACCESS;
 
-    m_Handle = CreateFileA(filename,
+    m_Handle = CreateFileA(filename.Data(),
                            desired_access,
                            shared_mode,
                            null,
@@ -119,7 +119,7 @@ void AsyncFile::Move(const StaticString<MAX_PATH>& to_filename)
 {
     Wait();
 
-    if (MoveFileExA(m_Name, to_filename, MOVEFILE_REPLACE_EXISTING))
+    if (MoveFileExA(m_Name.Data(), to_filename.Data(), MOVEFILE_REPLACE_EXISTING))
     {
         m_Name = to_filename;
     }
@@ -127,12 +127,12 @@ void AsyncFile::Move(const StaticString<MAX_PATH>& to_filename)
 
 void AsyncFile::Copy(const StaticString<MAX_PATH>& to_filename) const
 {
-    CopyFileExA(m_Name, to_filename, null, null, null, 0);
+    CopyFileExA(m_Name.Data(), to_filename.Data(), null, null, null, 0);
 }
 
 void AsyncFile::Copy(const StaticString<MAX_PATH>& to_filename, AsyncFile& to_file, FLAGS to_flags) const
 {
-    if (CopyFileExA(m_Name, to_filename, null, null, null, 0))
+    if (CopyFileExA(m_Name.Data(), to_filename.Data(), null, null, null, 0))
     {
         to_file = AsyncFile(to_filename, to_flags == FLAGS::NONE ? m_Flags : to_flags);
     }

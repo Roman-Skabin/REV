@@ -11,9 +11,9 @@ class Buffer final
 {
 public:
     using Type = T;
-    static inline constexpr u64 npos = U64_MAX;
+    static constexpr u64 npos = U64_MAX;
 
-    Buffer(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
+    explicit Buffer(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
         : m_Header(null)
     {
         Check(allocator);
@@ -37,7 +37,7 @@ public:
     Buffer(Buffer&& other) noexcept
         : m_Header(other.m_Header)
     {
-        other.m_Header = nullptr;
+        other.m_Header = null;
     }
 
     ~Buffer()
@@ -55,7 +55,7 @@ public:
         u64 old_count = m_Header->count;
 
         m_Header->count += sizeof...(elements);
-        Resize();
+        Expand();
 
         if (where != old_count)
         {
@@ -73,7 +73,7 @@ public:
         u64 old_count = m_Header->count;
 
         m_Header->count += sizeof...(elements);
-        Resize();
+        Expand();
 
         if (where != old_count)
         {
@@ -91,7 +91,7 @@ public:
         u64 old_count = m_Header->count;
 
         m_Header->count += count;
-        Resize();
+        Expand();
 
         if (where != old_count)
         {
@@ -112,7 +112,7 @@ public:
         u64 old_count = m_Header->count;
 
         m_Header->count += count;
-        Resize();
+        Expand();
 
         if (where != old_count)
         {
@@ -145,7 +145,7 @@ public:
         u64 old_count = m_Header->count;
 
         ++m_Header->count;
-        Resize();
+        Expand();
 
         if (where != old_count)
         {
@@ -184,7 +184,7 @@ public:
         ZeroMemory(m_Header->data + m_Header->count - to + from, (to - from) * sizeof(T));
 
         m_Header->count -= to - from;
-        Resize();
+        Fit();
     }
 
     void Clear()
@@ -193,7 +193,17 @@ public:
         ZeroMemory(m_Header->data, m_Header->count * sizeof(T));
 
         m_Header->count = 0;
-        Resize();
+    }
+
+    void Reserve(u64 capacity)
+    {
+        if (m_Header->count <= capacity && m_Header->capacity != capacity)
+        {
+            m_Header = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                                                                             sizeof(Header) + capacity * sizeof(T),
+                                                                             m_Header->alignment_in_bytes));
+            m_Header->capacity = capacity;
+        }
     }
 
     u64 Find(const T& what) const
@@ -297,7 +307,7 @@ public:
     }
 
 private:
-    void Resize()
+    void Expand()
     {
         if (m_Header->count > m_Header->capacity)
         {
@@ -306,8 +316,12 @@ private:
                                                                                         sizeof(Header) + m_Header->capacity * sizeof(T),
                                                                                         m_Header->alignment_in_bytes));
         }
-        // @Issue(Roman): Do we need to fit the buffer if its capacity is a way bigger than number of elements it?
-        else if (2 * m_Header->count < m_Header->capacity)
+    }
+
+    void Fit()
+    {
+        // @Issue(Roman): Do we need to fit the buffer if its capacity is a way bigger than number of elements in it?
+        if (2 * m_Header->count < m_Header->capacity)
         {
             m_Header->capacity = 2 * m_Header->count;
             m_Header           = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),

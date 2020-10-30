@@ -141,8 +141,8 @@ void GraphicsProgram::AttachMainShaders(const StaticString<MAX_PATH>& vs_filenam
 
     AsyncFile::WaitForAll(vs_file, ps_file);
 
-    m_VertexShader.Compile(vs, vs_length, vs_filename, "VSMain", "vs_5_1");
-    m_PixelShader.Compile(ps,  ps_length, ps_filename, "PSMain", "ps_5_1");
+    m_VertexShader.Compile(vs, vs_length, vs_filename.Data(), "VSMain", "vs_5_1");
+    m_PixelShader.Compile(ps,  ps_length, ps_filename.Data(), "PSMain", "ps_5_1");
 }
 
 void GraphicsProgram::CreateRootSignature(const D3D12_ROOT_SIGNATURE_DESC& desc)
@@ -357,7 +357,7 @@ void GraphicsProgram::AttachHullShader(const StaticString<MAX_PATH>& filename)
     file.Read(shader, shader_size);
     file.Wait();
 
-    m_HullShader.Compile(shader, shader_size, filename, "HSMain", "hs_5_1");
+    m_HullShader.Compile(shader, shader_size, filename.Data(), "HSMain", "hs_5_1");
 }
 
 void GraphicsProgram::AttachDomainShader(const StaticString<MAX_PATH>& filename)
@@ -375,7 +375,7 @@ void GraphicsProgram::AttachDomainShader(const StaticString<MAX_PATH>& filename)
     file.Read(shader, shader_size);
     file.Wait();
 
-    m_DomainShader.Compile(shader, shader_size, filename, "DSMain", "ds_5_1");
+    m_DomainShader.Compile(shader, shader_size, filename.Data(), "DSMain", "ds_5_1");
 }
 
 void GraphicsProgram::AttachGeometryShader(const StaticString<MAX_PATH>& filename)
@@ -393,7 +393,7 @@ void GraphicsProgram::AttachGeometryShader(const StaticString<MAX_PATH>& filenam
     file.Read(shader, shader_size);
     file.Wait();
 
-    m_GeometryShader.Compile(shader, shader_size, filename, "GSMain", "gs_5_1");
+    m_GeometryShader.Compile(shader, shader_size, filename.Data(), "GSMain", "gs_5_1");
 }
 
 void GraphicsProgram::BindResource(IGPUResource *resource)

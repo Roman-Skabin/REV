@@ -290,4 +290,5 @@ template<u64 index, typename ...T> constexpr bool operator>=(const TupleImpl<ind
 // Tuple
 //
 
-template<typename ...T> using Tuple = TupleImpl<0, T...>;
+template<typename ...T>
+using Tuple = TupleImpl<0, T...>;

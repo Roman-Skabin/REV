@@ -41,49 +41,49 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(4) reg32 final
     u32 u;
     int i;
 
-    reg32(              ) : f(0.0f) {}
-    reg32(f32          v) : f(v)    {}
-    reg32(s32          v) : s(v)    {}
-    reg32(u32          v) : u(v)    {}
-    reg32(int          v) : i(v)    {}
-    reg32(const reg32& v) : f(v.f)  {}
-    reg32(reg32&&      v) : f(v.f)  {}
+    constexpr reg32(              ) : f(0.0f) {}
+    constexpr reg32(f32          v) : f(v)    {}
+    constexpr reg32(s32          v) : s(v)    {}
+    constexpr reg32(u32          v) : u(v)    {}
+    constexpr reg32(int          v) : i(v)    {}
+    constexpr reg32(const reg32& v) : f(v.f)  {}
+    constexpr reg32(reg32&&      v) : f(v.f)  {}
 
-    __vectorcall operator f32() const { return f; }
-    __vectorcall operator s32() const { return s; }
-    __vectorcall operator u32() const { return u; }
-    __vectorcall operator int() const { return i; }
+    constexpr __vectorcall operator f32() const { return f; }
+    constexpr __vectorcall operator s32() const { return s; }
+    constexpr __vectorcall operator u32() const { return u; }
+    constexpr __vectorcall operator int() const { return i; }
 
-    reg32& __vectorcall operator=(f32          v) { f = v;   return *this; }
-    reg32& __vectorcall operator=(s32          v) { s = v;   return *this; }
-    reg32& __vectorcall operator=(u32          v) { u = v;   return *this; }
-    reg32& __vectorcall operator=(int          v) { i = v;   return *this; }
-    reg32& __vectorcall operator=(const reg32& v) { f = v.f; return *this; }
-    reg32& __vectorcall operator=(reg32&&      v) { f = v.f; return *this; }
+    constexpr reg32& __vectorcall operator=(f32          v) { f = v;   return *this; }
+    constexpr reg32& __vectorcall operator=(s32          v) { s = v;   return *this; }
+    constexpr reg32& __vectorcall operator=(u32          v) { u = v;   return *this; }
+    constexpr reg32& __vectorcall operator=(int          v) { i = v;   return *this; }
+    constexpr reg32& __vectorcall operator=(const reg32& v) { f = v.f; return *this; }
+    constexpr reg32& __vectorcall operator=(reg32&&      v) { f = v.f; return *this; }
 };
 
 union ENGINE_INTRIN_TYPE ENGINE_ALIGN(8) reg64 final
 {
-    f64   f;
-    s64   s;
-    u64   u;
+    f64 f;
+    s64 s;
+    u64 u;
 
-    reg64(              ) : f(0.0) {}
-    reg64(f64          v) : f(v)   {}
-    reg64(s64          v) : s(v)   {}
-    reg64(u64          v) : u(v)   {}
-    reg64(const reg64& v) : f(v.f) {}
-    reg64(reg64&&      v) : f(v.f) {}
+    constexpr reg64(              ) : f(0.0) {}
+    constexpr reg64(f64          v) : f(v)   {}
+    constexpr reg64(s64          v) : s(v)   {}
+    constexpr reg64(u64          v) : u(v)   {}
+    constexpr reg64(const reg64& v) : f(v.f) {}
+    constexpr reg64(reg64&&      v) : f(v.f) {}
 
-    __vectorcall operator f64() const { return f; }
-    __vectorcall operator s64() const { return s; }
-    __vectorcall operator u64() const { return u; }
+    constexpr __vectorcall operator f64() const { return f; }
+    constexpr __vectorcall operator s64() const { return s; }
+    constexpr __vectorcall operator u64() const { return u; }
 
-    reg64& __vectorcall operator=(f64          v) { f = v;   return *this; }
-    reg64& __vectorcall operator=(s64          v) { s = v;   return *this; }
-    reg64& __vectorcall operator=(u64          v) { u = v;   return *this; }
-    reg64& __vectorcall operator=(const reg64& v) { f = v.f; return *this; }
-    reg64& __vectorcall operator=(reg64&&      v) { f = v.f; return *this; }
+    constexpr reg64& __vectorcall operator=(f64          v) { f = v;   return *this; }
+    constexpr reg64& __vectorcall operator=(s64          v) { s = v;   return *this; }
+    constexpr reg64& __vectorcall operator=(u64          v) { u = v;   return *this; }
+    constexpr reg64& __vectorcall operator=(const reg64& v) { f = v.f; return *this; }
+    constexpr reg64& __vectorcall operator=(reg64&&      v) { f = v.f; return *this; }
 };
 
 template<typename T, typename = RTTI::enable_if_t<RTTI::is_floating_point_v<T>>>

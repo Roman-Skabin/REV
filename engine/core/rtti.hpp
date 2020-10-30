@@ -123,15 +123,15 @@ namespace RTTI
 
     template<bool cond, typename True, typename False> using conditional_t = typename conditional<cond, True, False>::type;
 
-    template<typename T, typename U> constexpr auto cmpe(T  a, U b) -> decltype(a == b) { return a == b; }
+    template<typename T, typename U> constexpr auto cmpeq(T a, U b) -> decltype(a == b) { return a == b; }
     template<typename T, typename U> constexpr auto cmpne(T a, U b) -> decltype(a != b) { return a != b; }
-    template<typename T, typename U> constexpr auto cmpl(T  a, U b) -> decltype(a <  b) { return a <  b; }
-    template<typename T, typename U> constexpr auto cmpg(T  a, U b) -> decltype(a >  b) { return a >  b; }
+    template<typename T, typename U> constexpr auto cmplt(T a, U b) -> decltype(a <  b) { return a <  b; }
+    template<typename T, typename U> constexpr auto cmpgt(T a, U b) -> decltype(a >  b) { return a >  b; }
     template<typename T, typename U> constexpr auto cmple(T a, U b) -> decltype(a <= b) { return a <= b; }
     template<typename T, typename U> constexpr auto cmpge(T a, U b) -> decltype(a >= b) { return a >= b; }
 
-    template<typename T, typename U> using min_size_t = conditional_t<cmpl(sizeof(T), sizeof(U)), T, U>;
-    template<typename T, typename U> using max_size_t = conditional_t<cmpg(sizeof(T), sizeof(U)), T, U>;
+    template<typename T, typename U> using min_size_t = conditional_t<cmplt(sizeof(T), sizeof(U)), T, U>;
+    template<typename T, typename U> using max_size_t = conditional_t<cmpgt(sizeof(T), sizeof(U)), T, U>;
 
     template<typename Base, typename Derived> inline constexpr bool is_base_of_v = __is_base_of(Base, Derived);
 
@@ -292,4 +292,32 @@ namespace RTTI
     template<typename T> struct add_ref<T&&> { using type = T&&; };
 
     template<typename T> using add_ref_t = typename add_ref<T>::type;
+
+    template<typename T> using void_t = void;
+
+    template<typename T> constexpr remove_ref_t<T>&& declval() noexcept;
+
+    template<typename Void, typename Callable, typename ...Args>
+    struct _callable
+    {
+        static constexpr bool is_callable = false;
+    };
+
+    template<typename Callable, typename ...Args>
+    struct _callable<void_t<decltype(declval<Callable>()(declval<Args>()...))>, Callable, Args...>
+    {
+        static constexpr bool is_callable = true;
+
+        using ret_type  = decltype(declval<Callable>()(declval<Args>()...));
+        using func_type = ret_type(Args...);
+    };
+
+    template<typename Callable, typename ...Args>
+    using callable = _callable<void, Callable, Args...>;
+
+    template<typename Callable, typename ...Args>
+    inline constexpr bool is_callable_v = callable<Callable, Args...>::is_callable;
+
+    template<typename T> T max(T left, T right) { return left > right ? left : right; }
+    template<typename T> T min(T left, T right) { return left < right ? left : right; }
 }

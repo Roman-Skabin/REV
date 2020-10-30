@@ -71,21 +71,26 @@ void GPUResource::SetName(const StaticString<64>& name)
 {
     m_Name = name;
 
-    char ext_name[16 + 64] = {'\0'};
-    CopyMemory(ext_name, "__default__", CSTRLEN("__default__"));
-    CopyMemory(ext_name + CSTRLEN("__default__"), m_Name, m_Name.Length());
+    StaticString<16 + 64> ext_name;
+    ext_name += "__default__";
+    ext_name += m_Name;
 
-    HRESULT error = m_DefaultResource->SetPrivateData(WKPDID_D3DDebugObjectName, cast<u32>(CSTRLEN("__default__") + m_Name.Length()), ext_name);
+    HRESULT error = m_DefaultResource->SetPrivateData(WKPDID_D3DDebugObjectName, cast<u32>(ext_name.Length()), ext_name.Data());
     Check(SUCCEEDED(error));
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
-        s32 len = sprintf(ext_name, "__upload_%I32u__", i);
+        ext_name.Clear();
 
-        CopyMemory(ext_name + len, m_Name, m_Name.Length());
-        len += cast<s32>(m_Name.Length());
+        char str_i[64];
+        _itoa(i, str_i, 10);
 
-        error = m_UploadResources[i]->SetPrivateData(WKPDID_D3DDebugObjectName, len, ext_name);
+        ext_name += "__upload_";
+        ext_name += str_i;
+        ext_name += "__";
+        ext_name += m_Name;
+
+        error = m_UploadResources[i]->SetPrivateData(WKPDID_D3DDebugObjectName, cast<u32>(ext_name.Length()), ext_name.Data());
         Check(SUCCEEDED(error));
     }
 }
@@ -400,7 +405,7 @@ void GPUResourceMemory::Reset()
         {
             resource.m_AllocationState = GPUResource::ALLOCATION_STATE::IN_FREE_LIST;
 
-            GPUResourceList::Node *prev_free = nullptr;
+            GPUResourceList::Node *prev_free = null;
 
             for (GPUResourceList::Node *inner_it = it->Prev(); inner_it; inner_it = inner_it->Prev())
             {

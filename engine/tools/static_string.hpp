@@ -7,13 +7,11 @@
 #include "core/memory.h"
 #include "math/simd.h"
 
-// @TODO(Roman): Static string builder.
-
 template<u64 capacity, u64 aligned_capacity = AlignUp(capacity, CACHE_LINE_SIZE)>
 class StaticString final
 {
 public:
-    static inline constexpr u64 npos = U64_MAX;
+    static constexpr u64 npos = U64_MAX;
 
     StaticString()
         : m_Length(0)
@@ -44,15 +42,15 @@ public:
         }
     }
 
-    StaticString(const char *string, u64 len = 0)
-        : m_Length(len ? len : strlen(string))
+    StaticString(const char *string, u64 len = npos)
+        : m_Length(len != npos ? len : strlen(string))
     {
         CheckM(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
         CopyMemory(m_Data, string, m_Length);
         memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
     }
 
-    template<u64 other_capacity, u64 other_aligned_capacity = AlignUp(other_capacity, CACHE_LINE_SIZE)>
+    template<u64 other_capacity, u64 other_aligned_capacity>
     StaticString(const StaticString<other_capacity, other_aligned_capacity>& other)
         : m_Length(other.m_Length)
     {
@@ -89,6 +87,12 @@ public:
     constexpr u64 Length() const { return m_Length; }
 
     constexpr bool Empty() const { return !m_Length; }
+
+    void Clear()
+    {
+        memset_char(m_Data, '\0', m_Length);
+        m_Length = 0;
+    }
 
     u64 Find(char what) const
     {
@@ -137,9 +141,6 @@ public:
         return found_str ? found_str - m_Data : npos;
     }
 
-    constexpr operator const char *() const { return m_Data; }
-    constexpr operator       char *()       { return m_Data; }
-
     template<u64 count>
     StaticString& operator=(const char (&array)[count])
     {
@@ -177,7 +178,7 @@ public:
         return *this;
     }
 
-    template<u64 other_capacity, u64 other_aligned_capacity = AlignUp(other_capacity, CACHE_LINE_SIZE)>
+    template<u64 other_capacity, u64 other_aligned_capacity>
     StaticString& operator=(const StaticString<other_capacity, other_aligned_capacity>& other)
     {
         if (this != &other)
@@ -189,7 +190,7 @@ public:
         return *this;
     }
 
-    template<u64 other_capacity, u64 other_aligned_capacity = AlignUp(other_capacity, CACHE_LINE_SIZE)>
+    template<u64 other_capacity, u64 other_aligned_capacity>
     StaticString& operator+=(const StaticString<other_capacity, other_aligned_capacity>& other)
     {
         u64 entire_length = m_Length + other.m_Length;
@@ -258,7 +259,13 @@ private:
 private:
     u64  m_Length;
     char m_Data[aligned_capacity];
+
+    template<u64 cap, u64 acap>
+    friend class StaticString;
 };
+
+template<u64 count>
+StaticString(const char (&)[count]) -> StaticString<count>;
 
 template<u64 l_capacity, u64 r_capacity, u64 l_aligned_capacity, u64 r_aligned_capacity>
 bool operator==(const StaticString<l_capacity, l_aligned_capacity>& left,

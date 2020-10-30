@@ -11,8 +11,7 @@
 - Tools
     - Several simultaneous read operations under the same file?
     - Hash table
-    - String
-    - StaticStringBuilder, StringBuilder
+    - ConstStringBuilder?, StaticStringBuilder, StringBuilder
 
 - Build
     - [Pre?]build system. Build only edited files

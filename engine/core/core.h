@@ -9,13 +9,16 @@
 
 #pragma warning(disable: 4251)
 
+enum
+{
 #if ENGINE_ISA >= ENGINE_ISA_AVX512
-    #define ENGINE_DEFAULT_ALIGNMENT sizeof(__m512)
+    ENGINE_DEFAULT_ALIGNMENT = sizeof(__m512)
 #elif ENGINE_ISA >= ENGINE_ISA_AVX
-    #define ENGINE_DEFAULT_ALIGNMENT sizeof(__m256)
+    ENGINE_DEFAULT_ALIGNMENT = sizeof(__m256)
 #else
-    #define ENGINE_DEFAULT_ALIGNMENT sizeof(__m128)
+    ENGINE_DEFAULT_ALIGNMENT = sizeof(__m128)
 #endif
+};
 
 #pragma pack(push, 16)
 

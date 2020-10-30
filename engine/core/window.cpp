@@ -25,7 +25,7 @@ Window::Window(const Logger&            logger,
     wca.hInstance     = m_Instance;
     wca.hCursor       = LoadCursorA(0, IDC_ARROW);
     // wca.hbrBackground = GetSysColorBrush(COLOR_BACKGROUND);
-    wca.lpszClassName = m_ClassName;
+    wca.lpszClassName = m_ClassName.Data();
     DebugResult(RegisterClassA(&wca));
 
     s32 width  = m_XYWH.z;
@@ -41,7 +41,7 @@ Window::Window(const Logger&            logger,
         }
     }
 
-    DebugResult(m_Handle = CreateWindowA(wca.lpszClassName, m_Title, WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wca.hInstance, 0));
+    DebugResult(m_Handle = CreateWindowA(wca.lpszClassName, m_Title.Data(), WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wca.hInstance, 0));
     DebugResult(m_Context = GetDC(m_Handle));
 
     m_Logger.LogSuccess("Window \"%s\" has been created", m_Title.Data());
@@ -53,7 +53,7 @@ Window::~Window()
 {
     if (m_Instance)
     {
-        DebugResult(UnregisterClassA(m_ClassName, m_Instance));
+        DebugResult(UnregisterClassA(m_ClassName.Data(), m_Instance));
         m_Instance = null;
         m_Logger.LogInfo("Window \"%s\" has been destroyed", m_Title.Data());
     }
@@ -99,7 +99,7 @@ void Window::Show()
 
 void Window::SetTitle(const StaticString<128>& new_title)
 {
-    DebugResult(SetWindowTextA(m_Handle, new_title));
+    DebugResult(SetWindowTextA(m_Handle, new_title.Data()));
     m_Title = new_title;
 }
 

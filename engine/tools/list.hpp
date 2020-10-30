@@ -478,7 +478,7 @@ private:
             }
             else
             {
-                Node *prev = nullptr;
+                Node *prev = null;
                 for (Node *it = m_First; it && it != where; prev = it, it = it->m_Next)
                 {
                 }
@@ -517,7 +517,7 @@ private:
         }
         else
         {
-            Node *prev = nullptr;
+            Node *prev = null;
             for (Node *it = m_First; it && it != what; prev = it, it = it->m_Next)
             {
             }

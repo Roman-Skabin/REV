@@ -6,42 +6,6 @@
 #include "core/memory.h"
 
 //
-// Memory::Area
-//
-
-Memory::Area::Area()
-    : base(null),
-      size(0),
-      capacity(0)
-{
-}
-
-Memory::Area::Area(Area&& other) noexcept
-    : base(other.base),
-      size(other.size),
-      capacity(other.capacity)
-{
-    other.base     = null;
-    other.size     = 0;
-    other.capacity = 0;
-}
-
-Memory::Area& Memory::Area::operator=(Area&& other) noexcept
-{
-    if (this != &other)
-    {
-        base     = other.base;
-        size     = other.size;
-        capacity = other.capacity;
-
-        other.base     = null;
-        other.size     = 0;
-        other.capacity = 0;
-    }
-    return *this;
-}
-
-//
 // Memory
 //
 
@@ -62,16 +26,17 @@ Memory *Memory::Get()
 }
 
 Memory::Memory(u64 transient_area_capacity, u64 permanent_area_capacity)
+    : m_CriticalSection()
 {
     CheckM(transient_area_capacity, "Transient area capacity must be greater than 0");
     CheckM(permanent_area_capacity, "Permanent area capacity must be greater than 0");
 
     transient_area_capacity = AlignUp(transient_area_capacity, PAGE_SIZE);
     permanent_area_capacity = AlignUp(permanent_area_capacity, PAGE_SIZE);
-    Check(   transient_area_capacity <= MAX_MEMORY
-          && permanent_area_capacity <= MAX_MEMORY
-          && transient_area_capacity <= MAX_MEMORY - permanent_area_capacity
-          && permanent_area_capacity <= MAX_MEMORY - transient_area_capacity);
+    Check(   transient_area_capacity <= MAX
+          && permanent_area_capacity <= MAX
+          && transient_area_capacity <= MAX - permanent_area_capacity
+          && permanent_area_capacity <= MAX - transient_area_capacity);
 
     u64 memory_capacity = transient_area_capacity + permanent_area_capacity;
 
@@ -107,6 +72,8 @@ void *Memory::PushToTransientArea(u64 bytes)
 {
     CheckM(bytes, "0 bytes has been passed");
 
+    m_CriticalSection.Enter();
+
     CheckM(bytes <= m_TransientArea.capacity - m_TransientArea.size,
            "Transient area overflow.\n"
            "Bytes to allocate: %I64u.\n"
@@ -117,6 +84,7 @@ void *Memory::PushToTransientArea(u64 bytes)
     byte *retptr = m_TransientArea.base + m_TransientArea.size;
     m_TransientArea.size += bytes;
 
+    m_CriticalSection.Leave();
     return retptr;
 }
 
@@ -129,6 +97,8 @@ void *Memory::PushToTransientAreaAligned(u64 bytes, u64 alignment)
 
     u64 aligned_bytes = AlignUp(bytes, alignment);
 
+    m_CriticalSection.Enter();
+
     CheckM(bytes <= m_TransientArea.capacity - m_TransientArea.size,
            "Transient area overflow.\n"
            "Bytes: %I64u. Alignment: %I64u. Aligned bytes: %I64u.\n"
@@ -139,18 +109,23 @@ void *Memory::PushToTransientAreaAligned(u64 bytes, u64 alignment)
     byte *retptr = m_TransientArea.base + m_TransientArea.size;
     m_TransientArea.size += aligned_bytes;
 
+    m_CriticalSection.Leave();
     return retptr;
 }
 
 void Memory::ResetTransientArea()
 {
+    m_CriticalSection.Enter();
     ZeroMemory(m_TransientArea.base, m_TransientArea.size);
     m_TransientArea.size = 0;
+    m_CriticalSection.Leave();
 }
 
 void *Memory::PushToPermanentArea(u64 bytes)
 {
     CheckM(bytes, "0 bytes was passed");
+
+    m_CriticalSection.Enter();
 
     CheckM(bytes <= m_PermanentArea.capacity - m_PermanentArea.size,
            "Permanent area overflow.\n"
@@ -162,6 +137,7 @@ void *Memory::PushToPermanentArea(u64 bytes)
     byte *retptr = m_PermanentArea.base + m_PermanentArea.size;
     m_PermanentArea.size += bytes;
 
+    m_CriticalSection.Leave();
     return retptr;
 }
 
@@ -174,6 +150,8 @@ void *Memory::PushToPermanentAreaAligned(u64 bytes, u64 alignment)
     
     u64 aligned_bytes = AlignUp(bytes, alignment);
 
+    m_CriticalSection.Enter();
+
     CheckM(bytes <= m_PermanentArea.capacity - m_PermanentArea.size,
            "Transient area overflow.\n"
            "Bytes: %I64u. Alignment: %I64u. Aligned bytes: %I64u.\n"
@@ -184,5 +162,6 @@ void *Memory::PushToPermanentAreaAligned(u64 bytes, u64 alignment)
     byte *retptr = m_PermanentArea.base + m_PermanentArea.size;
     m_PermanentArea.size += aligned_bytes;
 
+    m_CriticalSection.Leave();
     return retptr;
 }

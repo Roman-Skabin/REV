@@ -79,11 +79,6 @@ enum
 #endif
 
 #define NULL 0
-
-#ifndef __cplusplus
-    #define nullptr 0
-#endif
-
 #define null nullptr
 
 #define ENGINE_INTERFACE struct ENGINE_NOVTABLE
@@ -108,14 +103,12 @@ typedef double f64;
 typedef f32 rad;
 typedef f32 deg;
 
+typedef bool b8;
+typedef s16 b16;
 typedef s32 b32;
+typedef s64 b64;
 
 typedef u8 byte;
-
-#ifndef __cplusplus
-    #define true  1
-    #define false 0
-#endif
 
 #define S8_MIN  0x80i8
 #define S16_MIN 0x8000i16

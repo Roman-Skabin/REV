@@ -6,9 +6,6 @@
 
 #include "core/core.h"
 
-template<u64 index, typename ...T>
-class TupleImpl;
-
 //
 // TupleNode
 //
@@ -41,13 +38,11 @@ public:
 };
 
 //
-// Helpers
-//
-
-
-//
 // TupleImpl
 //
+
+template<u64 index, typename ...T>
+class TupleImpl;
 
 template<u64 index>
 class TupleImpl<index>

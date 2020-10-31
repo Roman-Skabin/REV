@@ -35,7 +35,8 @@ Allocator::Allocator(void *base_address, u64 capacity, b32 clear_memory)
       m_ReAllocationsCount(0),
       m_DeAllocationsCount(0),
 #endif
-      m_VallocUsed(false)
+      m_VallocUsed(false),
+      m_CriticalSection()
 {
     CheckM(m_Capacity, "Allocator's capacity can't be 0");
 
@@ -65,7 +66,8 @@ Allocator::Allocator(Allocator&& other) noexcept
       m_ReAllocationsCount(other.m_ReAllocationsCount),
       m_DeAllocationsCount(other.m_DeAllocationsCount),
 #endif
-      m_VallocUsed(other.m_VallocUsed)
+      m_VallocUsed(other.m_VallocUsed),
+      m_CriticalSection(RTTI::move(other.m_CriticalSection))
 {
     ZeroMemory(&other, sizeof(Allocator));
 }
@@ -79,13 +81,13 @@ Allocator::~Allocator()
 #if DEBUG
     else if (m_AllocationsCount > m_DeAllocationsCount)
     {
-        DebugFC(DEBUG_IN::CONSOLE, DEBUG_COLOR::ERROR, "Memory leak detected allocator!!!:\n");
+        DebugFC(DEBUG_IN::CONSOLE, DEBUG_COLOR::ERROR, "Memory leak in allocator detected!!!:\n");
         DebugF(DEBUG_IN::CONSOLE, "    Allocations overall: %I64u\n", m_AllocationsCount);
         DebugF(DEBUG_IN::CONSOLE, "    Reallocations overall: %I64u\n", m_ReAllocationsCount);
         DebugF(DEBUG_IN::CONSOLE, "    Deallocations overall: %I64u\n", m_DeAllocationsCount);
     }
 #endif
-    ZeroMemory(this, sizeof(Allocator));
+    ZeroMemory(this, StructFieldOffset(Allocator, m_CriticalSection));
 }
 
 BlockHeader *Allocator::FindBestMatch(u64 bytes)
@@ -184,7 +186,9 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
 
 void *Allocator::Allocate(u64 bytes)
 {
-    CheckM(bytes, "bytes can't be 0")
+    CheckM(bytes, "bytes can't be 0");
+
+    m_CriticalSection.Enter();
 
     CheckM(bytes <= m_Capacity - m_Used,
            "Memory overflow.\n"
@@ -208,6 +212,8 @@ void *Allocator::Allocate(u64 bytes)
 #if DEBUG
     ++m_AllocationsCount;
 #endif
+
+    m_CriticalSection.Leave();
 
     return header->data;
 }
@@ -296,6 +302,8 @@ void Allocator::DeAllocate(void *&mem)
 {
     if (mem)
     {
+        m_CriticalSection.Enter();
+
         CheckM(MemInAllocatorRange(mem),
                "This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p].",
                mem,
@@ -319,6 +327,8 @@ void Allocator::DeAllocate(void *&mem)
     #endif
     
         mem = null;
+
+        m_CriticalSection.Leave();
     }
 }
 
@@ -474,6 +484,8 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
         return null;
     }
 
+    m_CriticalSection.Enter();
+
     CheckM(MemInAllocatorRange(mem),
            "This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p].",
            mem,
@@ -488,6 +500,7 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
 
     if (header->data_bytes == bytes)
     {
+        m_CriticalSection.Leave();
         return mem;
     }
 
@@ -529,6 +542,8 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
     ++m_ReAllocationsCount;
 #endif
 
+    m_CriticalSection.Leave();
+
     return new_header->data;
 }
 
@@ -555,15 +570,22 @@ Allocator& Allocator::operator=(Allocator&& other) noexcept
 {
     if (this != &other)
     {
-        CopyMemory(this, &other, sizeof(Allocator));
-        ZeroMemory(&other, sizeof(Allocator));
+        CopyMemory(this, &other, StructFieldOffset(Allocator, m_CriticalSection));
+        m_CriticalSection = RTTI::move(other.m_CriticalSection);
+
+        ZeroMemory(&other, StructFieldOffset(Allocator, m_CriticalSection));
     }
     return *this;
 }
 
 bool Allocator::MemInAllocatorRange(void *mem)
 {
-    return m_First->data <= mem && mem < cast<byte *>(m_First) + m_Capacity;
+    m_CriticalSection.Enter();
+
+    bool in = m_First->data <= mem && mem < cast<byte *>(m_First) + m_Capacity;
+
+    m_CriticalSection.Leave();
+    return in;
 }
 
 bool Allocator::BlockInAllocatorRange(BlockHeader *block)

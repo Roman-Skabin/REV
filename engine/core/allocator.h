@@ -5,6 +5,7 @@
 #pragma once
 
 #include "core/core.h"
+#include "tools/critical_section.h"
 
 struct BlockHeader;
 
@@ -59,15 +60,16 @@ private:
     bool BlockInAllocatorRange(BlockHeader *block);
 
 private:
-    BlockHeader *m_FreeList;
-    BlockHeader *m_First;
-    BlockHeader *m_LastAllocated;
-    u64          m_Used;
-    u64          m_Capacity;
+    BlockHeader     *m_FreeList;
+    BlockHeader     *m_First;
+    BlockHeader     *m_LastAllocated;
+    u64              m_Used;
+    u64              m_Capacity;
 #if DEBUG
-    u64          m_AllocationsCount;
-    u64          m_ReAllocationsCount;
-    u64          m_DeAllocationsCount;
+    u64              m_AllocationsCount;
+    u64              m_ReAllocationsCount;
+    u64              m_DeAllocationsCount;
 #endif
-    b32          m_VallocUsed;
+    b32              m_VallocUsed;
+    CriticalSection  m_CriticalSection;
 };

@@ -5,8 +5,7 @@
 #pragma once
 
 #include "core/core.h"
-
-#define MAX_MEMORY 0xFFFFFFFFFFFFF000ui64
+#include "tools/critical_section.h"
 
 enum REGULAR_MEMORY_SPECS
 {
@@ -38,27 +37,27 @@ void memset_any(T *mem, T val, u64 count)
     else                                                         static_assert(false, "memset_any failed");
 }
 
-template<typename T, u64 count, typename = RTTI::enable_if_t<RTTI::cmpg(sizeof(T), 8)>>
+template<typename T, u64 count, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8)>>
 void memset_any(T (&arr)[count], const T& val)
 {
     T *ptr = arr;
     while (count--) *ptr++ = val;
 }
 
-template<typename T, u64 count, typename = RTTI::enable_if_t<RTTI::cmpg(sizeof(T), 8)>>
+template<typename T, u64 count, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8)>>
 void memset_any(T (&arr)[count], T&& val)
 {
     T *ptr = arr;
     while (count--) *ptr++ = RTTI::move(val);
 }
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::cmpg(sizeof(T), 8)>>
+template<typename T, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8)>>
 void memset_any(T *mem, const T& val, u64 count)
 {
     while (count--) *mem++ = val;
 }
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::cmpg(sizeof(T), 8)>>
+template<typename T, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8)>>
 void memset_any(T *mem, T&& val, u64 count)
 {
     while (count--) *mem++ = RTTI::move(val);
@@ -67,6 +66,8 @@ void memset_any(T *mem, T&& val, u64 count)
 class ENGINE_API Memory final
 {
 public:
+    enum : u64 { MAX = 0xFFFFFFFFFFFFF000ui64 };
+
     static Memory *Create(u64 transient_area_capacity, u64 permanent_area_capacity);
     static Memory *Get();
 
@@ -83,10 +84,10 @@ public:
     void *PushToPermanentArea(u64 bytes);
     void *PushToPermanentAreaAligned(u64 bytes, u64 alignment);
 
-    template<typename T> constexpr T *PushToTA(u64 count = 1)                         { return cast<T *>(PushToTransientArea(count * sizeof(T)));                   }
+    template<typename T> constexpr T *PushToTA(u64 count = 1)                     { return cast<T *>(PushToTransientArea(count * sizeof(T)));                   }
     template<typename T> constexpr T *PushToTAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToTransientAreaAligned(count * sizeof(T), alignment)); }
 
-    template<typename T> constexpr T *PushToPA(u64 count = 1)                         { return cast<T *>(PushToPermanentArea(count * sizeof(T)));                   }
+    template<typename T> constexpr T *PushToPA(u64 count = 1)                     { return cast<T *>(PushToPermanentArea(count * sizeof(T)));                   }
     template<typename T> constexpr T *PushToPAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToPermanentAreaAligned(count * sizeof(T), alignment)); }
 
 private:
@@ -97,23 +98,16 @@ private:
     Memory& operator=(Memory&&)      = delete;
 
 private:
-    struct ENGINE_API Area final
+    struct Area
     {
-        byte *base;
-        u64   size;
-        u64   capacity;
-
-        Area();
-        Area(Area&& other) noexcept;
-
-        Area& operator=(Area&& other) noexcept;
-
-        Area(const Area&) = delete;
-        Area& operator=(const Area&) = delete;
+        byte *base     = null;
+        u64   size     = 0;
+        u64   capacity = 0;
     };
 
-    Area m_TransientArea;
-    Area m_PermanentArea;
+    Area            m_TransientArea;
+    Area            m_PermanentArea;
+    CriticalSection m_CriticalSection;
 
     static Memory *s_Memory;
 };

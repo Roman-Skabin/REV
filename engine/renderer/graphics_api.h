@@ -13,7 +13,7 @@
 
 #include "tools/logger.h"
 
-class ENGINE_IMPEXP GraphicsAPI
+class ENGINE_API GraphicsAPI
 {
 public:
     enum class API

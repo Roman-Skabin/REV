@@ -6,6 +6,9 @@
 
 #include "core/core.h"
 
+template<u64 index, typename ...T>
+class TupleImpl;
+
 //
 // TupleNode
 //
@@ -27,23 +30,24 @@ public:
     constexpr const T&& Get() const && { return RTTI::move(m_Val); }
     constexpr       T&& Get()       && { return RTTI::move(m_Val); }
 
-    constexpr const u64 Index() const { return index; }
+    constexpr u64 Index() const { return index; }
 
     template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>> constexpr TupleNode& operator=(const T& val)           { m_Val = val;                     return *this; }
     template<typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr TupleNode& operator=(T&& val)                { m_Val = RTTI::move(val);         return *this; }
     template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>> constexpr TupleNode& operator=(const TupleNode& other) { m_Val = other.m_Val;             return *this; }
     template<typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr TupleNode& operator=(TupleNode&& other)      { m_Val = RTTI::move(other.m_Val); return *this; }
 
-private:
     T m_Val;
 };
 
 //
-// TupleImpl
+// Helpers
 //
 
-template<u64 index, typename ...T>
-class TupleImpl;
+
+//
+// TupleImpl
+//
 
 template<u64 index>
 class TupleImpl<index>
@@ -68,8 +72,8 @@ public:
 };
 
 template<u64 index, typename First, typename ...Rest>
-class TupleImpl<index, First, Rest...> : protected TupleNode<index, First>,
-                                         private   TupleImpl<index + 1, Rest...>
+class TupleImpl<index, First, Rest...> : public  TupleNode<index, First>,
+                                         private TupleImpl<index + 1, Rest...>
 {
 public:
     using BaseNode  = TupleNode<index, First>;
@@ -149,7 +153,7 @@ public:
         }
         else
         {
-            static_assert(false, "Index out of bound")
+            static_assert(false, "Index out of bound");
         }
     }
 
@@ -256,10 +260,29 @@ public:
     }
 
     template<typename Callback>
+    constexpr void ForEach(Callback&& callback) const
+    {
+        callback(index, BaseNode::Get());
+        BaseTuple::ForEach(callback);
+    }
+
+    template<typename Callback>
     constexpr void ForEach(Callback&& callback)
     {
         callback(index, BaseNode::Get());
         BaseTuple::ForEach(callback);
+    }
+
+    template<u64 ...indices>
+    constexpr TupleImpl<0, RTTI::get_sequence_type_t<indices, First, Rest...>...> SubTuple() const
+    {
+        return RTTI::move(TupleImpl<0, RTTI::get_sequence_type_t<indices, First, Rest...>...>(Get<indices>()...));
+    }
+
+    template<typename ...T>
+    constexpr TupleImpl<0, T...> SubTuple() const
+    {
+        return RTTI::move(TupleImpl<0, T...>(Get<T>()...));
     }
 
     template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<First> && RTTI::are_copy_assignable_v<Rest...>>>

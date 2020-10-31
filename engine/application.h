@@ -19,7 +19,7 @@
 #include "tools/buffer.hpp"
 #include "tools/static_string.hpp"
 
-class ENGINE_IMPEXP Application
+class ENGINE_API Application
 {
 public:
     static Application *Get();

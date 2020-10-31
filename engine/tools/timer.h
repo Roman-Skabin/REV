@@ -7,7 +7,7 @@
 #include "tools/logger.h"
 #include "tools/static_string.hpp"
 
-class ENGINE_IMPEXP Timer final
+class ENGINE_API Timer final
 {
 public:
     Timer(const StaticString<256>& name);
@@ -67,7 +67,7 @@ private:
     friend class ProfilingTimer;
 };
 
-class ENGINE_IMPEXP ProfilingTimer final
+class ENGINE_API ProfilingTimer final
 {
 public:
     ProfilingTimer(const StaticString<256>& name);

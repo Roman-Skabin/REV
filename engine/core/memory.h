@@ -18,13 +18,13 @@ enum REGULAR_MEMORY_SPECS
     NTFS_SECTOR_SIZE  = 512,
 };
 
-ENGINE_FUN void memset_f32 (f32  *mem, f32  val, u64 count);
-ENGINE_FUN void memset_f64 (f64  *mem, f64  val, u64 count);
-ENGINE_FUN void memset_char(char *mem, char val, u64 count);
-ENGINE_FUN void memset_s8  (s8   *mem, s8   val, u64 count);
-ENGINE_FUN void memset_s16 (s16  *mem, s16  val, u64 count);
-ENGINE_FUN void memset_s32 (s32  *mem, s32  val, u64 count);
-ENGINE_FUN void memset_s64 (s64  *mem, s64  val, u64 count);
+ENGINE_API void memset_f32 (f32  *mem, f32  val, u64 count);
+ENGINE_API void memset_f64 (f64  *mem, f64  val, u64 count);
+ENGINE_API void memset_char(char *mem, char val, u64 count);
+ENGINE_API void memset_s8  (s8   *mem, s8   val, u64 count);
+ENGINE_API void memset_s16 (s16  *mem, s16  val, u64 count);
+ENGINE_API void memset_s32 (s32  *mem, s32  val, u64 count);
+ENGINE_API void memset_s64 (s64  *mem, s64  val, u64 count);
 
 template<typename T, typename = RTTI::enable_if_t<RTTI::cmple(sizeof(T), 8)>>
 void memset_any(T *mem, T val, u64 count)
@@ -64,7 +64,7 @@ void memset_any(T *mem, T&& val, u64 count)
     while (count--) *mem++ = RTTI::move(val);
 }
 
-class ENGINE_IMPEXP Memory final
+class ENGINE_API Memory final
 {
 public:
     static Memory *Create(u64 transient_area_capacity, u64 permanent_area_capacity);
@@ -97,7 +97,7 @@ private:
     Memory& operator=(Memory&&)      = delete;
 
 private:
-    struct ENGINE_IMPEXP Area final
+    struct ENGINE_API Area final
     {
         byte *base;
         u64   size;

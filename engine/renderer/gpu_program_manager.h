@@ -8,7 +8,7 @@
 #include "renderer/gpu_memory_manager.h"
 #include "tools/static_string.hpp"
 
-interface ENGINE_IMPEXP IGraphicsProgram
+ENGINE_INTERFACE ENGINE_API IGraphicsProgram
 {
     virtual void AttachHullShader(const StaticString<MAX_PATH>& filename)     = 0;
     virtual void AttachDomainShader(const StaticString<MAX_PATH>& filename)   = 0;
@@ -23,11 +23,11 @@ interface ENGINE_IMPEXP IGraphicsProgram
     virtual void DrawIndices()  = 0;
 };
 
-interface ENGINE_IMPEXP IComputeProgram
+ENGINE_INTERFACE ENGINE_API IComputeProgram
 {
 };
 
-interface ENGINE_IMPEXP IGPUProgramManager
+ENGINE_INTERFACE ENGINE_API IGPUProgramManager
 {
     virtual void Destroy() = 0;
 

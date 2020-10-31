@@ -7,6 +7,7 @@
     - Move all STD includes from platform.h to pch.h?
     - Get rid of the interface stuff and swith to function pointers?
     - ACS (Application Component System)
+    - Thread safety in memory, allocator
 
 - Tools
     - Several simultaneous read operations under the same file?

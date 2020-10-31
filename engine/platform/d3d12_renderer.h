@@ -9,6 +9,10 @@
 #include "core/window.h"
 #include "tools/event.h"
 
+#include <d3d12.h>
+#include <dxgi1_6.h>
+#include <dxgidebug.h>
+
 namespace D3D12
 {
     // @TODO(Roman): Various number of back buffers?
@@ -17,7 +21,7 @@ namespace D3D12
         SWAP_CHAIN_BUFFERS_COUNT = 2,
     };
 
-    class ENGINE_IMPEXP Renderer final : public IRenderer
+    class ENGINE_API Renderer final : public IRenderer
     {
     public:
         enum class FLAGS

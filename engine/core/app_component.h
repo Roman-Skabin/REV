@@ -8,7 +8,7 @@
 
 class Application;
 
-class ENGINE_IMPEXP AppComponent
+class ENGINE_API AppComponent
 {
 protected:
     explicit AppComponent(const char *name = "Level") : m_Name(name) {}

@@ -6,7 +6,7 @@
 
 #include "math/vec.h"
 
-interface ENGINE_IMPEXP IRenderer
+ENGINE_INTERFACE ENGINE_API IRenderer
 {
     virtual void Destroy() = 0;
 

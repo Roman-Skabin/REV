@@ -8,7 +8,7 @@
 #include "tools/logger.h"
 #include "tools/function.hpp"
 
-class ENGINE_IMPEXP WorkQueue final
+class ENGINE_API WorkQueue final
 {
 public:
     using WorkType = Function<void()>;

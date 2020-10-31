@@ -6,7 +6,7 @@
 
 #include "core/core.h"
 
-class ENGINE_IMPEXP ConstString final
+class ENGINE_API ConstString final
 {
 public:
     static constexpr u64 npos = U64_MAX;

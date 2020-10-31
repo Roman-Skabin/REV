@@ -45,9 +45,9 @@ enum
 #endif
 
 #if _ENGINE_DEV
-    #define ENGINE_IMPEXP ENGINE_EXPORT
+    #define ENGINE_API ENGINE_EXPORT
 #else
-    #define ENGINE_IMPEXP ENGINE_IMPORT
+    #define ENGINE_API ENGINE_IMPORT
 #endif
 
 #ifdef __cplusplus
@@ -55,10 +55,6 @@ enum
 #else
     #define ENGINE_EXTERN extern
 #endif
-
-#define ENGINE_FUN   ENGINE_IMPEXP
-#define ENGINE_DATA  ENGINE_IMPEXP
-#define ENGINE_CLASS ENGINE_IMPEXP
 
 #if DEVDEBUG
     #define INLINE ENGINE_NOINLINE inline
@@ -90,15 +86,7 @@ enum
 
 #define null nullptr
 
-#ifdef interface
-    #undef interface
-#endif
-
-#ifdef __cplusplus
-    #define interface struct ENGINE_NOVTABLE
-#else
-    #define interface struct
-#endif
+#define ENGINE_INTERFACE struct ENGINE_NOVTABLE
 
 //
 // Types
@@ -250,10 +238,10 @@ enum class DEBUG_COLOR : u16
     SUCCESS = 0xA,
 };
 
-ENGINE_FUN void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
-ENGINE_FUN void __cdecl DebugFC(DEBUG_IN debug_in, DEBUG_COLOR color, const char *format, ...);
-ENGINE_FUN void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
-ENGINE_FUN void __cdecl ShowDebugMessage(
+ENGINE_API void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
+ENGINE_API void __cdecl DebugFC(DEBUG_IN debug_in, DEBUG_COLOR color, const char *format, ...);
+ENGINE_API void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
+ENGINE_API void __cdecl ShowDebugMessage(
     b32         message_is_expr,
     const char *file,
     u64         line,

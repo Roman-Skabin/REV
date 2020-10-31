@@ -112,10 +112,6 @@
 #include <mfidl.h>
 #include <mfapi.h>
 #include <mfreadwrite.h>
-#include <d3d12.h>
-#include <dxgi1_6.h>
-#include <dxgidebug.h>
-#include <d3dcompiler.h>
 
 #undef near
 #undef far

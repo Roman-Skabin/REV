@@ -10,7 +10,7 @@
 #include "math/vec.h"
 #include "tools/logger.h"
 
-class ENGINE_IMPEXP DigitalButton final
+class ENGINE_API DigitalButton final
 {
 public:
     bool Down()     const { return m_Down;     }
@@ -26,7 +26,7 @@ private:
     bool m_Released = false;
 };
 
-class ENGINE_IMPEXP AnalogButton final
+class ENGINE_API AnalogButton final
 {
 public:
     AnalogButton(f32 threshold);
@@ -47,7 +47,7 @@ private:
     bool m_Released;
 };
 
-class ENGINE_IMPEXP Keyboard final
+class ENGINE_API Keyboard final
 {
 public:
     using Key = DigitalButton;
@@ -69,7 +69,7 @@ private:
     Key m_Keys[cast<u16>(KEY::MAX)];
 };
 
-class ENGINE_IMPEXP Mouse final
+class ENGINE_API Mouse final
 {
 public:
     Mouse(const Logger& logger, HWND window_handle);
@@ -102,7 +102,7 @@ private:
     DigitalButton m_X2Button;
 };
 
-class ENGINE_IMPEXP Stick final
+class ENGINE_API Stick final
 {
 public:
     Stick(f32 deadzone);
@@ -119,7 +119,7 @@ private:
     DigitalButton m_Button;
 };
 
-class ENGINE_IMPEXP Gamepad final
+class ENGINE_API Gamepad final
 {
 public:
     Gamepad(const Logger& logger);
@@ -172,7 +172,7 @@ private:
     static XInputGetStateProc *s_XInputGetState;
 };
 
-class ENGINE_IMPEXP Input final
+class ENGINE_API Input final
 {
 public:
     static Input *Create(const Window& window, const Logger& logger);

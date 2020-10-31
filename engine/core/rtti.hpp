@@ -287,6 +287,11 @@ namespace RTTI
 
     template<typename ...T> using sequence_count = base<unsigned long long, sizeof...(T)>;
 
+    template<unsigned long long index, typename T, typename ...U> struct get_sequence_type             { using type = typename get_sequence_type<index - 1, U...>::type; };
+    template<                          typename T, typename ...U> struct get_sequence_type<0, T, U...> { using type = T; };
+
+    template<unsigned long long index, typename ...T> using get_sequence_type_t = typename get_sequence_type<index, T...>::type;
+
     template<typename T> struct add_ref      { using type = T&;  };
     template<typename T> struct add_ref<T&>  { using type = T&&; };
     template<typename T> struct add_ref<T&&> { using type = T&&; };

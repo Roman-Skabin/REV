@@ -9,7 +9,7 @@
 struct BlockHeader;
 
 // @TODO(Roman): Allocator gotta has a name?
-class ENGINE_IMPEXP Allocator final
+class ENGINE_API Allocator final
 {
 public:
     Allocator(

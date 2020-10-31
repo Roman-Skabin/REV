@@ -7,14 +7,14 @@
 #include "core/core.h"
 #include "tools/static_string.hpp"
 
-interface ENGINE_IMPEXP IGPUResource
+ENGINE_INTERFACE ENGINE_API IGPUResource
 {
     virtual void SetName(const StaticString<64>& name) = 0;
     virtual void SetData(const void *data) = 0;
     virtual void SetDataImmediate(const void *data) = 0;
 };
 
-interface ENGINE_IMPEXP IGPUMemoryManager
+ENGINE_INTERFACE ENGINE_API IGPUMemoryManager
 {
     virtual void Destroy() = 0;
 

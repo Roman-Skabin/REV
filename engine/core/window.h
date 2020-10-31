@@ -10,7 +10,7 @@
 #include "tools/logger.h"
 #include "tools/static_string.hpp"
 
-class ENGINE_IMPEXP Window final
+class ENGINE_API Window final
 {
 public:
     enum class FLAGS

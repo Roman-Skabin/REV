@@ -5,12 +5,9 @@
 #pragma once
 
 #include "renderer/gpu_memory_manager.h"
-
 #include "core/memory.h"
 #include "core/allocator.h"
-
 #include "tools/list.hpp"
-
 #include "platform/d3d12_renderer.h"
 
 // @TODO(Roman): Aliased (overlapped) resources?
@@ -68,7 +65,7 @@ namespace D3D12
 {
     class GPUDescHeap;
 
-    class ENGINE_IMPEXP GPUResource final : public IGPUResource
+    class ENGINE_API GPUResource final : public IGPUResource
     {
     public:
         enum class KIND
@@ -144,7 +141,7 @@ namespace D3D12
         friend class GPUMemoryManager;
     };
 
-    class ENGINE_IMPEXP GPUDescHeap final
+    class ENGINE_API GPUDescHeap final
     {
     public:
         enum class ALLOCATION_STATE
@@ -183,7 +180,7 @@ namespace D3D12
         friend class GPUMemoryManager;
     };
 
-    class ENGINE_IMPEXP GPUResourceMemory final
+    class ENGINE_API GPUResourceMemory final
     {
     public:
         using GPUResourceList = List<GPUResource, true>;
@@ -224,7 +221,7 @@ namespace D3D12
         bool             m_AllowOnlyBuffers;
     };
 
-    class ENGINE_IMPEXP GPUDescHeapMemory final
+    class ENGINE_API GPUDescHeapMemory final
     {
     public:
         using GPUDescHeapList = List<GPUDescHeap>;
@@ -249,7 +246,7 @@ namespace D3D12
         GPUDescHeap     *m_FreeList;
     };
 
-    class ENGINE_IMPEXP GPUMemoryManager final : public IGPUMemoryManager
+    class ENGINE_API GPUMemoryManager final : public IGPUMemoryManager
     {
     public:
         GPUMemoryManager(Allocator *allocator, const Logger& logger, u64 gpu_memory_capacity);

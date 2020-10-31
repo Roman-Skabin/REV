@@ -6,7 +6,7 @@
 
 #include "core/core.h"
 
-class ENGINE_IMPEXP Logger final
+class ENGINE_API Logger final
 {
 public:
     enum class TARGET

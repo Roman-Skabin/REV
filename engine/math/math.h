@@ -100,4 +100,4 @@ INLINE T __vectorcall clamp(T val, T min, T max)
 }
 
 // value <= 20
-ENGINE_FUN u64 __vectorcall fact(u8 value);
+ENGINE_API u64 __vectorcall fact(u8 value);

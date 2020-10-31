@@ -6,7 +6,7 @@
 
 #include "core/core.h"
 
-class ENGINE_IMPEXP Event final
+class ENGINE_API Event final
 {
 public:
     enum class FLAGS

@@ -9,7 +9,7 @@
 
 // @Issue(Roman): Several simultaneous read operations under the same file?
 
-class ENGINE_IMPEXP AsyncFile final
+class ENGINE_API AsyncFile final
 {
 public:
     enum class FLAGS

@@ -9,9 +9,11 @@
 #include "tools/list.hpp"
 #include "platform/d3d12_gpu_memory_manager.h"
 
+#include <d3dcompiler.h>
+
 namespace D3D12
 {
-    class ENGINE_IMPEXP Shader final
+    class ENGINE_API Shader final
     {
     public:
         Shader();
@@ -38,7 +40,7 @@ namespace D3D12
         D3D12_SHADER_BYTECODE  m_Bytecode;
     };
 
-    class ENGINE_IMPEXP GraphicsProgram final : public IGraphicsProgram
+    class ENGINE_API GraphicsProgram final : public IGraphicsProgram
     {
     public:
         using ResourcePointersList = List<GPUResource *>;
@@ -102,7 +104,7 @@ namespace D3D12
         Shader                m_GeometryShader;
     };
 
-    class ENGINE_IMPEXP ComputeProgram final : public IComputeProgram
+    class ENGINE_API ComputeProgram final : public IComputeProgram
     {
     public:
         ComputeProgram();
@@ -110,7 +112,7 @@ namespace D3D12
     private:
     };
 
-    class ENGINE_IMPEXP GPUProgramManager final : public IGPUProgramManager
+    class ENGINE_API GPUProgramManager final : public IGPUProgramManager
     {
     public:
         using GraphicsProgramList = List<GraphicsProgram>;

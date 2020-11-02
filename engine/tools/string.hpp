@@ -59,24 +59,6 @@ public:
         CopyMemory(m_Header->data, cstring, length);
     }
 
-    template<u64 count>
-    String(Allocator_t *allocator, const char (&array)[count], u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
-        : m_Header(null)
-    {
-        Check(allocator);
-        if (alignment_in_bytes < ENGINE_DEFAULT_ALIGNMENT) alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT;
-
-        constexpr u64 array_length = count - 1;
-
-        m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + 2 * array_length, alignment_in_bytes));
-        m_Header->allocator          = allocator;
-        m_Header->length             = array_length;
-        m_Header->capacity           = 2 * array_length;
-        m_Header->alignment_in_bytes = alignment_in_bytes;
-
-        CopyMemory(m_Header->data, array, array_length);
-    }
-
     String(Allocator_t *allocator, const ConstString& const_string, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
         : m_Header(null)
     {
@@ -138,6 +120,8 @@ public:
 
     constexpr bool Empty() const { return !m_Header->length; }
 
+    constexpr const Allocator_t *GetAllocator() const { return m_Header->allocator; }
+
     constexpr const char *begin()   const { return m_Header->data;                    }
     constexpr const char *cbegin()  const { return m_Header->data;                    }
     constexpr const char *rbegin()  const { return m_Header->data + m_Header->length; }
@@ -154,8 +138,8 @@ public:
     constexpr char *end()  { return m_Header->data + m_Header->length; }
     constexpr char *rend() { return m_Header->data;                    }
 
-    constexpr const char& First() const { return *m_Header->data;                      }
-    constexpr const char& Last()  const { return m_Header->data[m_Header->length - 1]; }
+    constexpr char First() const { return *m_Header->data;                      }
+    constexpr char Last()  const { return m_Header->data[m_Header->length - 1]; }
 
     constexpr char& First() { return *m_Header->data;                      }
     constexpr char& Last()  { return m_Header->data[m_Header->length - 1]; }
@@ -241,13 +225,6 @@ public:
             && !Compare(cstring);
     }
 
-    template<u64 count>
-    bool Equals(const char (&array)[count]) const
-    {
-        return m_Header->length == count - 1
-            && !Compare(array);
-    }
-
     bool Equals(const ConstString& const_string) const
     {
         return m_Header->length == const_string.Length()
@@ -267,7 +244,7 @@ public:
             && !Compare(other);
     }
 
-    String& Insert(u64 where, char symbol)
+    String& Insert(u64 where, char symbol, u64 count = 1)
     {
         CheckM(where <= m_Header->length, "Expected max index: %I64u, got: %I64u", m_Header->length, where);
 
@@ -283,7 +260,7 @@ public:
                        old_length - where);
         }
 
-        m_Header->data[where] = symbol;
+        memset_char(m_Header->data + where, symbol, count);
         return *this;
     }
 
@@ -305,28 +282,6 @@ public:
         }
 
         CopyMemory(m_Header->data + where, cstring, length);
-        return *this;
-    }
-
-    template<u64 count>
-    String& Insert(u64 where, const char (&array)[count])
-    {
-        CheckM(where <= m_Header->length, "Expected max index: %I64u, got: %I64u", m_Header->length, where);
-
-        u64 old_length = m_Header->length;
-        constexpr u64 length = count - 1;
-
-        m_Header->length += length;
-        Expand();
-
-        if (where < old_length)
-        {
-            MoveMemory(m_Header->data + where + length,
-                       m_Header->data + where,
-                       old_length - where);
-        }
-
-        CopyMemory(m_Header->data + where, array, length);
         return *this;
     }
 
@@ -402,31 +357,60 @@ public:
         {
             MoveMemory(m_Header->data + from,
                        m_Header->data + to,
-                       delta);
+                       m_Header->length - to);
         }
 
         memset_char(m_Header->data + m_Header->length - delta, '\0', delta);
 
         m_Header->length -= delta;
-        Fit();
 
         return *this;
     }
 
-    String& PushFront(char symbol)
+    String& Replace(u64 from, u64 to, char symbol, u64 count = 1)
     {
-        return Insert(0, symbol);
+        Erase(from, to);
+        Insert(from, symbol, count);
+        return *this;
+    }
+
+    String& Replace(u64 from, u64 to, const char *cstring, u64 length = npos)
+    {
+        Erase(from, to);
+        Insert(from, cstring, length);
+        return *this;
+    }
+
+    String& Replace(u64 from, u64 to, const ConstString& const_string)
+    {
+        Erase(from, to);
+        Insert(from, const_string);
+        return *this;
+    }
+
+    template<u64 ss_capacity, u64 ss_aligned_capacity>
+    String& Replace(u64 from, u64 to, const StaticString<ss_capacity, ss_aligned_capacity>& static_string)
+    {
+        Erase(from, to);
+        Insert(from, static_string);
+        return *this;
+    }
+
+    String& Replace(u64 from, u64 to, const String& string)
+    {
+        Erase(from, to);
+        Insert(from, string);
+        return *this;
+    }
+
+    String& PushFront(char symbol, u64 count = 1)
+    {
+        return Insert(0, symbol, count);
     }
 
     String& PushFront(const char *cstring, u64 length = npos)
     {
         return Insert(0, cstring, length);
-    }
-
-    template<u64 count>
-    String& PushFront(const char (&array)[count])
-    {
-        return Insert(0, array);
     }
 
     String& PushFront(const ConstString& const_string)
@@ -445,20 +429,14 @@ public:
         return Insert(0, string);
     }
     
-    String& PushBack(char symbol)
+    String& PushBack(char symbol, u64 count = 1)
     {
-        return Insert(m_Header->length, symbol);
+        return Insert(m_Header->length, symbol, count);
     }
 
     String& PushBack(const char *cstring, u64 length = npos)
     {
         return Insert(m_Header->length, cstring, length);
-    }
-
-    template<u64 count>
-    String& PushBack(const char (&array)[count])
-    {
-        return Insert(m_Header->length, array);
     }
 
     String& PushBack(const ConstString& const_string)
@@ -477,20 +455,14 @@ public:
         return Insert(m_Header->length, string);
     }
 
-    static String Concat(const String& left, char right)
+    static String Concat(const String& left, char right, u64 count = 1)
     {
-        return RTTI::move(String(left).PushBack(right));
+        return RTTI::move(String(left).PushBack(right, count));
     }
 
     static String Concat(const String& left, const char *right, u64 right_length)
     {
         return RTTI::move(String(left).PushBack(right, right_length));
-    }
-
-    template<u64 count>
-    static String Concat(const String& left, const char (&right)[count])
-    {
-        return RTTI::move(String(left).PushBack(right));
     }
 
     static String Concat(const String& left, const ConstString& right)
@@ -514,20 +486,14 @@ public:
         return RTTI::move(right.PushFront(left));
     }
 
-    static String Concat(String&& left, char right)
+    static String Concat(String&& left, char right, u64 count = 1)
     {
-        return RTTI::move(left.PushBack(right));
+        return RTTI::move(left.PushBack(right, count));
     }
 
     static String Concat(String&& left, const char *right, u64 right_length)
     {
         return RTTI::move(left.PushBack(right, right_length));
-    }
-
-    template<u64 count>
-    static String Concat(String&& left, const char (&right)[count])
-    {
-        return RTTI::move(left.PushBack(right));
     }
 
     static String Concat(String&& left, const ConstString& right)
@@ -561,12 +527,6 @@ public:
         return RTTI::move(String(right).PushFront(left, left_length));
     }
 
-    template<u64 count>
-    static String Concat(const char (&left)[count], const String& right)
-    {
-        return RTTI::move(String(right).PushFront(left));
-    }
-
     static String Concat(const ConstString& left, const String& right)
     {
         return RTTI::move(String(right).PushFront(left));
@@ -586,12 +546,6 @@ public:
     static String Concat(const char *left, u64 left_length, String&& right)
     {
         return RTTI::move(right.PushFront(left, left_length));
-    }
-
-    template<u64 count>
-    static String Concat(const char (&left)[count], String&& right)
-    {
-        return RTTI::move(right.PushFront(left));
     }
 
     static String Concat(const ConstString& left, String&& right)
@@ -615,9 +569,11 @@ public:
         return RTTI::move(Erase(from, to));
     }
 
-    u64 Find(char symbol) const
+    u64 Find(char symbol, u64 offset = 0) const
     {
-        for (const char *it = m_Header->data; it; ++it)
+        CheckM(offset < m_Header->length, "Offset out of bounds.");
+
+        for (const char *it = m_Header->data + offset; it; ++it)
         {
             if (*it == symbol)
             {
@@ -627,13 +583,15 @@ public:
         return npos;
     }
 
-    u64 Find(const char *cstring, u64 cstring_length = npos) const
+    u64 Find(const char *cstring, u64 cstring_length = npos, u64 offset = 0) const
     {
+        CheckM(offset < m_Header->length, "Offset out of bounds.");
+
         if (cstring_length == npos) cstring_length = strlen(cstring);
 
         const char *_end = m_Header->data + m_Header->length;
 
-        for (const char *it = m_Header->data; it; ++it)
+        for (const char *it = m_Header->data + offset; it; ++it)
         {
             const char *sub_end = it + cstring_length;
 
@@ -658,43 +616,13 @@ public:
         return npos;
     }
 
-    template<u64 count>
-    u64 Find(const char (&array)[count]) const
+    u64 Find(const ConstString& const_string, u64 offset = 0) const
     {
-        constexpr u64 length = count - 1;
+        CheckM(offset < m_Header->length, "Offset out of bounds.");
 
         const char *_end = m_Header->data + m_Header->length;
 
-        for (const char *it = m_Header->data; it; ++it)
-        {
-            const char *sub_end = it + length;
-
-            if (sub_end > _end)
-            {
-                return npos;
-            }
-
-            const char *sub  = it;
-            const char *parr = array;
-
-            while (*sub++ == *parr++)
-            {
-            }
-
-            if (sub == sub_end)
-            {
-                return it - m_Header->data;
-            }
-        }
-
-        return npos;
-    }
-
-    u64 Find(const ConstString& const_string) const
-    {
-        const char *_end = m_Header->data + m_Header->length;
-
-        for (const char *it = m_Header->data; it; ++it)
+        for (const char *it = m_Header->data + offset; it; ++it)
         {
             const char *sub_end = it + const_string.Length();
 
@@ -720,11 +648,13 @@ public:
     }
 
     template<u64 ss_capacity, u64 ss_aligned_capacity>
-    u64 Find(const StaticString<ss_capacity, ss_aligned_capacity>& static_string) const
+    u64 Find(const StaticString<ss_capacity, ss_aligned_capacity>& static_string, u64 offset = 0) const
     {
+        CheckM(offset < m_Header->length, "Offset out of bounds.");
+
         const char *_end = m_Header->data + m_Header->length;
 
-        for (const char *it = m_Header->data; it; ++it)
+        for (const char *it = m_Header->data + offset; it; ++it)
         {
             const char *sub_end = it + static_string.Length();
 
@@ -749,11 +679,13 @@ public:
         return npos;
     }
 
-    u64 Find(const String& string) const
+    u64 Find(const String& string, u64 offset = 0) const
     {
+        CheckM(offset < m_Header->length, "Offset out of bounds.");
+
         const char *_end = m_Header->data + m_Header->length;
 
-        for (const char *it = m_Header->data; it; ++it)
+        for (const char *it = m_Header->data + offset; it; ++it)
         {
             const char *sub_end = it + string.m_Header->length;
 
@@ -784,12 +716,6 @@ public:
     }
 
     String& operator+=(const char *right)
-    {
-        return PushBack(right);
-    }
-
-    template<u64 count>
-    String& operator+=(const char (&right)[count])
     {
         return PushBack(right);
     }
@@ -849,20 +775,6 @@ public:
         Fit();
 
         CopyMemory(m_Header->data, cstring, cstring_length);
-        return *this;
-    }
-
-    template<u64 count>
-    String& operator=(const char (&array)[count])
-    {
-        constexpr u64 array_length = count - 1;
-
-        memset_char(m_Header->data + array_length, '\0', m_Header->length - array_length);
-
-        m_Header->length = array_length;
-        Fit();
-
-        CopyMemory(m_Header->data, array, array_length);
         return *this;
     }
 
@@ -952,98 +864,83 @@ private:
     Header *m_Header;
 };
 
-template<typename Allocator_t, typename ...T>
-String(Allocator_t, T...) -> String<Allocator_t>;
+template<typename Allocator_t, typename ...T> String(Allocator_t *, T...)        -> String<Allocator_t>;
+template<typename Allocator_t>                String(const String<Allocator_t>&) -> String<Allocator_t>;
+template<typename Allocator_t>                String(String<Allocator_t>&&)      -> String<Allocator_t>;
 
 template<typename LAllocator>                                           INLINE bool operator==(const String<LAllocator>& left, const char                                           *right) { return left.Length() == strlen(right)  && !left.Compare(right); }
-template<typename LAllocator, u64 count>                                INLINE bool operator==(const String<LAllocator>& left, const char                                  (&right)[count]) { return left.Length() == count - 1      && !left.Compare(right); }
 template<typename LAllocator>                                           INLINE bool operator==(const String<LAllocator>& left, const ConstString&                                    right) { return left.Length() == right.Length() && !left.Compare(right); }
 template<typename LAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator==(const String<LAllocator>& left, const StaticString<ss_capacity, ss_aligned_capacity>& right) { return left.Length() == right.Length() && !left.Compare(right); }
 template<typename LAllocator, typename RAllocator>                      INLINE bool operator==(const String<LAllocator>& left, const String<RAllocator>&                             right) { return left.Length() == right.Length() && !left.Compare(right); }
 
 template<typename RAllocator>                                           INLINE bool operator==(const char                                           *left, const String<RAllocator>& right) { return strlen(left)  == right.Length() && !right.Compare(left); }
-template<typename RAllocator, u64 count>                                INLINE bool operator==(const char                                  (&left)[count], const String<RAllocator>& right) { return count - 1     == right.Length() && !right.Compare(left); }
 template<typename RAllocator>                                           INLINE bool operator==(const ConstString&                                    left, const String<RAllocator>& right) { return left.Length() == right.Length() && !right.Compare(left); }
 template<typename RAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator==(const StaticString<ss_capacity, ss_aligned_capacity>& left, const String<RAllocator>& right) { return left.Length() == right.Length() && !right.Compare(left); }
 
 template<typename LAllocator>                                           INLINE bool operator!=(const String<LAllocator>& left, const char                                           *right) { return left.Length() != strlen(right)  || left.Compare(right); }
-template<typename LAllocator, u64 count>                                INLINE bool operator!=(const String<LAllocator>& left, const char                                  (&right)[count]) { return left.Length() != count - 1      || left.Compare(right); }
 template<typename LAllocator>                                           INLINE bool operator!=(const String<LAllocator>& left, const ConstString&                                    right) { return left.Length() != right.Length() || left.Compare(right); }
 template<typename LAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator!=(const String<LAllocator>& left, const StaticString<ss_capacity, ss_aligned_capacity>& right) { return left.Length() != right.Length() || left.Compare(right); }
 template<typename LAllocator, typename RAllocator>                      INLINE bool operator!=(const String<LAllocator>& left, const String<RAllocator>&                             right) { return left.Length() != right.Length() || left.Compare(right); }
 
 template<typename RAllocator>                                           INLINE bool operator!=(const char                                           *left, const String<RAllocator>& right) { return strlen(left)  != right.Length() || right.Compare(left); }
-template<typename RAllocator, u64 count>                                INLINE bool operator!=(const char                                  (&left)[count], const String<RAllocator>& right) { return count - 1     != right.Length() || right.Compare(left); }
 template<typename RAllocator>                                           INLINE bool operator!=(const ConstString&                                    left, const String<RAllocator>& right) { return left.Length() != right.Length() || right.Compare(left); }
 template<typename RAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator!=(const StaticString<ss_capacity, ss_aligned_capacity>& left, const String<RAllocator>& right) { return left.Length() != right.Length() || right.Compare(left); }
 
 template<typename LAllocator>                                           INLINE bool operator<(const String<LAllocator>& left, const char                                           *right) { return left.Length() <= strlen(right)  && left.Compare(right) < 0; }
-template<typename LAllocator, u64 count>                                INLINE bool operator<(const String<LAllocator>& left, const char                                  (&right)[count]) { return left.Length() <= count - 1      && left.Compare(right) < 0; }
 template<typename LAllocator>                                           INLINE bool operator<(const String<LAllocator>& left, const ConstString&                                    right) { return left.Length() <= right.Length() && left.Compare(right) < 0; }
 template<typename LAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator<(const String<LAllocator>& left, const StaticString<ss_capacity, ss_aligned_capacity>& right) { return left.Length() <= right.Length() && left.Compare(right) < 0; }
 template<typename LAllocator, typename RAllocator>                      INLINE bool operator<(const String<LAllocator>& left, const String<RAllocator>&                             right) { return left.Length() <= right.Length() && left.Compare(right) < 0; }
 
 template<typename RAllocator>                                           INLINE bool operator<(const char                                           *left, const String<RAllocator>& right) { return strlen(left)  <= right.Length() && right.Compare(left) > 0; }
-template<typename RAllocator, u64 count>                                INLINE bool operator<(const char                                  (&left)[count], const String<RAllocator>& right) { return count - 1     <= right.Length() && right.Compare(left) > 0; }
 template<typename RAllocator>                                           INLINE bool operator<(const ConstString&                                    left, const String<RAllocator>& right) { return left.Length() <= right.Length() && right.Compare(left) > 0; }
 template<typename RAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator<(const StaticString<ss_capacity, ss_aligned_capacity>& left, const String<RAllocator>& right) { return left.Length() <= right.Length() && right.Compare(left) > 0; }
 
 template<typename LAllocator>                                           INLINE bool operator>(const String<LAllocator>& left, const char                                           *right) { return left.Length() >= strlen(right)  && left.Compare(right) > 0; }
-template<typename LAllocator, u64 count>                                INLINE bool operator>(const String<LAllocator>& left, const char                                  (&right)[count]) { return left.Length() >= count - 1      && left.Compare(right) > 0; }
 template<typename LAllocator>                                           INLINE bool operator>(const String<LAllocator>& left, const ConstString&                                    right) { return left.Length() >= right.Length() && left.Compare(right) > 0; }
 template<typename LAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator>(const String<LAllocator>& left, const StaticString<ss_capacity, ss_aligned_capacity>& right) { return left.Length() >= right.Length() && left.Compare(right) > 0; }
 template<typename LAllocator, typename RAllocator>                      INLINE bool operator>(const String<LAllocator>& left, const String<RAllocator>&                             right) { return left.Length() >= right.Length() && left.Compare(right) > 0; }
 
 template<typename RAllocator>                                           INLINE bool operator>(const char                                           *left, const String<RAllocator>& right) { return strlen(left)  >= right.Length() && right.Compare(left) < 0; }
-template<typename RAllocator, u64 count>                                INLINE bool operator>(const char                                  (&left)[count], const String<RAllocator>& right) { return count - 1     >= right.Length() && right.Compare(left) < 0; }
 template<typename RAllocator>                                           INLINE bool operator>(const ConstString&                                    left, const String<RAllocator>& right) { return left.Length() >= right.Length() && right.Compare(left) < 0; }
 template<typename RAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator>(const StaticString<ss_capacity, ss_aligned_capacity>& left, const String<RAllocator>& right) { return left.Length() >= right.Length() && right.Compare(left) < 0; }
 
 template<typename LAllocator>                                           INLINE bool operator<=(const String<LAllocator>& left, const char                                           *right) { return left.Length() <= strlen(right)  && left.Compare(right) <= 0; }
-template<typename LAllocator, u64 count>                                INLINE bool operator<=(const String<LAllocator>& left, const char                                  (&right)[count]) { return left.Length() <= count - 1      && left.Compare(right) <= 0; }
 template<typename LAllocator>                                           INLINE bool operator<=(const String<LAllocator>& left, const ConstString&                                    right) { return left.Length() <= right.Length() && left.Compare(right) <= 0; }
 template<typename LAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator<=(const String<LAllocator>& left, const StaticString<ss_capacity, ss_aligned_capacity>& right) { return left.Length() <= right.Length() && left.Compare(right) <= 0; }
 template<typename LAllocator, typename RAllocator>                      INLINE bool operator<=(const String<LAllocator>& left, const String<RAllocator>&                             right) { return left.Length() <= right.Length() && left.Compare(right) <= 0; }
 
 template<typename RAllocator>                                           INLINE bool operator<=(const char                                           *left, const String<RAllocator>& right) { return strlen(left)  <= right.Length() && right.Compare(left) >= 0; }
-template<typename RAllocator, u64 count>                                INLINE bool operator<=(const char                                  (&left)[count], const String<RAllocator>& right) { return count - 1     <= right.Length() && right.Compare(left) >= 0; }
 template<typename RAllocator>                                           INLINE bool operator<=(const ConstString&                                    left, const String<RAllocator>& right) { return left.Length() <= right.Length() && right.Compare(left) >= 0; }
 template<typename RAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator<=(const StaticString<ss_capacity, ss_aligned_capacity>& left, const String<RAllocator>& right) { return left.Length() <= right.Length() && right.Compare(left) >= 0; }
 
 template<typename LAllocator>                                           INLINE bool operator>=(const String<LAllocator>& left, const char                                           *right) { return left.Length() >= strlen(right)  && left.Compare(right) >= 0; }
-template<typename LAllocator, u64 count>                                INLINE bool operator>=(const String<LAllocator>& left, const char                                  (&right)[count]) { return left.Length() >= count - 1      && left.Compare(right) >= 0; }
 template<typename LAllocator>                                           INLINE bool operator>=(const String<LAllocator>& left, const ConstString&                                    right) { return left.Length() >= right.Length() && left.Compare(right) >= 0; }
 template<typename LAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator>=(const String<LAllocator>& left, const StaticString<ss_capacity, ss_aligned_capacity>& right) { return left.Length() >= right.Length() && left.Compare(right) >= 0; }
 template<typename LAllocator, typename RAllocator>                      INLINE bool operator>=(const String<LAllocator>& left, const String<RAllocator>&                             right) { return left.Length() >= right.Length() && left.Compare(right) >= 0; }
 
 template<typename RAllocator>                                           INLINE bool operator>=(const char                                           *left, const String<RAllocator>& right) { return strlen(left)  >= right.Length() && right.Compare(left) <= 0; }
-template<typename RAllocator, u64 count>                                INLINE bool operator>=(const char                                  (&left)[count], const String<RAllocator>& right) { return count - 1     >= right.Length() && right.Compare(left) <= 0; }
 template<typename RAllocator>                                           INLINE bool operator>=(const ConstString&                                    left, const String<RAllocator>& right) { return left.Length() >= right.Length() && right.Compare(left) <= 0; }
 template<typename RAllocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE bool operator>=(const StaticString<ss_capacity, ss_aligned_capacity>& left, const String<RAllocator>& right) { return left.Length() >= right.Length() && right.Compare(left) <= 0; }
 
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const String<Allocator>& left,       char                                            right) { return String<Allocator>::Concat(left, right); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const String<Allocator>& left, const char                                           *right) { return String<Allocator>::Concat(left, right); }
-template<typename Allocator, u64 count>                                INLINE String<Allocator> operator+(const String<Allocator>& left, const char                                  (&right)[count]) { return String<Allocator>::Concat(left, right); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const String<Allocator>& left, const ConstString&                                    right) { return String<Allocator>::Concat(left, right); }
 template<typename Allocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE String<Allocator> operator+(const String<Allocator>& left, const StaticString<ss_capacity, ss_aligned_capacity>& right) { return String<Allocator>::Concat(left, right); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const String<Allocator>& left, const String<Allocator>&                              right) { return String<Allocator>::Concat(left, right); }
 
 template<typename Allocator>                                           INLINE String<Allocator> operator+(      char                                            left, const String<Allocator>& right) { return String<Allocator>::Concat(left, right); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const char                                           *left, const String<Allocator>& right) { return String<Allocator>::Concat(left, right); }
-template<typename Allocator, u64 count>                                INLINE String<Allocator> operator+(const char                                  (&left)[count], const String<Allocator>& right) { return String<Allocator>::Concat(left, right); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const ConstString&                                    left, const String<Allocator>& right) { return String<Allocator>::Concat(left, right); }
 template<typename Allocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE String<Allocator> operator+(const StaticString<ss_capacity, ss_aligned_capacity>& left, const String<Allocator>& right) { return String<Allocator>::Concat(left, right); }
 
 template<typename Allocator>                                           INLINE String<Allocator> operator+(String<Allocator>&& left,       char                                            right) { return String<Allocator>::Concat(RTTI::move(left), right); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(String<Allocator>&& left, const char                                           *right) { return String<Allocator>::Concat(RTTI::move(left), right); }
-template<typename Allocator, u64 count>                                INLINE String<Allocator> operator+(String<Allocator>&& left, const char                                  (&right)[count]) { return String<Allocator>::Concat(RTTI::move(left), right); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(String<Allocator>&& left, const ConstString&                                    right) { return String<Allocator>::Concat(RTTI::move(left), right); }
 template<typename Allocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE String<Allocator> operator+(String<Allocator>&& left, const StaticString<ss_capacity, ss_aligned_capacity>& right) { return String<Allocator>::Concat(RTTI::move(left), right); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(String<Allocator>&& left, const String<Allocator>&                              right) { return String<Allocator>::Concat(RTTI::move(left), right); }
 
 template<typename Allocator>                                           INLINE String<Allocator> operator+(      char                                            left, String<Allocator>&& right) { return String<Allocator>::Concat(left, RTTI::move(right)); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const char                                           *left, String<Allocator>&& right) { return String<Allocator>::Concat(left, RTTI::move(right)); }
-template<typename Allocator, u64 count>                                INLINE String<Allocator> operator+(const char                                  (&left)[count], String<Allocator>&& right) { return String<Allocator>::Concat(left, RTTI::move(right)); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const ConstString&                                    left, String<Allocator>&& right) { return String<Allocator>::Concat(left, RTTI::move(right)); }
 template<typename Allocator, u64 ss_capacity, u64 ss_aligned_capacity> INLINE String<Allocator> operator+(const StaticString<ss_capacity, ss_aligned_capacity>& left, String<Allocator>&& right) { return String<Allocator>::Concat(left, RTTI::move(right)); }
 template<typename Allocator>                                           INLINE String<Allocator> operator+(const String<Allocator>&                              left, String<Allocator>&& right) { return String<Allocator>::Concat(left, RTTI::move(right)); }

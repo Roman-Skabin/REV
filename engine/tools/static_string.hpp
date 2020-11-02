@@ -25,23 +25,6 @@ public:
         memset_char(m_Data, '\0', aligned_capacity);
     }
 
-    template<u64 count>
-    StaticString(const char (&array)[count])
-    {
-        if constexpr (count)
-        {
-            m_Length = count - 1;
-            CheckM(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
-            CopyMemory(m_Data, array, m_Length);
-            memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
-        }
-        else
-        {
-            m_Length = 0;
-            memset_char(m_Data, '\0', aligned_capacity);
-        }
-    }
-
     StaticString(const char *string, u64 len = npos)
         : m_Length(len != npos ? len : strlen(string))
     {
@@ -141,27 +124,6 @@ public:
         return found_str ? found_str - m_Data : npos;
     }
 
-    template<u64 count>
-    StaticString& operator=(const char (&array)[count])
-    {
-        if (this != &other)
-        {
-            if constexpr (count)
-            {
-                m_Length = count - 1;
-                CheckM(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
-                CopyMemory(m_Data, array, m_Length);
-                memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
-            }
-            else
-            {
-                m_Length = 0;
-                memset_char(m_Data, '\0', aligned_capacity);
-            }
-        }
-        return *this;
-    }
-
     StaticString& operator=(const char *string)
     {
         m_Length = strlen(string);
@@ -196,16 +158,6 @@ public:
         u64 entire_length = m_Length + other.m_Length;
         CheckM(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
         CopyMemory(m_Data + m_Length, other.m_Data, other.m_Length);
-        m_Length = entire_length;
-        return *this;
-    }
-
-    template<u64 count>
-    StaticString& operator+=(const char (&arr)[count])
-    {
-        u64 entire_length = m_Length + count - 1;
-        CheckM(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
-        CopyMemory(m_Data + m_Length, arr, count - 1);
         m_Length = entire_length;
         return *this;
     }
@@ -263,9 +215,6 @@ private:
     template<u64 cap, u64 acap>
     friend class StaticString;
 };
-
-template<u64 count>
-StaticString(const char (&)[count]) -> StaticString<count>;
 
 template<u64 l_capacity, u64 r_capacity, u64 l_aligned_capacity, u64 r_aligned_capacity>
 bool operator==(const StaticString<l_capacity, l_aligned_capacity>& left,

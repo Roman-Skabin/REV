@@ -12,7 +12,7 @@
 - Tools
     - Several simultaneous read operations under the same file?
     - Hash table
-    - ConstStringBuilder?, StaticStringBuilder, StringBuilder
+    - StaticStringBuilder
 
 - Build
     - [Pre?]build system. Build only edited files
@@ -20,6 +20,9 @@
 
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
+
+- Math
+    - Quaternions
 
 - GPU
     - TODOs in engine/platform/d3d12_gpu_memory_manager.h

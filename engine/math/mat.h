@@ -129,6 +129,9 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(16) m2 final
     m2& __vectorcall operator-=(f32 r) { mm = _mm_sub_ps(mm, _mm_set_ps1(r)); return *this; }
     m2& __vectorcall operator*=(f32 r) { mm = _mm_mul_ps(mm, _mm_set_ps1(r)); return *this; }
     m2& __vectorcall operator/=(f32 r) { mm = _mm_div_ps(mm, _mm_set_ps1(r)); return *this; }
+
+    v2  operator[](u8 index) const { return index == 0 ? r0 : r1; }
+    v2& operator[](u8 index)       { return index == 0 ? r0 : r1; }
 };
 
 INLINE m2 __vectorcall operator+(m2 l, m2 r) { return m2(_mm_add_ps(l.mm, r.mm)); }
@@ -198,6 +201,8 @@ INLINE bool __vectorcall operator!=(m2 l, m2 r)
 //
 // m3
 //
+
+// @TODO(Roman): sizeof(m3) == 9*sizeof(f32);
 
 union ENGINE_INTRIN_TYPE m3 final
 {
@@ -557,9 +562,13 @@ union ENGINE_INTRIN_TYPE m3 final
         __m128 r_c2 = _mm_setr_ps(r.e02, r.e12, r.e22, 0.0f);
 
     #if ENGINE_ISA >= ENGINE_ISA_AVX
-        mm0 = _mm256_setr_ps(_mm_cvtss_f32(_mm_dp_ps(r0.mm, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(r0.mm, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(r0.mm, r_c2, 0x71)), 0.0f,
-                             _mm_cvtss_f32(_mm_dp_ps(r1.mm, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(r1.mm, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(r1.mm, r_c2, 0x71)), 0.0f);
-        mm1 =    _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(r2.mm, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(r2.mm, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(r2.mm, r_c2, 0x71)), 0.0f);
+        __m128 l_r0 = _mm_setr_ps(e00, e01, e02, 0.0f);
+        __m128 l_r1 = _mm_setr_ps(e10, e11, e12, 0.0f);
+        __m128 l_r2 = _mm_setr_ps(e20, e21, e22, 0.0f);
+
+        mm0 = _mm256_setr_ps(_mm_cvtss_f32(_mm_dp_ps(l_r0, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r0, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r0, r_c2, 0x71)), 0.0f,
+                             _mm_cvtss_f32(_mm_dp_ps(l_r1, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r1, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r1, r_c2, 0x71)), 0.0f);
+        mm1 =    _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(l_r2, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r2, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r2, r_c2, 0x71)), 0.0f);
     #else
         mm0 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(mm0, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(mm0, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(mm0, r_c2, 0x71)), 0.0f);
         mm1 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(mm1, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(mm1, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(mm1, r_c2, 0x71)), 0.0f);
@@ -624,6 +633,14 @@ union ENGINE_INTRIN_TYPE m3 final
     #endif
         return *this;
     }
+
+    #if 0 // @TODO(Roman): Switch to after rewriting data
+        v3  operator[](u8 index) const { return cast<v3 *>(this)[index]; }
+        v3& operator[](u8 index)       { return cast<v3 *>(this)[index]; }
+    #else
+        v3  operator[](u8 index) const { return index == 0 ? r0 : index == 1 ? r1 : r2; }
+        v3& operator[](u8 index)       { return index == 0 ? r0 : index == 1 ? r1 : r2; }
+    #endif
 };
 
 INLINE m3 __vectorcall operator+(m3 l, m3 r)
@@ -657,9 +674,13 @@ INLINE m3 __vectorcall operator*(m3 l, m3 r)
     __m128 r_c2 = _mm_setr_ps(r.e02, r.e12, r.e22, 0.0f);
 
 #if ENGINE_ISA >= ENGINE_ISA_AVX
-    return m3(_mm256_setr_ps(_mm_cvtss_f32(_mm_dp_ps(l.r0.mm, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.r0.mm, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.r0.mm, r_c2, 0x71)), 0.0f,
-                             _mm_cvtss_f32(_mm_dp_ps(l.r1.mm, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.r1.mm, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.r1.mm, r_c2, 0x71)), 0.0f),
-                 _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(l.r2.mm, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.r2.mm, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.r2.mm, r_c2, 0x71)), 0.0f));
+    __m128 l_r0 = _mm_setr_ps(l.e00, l.e01, l.e02, 0.0f);
+    __m128 l_r1 = _mm_setr_ps(l.e10, l.e11, l.e12, 0.0f);
+    __m128 l_r2 = _mm_setr_ps(l.e20, l.e21, l.e22, 0.0f);
+
+    return m3(_mm256_setr_ps(_mm_cvtss_f32(_mm_dp_ps(l_r0, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r0, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r0, r_c2, 0x71)), 0.0f,
+                             _mm_cvtss_f32(_mm_dp_ps(l_r1, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r1, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r1, r_c2, 0x71)), 0.0f),
+                 _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(l_r2, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r2, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l_r2, r_c2, 0x71)), 0.0f));
 #else
     return m3(_mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(l.mm0, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.mm0, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.mm0, r_c2, 0x71)), 0.0f),
               _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(l.mm1, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.mm1, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.mm1, r_c2, 0x71)), 0.0f),
@@ -721,9 +742,15 @@ INLINE m3 __vectorcall operator/(m3 l, f32 r)
 
 INLINE v3 __vectorcall operator*(m3 l, v3 r)
 {
-    return v3(_mm_cvtss_f32(_mm_dp_ps(l.r0.mm, r.mm, 0x71)),
-              _mm_cvtss_f32(_mm_dp_ps(l.r1.mm, r.mm, 0x71)),
-              _mm_cvtss_f32(_mm_dp_ps(l.r2.mm, r.mm, 0x71)));
+    __m128 l_r0 = _mm_setr_ps(l.e00, l.e01, l.e02, 0.0f);
+    __m128 l_r1 = _mm_setr_ps(l.e10, l.e11, l.e12, 0.0f);
+    __m128 l_r2 = _mm_setr_ps(l.e20, l.e21, l.e22, 0.0f);
+
+    __m128 r_mm = _mm_setr_ps(r.x, r.y, r.z, 0.0f);
+
+    return v3(_mm_cvtss_f32(_mm_dp_ps(l_r0, r_mm, 0x71)),
+              _mm_cvtss_f32(_mm_dp_ps(l_r1, r_mm, 0x71)),
+              _mm_cvtss_f32(_mm_dp_ps(l_r2, r_mm, 0x71)));
 }
 
 INLINE bool __vectorcall operator==(m3 l, m3 r)
@@ -1562,6 +1589,9 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
     #endif
         return *this;
     }
+
+    v4  operator[](u8 index) const { return cast<v4 *>(this)[index]; }
+    v4& operator[](u8 index)       { return cast<v4 *>(this)[index]; }
 };
 
 INLINE m4 __vectorcall operator+(m4 l, m4 r)
@@ -1675,7 +1705,7 @@ INLINE m4 __vectorcall operator/(m4 l, f32 r)
 #endif
 }
 
-INLINE v4 __vectorcall operator*(m4 l, v3 r)
+INLINE v4 __vectorcall operator*(m4 l, v4 r)
 {
     return v4(_mm_cvtss_f32(_mm_dp_ps(l.xmm0, r.mm, 0x71)),
               _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r.mm, 0x71)),

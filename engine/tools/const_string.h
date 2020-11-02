@@ -16,13 +16,6 @@ public:
     ConstString(const char *cstring, u64 len = npos);
     ConstString(const ConstString& other);
 
-    template<u64 count>
-    ConstString(const char (&arr)[count])
-        : m_Length(count - 1),
-          m_Data(arr)
-    {
-    }
-
     ~ConstString();
 
     constexpr const char *begin()   const { return m_Data;            }
@@ -51,14 +44,6 @@ public:
     ConstString& operator=(nullptr_t);
     ConstString& operator=(const char *cstring);
     ConstString& operator=(const ConstString& other);
-
-    template<u64 count>
-    ConstString& operator=(const char (&arr)[count])
-    {
-        m_Length = count - 1;
-        m_Data   = arr;
-        return *this;
-    }
 
     char operator[](u64 index) const;
 

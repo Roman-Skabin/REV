@@ -45,8 +45,31 @@ DemoComponent::~DemoComponent()
 {
 }
 
+#include "tools/string_builder.hpp"
+
 void DemoComponent::OnAttach()
 {
+    Allocator *allocator = &Application::Get()->GetAllocator();
+
+    char ch = 'c';
+    const char *cstring = "Hello, world!";
+    v4 rotation_vector = v4(0.5f, -0.75f, 0.25, 0.0f).normalize();
+
+    StringBuilder sb(allocator, 1024);
+
+    sb.BuildLn("\nchar: ", ch, ", s8: ", cast<s8>(S8_MAX), ", u8: ", U8_MAX, ", s16: ", S16_MAX, ", u16: ", U16_MAX,
+               ", int: ", INT_MAX, ", s32: ", S32_MAX, ", u32: ", U32_MAX, ", s64: ", S64_MAX, ", u64: ", U64_MAX);
+    sb.BuildLn("f32: ", F32_MAX, " f64: ", F64_MAX);
+    sb.BuildLn("pointer: ", allocator);
+    sb.BuildLn("allocator: ", *allocator);
+    sb.BuildLn("nullptr: ", null);
+    sb.BuildLn("cstring: ", cstring);
+    sb.BuildLn("rotation vector: ", rotation_vector);
+    sb.Precision = 5;
+    sb.ForceSign = true;
+    sb.BuildLn("rotation matrix: ", m4::rotation(rotation_vector, f32_PI_4));
+
+    WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), sb.ToString().Data(), sb.ToString().Length(), null, null);
 }
 
 void DemoComponent::OnDetach()

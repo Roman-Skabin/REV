@@ -64,11 +64,6 @@ public:
 
     constexpr TupleImpl& operator=(const TupleImpl&) { return *this; }
     constexpr TupleImpl& operator=(TupleImpl&&)      { return *this; }
-
-    template<u64 = 0>
-    void operator[](u64) const
-    {
-    }
 };
 
 template<u64 index, typename First, typename ...Rest>

@@ -153,6 +153,7 @@ public:
             TextAlignment = other.TextAlignment;
             Fill          = other.Fill;
             DecorateBase  = other.DecorateBase;
+            ForceSign     = other.ForceSign;
             m_String      = other.m_String;
         }
         return *this;
@@ -168,6 +169,7 @@ public:
             TextAlignment = other.TextAlignment;
             Fill          = other.Fill;
             DecorateBase  = other.DecorateBase;
+            ForceSign     = other.ForceSign;
             m_String      = RTTI::move(other.m_String);
         }
         return *this;

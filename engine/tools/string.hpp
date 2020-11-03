@@ -43,12 +43,27 @@ public:
         memset_char(m_Header->data, symbol, count);
     }
 
-    String(Allocator_t *allocator, const char *cstring, u64 length = npos, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
+    String(Allocator_t *allocator, const char *cstring, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
         : m_Header(null)
     {
         Check(allocator);
         if (alignment_in_bytes < ENGINE_DEFAULT_ALIGNMENT) alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT;
-        if (length == npos) length = strlen(cstring);
+        u64 length = strlen(cstring);
+
+        m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + 2 * length, alignment_in_bytes));
+        m_Header->allocator          = allocator;
+        m_Header->length             = length;
+        m_Header->capacity           = 2 * length;
+        m_Header->alignment_in_bytes = alignment_in_bytes;
+
+        CopyMemory(m_Header->data, cstring, length);
+    }
+
+    String(Allocator_t *allocator, const char *cstring, u64 length, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
+        : m_Header(null)
+    {
+        Check(allocator);
+        if (alignment_in_bytes < ENGINE_DEFAULT_ALIGNMENT) alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT;
 
         m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + 2 * length, alignment_in_bytes));
         m_Header->allocator          = allocator;
@@ -118,6 +133,9 @@ public:
     constexpr const char *Data() const { return m_Header->data; }
     constexpr       char *Data()       { return m_Header->data; }
 
+    constexpr const String& ToString() const { return *this; }
+    constexpr       String& ToString()       { return *this; }
+
     constexpr bool Empty() const { return !m_Header->length; }
 
     constexpr const Allocator_t *GetAllocator() const { return m_Header->allocator; }
@@ -158,6 +176,19 @@ public:
                                                                              sizeof(Header) + capacity,
                                                                              m_Header->alignment_in_bytes));
             m_Header->capacity = capacity;
+        }
+    }
+
+    void Reverse()
+    {
+        char *first = m_Header->data;
+        char *last  = m_Header->data + m_Header->length - 1;
+
+        while (first < last)
+        {
+            char temp = *first;
+            *first++  = *last;
+            *last--   = temp;
         }
     }
 
@@ -217,18 +248,19 @@ public:
         return 0;
     }
 
-    bool Equals(const char *cstring, u64 length = npos) const
+    bool Equals(const char *cstring) const
     {
-        if (length == npos) length = strlen(cstring);
+        return m_Header->length == strlen(cstring) && !Compare(cstring);
+    }
 
-        return m_Header->length == length
-            && !Compare(cstring);
+    bool Equals(const char *cstring, u64 length) const
+    {
+        return m_Header->length == length && !Compare(cstring);
     }
 
     bool Equals(const ConstString& const_string) const
     {
-        return m_Header->length == const_string.Length()
-            && !Compare(const_string);
+        return m_Header->length == const_string.Length() && !Compare(const_string);
     }
 
     template<u64 ss_capacity, u64 ss_aligned_capacity>
@@ -250,12 +282,12 @@ public:
 
         u64 old_length = m_Header->length;
 
-        ++m_Header->length;
+        m_Header->length += count;
         Expand();
 
         if (where < old_length)
         {
-            MoveMemory(m_Header->data + where + 1,
+            MoveMemory(m_Header->data + where + count,
                        m_Header->data + where,
                        old_length - where);
         }
@@ -264,12 +296,32 @@ public:
         return *this;
     }
 
-    String& Insert(u64 where, const char *cstring, u64 length = npos)
+    String& Insert(u64 where, const char *cstring)
     {
         CheckM(where <= m_Header->length, "Expected max index: %I64u, got: %I64u", m_Header->length, where);
 
         u64 old_length = m_Header->length;
-        if (length == npos) length = strlen(cstring);
+        u64 length     = strlen(cstring);
+
+        m_Header->length += length;
+        Expand();
+
+        if (where < old_length)
+        {
+            MoveMemory(m_Header->data + where + length,
+                       m_Header->data + where,
+                       old_length - where);
+        }
+
+        CopyMemory(m_Header->data + where, cstring, length);
+        return *this;
+    }
+
+    String& Insert(u64 where, const char *cstring, u64 length)
+    {
+        CheckM(where <= m_Header->length, "Expected max index: %I64u, got: %I64u", m_Header->length, where);
+
+        u64 old_length = m_Header->length;
 
         m_Header->length += length;
         Expand();
@@ -346,9 +398,9 @@ public:
         return *this;
     }
 
-    String& Erase(u64 from, u64 to = npos)
+    String& Erase(u64 from)
     {
-        if (to == npos) to = from + 1;
+        u64 to = from + 1;
         CheckM(from < m_Header->length && from < to && to <= m_Header->length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Header->length);
 
         u64 delta = to - from;
@@ -361,9 +413,25 @@ public:
         }
 
         memset_char(m_Header->data + m_Header->length - delta, '\0', delta);
-
         m_Header->length -= delta;
+        return *this;
+    }
 
+    String& Erase(u64 from, u64 to)
+    {
+        CheckM(from < m_Header->length && from < to && to <= m_Header->length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Header->length);
+
+        u64 delta = to - from;
+
+        if (from < m_Header->length - 1)
+        {
+            MoveMemory(m_Header->data + from,
+                       m_Header->data + to,
+                       m_Header->length - to);
+        }
+
+        memset_char(m_Header->data + m_Header->length - delta, '\0', delta);
+        m_Header->length -= delta;
         return *this;
     }
 
@@ -374,7 +442,14 @@ public:
         return *this;
     }
 
-    String& Replace(u64 from, u64 to, const char *cstring, u64 length = npos)
+    String& Replace(u64 from, u64 to, const char *cstring)
+    {
+        Erase(from, to);
+        Insert(from, cstring);
+        return *this;
+    }
+
+    String& Replace(u64 from, u64 to, const char *cstring, u64 length)
     {
         Erase(from, to);
         Insert(from, cstring, length);
@@ -408,7 +483,12 @@ public:
         return Insert(0, symbol, count);
     }
 
-    String& PushFront(const char *cstring, u64 length = npos)
+    String& PushFront(const char *cstring)
+    {
+        return Insert(0, cstring);
+    }
+
+    String& PushFront(const char *cstring, u64 length)
     {
         return Insert(0, cstring, length);
     }
@@ -434,7 +514,12 @@ public:
         return Insert(m_Header->length, symbol, count);
     }
 
-    String& PushBack(const char *cstring, u64 length = npos)
+    String& PushBack(const char *cstring)
+    {
+        return Insert(m_Header->length, cstring);
+    }
+
+    String& PushBack(const char *cstring, u64 length)
     {
         return Insert(m_Header->length, cstring, length);
     }
@@ -559,12 +644,22 @@ public:
         return RTTI::move(right.PushFront(left));
     }
 
-    String SubString(u64 from, u64 to = npos) const &
+    String SubString(u64 from) const &
+    {
+        return RTTI::move(String(*this).Erase(from));
+    }
+
+    String SubString(u64 from, u64 to) const &
     {
         return RTTI::move(String(*this).Erase(from, to));
     }
 
-    String SubString(u64 from, u64 to = npos) &&
+    String SubString(u64 from) &&
+    {
+        return RTTI::move(Erase(from));
+    }
+
+    String SubString(u64 from, u64 to) &&
     {
         return RTTI::move(Erase(from, to));
     }
@@ -583,11 +678,42 @@ public:
         return npos;
     }
 
-    u64 Find(const char *cstring, u64 cstring_length = npos, u64 offset = 0) const
+    u64 Find(const char *cstring, u64 offset = 0) const
     {
         CheckM(offset < m_Header->length, "Offset out of bounds.");
 
-        if (cstring_length == npos) cstring_length = strlen(cstring);
+        u64 cstring_length = strlen(cstring);
+
+        const char *_end = m_Header->data + m_Header->length;
+
+        for (const char *it = m_Header->data + offset; it; ++it)
+        {
+            const char *sub_end = it + cstring_length;
+
+            if (sub_end > _end)
+            {
+                return npos;
+            }
+
+            const char *sub  = it;
+            const char *cstr = cstring;
+
+            while (*sub++ == *cstr++)
+            {
+            }
+
+            if (sub == sub_end)
+            {
+                return it - m_Header->data;
+            }
+        }
+
+        return npos;
+    }
+
+    u64 Find(const char *cstring, u64 cstring_length, u64 offset = 0) const
+    {
+        CheckM(offset < m_Header->length, "Offset out of bounds.");
 
         const char *_end = m_Header->data + m_Header->length;
 
@@ -710,48 +836,14 @@ public:
         return npos;
     }
 
-    String& operator+=(char right)
+    String& operator=(nullptr_t)
     {
-        return PushBack(right);
-    }
+        memset_char(m_Header->data, '\0', m_Header->length);
 
-    String& operator+=(const char *right)
-    {
-        return PushBack(right);
-    }
+        m_Header->length = 0;
+        Fit();
 
-    String& operator+=(const ConstString& right)
-    {
-        return PushBack(right);
-    }
-
-    template<u64 ss_capacity, u64 ss_aligned_capacity>
-    String& operator+=(const StaticString<ss_capacity, ss_aligned_capacity>& right)
-    {
-        return PushBack(right);
-    }
-
-    String& operator+=(const String& right)
-    {
-        return PushBack(right);
-    }
-
-    template<typename T>
-    String& operator+=(const T& right)
-    {
-        return PushBack(right.ToString());
-    }
-
-    char operator[](u64 index) const
-    {
-        CheckM(index < m_Header->length, "Expected max index: %I64u, got: %I64u", m_Header->length - 1, index);
-        return m_Header->data[index];
-    }
-
-    char& operator[](u64 index)
-    {
-        CheckM(index < m_Header->length, "Expected max index: %I64u, got: %I64u", m_Header->length - 1, index);
-        return m_Header->data[index];
+        return *this;
     }
 
     String& operator=(char symbol)
@@ -825,6 +917,50 @@ public:
             other.m_Header = null;
         }
         return *this;
+    }
+
+    String& operator+=(char right)
+    {
+        return PushBack(right);
+    }
+
+    String& operator+=(const char *right)
+    {
+        return PushBack(right);
+    }
+
+    String& operator+=(const ConstString& right)
+    {
+        return PushBack(right);
+    }
+
+    template<u64 ss_capacity, u64 ss_aligned_capacity>
+    String& operator+=(const StaticString<ss_capacity, ss_aligned_capacity>& right)
+    {
+        return PushBack(right);
+    }
+
+    String& operator+=(const String& right)
+    {
+        return PushBack(right);
+    }
+
+    template<typename T>
+    String& operator+=(const T& right)
+    {
+        return PushBack(right.ToString());
+    }
+
+    char operator[](u64 index) const
+    {
+        CheckM(index < m_Header->length, "Expected max index: %I64u, got: %I64u", m_Header->length - 1, index);
+        return m_Header->data[index];
+    }
+
+    char& operator[](u64 index)
+    {
+        CheckM(index < m_Header->length, "Expected max index: %I64u, got: %I64u", m_Header->length - 1, index);
+        return m_Header->data[index];
     }
 
 private:

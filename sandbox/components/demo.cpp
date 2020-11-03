@@ -2,6 +2,7 @@
 #include "application.h"
 #include "math/vec.h"
 #include "math/color.h"
+#include "tools/static_string_builder.hpp"
 
 #pragma pack(push, 1)
 struct Vertex
@@ -69,7 +70,7 @@ void DemoComponent::OnAttach()
     sb.ForceSign = true;
     sb.BuildLn("rotation matrix: ", m4::rotation(rotation_vector, f32_PI_4));
 
-    WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), sb.ToString().Data(), sb.ToString().Length(), null, null);
+    WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), sb.ToString().Data(), cast<u32>(sb.ToString().Length()), null, null);
 }
 
 void DemoComponent::OnDetach()
@@ -87,10 +88,11 @@ void DemoComponent::OnUpdate()
     {
         f32 FPS = timer.TicksPerSecond() / cast<f32>(timer.DeltaTicks());
 
-        char buffer[64];
-        sprintf(buffer, "%s - FPS: %f - MSPF: %f", m_OriginalWindowTitle.Data(), FPS, 1000.0f / FPS);
+        StaticStringBuilder<128> ssb;
+        ssb.Precision = 2;
+        ssb.Build(m_OriginalWindowTitle, " - FPS: ", FPS, " - MSPF: ", 1000.0f / FPS);
 
-        window.SetTitle(buffer);
+        window.SetTitle(ssb.ToStaticString());
 
         last_print_time = timer.Seconds();
     }

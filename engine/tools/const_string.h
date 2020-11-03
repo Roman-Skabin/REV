@@ -32,6 +32,9 @@ public:
     constexpr u64         Length() const { return  m_Length; }
     constexpr bool        Empty()  const { return !m_Length; }
 
+    constexpr const ConstString& ToConstString() const { return *this; }
+    constexpr       ConstString& ToConstString()       { return *this; }
+
     u64 Find(const ConstString& what) const;
     u64 Find(const char *what) const;
     u64 Find(char what) const;

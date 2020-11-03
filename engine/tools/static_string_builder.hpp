@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "tools/string.hpp"
+#include "tools/static_string.hpp"
 #include "math/mat.h"
 
 #ifndef SB_RTTI_AND_TYPES_DEFINED
@@ -45,11 +45,11 @@ enum class BASE
 };
 #endif
 
-template<typename Allocator_t = Allocator>
-class StringBuilder final
+template<u64 capacity, u64 aligned_capacity = AlignUp(capacity, CACHE_LINE_SIZE)>
+class StaticStringBuilder final
 {
 public:
-    StringBuilder(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
+    StaticStringBuilder()
         : Base(BASE::DEC),
           Width(0),
           Precision(0),
@@ -57,11 +57,11 @@ public:
           Fill(' '),
           DecorateBase(true),
           ForceSign(false),
-          m_String(allocator, initial_capacity, alignment_in_bytes)
+          m_StaticString()
     {
     }
 
-    StringBuilder(const String<Allocator_t>& string)
+    StaticStringBuilder(const StaticString<capacity, aligned_capacity>& static_string)
         : Base(BASE::DEC),
           Width(0),
           Precision(0),
@@ -69,23 +69,11 @@ public:
           Fill(' '),
           DecorateBase(true),
           ForceSign(false),
-          m_String(string)
+          m_StaticString(static_string)
     {
     }
 
-    StringBuilder(String<Allocator_t>&& string)
-        : Base(BASE::DEC),
-          Width(0),
-          Precision(0),
-          TextAlignment(SBTA::RIGHT),
-          Fill(' '),
-          DecorateBase(true),
-          ForceSign(false),
-          m_String(RTTI::move(string))
-    {
-    }
-
-    StringBuilder(const StringBuilder& other)
+    StaticStringBuilder(const StaticStringBuilder& other)
         : Base(other.Base),
           Width(other.Width),
           Precision(other.Precision),
@@ -93,28 +81,16 @@ public:
           Fill(other.Fill),
           DecorateBase(other.DecorateBase),
           ForceSign(other.ForceSign),
-          m_String(other.m_String)
+          m_StaticString(other.m_StaticString)
     {
     }
 
-    StringBuilder(StringBuilder&& other)
-        : Base(other.Base),
-          Width(other.Width),
-          Precision(other.Precision),
-          TextAlignment(other.TextAlignment),
-          Fill(other.Fill),
-          DecorateBase(other.DecorateBase),
-          ForceSign(other.ForceSign),
-          m_String(RTTI::move(other.m_String))
+    ~StaticStringBuilder()
     {
     }
 
-    ~StringBuilder()
-    {
-    }
-
-    constexpr const String<Allocator_t>& ToString() const { return m_String; }
-    constexpr       String<Allocator_t>& ToString()       { return m_String; }
+    constexpr const StaticString<capacity, aligned_capacity>& ToStaticString() const { return m_StaticString; }
+    constexpr       StaticString<capacity, aligned_capacity>& ToStaticString()       { return m_StaticString; }
 
     template<typename ...Args>
     void Build(const Args&... args)
@@ -142,39 +118,26 @@ public:
         ForceSign     = false;
     }
 
-    StringBuilder& operator=(const StringBuilder& other)
+    StaticStringBuilder& operator=(const StaticStringBuilder& other)
     {
         if (this != &other)
         {
-            Base          = other.Base;
-            Width         = other.Width;
-            Precision     = other.Precision;
-            TextAlignment = other.TextAlignment;
-            Fill          = other.Fill;
-            DecorateBase  = other.DecorateBase;
-            ForceSign     = other.ForceSign;
-            m_String      = other.m_String;
-        }
-        return *this;
-    }
-
-    StringBuilder& operator=(StringBuilder&& other)
-    {
-        if (this != &other)
-        {
-            Base          = other.Base;
-            Width         = other.Width;
-            Precision     = other.Precision;
-            TextAlignment = other.TextAlignment;
-            Fill          = other.Fill;
-            DecorateBase  = other.DecorateBase;
-            ForceSign     = other.ForceSign;
-            m_String      = RTTI::move(other.m_String);
+            Base           = other.Base;
+            Width          = other.Width;
+            Precision      = other.Precision;
+            TextAlignment  = other.TextAlignment;
+            Fill           = other.Fill;
+            DecorateBase   = other.DecorateBase;
+            ForceSign      = other.ForceSign;
+            m_StaticString = other.m_StaticString;
         }
         return *this;
     }
 
 private:
+    StaticStringBuilder(StaticStringBuilder&&)            = delete;
+    StaticStringBuilder& operator=(StaticStringBuilder&&) = delete;
+
     template<typename T>
     void BuildOne(const T& arg)
     {
@@ -182,27 +145,20 @@ private:
         {
             AppendTrivial(arg);
         }
-        else if constexpr (RTTI::has_to_string_v<T>)
-        {
-            m_String.PushBack(arg.ToString());
-        }
         else if constexpr (RTTI::has_to_static_string_v<T>)
         {
-            m_String.PushBack(arg.ToStaticString());
+            m_StaticString.PushBack(arg.ToStaticString());
         }
         else if constexpr (RTTI::has_to_const_string_v<T>)
         {
-            m_String.PushBack(arg.ToConstString());
+            m_StaticString.PushBack(arg.ToConstString());
         }
         else
         {
-            StaticString<128> message;
-            message.PushBack('<');
-            message.PushBack(typeid(T).name());
-            message.PushBack(" has no method ToString or ToStaticString or ToConstString>",
-                             CSTRLEN(" has no method ToString or ToStaticString or ToConstString>"));
-
-            m_String.PushBack(message);
+            m_StaticString.PushBack('<');
+            m_StaticString.PushBack(typeid(T).name());
+            m_StaticString.PushBack(" has no method ToStaticString or ToConstString>",
+                                    CSTRLEN(" has no method ToStaticString or ToConstString>"));
         }
     }
 
@@ -695,64 +651,64 @@ private:
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_trivially_buildable_v<T>>>
     void AppendTrivial(T val)
     {
-        u64 start_length = m_String.Length();
+        u64 start_length = m_StaticString.Length();
 
         char buffer[1024] = {'\0'};
 
         if constexpr (RTTI::is_bool_v<T>)
         {
-            if (val) m_String.PushBack("true", 4);
-            else     m_String.PushBack("false", 5);
+            if (val) m_StaticString.PushBack("true", 4);
+            else     m_StaticString.PushBack("false", 5);
         }
         else if constexpr (RTTI::is_char_v<T>)
         {
-            m_String.PushBack(val);
+            m_StaticString.PushBack(val);
         }
         else if constexpr (RTTI::is_cstring_v<T>)
         {
-            m_String.PushBack(val);
+            m_StaticString.PushBack(val);
         }
         else if constexpr (RTTI::is_pointer_v<T>)
         {
             ParsePointer(buffer, cast<u64>(val));
-            m_String.PushBack(buffer);
+            m_StaticString.PushBack(buffer);
         }
         else if constexpr (RTTI::is_nullptr_t_v<T>)
         {
-            m_String.PushBack("null");
+            m_StaticString.PushBack("null");
         }
         else if constexpr (RTTI::is_arithmetic_v<T> && !RTTI::is_floating_point_v<T>)
         {
             ParseInt(buffer, val);
-            m_String.PushBack(buffer);
+            m_StaticString.PushBack(buffer);
         }
         else if constexpr (RTTI::is_floating_point_v<T>)
         {
             ParseFloatingPoint(buffer, val);
-            m_String.PushBack(buffer);
+            m_StaticString.PushBack(buffer);
         }
         else if constexpr (RTTI::is_vec_v<T>)
         {
             ParseVec(buffer, val);
-            m_String.PushBack(buffer);
+            m_StaticString.PushBack(buffer);
         }
         else if constexpr (RTTI::is_mat_v<T>)
         {
             ParseMat(buffer, val);
-            m_String.PushBack(buffer);
+            m_StaticString.PushBack(buffer);
         }
 
-        u64 appended_length = m_String.Length() - start_length;
+        u64 appended_length = m_StaticString.Length() - start_length;
         
         if (appended_length < Width)
         {
             if (TextAlignment == SBTA::RIGHT)
             {
-                m_String.Insert(start_length, Fill, Width - appended_length);
+                m_StaticString.Insert(start_length, Fill, Width - appended_length);
             }
             else
             {
-                m_String.Insert(start_length + appended_length, Fill, Width - appended_length);
+                m_StaticString.Insert(start_length + appended_length, Fill, Width - appended_length);
             }
         }
     }
@@ -767,13 +723,8 @@ public:
     bool ForceSign;
 
 private:
-    String<Allocator_t> m_String;
+    StaticString<capacity, aligned_capacity> m_StaticString;
 };
 
-template<typename Allocator_t> StringBuilder(Allocator_t *, u64, u64) -> StringBuilder<Allocator_t>;
-
-template<typename Allocator_t> StringBuilder(const String<Allocator_t>&) -> StringBuilder<Allocator_t>;
-template<typename Allocator_t> StringBuilder(String<Allocator_t>&&)      -> StringBuilder<Allocator_t>;
-
-template<typename Allocator_t> StringBuilder(const StringBuilder<Allocator_t>&) -> StringBuilder<Allocator_t>;
-template<typename Allocator_t> StringBuilder(StringBuilder<Allocator_t>&&)      -> StringBuilder<Allocator_t>;
+template<u64 capacity, u64 aligned_capacity> StaticStringBuilder(const StaticString<capacity, aligned_capacity>&)        -> StaticStringBuilder<capacity, aligned_capacity>;
+template<u64 capacity, u64 aligned_capacity> StaticStringBuilder(const StaticStringBuilder<capacity, aligned_capacity>&) -> StaticStringBuilder<capacity, aligned_capacity>;

@@ -118,6 +118,11 @@ public:
         ForceSign     = false;
     }
 
+    void Clear()
+    {
+        m_StaticString.Clear();
+    }
+
     StaticStringBuilder& operator=(const StaticStringBuilder& other)
     {
         if (this != &other)

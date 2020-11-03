@@ -197,6 +197,7 @@ public:
 public:
     List(Allocator_t *allocator)
         : m_Allocator(allocator),
+          m_Count(0),
           m_First(null),
           m_Last(null)
     {
@@ -206,6 +207,7 @@ public:
     template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>>
     List(const List& other)
         : m_Allocator(other.m_Allocator),
+          m_Count(0),
           m_First(null),
           m_Last(null)
     {
@@ -217,10 +219,12 @@ public:
 
     List(List&& other) noexcept
         : m_Allocator(other.m_Allocator),
+          m_Count(other.m_Count),
           m_First(other.m_First),
           m_Last(other.m_Last)
     {
         other.m_Allocator = null;
+        other.m_Count     = null;
         other.m_First     = null;
         other.m_Last      = null;
     }

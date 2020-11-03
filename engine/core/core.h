@@ -244,7 +244,7 @@ ENGINE_API void __cdecl ShowDebugMessage(
     ...
 );
 
-#if DEVDEBUG && !defined(_ENGINE_NO_CHECKS)
+#if (DEVDEBUG || defined(_ENGINE_CHECKS_BREAK)) && !defined(_ENGINE_NO_CHECKS)
 
     #define CheckM(expr, message, ...) if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); __debugbreak(); ExitProcess(1); }
     #define Check(expr)                if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); __debugbreak(); ExitProcess(1); }

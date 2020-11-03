@@ -50,7 +50,7 @@ if !COMPILE_CENGINE! == 1 (
     set LINKER= -link
     set LINKING=
     set INPUT_FILES=
-    set PREPROCESSOR= -Iengine -D_ENGINE_DEV
+    set PREPROCESSOR= -Iengine -D_ENGINE_DEV -D_ENGINE_CHECKS_BREAK
     set MISCELLANEOUS= -TP
     set OUTPUT_FILES= -Fo:bin\obj\engine\ -Fe:bin\engine.dll -Fp:bin\obj\engine\engine.pch
 
@@ -70,6 +70,8 @@ if !COMPILE_CENGINE! == 1 (
         set CODE_GENERATION= !CODE_GENERATION! -GL
         set LINKING= !LINKING! -MT -LD
         set LINKER= !LINKER! -incremental:no -opt:ref
+        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\engine.pdb
+        set LANGUAGE= !LANGUAGE! -Zi
     ) else if /I "!BUILD_TYPE!" == "nsight" (
         set OPTIMIZATION= !OPTIMIZATION! -Od
         set LINKING= !LINKING! -MT -LD
@@ -105,7 +107,7 @@ if !COMPILE_SANDBOX! == 1 (
     set LINKER= -link
     set LINKING=
     set INPUT_FILES=
-    set PREPROCESSOR= -Iengine -Isandbox
+    set PREPROCESSOR= -Iengine -Isandbox -D_ENGINE_CHECKS_BREAK
     set MISCELLANEOUS= -TP
     set OUTPUT_FILES= -Fo:bin\obj\sandbox\ -Fe:bin\sandbox.exe
 
@@ -118,6 +120,8 @@ if !COMPILE_SANDBOX! == 1 (
         set CODE_GENERATION= !CODE_GENERATION! -GL
         set LINKING= !LINKING! -MT
         set LINKER= !LINKER! -incremental:no -opt:ref
+        set OUTPUT_FILES= !OUTPUT_FILES! -Fd:bin\engine.pdb
+        set LANGUAGE= !LANGUAGE! -Zi
     ) else if /I "!BUILD_TYPE!" == "nsight" (
         set OPTIMIZATION= !OPTIMIZATION! -Od
         set LINKING= !LINKING! -MT

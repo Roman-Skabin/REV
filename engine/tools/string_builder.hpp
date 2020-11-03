@@ -142,6 +142,11 @@ public:
         ForceSign     = false;
     }
 
+    void Clear()
+    {
+        m_String.Clear();
+    }
+
     StringBuilder& operator=(const StringBuilder& other)
     {
         if (this != &other)

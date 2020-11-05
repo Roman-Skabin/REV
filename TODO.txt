@@ -2,12 +2,11 @@
     - Move to C++ because of bad D3D12 compatibility with C.
 
 - Core
-    - More significant logs. Have to be almost everywhere, BUT DO NOT TRASH THE CODE!
     - Complete core\platform.h
     - Move all STD includes from platform.h to pch.h?
     - Get rid of the interface stuff and swith to function pointers?
-    - ACS (Application Component System)
-    - Rethink memory management?
+    - Rethink memory management
+    - Scene serialization
 
 - Tools
     - Several simultaneous read operations under the same file?
@@ -48,17 +47,16 @@
     - Weighted Blended OIT
     - Support triangle strips (define topology in shaders?)
     - Support stream output (define it in shaders too?)
+    - Meshes
     - SubTextures
     - Entity (component?) system
     - Particle system
     - TextRenderer (DirectWrite + D2D)
 
 - Sound
+    - Mixer
     - Create a common audio session for entire program
     - Allow to create more audio streams
-    - Different callbacks for audios and sounds (fx)
 
 - Editor
     - UI (ImGUI or Nuklear or write my own?)
-    - Vertex and index buffer generation.
-    - Ability to choose render targets' (framebuffers') dimension. // What I meant by that??

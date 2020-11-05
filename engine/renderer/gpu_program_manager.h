@@ -14,7 +14,7 @@ ENGINE_INTERFACE ENGINE_API IGraphicsProgram
     virtual void AttachDomainShader(const StaticString<MAX_PATH>& filename)   = 0;
     virtual void AttachGeometryShader(const StaticString<MAX_PATH>& filename) = 0;
 
-    virtual void BindResource(IGPUResource *resource) = 0;
+    virtual void AttachResource(IGPUResource *resource) = 0;
 
     virtual void BindVertexBuffer(IGPUResource *resource) = 0;
     virtual void BindIndexBuffer(IGPUResource *resource)  = 0;

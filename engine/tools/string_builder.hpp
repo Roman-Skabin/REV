@@ -191,21 +191,12 @@ private:
         {
             m_String.PushBack(arg.ToString());
         }
-        else if constexpr (RTTI::has_to_static_string_v<T>)
-        {
-            m_String.PushBack(arg.ToStaticString());
-        }
-        else if constexpr (RTTI::has_to_const_string_v<T>)
-        {
-            m_String.PushBack(arg.ToConstString());
-        }
         else
         {
             StaticString<128> message;
             message.PushBack('<');
             message.PushBack(typeid(T).name());
-            message.PushBack(" has no method ToString or ToStaticString or ToConstString>",
-                             CSTRLEN(" has no method ToString or ToStaticString or ToConstString>"));
+            message.PushBack(" has no method ToString>", CSTRLEN(" has no method ToString>"));
 
             m_String.PushBack(message);
         }

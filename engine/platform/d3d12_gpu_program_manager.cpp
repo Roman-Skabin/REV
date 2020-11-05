@@ -108,7 +108,18 @@ GraphicsProgram::GraphicsProgram(Allocator *allocator, const StaticString<MAX_PA
     input_layout.pInputElementDescs = elements;
     input_layout.NumElements        = cast<u32>(ArrayCount(elements));
 
-    D3D12_ROOT_SIGNATURE_DESC root_signature_desc = {};
+    D3D12_ROOT_PARAMETER parameter;
+    parameter.ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    parameter.Descriptor.ShaderRegister = 0;
+    parameter.Descriptor.RegisterSpace  = 0;
+    parameter.ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_ROOT_SIGNATURE_DESC root_signature_desc;
+    root_signature_desc.NumParameters     = 1;
+    root_signature_desc.pParameters       = &parameter;
+    root_signature_desc.NumStaticSamplers = 0;
+    root_signature_desc.pStaticSamplers   = null;
+    root_signature_desc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
     // @TODO(Roman): Parse Shaders.
 
@@ -396,7 +407,7 @@ void GraphicsProgram::AttachGeometryShader(const StaticString<MAX_PATH>& filenam
     m_GeometryShader.Compile(shader, shader_size, filename.Data(), "GSMain", "gs_5_1");
 }
 
-void GraphicsProgram::BindResource(IGPUResource *resource)
+void GraphicsProgram::AttachResource(IGPUResource *resource)
 {
     m_BoundResources.PushBack(cast<GPUResource *>(resource));
 }

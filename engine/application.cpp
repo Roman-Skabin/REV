@@ -23,7 +23,7 @@ Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
                v4s(10, 10, 960, 540)),
       m_Input(Input::Create(m_Window, m_Logger)),
       m_Timer("EngineMainTimer"),
-      m_AppComponents(&m_Allocator)
+      m_SceneManager(SceneManager::Create(MB(16)))
 {
     CheckM(!s_Application,
            "Only one application alowed. "
@@ -68,14 +68,7 @@ void Application::Run()
             m_Window.ApplyFullscreenRequest();
 
             renderer->StartFrame();
-            for (AppComponent *component : m_AppComponents)
-            {
-                m_WorkQueue->AddWork([component]
-                {
-                    component->OnUpdate();
-                });
-            }
-            m_WorkQueue->Wait();
+            m_SceneManager->CurrentScene()->OnUpdate();
             renderer->EndFrame();
         }
     }

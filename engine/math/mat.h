@@ -1499,20 +1499,20 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
         __m128 r_c3 = _mm_setr_ps(r.e03, r.e13, r.e23, r.e33);
 
     #if ENGINE_ISA >= ENGINE_ISA_AVX512
-        zmm = _mm512_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm0, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c3, 0x71)),
-                             _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c3, 0x71)),
-                             _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c3, 0x71)),
-                             _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c3, 0x71)));
+        zmm = _mm512_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm0, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c3, 0xF1)),
+                             _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c3, 0xF1)),
+                             _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c3, 0xF1)),
+                             _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c3, 0xF1)));
     #elif ENGINE_ISA >= ENGINE_ISA_AVX
-        ymm0 = _mm256_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm0, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c3, 0x71)),
-                              _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c3, 0x71)));
-        ymm1 = _mm256_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm2, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c3, 0x71)),
-                              _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c3, 0x71)));
+        ymm0 = _mm256_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm0, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c3, 0xF1)),
+                              _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c3, 0xF1)));
+        ymm1 = _mm256_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm2, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c3, 0xF1)),
+                              _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c3, 0xF1)));
     #else
-        xmm0 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm0, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c3, 0x71)));
-        xmm1 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm1, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c3, 0x71)));
-        xmm2 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm2, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c3, 0x71)));
-        xmm2 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm3, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c3, 0x71)));
+        xmm0 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm0, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm0, r_c3, 0xF1)));
+        xmm1 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm1, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm1, r_c3, 0xF1)));
+        xmm2 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm2, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm2, r_c3, 0xF1)));
+        xmm2 = _mm_setr_ps(_mm_cvtss_f32(_mm_dp_ps(xmm3, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(xmm3, r_c3, 0xF1)));
     #endif
 
         return *this;
@@ -1631,10 +1631,10 @@ INLINE m4 __vectorcall operator*(m4 l, m4 r)
     __m128 r_c2 = _mm_setr_ps(r.e02, r.e12, r.e22, r.e32);
     __m128 r_c3 = _mm_setr_ps(r.e03, r.e13, r.e23, r.e33);
 
-    return m4(_mm_cvtss_f32(_mm_dp_ps(l.xmm0, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm0, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm0, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm0, r_c3, 0x71)),
-              _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r_c3, 0x71)),
-              _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r_c3, 0x71)),
-              _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c0, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c1, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c2, 0x71)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c3, 0x71)));
+    return m4(_mm_cvtss_f32(_mm_dp_ps(l.xmm0, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm0, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm0, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm0, r_c3, 0xF1)),
+              _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r_c3, 0xF1)),
+              _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r_c3, 0xF1)),
+              _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c0, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c1, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c2, 0xF1)), _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r_c3, 0xF1)));
 }
 
 INLINE m4 __vectorcall operator+(f32 l, m4 r)
@@ -1707,10 +1707,10 @@ INLINE m4 __vectorcall operator/(m4 l, f32 r)
 
 INLINE v4 __vectorcall operator*(m4 l, v4 r)
 {
-    return v4(_mm_cvtss_f32(_mm_dp_ps(l.xmm0, r.mm, 0x71)),
-              _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r.mm, 0x71)),
-              _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r.mm, 0x71)),
-              _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r.mm, 0x71)));
+    return v4(_mm_cvtss_f32(_mm_dp_ps(l.xmm0, r.mm, 0xF1)),
+              _mm_cvtss_f32(_mm_dp_ps(l.xmm1, r.mm, 0xF1)),
+              _mm_cvtss_f32(_mm_dp_ps(l.xmm2, r.mm, 0xF1)),
+              _mm_cvtss_f32(_mm_dp_ps(l.xmm3, r.mm, 0xF1)));
 }
 
 INLINE bool __vectorcall operator==(m4 l, m4 r)

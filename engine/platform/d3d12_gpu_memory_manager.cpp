@@ -26,33 +26,12 @@ GPUResource::GPUResource()
       m_InitialState(D3D12_RESOURCE_STATE_COMMON),
       m_Name(),
       m_NextFree(null),
-      m_CommandAllocator(null),
-      m_CommandList(null),
-      m_Fence(null),
-      m_FenceEvent(),
       m_ResourceDesc()
 {
-    Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
-
-    HRESULT error = renderer->Device()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_CommandAllocator));
-    Check(SUCCEEDED(error));
-
-    error = renderer->Device()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator, null, IID_PPV_ARGS(&m_CommandList));
-    Check(SUCCEEDED(error));
-
-    error = m_CommandList->Close();
-    Check(SUCCEEDED(error));
-
-    error = renderer->Device()->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_Fence));
-    Check(SUCCEEDED(error));
 }
 
 GPUResource::~GPUResource()
 {
-    SafeRelease(m_CommandAllocator);
-    SafeRelease(m_CommandList);
-    SafeRelease(m_Fence);
-
     SafeRelease(m_DefaultResource);
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
@@ -140,10 +119,10 @@ void GPUResource::SetData(const void *data)
 
 void GPUResource::SetDataImmediate(const void *data)
 {
-    Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
+    Renderer                  *renderer           = cast<Renderer *>(GraphicsAPI::GetRenderer());
+    GPUMemoryManager          *gpu_memory_manager = cast<GPUMemoryManager *>(GraphicsAPI::GetGPUMemoryManager());
+    ID3D12GraphicsCommandList *command_list       = gpu_memory_manager->CommandList();
     
-    StartImmediateExecution();
-
     if (!data)
     {
         D3D12_DISCARD_REGION discard_region;
@@ -152,8 +131,8 @@ void GPUResource::SetDataImmediate(const void *data)
         discard_region.FirstSubresource = 0;
         discard_region.NumSubresources  = 1;
 
-        m_CommandList->DiscardResource(m_DefaultResource, &discard_region);
-        m_CommandList->DiscardResource(m_UploadResources[renderer->CurrentBuffer()], &discard_region);
+        command_list->DiscardResource(m_DefaultResource, &discard_region);
+        command_list->DiscardResource(m_UploadResources[renderer->CurrentBuffer()], &discard_region);
     }
     else
     {
@@ -171,17 +150,15 @@ void GPUResource::SetDataImmediate(const void *data)
         resource_barrier.Transition.StateBefore = m_InitialState;
         resource_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
 
-        m_CommandList->ResourceBarrier(1, &resource_barrier);
+        command_list->ResourceBarrier(1, &resource_barrier);
 
-        m_CommandList->CopyResource(m_DefaultResource, m_UploadResources[renderer->CurrentBuffer()]);
+        command_list->CopyResource(m_DefaultResource, m_UploadResources[renderer->CurrentBuffer()]);
 
         resource_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
         resource_barrier.Transition.StateAfter  = m_InitialState;
 
-        m_CommandList->ResourceBarrier(1, &resource_barrier);
+        command_list->ResourceBarrier(1, &resource_barrier);
     }
-
-    EndImmediateExecution();
 }
 
 GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
@@ -212,53 +189,13 @@ GPUResource& GPUResource::operator=(GPUResource&& other) noexcept
         m_InitialState      = other.m_InitialState;
         m_Name              = other.m_Name;
         m_NextFree          = other.m_NextFree;
-        m_CommandAllocator  = other.m_CommandAllocator;
-        m_CommandList       = other.m_CommandList;
-        m_Fence             = other.m_Fence;
-        m_FenceEvent        = RTTI::move(other.m_FenceEvent);
         m_ResourceDesc      = other.m_ResourceDesc;
 
-        other.m_DefaultResource  = null;
-        other.m_DescHeap         = null;
-        other.m_NextFree         = null;
-        other.m_CommandAllocator = null;
-        other.m_CommandList      = null;
-        other.m_Fence            = null;
+        other.m_DefaultResource = null;
+        other.m_DescHeap        = null;
+        other.m_NextFree        = null;
     }
     return *this;
-}
-
-void GPUResource::StartImmediateExecution()
-{
-    HRESULT error = m_CommandAllocator->Reset();
-    Check(SUCCEEDED(error));
-
-    error = m_CommandList->Reset(m_CommandAllocator, null);
-    Check(SUCCEEDED(error));
-}
-
-void GPUResource::EndImmediateExecution()
-{
-    Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
-
-    HRESULT error = m_CommandList->Close();
-    Check(SUCCEEDED(error));
-
-    ID3D12CommandList *command_lists[] = { m_CommandList };
-    renderer->GraphicsQueue()->ExecuteCommandLists(cast<u32>(ArrayCount(command_lists)), command_lists);
-
-    u64 fence_value = m_Fence->GetCompletedValue() + 1;
-
-    error = renderer->GraphicsQueue()->Signal(m_Fence, fence_value);
-    Check(SUCCEEDED(error));
-
-    if (m_Fence->GetCompletedValue() < fence_value)
-    {
-        error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent);
-        Check(SUCCEEDED(error));
-
-        m_FenceEvent.Wait(INFINITE, true);
-    }
 }
 
 //
@@ -635,6 +572,10 @@ void GPUDescHeapMemory::CreateDescHeapForCB(GPUDescHeap *desc_heap, GPUResource 
 
 GPUMemoryManager::GPUMemoryManager(Allocator *allocator, const Logger& logger, u64 gpu_memory_capacity)
     : m_Allocator(allocator),
+      m_CommandAllocator(null),
+      m_CommandList(null),
+      m_Fence(null),
+      m_FenceEvent(),
       m_Logger(logger),
       m_DescHeapMemory(allocator),
       m_BufferMemory(allocator),
@@ -695,11 +636,27 @@ GPUMemoryManager::GPUMemoryManager(Allocator *allocator, const Logger& logger, u
 
     m_BufferMemory.Create(default_buffer_heap_desc, upload_buffer_heap_desc, true);
     m_TextureMemory.Create(default_texture_heap_desc, upload_texture_heap_desc, false);
+    
+    HRESULT error = renderer->Device()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_CommandAllocator));
+    Check(SUCCEEDED(error));
+
+    error = renderer->Device()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator, null, IID_PPV_ARGS(&m_CommandList));
+    Check(SUCCEEDED(error));
+
+    error = m_CommandList->Close();
+    Check(SUCCEEDED(error));
+
+    error = renderer->Device()->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_Fence));
+    Check(SUCCEEDED(error));
 }
 
 GPUMemoryManager::~GPUMemoryManager()
 {
     Release();
+
+    SafeRelease(m_CommandAllocator);
+    SafeRelease(m_CommandList);
+    SafeRelease(m_Fence);
 }
 
 void GPUMemoryManager::Destroy()
@@ -865,6 +822,39 @@ void GPUMemoryManager::SetGPUResourceDataImmediate(const StaticString<64>& name,
 
     if (resource) resource->SetDataImmediate(data);
     else          m_Logger.LogError("There is no buffer nor texture with the name \"%s\"", name);
+}
+
+void GPUMemoryManager::StartImmediateExecution()
+{
+    HRESULT error = m_CommandAllocator->Reset();
+    Check(SUCCEEDED(error));
+
+    error = m_CommandList->Reset(m_CommandAllocator, null);
+    Check(SUCCEEDED(error));
+}
+
+void GPUMemoryManager::EndImmediateExecution()
+{
+    Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
+
+    HRESULT error = m_CommandList->Close();
+    Check(SUCCEEDED(error));
+
+    ID3D12CommandList *command_lists[] = { m_CommandList };
+    renderer->GraphicsQueue()->ExecuteCommandLists(cast<u32>(ArrayCount(command_lists)), command_lists);
+
+    u64 fence_value = m_Fence->GetCompletedValue() + 1;
+
+    error = renderer->GraphicsQueue()->Signal(m_Fence, fence_value);
+    Check(SUCCEEDED(error));
+
+    if (m_Fence->GetCompletedValue() < fence_value)
+    {
+        error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent);
+        Check(SUCCEEDED(error));
+
+        m_FenceEvent.Wait(INFINITE, true);
+    }
 }
 
 void GPUMemoryManager::Reset()

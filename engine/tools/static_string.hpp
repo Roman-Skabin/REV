@@ -76,8 +76,8 @@ public:
     constexpr const char *Data() const { return m_Data; }
     constexpr       char *Data()       { return m_Data; }
 
-    constexpr const StaticString& ToStaticString() const { return *this; }
-    constexpr       StaticString& ToStaticString()       { return *this; }
+    constexpr const StaticString& ToString() const { return *this; }
+    constexpr       StaticString& ToString()       { return *this; }
 
     constexpr bool Empty() const { return !m_Length; }
 

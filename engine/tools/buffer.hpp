@@ -13,6 +13,17 @@ public:
     using Type = T;
     static constexpr u64 npos = U64_MAX;
 
+    template<typename ...U>
+    using EnableConditionCA = RTTI::conditional_t<RTTI::is_pointer_v<T>,
+                                                  RTTI::enable_if_t<RTTI::are_base_of_v<RTTI::remove_pointer_t<T>, RTTI::remove_pointer_t<U>...>>,
+                                                  RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>>;
+    template<typename ...U>
+    using EnableConditionMA = RTTI::conditional_t<RTTI::is_pointer_v<T>,
+                                                  RTTI::enable_if_t<RTTI::are_base_of_v<RTTI::remove_pointer_t<T>, RTTI::remove_pointer_t<U>...>>,
+                                                  RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>>;
+    using EnableCA = RTTI::conditional_t<RTTI::is_pointer_v<T>, void, RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>>;
+    using EnableMA = RTTI::conditional_t<RTTI::is_pointer_v<T>, void, RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>>;
+
     explicit Buffer(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
         : m_Header(null)
     {
@@ -49,7 +60,7 @@ public:
         }
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>>
+    template<typename ...U, typename = EnableConditionMA<U...>>
     void Insert(u64 where, U&&... elements)
     {
         u64 old_count = m_Header->count;
@@ -67,7 +78,7 @@ public:
         (..., (m_Header->data[where++] = RTTI::move(elements)));
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>>
+    template<typename ...U, typename = EnableConditionCA<U...>>
     void Insert(u64 where, const U&... elements)
     {
         u64 old_count = m_Header->count;
@@ -85,7 +96,7 @@ public:
         (..., (m_Header->data[where++] = elements));
     }
 
-    template<u64 count, typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>>
+    template<u64 count, typename = EnableCA>
     void Insert(u64 where, const T (&elements)[count])
     {
         u64 old_count = m_Header->count;
@@ -106,7 +117,7 @@ public:
         }
     }
 
-    template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>>
+    template<typename = EnableCA>
     void Insert(u64 where, T *const elements, u64 count)
     {
         u64 old_count = m_Header->count;
@@ -127,19 +138,19 @@ public:
         }
     }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> constexpr void PushFront(const U&... elements) { Insert(0,               elements...); }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> constexpr void PushBack(const U&... elements)  { Insert(m_Header->count, elements...); }
+    template<typename ...U, typename = EnableConditionCA<U...>> constexpr void PushFront(const U&... elements) { Insert(0,               elements...); }
+    template<typename ...U, typename = EnableConditionCA<U...>> constexpr void PushBack(const U&... elements)  { Insert(m_Header->count, elements...); }
 
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> constexpr void PushFront(U&&... elements) { Insert(0,               RTTI::forward<U>(elements)...); }
-    template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> constexpr void PushBack(U&&... elements)  { Insert(m_Header->count, RTTI::forward<U>(elements)...); }
+    template<typename ...U, typename = EnableConditionMA<U...>> constexpr void PushFront(U&&... elements) { Insert(0,               RTTI::forward<U>(elements)...); }
+    template<typename ...U, typename = EnableConditionMA<U...>> constexpr void PushBack(U&&... elements)  { Insert(m_Header->count, RTTI::forward<U>(elements)...); }
 
-    template<u64 count, typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>> constexpr void PushFront(const T (&elements)[count]) { Insert(0,               elements); }
-    template<u64 count, typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>> constexpr void PushBack(const T (&elements)[count])  { Insert(m_Header->count, elements); }
+    template<u64 count, typename = EnableCA> constexpr void PushFront(const T (&elements)[count]) { Insert(0,               elements); }
+    template<u64 count, typename = EnableCA> constexpr void PushBack(const T (&elements)[count])  { Insert(m_Header->count, elements); }
 
-    template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>> constexpr void PushFront(T *const elements, u64 count) { Insert(0,               elements, count); }
-    template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>> constexpr void PushBack(T *const elements, u64 count)  { Insert(m_Header->count, elements, count); }
+    template<typename = EnableCA> constexpr void PushFront(T *const elements, u64 count) { Insert(0,               elements, count); }
+    template<typename = EnableCA> constexpr void PushBack(T *const elements, u64 count)  { Insert(m_Header->count, elements, count); }
 
-    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>>
+    template<typename ...ConstructorArgs, typename = EnableMA>
     void Emplace(u64 where, ConstructorArgs&&... args)
     {
         u64 old_count = m_Header->count;
@@ -154,11 +165,11 @@ public:
                        (old_count - where) * sizeof(T));
         }
 
-        *m_Header->data = T(RTTI::forward<ConstructorArgs>(args)...);
+        return m_Header->data[where] = T(RTTI::forward<ConstructorArgs>(args)...);
     }
 
-    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr void EmplaceBack(ConstructorArgs&&... args)  { Emplace(m_Header->count, RTTI::forward<ConstructorArgs>(args)...); }
-    template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr void EmplaceFront(ConstructorArgs&&... args) { Emplace(0,               RTTI::forward<ConstructorArgs>(args)...); }
+    template<typename ...ConstructorArgs, typename = EnableMA> constexpr void EmplaceBack(ConstructorArgs&&... args)  { return Emplace(m_Header->count, RTTI::forward<ConstructorArgs>(args)...); }
+    template<typename ...ConstructorArgs, typename = EnableMA> constexpr void EmplaceFront(ConstructorArgs&&... args) { return Emplace(0,               RTTI::forward<ConstructorArgs>(args)...); }
 
     void Erase(u64 from, u64 to = npos)
     {
@@ -203,6 +214,19 @@ public:
                                                                              sizeof(Header) + capacity * sizeof(T),
                                                                              m_Header->alignment_in_bytes));
             m_Header->capacity = capacity;
+        }
+    }
+
+    void Reverse()
+    {
+        T *_first = m_Header->data;
+        T *_last  = m_Header->data + m_Header->count - 1;
+
+        while (_first < _last)
+        {
+            T temp    = RTTI::move(*_first);
+            *_first++ = RTTI::move(*_last);
+            *_last--  = RTTI::move(temp);
         }
     }
 
@@ -320,7 +344,6 @@ private:
 
     void Fit()
     {
-        // @Issue(Roman): Do we need to fit the buffer if its capacity is a way bigger than number of elements in it?
         if (2 * m_Header->count < m_Header->capacity)
         {
             m_Header->capacity = 2 * m_Header->count;

@@ -52,7 +52,7 @@ namespace D3D12
         virtual void AttachDomainShader(const StaticString<MAX_PATH>& filename)   override;
         virtual void AttachGeometryShader(const StaticString<MAX_PATH>& filename) override;
 
-        virtual void BindResource(IGPUResource *resource) override;
+        virtual void AttachResource(IGPUResource *resource) override;
 
         virtual void BindVertexBuffer(IGPUResource *resource) override;
         virtual void BindIndexBuffer(IGPUResource *resource)  override;
@@ -60,9 +60,9 @@ namespace D3D12
         virtual void DrawVertices() override;
         virtual void DrawIndices()  override;
 
-        constexpr const ID3DBlob             *Signature()     const  { return m_Signature;      }
-        constexpr const ID3D12RootSignature  *RootSignature() const  { return m_RootSignature;  }
-        constexpr const ID3D12PipelineState  *PipelineState() const  { return m_PipelineState;  }
+        constexpr const ID3DBlob             *Signature()      const { return m_Signature;      }
+        constexpr const ID3D12RootSignature  *RootSignature()  const { return m_RootSignature;  }
+        constexpr const ID3D12PipelineState  *PipelineState()  const { return m_PipelineState;  }
         constexpr const ResourcePointersList& BoundResources() const { return m_BoundResources; }
 
         constexpr ID3DBlob             *Signature()      { return m_Signature;      }

@@ -25,6 +25,9 @@ ENGINE_INTERFACE ENGINE_API IGPUMemoryManager
     virtual void SetGPUResourceData(const StaticString<64>& name, const void *data)          = 0;
     virtual void SetGPUResourceDataImmediate(const StaticString<64>& name, const void *data) = 0;
 
+    virtual void StartImmediateExecution() = 0;
+    virtual void EndImmediateExecution() = 0;
+
     virtual void Reset()   = 0;
     virtual void Release() = 0;
 };

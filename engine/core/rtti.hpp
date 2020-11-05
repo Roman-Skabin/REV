@@ -361,18 +361,4 @@ namespace RTTI
     template<typename T> using has_to_string = _has_to_string<void, T>;
 
     template<typename T> inline constexpr bool has_to_string_v = has_to_string<T>::value;
-
-    template<typename Void, typename T> struct _has_to_static_string                                                     : false_type {};
-    template<               typename T> struct _has_to_static_string<void_t<decltype(declval<T>().ToStaticString())>, T> : true_type  {};
-
-    template<typename T> using has_to_static_string = _has_to_static_string<void, T>;
-
-    template<typename T> inline constexpr bool has_to_static_string_v = has_to_static_string<T>::value;
-
-    template<typename Void, typename T> struct _has_to_const_string                                                    : false_type {};
-    template<               typename T> struct _has_to_const_string<void_t<decltype(declval<T>().ToConstString())>, T> : true_type  {};
-
-    template<typename T> using has_to_const_string = _has_to_const_string<void, T>;
-
-    template<typename T> inline constexpr bool has_to_const_string_v = has_to_const_string<T>::value;
 }

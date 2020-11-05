@@ -110,9 +110,6 @@ namespace D3D12
         GPUResource& operator=(GPUResource&& other) noexcept;
 
     private:
-        void StartImmediateExecution();
-        void EndImmediateExecution();
-
         GPUResource(const GPUResource&) = delete;
         GPUResource(GPUResource&&)      = delete;
 
@@ -130,10 +127,6 @@ namespace D3D12
         D3D12_RESOURCE_STATES      m_InitialState;
         StaticString<64>           m_Name;
         GPUResource               *m_NextFree;
-        ID3D12CommandAllocator    *m_CommandAllocator;
-        ID3D12GraphicsCommandList *m_CommandList;
-        ID3D12Fence               *m_Fence;
-        Event                      m_FenceEvent;
         D3D12_RESOURCE_DESC        m_ResourceDesc;
 
         friend class GPUResourceMemory;
@@ -261,11 +254,17 @@ namespace D3D12
         virtual void SetGPUResourceData(const StaticString<64>& name, const void *data) override;
         virtual void SetGPUResourceDataImmediate(const StaticString<64>& name, const void *data) override;
 
+        virtual void StartImmediateExecution() override;
+        virtual void EndImmediateExecution() override;
+
         virtual void Reset() override;
         virtual void Release() override;
 
         void *operator new(size_t) { return Memory::Get()->PushToPA<GPUMemoryManager>(); }
         void  operator delete(void *) {}
+
+        constexpr const ID3D12GraphicsCommandList *CommandList() const { return m_CommandList; };
+        constexpr       ID3D12GraphicsCommandList *CommandList()       { return m_CommandList; };
 
     private:
         GPUMemoryManager(const GPUMemoryManager&) = delete;
@@ -275,10 +274,14 @@ namespace D3D12
         GPUMemoryManager& operator=(GPUMemoryManager&&)      = delete;
 
     private:
-        Allocator        *m_Allocator;
-        Logger            m_Logger;
-        GPUDescHeapMemory m_DescHeapMemory;
-        GPUResourceMemory m_BufferMemory;
-        GPUResourceMemory m_TextureMemory;
+        Allocator                 *m_Allocator;
+        ID3D12CommandAllocator    *m_CommandAllocator;
+        ID3D12GraphicsCommandList *m_CommandList;
+        ID3D12Fence               *m_Fence;
+        Event                      m_FenceEvent;
+        Logger                     m_Logger;
+        GPUDescHeapMemory          m_DescHeapMemory;
+        GPUResourceMemory          m_BufferMemory;
+        GPUResourceMemory          m_TextureMemory;
     };
 };

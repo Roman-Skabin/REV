@@ -17,9 +17,6 @@ if /I "!PROJECT!" == "release" (
 )
 
 REM must have folders
-if not exist ..\assets          mkdir ..\assets
-if not exist ..\assets\audio    mkdir ..\assets\audio
-if not exist ..\assets\shaders  mkdir ..\assets\shaders
 if not exist ..\bin             mkdir ..\bin
 if not exist ..\bin\obj         mkdir ..\bin\obj
 if not exist ..\bin\obj\engine  mkdir ..\bin\obj\engine

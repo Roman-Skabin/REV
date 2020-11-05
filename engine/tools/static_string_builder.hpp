@@ -89,8 +89,8 @@ public:
     {
     }
 
-    constexpr const StaticString<capacity, aligned_capacity>& ToStaticString() const { return m_StaticString; }
-    constexpr       StaticString<capacity, aligned_capacity>& ToStaticString()       { return m_StaticString; }
+    constexpr const StaticString<capacity, aligned_capacity>& ToString() const { return m_StaticString; }
+    constexpr       StaticString<capacity, aligned_capacity>& ToString()       { return m_StaticString; }
 
     template<typename ...Args>
     void Build(const Args&... args)
@@ -150,20 +150,15 @@ private:
         {
             AppendTrivial(arg);
         }
-        else if constexpr (RTTI::has_to_static_string_v<T>)
+        else if constexpr (RTTI::has_to_string_v<T>)
         {
-            m_StaticString.PushBack(arg.ToStaticString());
-        }
-        else if constexpr (RTTI::has_to_const_string_v<T>)
-        {
-            m_StaticString.PushBack(arg.ToConstString());
+            m_StaticString.PushBack(arg.ToString());
         }
         else
         {
             m_StaticString.PushBack('<');
             m_StaticString.PushBack(typeid(T).name());
-            m_StaticString.PushBack(" has no method ToStaticString or ToConstString>",
-                                    CSTRLEN(" has no method ToStaticString or ToConstString>"));
+            m_StaticString.PushBack(" has no method ToString>", CSTRLEN(" has no method ToString>"));
         }
     }
 

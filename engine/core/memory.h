@@ -5,7 +5,7 @@
 #pragma once
 
 #include "core/core.h"
-#include "tools/critical_section.h"
+#include "tools/critical_section.hpp"
 
 enum REGULAR_MEMORY_SPECS
 {
@@ -105,9 +105,9 @@ private:
         u64   capacity = 0;
     };
 
-    Area            m_TransientArea;
-    Area            m_PermanentArea;
-    CriticalSection m_CriticalSection;
+    Area                   m_TransientArea;
+    Area                   m_PermanentArea;
+    CriticalSection<false> m_CriticalSection;
 
     static Memory *s_Memory;
 };

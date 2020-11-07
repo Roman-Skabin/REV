@@ -1,6 +1,3 @@
-- PRIMARY!!!
-    - Move to C++ because of bad D3D12 compatibility with C.
-
 - Core
     - Complete core\platform.h
     - Move all STD includes from platform.h to pch.h?
@@ -29,13 +26,12 @@
     - Batch rendering.
     - Save shaders bytecode in some files and compile only shaders that
       source file change time > bytecode file change time?
-    - Do ResizeGPUBuffers when we choose another screen dimension. (After UI implementation)
     - Custom compute shader's parser and ComputeProgram generation
-    - User-side GPU command lists and bundles?
-    - Several adapters support?
+    - Several adapters support? (NVidia has gotten rid of SLI so shall we?)
+    - Cross platform shaders.
 
 - Graphics
-    - Do I really need custom shaders??? UPD: Yes, probably
+    - Do I really need custom shaders??? UPD: Yes, probably (SPIR-V even maybe or something)
     - Custom graphics shader's parser and GraphicsProgram generation
         - SRVs, UAVs, static samplers, tables (, constants?)
         - Hash table for interns
@@ -60,3 +56,9 @@
 
 - Editor
     - UI (ImGUI or Nuklear or write my own?)
+
+- Other
+    - Make that README already!
+    - Figure out a new name for the engine
+    - Rewrite parser and sound on C++
+    - Some documenting?

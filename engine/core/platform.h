@@ -132,6 +132,7 @@
         #include <wmmintrin.h>
         #include <ammintrin.h> // AMD specific intrinsics
     #endif
+    #include <intrin.h>
 #elif ENGINE_COMPILER_GCC
     // @TODO(Roman): Cross platform includes
 #elif ENGINE_COMPILER_CLANG

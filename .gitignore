@@ -1,11 +1,7 @@
-.vs/
 .vscode/
-*.pdf
-build/*.time
-log/
 bin/
+build/*.time
+ideas/
+log/
 nsight/
-NEW_CHANGES.txt
-assets_old/
-engine_old/
-gpu_stuff.bmp
+old/

@@ -27,9 +27,9 @@ public:
 
 public:
     Logger(
-         const char *name,
+        const char *name,
         const char *filename, // @NOTE(Roman): Required if you are logging to the file
-         TARGET      target
+        TARGET      target
     );
 
     Logger(const Logger& other, const char *name = null, TARGET target = TARGET::NONE);

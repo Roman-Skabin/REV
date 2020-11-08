@@ -24,6 +24,7 @@ Renderer::Renderer(Window *window, const Logger& logger, v2s rt_size)
       m_Device(null),
       m_GraphicsQueue(null),
       m_SwapChain(null),
+      m_WaitableObject(null),
       m_RTVHeapDesc(null),
       m_RTVCPUDescHandle(),
       m_RTVDescSize(0),
@@ -33,7 +34,10 @@ Renderer::Renderer(Window *window, const Logger& logger, v2s rt_size)
       m_DSVCPUDescHandle(),
       m_Fences(),
       m_FenceEvent(null),
-      m_Flags(FLAGS::FIRST_FRAME),
+      m_VsyncEnabled(0),
+      m_FirstFrame(true),
+      m_TearingSupported(0),
+      m_Fullscreen(0),
       m_Features(),
 #if DEBUG
       m_LoggingEvent("StopLoggingEvent", Event::FLAGS::RESETTABLE),
@@ -55,13 +59,13 @@ Renderer::Renderer(Window *window, const Logger& logger, v2s rt_size)
     GetSwapChainRenderTargets();
     CreateDepthBuffer();
     CreateFences();
-    
+
     m_Logger.LogSuccess("Renderer has been created");
 }
 
 Renderer::~Renderer()
 {
-    if ((m_Flags & FLAGS::FULLSCREEN) != FLAGS::NONE)
+    if (m_Fullscreen)
     {
         m_Error = m_SwapChain->SetFullscreenState(false, null);
         Check(SUCCEEDED(m_Error));
@@ -124,6 +128,10 @@ void Renderer::StartFrame()
 
     WaitForGPU();
 
+    while (WaitForSingleObjectEx(m_WaitableObject, INFINITE, true) != WAIT_OBJECT_0)
+    {
+    }
+
     m_Error = graphics_allocator->Reset();
     Check(SUCCEEDED(m_Error));
     m_Error = graphics_list->Reset(graphics_allocator, null);
@@ -184,6 +192,8 @@ void Renderer::StartFrame()
                                          D3D12_CLEAR_FLAG_DEPTH,
                                          1.0f, 0,
                                          0, null);
+
+    // m_Logger.LogInfo("Current Buffer: %I32u", m_CurrentBuffer);
 }
 
 void Renderer::EndFrame()
@@ -221,29 +231,23 @@ void Renderer::EndFrame()
     m_GraphicsQueue->ExecuteCommandLists(cast<UINT>(ArrayCount(command_lists)), command_lists);
 
     // Present
-    u32 sync_interval = 1;
-    u32 present_flags = 0;
+    u32 present_flags = DXGI_PRESENT_DO_NOT_WAIT;
 
-    if ((m_Flags & FLAGS::VSYNC_ENABLED) == FLAGS::NONE)
+    if (!m_VsyncEnabled && m_TearingSupported && !m_Window->Fullscreened())
     {
-        sync_interval  = 0;
-        present_flags |= DXGI_PRESENT_DO_NOT_WAIT;
+        present_flags |= DXGI_PRESENT_ALLOW_TEARING;
+    }
 
-        if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE && !m_Window->Fullscreened())
-        {
-            present_flags |= DXGI_PRESENT_ALLOW_TEARING;
-        }
-    }
-    if ((m_Flags & FLAGS::FIRST_FRAME) != FLAGS::NONE)
+    if (m_FirstFrame)
     {
-        m_Flags &= ~FLAGS::FIRST_FRAME;
+        m_FirstFrame = false;
     }
-    if ((m_Flags & FLAGS::VSYNC_ENABLED) != FLAGS::NONE)
+    else if (m_VsyncEnabled)
     {
         present_flags |= DXGI_PRESENT_DO_NOT_SEQUENCE;
     }
 
-    m_Error = m_SwapChain->Present(sync_interval, present_flags);
+    m_Error = m_SwapChain->Present(0, present_flags);
     Check(SUCCEEDED(m_Error));
 
     // Swap buffers
@@ -251,17 +255,6 @@ void Renderer::EndFrame()
 
     m_RTVCPUDescHandle      = m_RTVHeapDesc->GetCPUDescriptorHandleForHeapStart();
     m_RTVCPUDescHandle.ptr += m_CurrentBuffer * m_RTVDescSize;
-}
-
-bool Renderer::VSyncEnabled()
-{
-    return (m_Flags & FLAGS::VSYNC_ENABLED) != FLAGS::NONE;
-}
-
-void Renderer::SetVSync(bool enable)
-{
-    if (enable) m_Flags |=  FLAGS::VSYNC_ENABLED;
-    else        m_Flags &= ~FLAGS::VSYNC_ENABLED;
 }
 
 void Renderer::WaitForGPU()
@@ -499,10 +492,7 @@ void Renderer::CreateSwapChain()
 
     b32 tearing_supported = false;
     m_Error = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearing_supported, sizeof(b32));
-    if (tearing_supported)
-    {
-        m_Flags |= FLAGS::TEARING_SUPPORTED;
-    }
+    m_TearingSupported = tearing_supported;
     Check(SUCCEEDED(m_Error));
 
     SafeRelease(factory5);
@@ -519,8 +509,9 @@ void Renderer::CreateSwapChain()
     swap_chain_desc1.Scaling            = DXGI_SCALING_STRETCH;
     swap_chain_desc1.SwapEffect         = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swap_chain_desc1.AlphaMode          = DXGI_ALPHA_MODE_UNSPECIFIED;
-    swap_chain_desc1.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-    if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE)
+    swap_chain_desc1.Flags              = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+                                        | DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+    if (m_TearingSupported)
     {
         swap_chain_desc1.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
@@ -548,6 +539,11 @@ void Renderer::CreateSwapChain()
 
     m_Error = m_Factory->MakeWindowAssociation(m_Window->Handle(), DXGI_MWA_NO_ALT_ENTER);
     Check(SUCCEEDED(m_Error));
+
+    m_Error = m_SwapChain->SetMaximumFrameLatency(1);
+    Check(SUCCEEDED(m_Error));
+
+    DebugResult(m_WaitableObject = m_SwapChain->GetFrameLatencyWaitableObject());
 }
 
 void Renderer::GetSwapChainRenderTargets()
@@ -658,8 +654,9 @@ void Renderer::ResizeBuffers()
     SafeRelease(m_DSBuffer);
 
     // Resize buffers
-    u32 flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-    if ((m_Flags & FLAGS::TEARING_SUPPORTED) != FLAGS::NONE)
+    u32 flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+              | DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+    if (m_TearingSupported)
     {
         flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
@@ -733,12 +730,12 @@ void Renderer::ResizeBuffers()
 
     m_Device->CreateDepthStencilView(m_DSBuffer, &dsv_desc, m_DSVCPUDescHandle);
 
-    m_Flags |= FLAGS::FIRST_FRAME;
+    m_FirstFrame = true;
 }
 
 void Renderer::SetFullscreenMode(bool set)
 {
-    if (set ^ ((m_Flags & FLAGS::FULLSCREEN) != FLAGS::NONE))
+    if (set ^ m_Fullscreen)
     {
         m_Error = m_SwapChain->SetFullscreenState(set, null);
         Check(SUCCEEDED(m_Error));
@@ -747,13 +744,13 @@ void Renderer::SetFullscreenMode(bool set)
         {
             m_ActualRTSize = m_Window->Size();
             ResizeBuffers();
-            m_Flags |= FLAGS::FULLSCREEN;
+            m_Fullscreen = true;
         }
         else
         {
             m_ActualRTSize = m_RTSize;
             ResizeBuffers();
-            m_Flags &= ~FLAGS::FULLSCREEN;
+            m_Fullscreen = false;
         }
     }
 }

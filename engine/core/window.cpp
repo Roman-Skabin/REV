@@ -24,7 +24,6 @@ Window::Window(const Logger&            logger,
     wca.lpfnWndProc   = WindowProc;
     wca.hInstance     = m_Instance;
     wca.hCursor       = LoadCursorA(0, IDC_ARROW);
-    // wca.hbrBackground = GetSysColorBrush(COLOR_BACKGROUND);
     wca.lpszClassName = m_ClassName.Data();
     DebugResult(RegisterClassA(&wca));
 
@@ -135,7 +134,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
 
         case WM_SIZE: // 0x0005
         {
-            v2s new_size = v2s(cast<s32>(lparam & 0xFFFF), cast<s32>(lparam >> 16));
+            v2s new_size(cast<s32>(lparam & 0xFFFF), cast<s32>(lparam >> 16));
 
             if ((window->m_XYWH.wh.w != new_size.w || window->m_XYWH.wh.h != new_size.h) && wparam != SIZE_MINIMIZED)
             {

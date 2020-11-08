@@ -44,6 +44,8 @@ IRenderer *GraphicsAPI::CreateRenderer(Window *window, const Logger& logger, v2s
             FailedM("Unknown Graphics API");
         } break;
     }
+
+    return null;
 }
 
 IGPUMemoryManager *GraphicsAPI::CreateGPUMemoryManager(Allocator *allocator, const Logger& logger, u64 gpu_memory_capacity)
@@ -69,6 +71,8 @@ IGPUMemoryManager *GraphicsAPI::CreateGPUMemoryManager(Allocator *allocator, con
             FailedM("Unknown Graphics API");
         } break;
     }
+
+    return null;
 }
 
 IGPUProgramManager *GraphicsAPI::CreateGPUProgramManager(Allocator *allocator)
@@ -94,6 +98,8 @@ IGPUProgramManager *GraphicsAPI::CreateGPUProgramManager(Allocator *allocator)
             FailedM("Unknown Graphics API");
         } break;
     }
+
+    return null;
 }
 
 IRenderer *GraphicsAPI::GetRenderer()

@@ -24,16 +24,6 @@ namespace D3D12
     class ENGINE_API Renderer final : public IRenderer
     {
     public:
-        enum class FLAGS
-        {
-            NONE              = 0,
-            VSYNC_ENABLED     = BIT(0),
-            FIRST_FRAME       = BIT(1),
-            TEARING_SUPPORTED = BIT(2),
-            FULLSCREEN        = BIT(3),
-        };
-
-    public:
         Renderer(Window *window, const Logger& logger, v2s rt_size);
         ~Renderer();
 
@@ -42,8 +32,8 @@ namespace D3D12
         virtual void StartFrame() override;
         virtual void EndFrame()   override;
 
-        virtual bool VSyncEnabled()        override;
-        virtual void SetVSync(bool enable) override;
+        virtual bool VSyncEnabled()        override { return m_VsyncEnabled; }
+        virtual void SetVSync(bool enable) override { m_VsyncEnabled = enable; }
 
         virtual void WaitForGPU() override;
         virtual void FlushGPU()   override;
@@ -64,9 +54,9 @@ namespace D3D12
         constexpr u32                        CurrentBuffer()               const { return m_CurrentBuffer; }
         constexpr D3D12_RESOURCE_HEAP_TIER   ResourceHeapTier()            const { return m_Features.options.ResourceHeapTier; }
 
-        constexpr bool FirstFrame()       const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::FIRST_FRAME);       }
-        constexpr bool TearingSupported() const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::TEARING_SUPPORTED); }
-        constexpr bool InFullscreenMode() const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::FULLSCREEN);        }
+        constexpr bool FirstFrame()       const { return m_FirstFrame;       }
+        constexpr bool TearingSupported() const { return m_TearingSupported; }
+        constexpr bool InFullscreenMode() const { return m_Fullscreen;       }
 
     private:
         void CreateDebugLayer();
@@ -116,6 +106,7 @@ namespace D3D12
     #endif
 
         IDXGISwapChain4             *m_SwapChain;
+        HANDLE                       m_WaitableObject;
 
         ID3D12DescriptorHeap        *m_RTVHeapDesc;
         ID3D12Resource              *m_RTBuffers[SWAP_CHAIN_BUFFERS_COUNT];
@@ -130,8 +121,13 @@ namespace D3D12
         ID3D12Fence                 *m_Fences[SWAP_CHAIN_BUFFERS_COUNT];
         HANDLE                       m_FenceEvent;
 
-        FLAGS                        m_Flags;
         HRESULT                      m_Error;
+
+        // Flags
+        u32 m_VsyncEnabled     : 1;
+        u32 m_FirstFrame       : 1;
+        u32 m_TearingSupported : 1;
+        u32 m_Fullscreen       : 1;
 
         // @TODO(Roman): Do we need it all???
         struct
@@ -155,8 +151,6 @@ namespace D3D12
         bool                         m_StopLogging;
     #endif
     };
-
-    ENUM_CLASS_OPERATORS(Renderer::FLAGS);
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_base_of_v<IUnknown, T>>>
     INLINE void SafeRelease(T *& unknown)

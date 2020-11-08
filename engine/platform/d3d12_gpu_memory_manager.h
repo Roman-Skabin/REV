@@ -20,7 +20,7 @@
 //               This functionality doesn't belong to memory management.
 
 // @Issue(Roman): It's not efficient to preallocate so much memory
-//                even for using the fastest way of resource allocation D3D12
+//                even for using the fastest way of resource allocation in D3D12
 //                (Using placed resources with preallocated heaps for them).
 //                Because ID3D12Heap is an interface used to manage PHYSICAL memory, NOT virtual.
 //                And when we trying to allocate x bytes we're commiting ALL the memory we want to reserve.

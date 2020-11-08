@@ -9,7 +9,8 @@
 // Debuging
 //
 
-global HANDLE gConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+global HANDLE  g_Console = GetStdHandle(STD_OUTPUT_HANDLE);
+global SRWLOCK g_SRWLock = SRWLOCK_INIT;
 
 void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...)
 {
@@ -18,16 +19,18 @@ void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...)
 
     char buffer[BUFSIZ] = {'\0'};
     int len             = vsprintf(buffer, format, args);
-    buffer[len]         = '\n';
+    buffer[len++]       = '\n';
 
+    AcquireSRWLockExclusive(&g_SRWLock);
     if (cast<bool>(debug_in & DEBUG_IN::CONSOLE))
     {
-        WriteConsoleA(gConsole, buffer, len, null, null);
+        WriteConsoleA(g_Console, buffer, len, null, null);
     }
     if (cast<bool>(debug_in & DEBUG_IN::WINDBG))
     {
         OutputDebugStringA(buffer);
     }
+    ReleaseSRWLockExclusive(&g_SRWLock);
 
     va_end(args);
 }
@@ -39,18 +42,20 @@ void __cdecl DebugFC(DEBUG_IN debug_in, DEBUG_COLOR color, const char *format, .
 
     char buffer[BUFSIZ] = {'\0'};
     int len             = vsprintf(buffer, format, args);
-    buffer[len]         = '\n';
+    buffer[len++]       = '\n';
 
+    AcquireSRWLockExclusive(&g_SRWLock);
     if (cast<bool>(debug_in & DEBUG_IN::CONSOLE))
     {
-        SetConsoleTextAttribute(gConsole, cast<u16>(color));
-        WriteConsoleA(gConsole, buffer, len, null, null);
-        SetConsoleTextAttribute(gConsole, cast<u16>(DEBUG_COLOR::INFO));
+        SetConsoleTextAttribute(g_Console, cast<u16>(color));
+        WriteConsoleA(g_Console, buffer, len, null, null);
+        SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::INFO));
     }
     if (cast<bool>(debug_in & DEBUG_IN::WINDBG))
     {
         OutputDebugStringA(buffer);
     }
+    ReleaseSRWLockExclusive(&g_SRWLock);
 
     va_end(args);
 }

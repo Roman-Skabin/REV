@@ -79,8 +79,16 @@ void GPUResource::SetData(const void *data)
     Renderer                  *renderer      = cast<Renderer *>(GraphicsAPI::GetRenderer());
     ID3D12GraphicsCommandList *graphics_list = renderer->CurrentGraphicsList();
 
+    void *upload_pointer = m_UploadPointers[renderer->CurrentBuffer()];
+
+    u64 resource_size = m_ResourceDesc.Width
+                      * m_ResourceDesc.Height
+                      * m_ResourceDesc.DepthOrArraySize;
+
     if (!data)
     {
+        ZeroMemory(upload_pointer, resource_size);
+        
         D3D12_DISCARD_REGION discard_region;
         discard_region.NumRects         = 0;
         discard_region.pRects           = null;
@@ -88,15 +96,10 @@ void GPUResource::SetData(const void *data)
         discard_region.NumSubresources  = 1;
 
         graphics_list->DiscardResource(m_DefaultResource, &discard_region);
-        graphics_list->DiscardResource(m_UploadResources[renderer->CurrentBuffer()], &discard_region);
     }
     else
     {
-        u64 resource_size = m_ResourceDesc.Width
-                          * m_ResourceDesc.Height
-                          * m_ResourceDesc.DepthOrArraySize;
-
-        CopyMemory(m_UploadPointers[renderer->CurrentBuffer()], data, resource_size);
+        CopyMemory(upload_pointer, data, resource_size);
 
         D3D12_RESOURCE_BARRIER resource_barrier;
         resource_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -122,9 +125,17 @@ void GPUResource::SetDataImmediate(const void *data)
     Renderer                  *renderer           = cast<Renderer *>(GraphicsAPI::GetRenderer());
     GPUMemoryManager          *gpu_memory_manager = cast<GPUMemoryManager *>(GraphicsAPI::GetGPUMemoryManager());
     ID3D12GraphicsCommandList *command_list       = gpu_memory_manager->CommandList();
-    
+
+    void *upload_pointer = m_UploadPointers[renderer->CurrentBuffer()];
+
+    u64 resource_size = m_ResourceDesc.Width
+                      * m_ResourceDesc.Height
+                      * m_ResourceDesc.DepthOrArraySize;
+
     if (!data)
     {
+        ZeroMemory(upload_pointer, resource_size);
+
         D3D12_DISCARD_REGION discard_region;
         discard_region.NumRects         = 0;
         discard_region.pRects           = null;
@@ -132,15 +143,10 @@ void GPUResource::SetDataImmediate(const void *data)
         discard_region.NumSubresources  = 1;
 
         command_list->DiscardResource(m_DefaultResource, &discard_region);
-        command_list->DiscardResource(m_UploadResources[renderer->CurrentBuffer()], &discard_region);
     }
     else
     {
-        u64 resource_size = m_ResourceDesc.Width
-                          * m_ResourceDesc.Height
-                          * m_ResourceDesc.DepthOrArraySize;
-
-        CopyMemory(m_UploadPointers[renderer->CurrentBuffer()], data, resource_size);
+        CopyMemory(upload_pointer, data, resource_size);
 
         D3D12_RESOURCE_BARRIER resource_barrier;
         resource_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;

@@ -28,7 +28,7 @@ WorkQueue::WorkQueue(const Logger& logger)
       m_NextEntryToWrite(0),
       m_Works{null}
 {
-    SYSTEM_INFO info = {0};
+    SYSTEM_INFO info = {};
     GetNativeSystemInfo(&info);
 
     s32 cpu_virtual_threads_count = info.dwNumberOfProcessors - 1; // minus main thread
@@ -36,7 +36,7 @@ WorkQueue::WorkQueue(const Logger& logger)
 
     if (cpu_virtual_threads_count > MAX_THREADS) cpu_virtual_threads_count = MAX_THREADS;
 
-    DebugResult(m_Semaphore = CreateSemaphoreExA(0, 0, cpu_virtual_threads_count, 0, 0, SEMAPHORE_ALL_ACCESS));
+    DebugResult(m_Semaphore = CreateSemaphoreExA(null, 0, cpu_virtual_threads_count, "WorkQueue Semaphore", 0, SEMAPHORE_ALL_ACCESS));
 
     for (s32 i = 0; i < cpu_virtual_threads_count; ++i)
     {
@@ -70,7 +70,7 @@ void WorkQueue::AddWork(const WorkType& work)
             if (old == old_next_entry_to_write)
             {
                 _InterlockedIncrement(&m_CompletionGoal);
-                ReleaseSemaphore(m_Semaphore, 1, 0);
+                ReleaseSemaphore(m_Semaphore, 1, null);
             }
 
             break;

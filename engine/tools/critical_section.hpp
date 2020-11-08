@@ -14,45 +14,62 @@ class CriticalSection<true>
 {
 public:
     CriticalSection()
-        : m_Handle{}
+        : m_Semaphore(CreateSemaphoreExA(null, 1, 1, "CriticalSection Semaphore", 0, SEMAPHORE_ALL_ACCESS)),
+          m_Owner(null),
+          m_RecursionCount(0)
     {
-    #if RELEASE
-        InitializeCriticalSectionEx(&m_Handle, 4096, RTL_CRITICAL_SECTION_FLAG_NO_DEBUG_INFO);
-    #else
-        InitializeCriticalSectionEx(&m_Handle, 4096, 0);
-    #endif
     }
 
     CriticalSection(CriticalSection&& other)
-        : m_Handle(other.m_Handle)
+        : m_Semaphore(other.m_Semaphore),
+          m_Owner(other.m_Owner),
+          m_RecursionCount(other.m_RecursionCount)
     {
-        other.m_Handle.LockSemaphore = null;
+        other.m_Semaphore = null;
     }
 
     ~CriticalSection()
     {
-        if (m_Handle.LockSemaphore)
-        {
-            DeleteCriticalSection(&m_Handle);
-        }
+        if (m_Semaphore) CloseHandle(m_Semaphore);
     }
 
     void Enter()
     {
-        EnterCriticalSection(&m_Handle);
+        HANDLE old_owner = m_Owner;
+        HANDLE new_owner = GetCurrentThread();
+
+        if (new_owner != old_owner)
+        {
+            // @NOTE(Roman): If more than one thread is waiting on a semaphore, a waiting thread is selected.
+            //               Do not assume a first-in, first-out (FIFO) order.
+            //               External events such as kernel-mode APCs can change the wait order.
+            while (WaitForSingleObjectEx(m_Semaphore, INFINITE, false) != WAIT_OBJECT_0);
+            _InterlockedExchangePointer(&m_Owner, new_owner);
+        }
+        _InterlockedIncrement64(&m_RecursionCount);
     }
 
     void Leave()
     {
-        LeaveCriticalSection(&m_Handle);
+        if (_InterlockedDecrement64(&m_RecursionCount) == 0)
+        {
+            _InterlockedExchangePointer(&m_Owner, null);
+            ReleaseSemaphore(m_Semaphore, 1, null);
+        }
     }
 
     constexpr bool Waitable() const { return true; }
 
     CriticalSection& operator=(CriticalSection&& other)
     {
-        m_Handle = other.m_Handle;
-        other.m_Handle.LockSemaphore = null;
+        if (this != &other)
+        {
+            m_Semaphore      = other.m_Semaphore;
+            m_Owner          = other.m_Owner;
+            m_RecursionCount = other.m_RecursionCount;
+
+            other.m_Semaphore = null;
+        }
         return *this;
     }
 
@@ -61,7 +78,9 @@ private:
     CriticalSection& operator=(const CriticalSection&) = delete;
 
 private:
-    RTL_CRITICAL_SECTION m_Handle;
+    volatile HANDLE m_Semaphore;
+    volatile HANDLE m_Owner;
+    volatile s64    m_RecursionCount;
 };
 
 template<>
@@ -82,6 +101,10 @@ public:
           m_Owner(other.m_Owner),
           m_RecursionCount(other.m_RecursionCount)
     {
+        other.m_CurrentThreadID = 0;
+        other.m_NextThreadID    = 0;
+        other.m_Owner           = null;
+        other.m_RecursionCount  = 0;
     }
 
     ~CriticalSection()
@@ -121,6 +144,11 @@ public:
             m_NextThreadID    = other.m_NextThreadID;
             m_Owner           = other.m_Owner;
             m_RecursionCount  = other.m_RecursionCount;
+
+            other.m_CurrentThreadID = 0;
+            other.m_NextThreadID    = 0;
+            other.m_Owner           = null;
+            other.m_RecursionCount  = 0;
         }
         return *this;
     }

@@ -19,48 +19,6 @@
 // @TOOD(Roman): Move Draw (and Bind probably) stuff somewhere.
 //               This functionality doesn't belong to memory management.
 
-// @Issue(Roman): It's not efficient to preallocate so much memory
-//                even for using the fastest way of resource allocation in D3D12
-//                (Using placed resources with preallocated heaps for them).
-//                Because ID3D12Heap is an interface used to manage PHYSICAL memory, NOT virtual.
-//                And when we trying to allocate x bytes we're commiting ALL the memory we want to reserve.
-//
-//                Double Bufferisation:
-//                     1 GB ->  3 GB
-//                     2 GB ->  6 GB
-//                     4 GB -> 12 GB
-//                     8 GB -> 24 GB
-//                    16 GB -> 48 GB
-//                    24 GB -> 72 GB
-//
-//                Triple Bufferisation:
-//                     1 GB ->  4 GB
-//                     2 GB ->  8 GB
-//                     4 GB -> 16 GB
-//                     8 GB -> 32 GB
-//                    16 GB -> 64 GB
-//                    24 GB -> 96 GB
-//
-//                Placed resources can be overlapped, so if we'll find a way
-//                to "place" upload resources from different frames into one memory,
-//                entire_bytes will be equals to:
-//
-//                                      buffers         textures
-//                                     def    upl      def    upl
-//                     entire_bytes = (0.4x + 0.4x) + (0.6x + 0.6x).
-//                     entire_bytes = 2x;
-//
-//                And it's seems much better than it is now:
-//
-//                     N = D3D12::SWAP_CHAIN_BUFFERS_COUNT.
-//                                       buffers          textures
-//                                     def     upl       def    upl
-//                     entire_bytes = (0.4x + 0.4Nx) + (0.6x + 0.6Nx).
-//                     entire_bytes = (1+N)x.
-//
-//                The first variant is to use fences to check is our work from previous frame with resource is completed.
-//                But won't it slow down all the performance I want to achieve?
-
 namespace D3D12
 {
     class GPUDescHeap;

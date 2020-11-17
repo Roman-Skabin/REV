@@ -9,7 +9,7 @@
 
 namespace D3D12 {
 
-Renderer::Renderer(Window *window, const Logger& logger, v2s rt_size)
+Renderer::Renderer(Window *window, const Logger& logger, Math::v2s rt_size)
     : m_Logger(logger, "GPU Manager logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_Window(window),
       m_RTSize(rt_size),
@@ -801,10 +801,10 @@ u32 WINAPI LogInfoQueueMessages(void *arg)
 
                 composed_message_len = 0;
 
-                /**/ if (mm_equals(&message->Producer, &DXGI_DEBUG_D3D12)) AddCSTR(composed_message, composed_message_len, "D3D12 ");
-                else if (mm_equals(&message->Producer, &DXGI_DEBUG_DXGI))  AddCSTR(composed_message, composed_message_len, "DXGI ");
-                else if (mm_equals(&message->Producer, &DXGI_DEBUG_APP))   AddCSTR(composed_message, composed_message_len, "APP ");
-                else                                                       AddCSTR(composed_message, composed_message_len, "<UNKNOWN> ");
+                /**/ if (Math::mm_equals(&message->Producer, &DXGI_DEBUG_D3D12)) AddCSTR(composed_message, composed_message_len, "D3D12 ");
+                else if (Math::mm_equals(&message->Producer, &DXGI_DEBUG_DXGI))  AddCSTR(composed_message, composed_message_len, "DXGI ");
+                else if (Math::mm_equals(&message->Producer, &DXGI_DEBUG_APP))   AddCSTR(composed_message, composed_message_len, "APP ");
+                else                                                             AddCSTR(composed_message, composed_message_len, "<UNKNOWN> ");
 
                 switch (message->Severity)
                 {

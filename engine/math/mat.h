@@ -6,6 +6,8 @@
 
 #include "math/vec.h"
 
+namespace Math {
+
 #pragma pack(push, 1)
 
 //
@@ -1433,7 +1435,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
 
     static m4 __vectorcall persp_lh(f32 aspect, deg fov, f32 near, f32 far) // returns z = [-1; 1]
     {
-        f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
+        f32 tanfov2 = tanf(fov / 2.0f * g_f32_PI / 180.0f);
 
         return m4(1.0f/(aspect*tanfov2),         0.0f,                  0.0f,                        0.0f,
                                    0.0f, 1.0f/tanfov2,                  0.0f,                        0.0f,
@@ -1451,7 +1453,7 @@ union ENGINE_INTRIN_TYPE ENGINE_ALIGN(32) m4 final
 
     static m4 __vectorcall persp_rh(f32 aspect, deg fov, f32 near, f32 far) // returns z = [-1; 1]
     {
-        f32 tanfov2 = tanf(fov / 2.0f * f32_PI / 180.0f);
+        f32 tanfov2 = tanf(fov / 2.0f * g_f32_PI / 180.0f);
         
         return m4(1.0f/(aspect*tanfov2),         0.0f,                  0.0f,                       0.0f,
                                    0.0f, 1.0f/tanfov2,                  0.0f,                       0.0f,
@@ -1784,3 +1786,5 @@ INLINE m4 __vectorcall CameraToWorldRH(v4 camera, v4 target, v4 up)
 }
 
 #pragma pack(pop)
+
+}

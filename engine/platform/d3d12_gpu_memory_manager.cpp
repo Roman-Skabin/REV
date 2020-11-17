@@ -420,12 +420,6 @@ void GPUResourceMemory::CreateGPUResource(GPUResource *resource)
 
     Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
 
-    D3D12_DISCARD_REGION discard_region;
-    discard_region.NumRects         = 0;
-    discard_region.pRects           = null;
-    discard_region.FirstSubresource = 0;
-    discard_region.NumSubresources  = 1;
-
     HRESULT error = renderer->Device()->CreatePlacedResource(m_DefaultHeap,
                                                              m_DefaultOffset,
                                                              &resource->m_ResourceDesc,

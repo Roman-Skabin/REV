@@ -409,7 +409,10 @@ void GraphicsProgram::AttachGeometryShader(const StaticString<MAX_PATH>& filenam
 
 void GraphicsProgram::AttachResource(IGPUResource *resource)
 {
-    m_BoundResources.PushBack(cast<GPUResource *>(resource));
+    GPUResource *d3d12_resource = cast<GPUResource *>(resource);
+    CheckM(d3d12_resource->Kind() != GPUResource::KIND::VB && d3d12_resource->Kind() != GPUResource::KIND::IB, "You can't attach vertex nor index buffer.");
+
+    m_BoundResources.PushBack(d3d12_resource);
 }
 
 void GraphicsProgram::BindVertexBuffer(IGPUResource *resource)
@@ -552,33 +555,31 @@ void GPUProgramManager::SetCurrentGraphicsProgram(IGraphicsProgram *graphics_pro
         ID3D12DescriptorHeap **desc_heaps = memory->PushToTA<ID3D12DescriptorHeap *>(bound_resources_count);
 
         u64 desc_heap_index = 0;
-        program->BoundResources().ForEach([&](GraphicsProgram::ResourcePointersList::Node *node)
+        for (GPUResource *it : program->BoundResources())
         {
-            desc_heaps[desc_heap_index++] = node->Data()->DescHeap()->Handle();
-        });
+            desc_heaps[desc_heap_index++] = it->DescHeap()->Handle();
+        }
 
         graphics_list->SetDescriptorHeaps(bound_resources_count, desc_heaps);
 
         u32 resource_index = 0;
-        program->BoundResources().ForEach([&](GraphicsProgram::ResourcePointersList::Node *node)
+        for (GPUResource *it : program->BoundResources())
         {
-            GPUResource *resource = node->Data();
-
-            switch (resource->Kind())
+            switch (it->Kind())
             {
                 case GPUResource::KIND::CB:
                 {
-                    graphics_list->SetGraphicsRootConstantBufferView(resource_index, resource->Handle()->GetGPUVirtualAddress());
+                    graphics_list->SetGraphicsRootConstantBufferView(resource_index, it->Handle()->GetGPUVirtualAddress());
                 } break;
 
                 case GPUResource::KIND::SR:
                 {
-                    graphics_list->SetGraphicsRootShaderResourceView(resource_index, resource->Handle()->GetGPUVirtualAddress());
+                    graphics_list->SetGraphicsRootShaderResourceView(resource_index, it->Handle()->GetGPUVirtualAddress());
                 } break;
 
                 case GPUResource::KIND::UA:
                 {
-                    graphics_list->SetGraphicsRootUnorderedAccessView(resource_index, resource->Handle()->GetGPUVirtualAddress());
+                    graphics_list->SetGraphicsRootUnorderedAccessView(resource_index, it->Handle()->GetGPUVirtualAddress());
                 } break;
 
                 default:
@@ -589,7 +590,7 @@ void GPUProgramManager::SetCurrentGraphicsProgram(IGraphicsProgram *graphics_pro
             }
 
             ++resource_index;
-        });
+        }
     }
 }
 

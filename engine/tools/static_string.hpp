@@ -184,15 +184,15 @@ public:
     {
         if constexpr (aligned_capacity == 16 && other_aligned_capacity == 16)
         {
-            return m_Length == static_string.m_Length && mm_equals(m_Data, static_string.m_Data);
+            return m_Length == static_string.m_Length && Math::mm_equals(m_Data, static_string.m_Data);
         }
         else if constexpr (aligned_capacity == 32 && other_aligned_capacity == 32)
         {
-            return m_Length == static_string.m_Length && mm256_equals(m_Data, static_string.m_Data);
+            return m_Length == static_string.m_Length && Math::mm256_equals(m_Data, static_string.m_Data);
         }
         else if constexpr (aligned_capacity == 64 && other_aligned_capacity == 64)
         {
-            return m_Length == static_string.m_Length && mm512_equals(m_Data, static_string.m_Data);
+            return m_Length == static_string.m_Length && Math::mm512_equals(m_Data, static_string.m_Data);
         }
         else
         {

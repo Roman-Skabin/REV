@@ -9,6 +9,8 @@
 
 #pragma pack(push, 1)
 
+namespace Math {
+
 //
 // v2
 //
@@ -1063,3 +1065,5 @@ INLINE v4  __vectorcall v4u_to_v4 (v4u v) { return v4 (_mm_cvtepi32_ps(v.mm)); }
 INLINE v4s __vectorcall v4u_to_v4s(v4u v) { return v4s(                v.mm ); }
 
 #pragma pack(pop)
+
+}

@@ -7,15 +7,15 @@
 #pragma pack(push, 1)
 struct Vertex
 {
-    v4 pos;
-    v4 col;
+    Math::v4 pos;
+    Math::v4 col;
 };
 #pragma pack(pop)
 
 struct ENGINE_ALIGN(256) CBuffer_MVPMatrix
 {
-    m4 MVP;
-    v3 center;
+    Math::m4 MVP;
+    Math::v3 center;
 };
 
 class DemoScene final : public Scene
@@ -40,7 +40,7 @@ private:
     u32               m_IndexData[6];
     CBuffer_MVPMatrix m_CBufferData;
 
-    m4                m_Translation;
+    Math::m4          m_Translation;
 
     StaticString<128> m_OriginalWindowTitle;
 };

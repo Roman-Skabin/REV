@@ -21,7 +21,7 @@ void GraphicsAPI::SetGraphicsAPI(API api)
     s_API = api;
 }
 
-IRenderer *GraphicsAPI::CreateRenderer(Window *window, const Logger& logger, v2s rt_size)
+IRenderer *GraphicsAPI::CreateRenderer(Window *window, const Logger& logger, Math::v2s rt_size)
 {
     switch (s_API)
     {

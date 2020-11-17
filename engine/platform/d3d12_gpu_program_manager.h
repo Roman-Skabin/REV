@@ -7,6 +7,7 @@
 #include "renderer/gpu_program_manager.h"
 #include "core/memory.h"
 #include "tools/list.hpp"
+#include "tools/buffer.hpp"
 #include "platform/d3d12_gpu_memory_manager.h"
 
 #include <d3dcompiler.h>
@@ -43,8 +44,6 @@ namespace D3D12
     class ENGINE_API GraphicsProgram final : public IGraphicsProgram
     {
     public:
-        using ResourcePointersList = List<GPUResource *>;
-
         GraphicsProgram(Allocator *allocator, const StaticString<MAX_PATH>& vs_filename, const StaticString<MAX_PATH>& ps_filename);
         ~GraphicsProgram();
 
@@ -60,15 +59,15 @@ namespace D3D12
         virtual void DrawVertices() override;
         virtual void DrawIndices()  override;
 
-        constexpr const ID3DBlob             *Signature()      const { return m_Signature;      }
-        constexpr const ID3D12RootSignature  *RootSignature()  const { return m_RootSignature;  }
-        constexpr const ID3D12PipelineState  *PipelineState()  const { return m_PipelineState;  }
-        constexpr const ResourcePointersList& BoundResources() const { return m_BoundResources; }
+        constexpr const ID3DBlob              *Signature()      const { return m_Signature;      }
+        constexpr const ID3D12RootSignature   *RootSignature()  const { return m_RootSignature;  }
+        constexpr const ID3D12PipelineState   *PipelineState()  const { return m_PipelineState;  }
+        constexpr const Buffer<GPUResource *>& BoundResources() const { return m_BoundResources; }
 
-        constexpr ID3DBlob             *Signature()      { return m_Signature;      }
-        constexpr ID3D12RootSignature  *RootSignature()  { return m_RootSignature;  }
-        constexpr ID3D12PipelineState  *PipelineState()  { return m_PipelineState;  }
-        constexpr ResourcePointersList& BoundResources() { return m_BoundResources; }
+        constexpr ID3DBlob              *Signature()      { return m_Signature;      }
+        constexpr ID3D12RootSignature   *RootSignature()  { return m_RootSignature;  }
+        constexpr ID3D12PipelineState   *PipelineState()  { return m_PipelineState;  }
+        constexpr Buffer<GPUResource *>& BoundResources() { return m_BoundResources; }
 
     private:
         void AttachMainShaders(const StaticString<MAX_PATH>& vs_filename, const StaticString<MAX_PATH>& ps_filename);
@@ -91,17 +90,17 @@ namespace D3D12
         GraphicsProgram& operator=(const GraphicsProgram&) = delete;
 
     private:
-        ID3DBlob             *m_Signature;
-        ID3D12RootSignature  *m_RootSignature;
-        ID3D12PipelineState  *m_PipelineState;
-        GPUResource          *m_VertexBuffer;
-        GPUResource          *m_IndexBuffer;
-        ResourcePointersList  m_BoundResources;
-        Shader                m_VertexShader;
-        Shader                m_PixelShader;
-        Shader                m_HullShader;
-        Shader                m_DomainShader;
-        Shader                m_GeometryShader;
+        ID3DBlob              *m_Signature;
+        ID3D12RootSignature   *m_RootSignature;
+        ID3D12PipelineState   *m_PipelineState;
+        GPUResource           *m_VertexBuffer;
+        GPUResource           *m_IndexBuffer;
+        Buffer<GPUResource *>  m_BoundResources;
+        Shader                 m_VertexShader;
+        Shader                 m_PixelShader;
+        Shader                 m_HullShader;
+        Shader                 m_DomainShader;
+        Shader                 m_GeometryShader;
     };
 
     class ENGINE_API ComputeProgram final : public IComputeProgram

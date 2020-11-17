@@ -295,7 +295,7 @@ public:
 
     Buffer& operator=(const Buffer& other)
     {
-        if (m_Header != other->m_Header)
+        if (m_Header != other.m_Header)
         {
             DestroyAll();
             m_Header = cast<Header *>(other.m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
@@ -308,7 +308,7 @@ public:
 
     Buffer& operator=(Buffer&& other) noexcept
     {
-        if (m_Header != other->m_Header)
+        if (m_Header != other.m_Header)
         {
             DestroyAll();
             if (m_Header) m_Header->allocator->DeAllocA(m_Header);
@@ -357,9 +357,12 @@ private:
     {
         if constexpr (RTTI::is_destructible_v<T>)
         {
-            for (T *it = m_Header->data; it < m_Header->data + m_Header->count; ++it)
+            if (m_Header)
             {
-                it->~T();
+                for (T *it = m_Header->data; it < m_Header->data + m_Header->count; ++it)
+                {
+                    it->~T();
+                }
             }
         }
     }

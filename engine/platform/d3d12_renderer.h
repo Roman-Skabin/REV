@@ -24,7 +24,7 @@ namespace D3D12
     class ENGINE_API Renderer final : public IRenderer
     {
     public:
-        Renderer(Window *window, const Logger& logger, v2s rt_size);
+        Renderer(Window *window, const Logger& logger, Math::v2s rt_size);
         ~Renderer();
 
         virtual void Destroy() override;
@@ -84,8 +84,8 @@ namespace D3D12
     private:
         Logger                       m_Logger;
         Window                      *m_Window;
-        v2s                          m_RTSize;
-        v2s                          m_ActualRTSize; // @NOTE(Roman): In windowed mode = m_RTSize, in fullscreen mode = m_Window->Size().
+        Math::v2s                    m_RTSize;
+        Math::v2s                    m_ActualRTSize; // @NOTE(Roman): In windowed mode = m_RTSize, in fullscreen mode = m_Window->Size().
 
     #if DEBUG
         ID3D12Debug1                *m_Debug;

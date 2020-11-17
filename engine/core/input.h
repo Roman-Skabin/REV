@@ -75,8 +75,8 @@ public:
     Mouse(const Logger& logger, HWND window_handle);
     Mouse(Mouse&& other) noexcept;
 
-    v2s                  Pos()          const { return m_Pos;          }
-    v2s                  DeltaPos()     const { return m_DeltaPos;     }
+    Math::v2s            Pos()          const { return m_Pos;          }
+    Math::v2s            DeltaPos()     const { return m_DeltaPos;     }
     s32                  Wheel()        const { return m_Wheel;        }
     s32                  DeltaWheel()   const { return m_DeltaWheel;   }
     const DigitalButton& LeftButton()   const { return m_LeftButton;   }
@@ -91,8 +91,8 @@ public:
     Mouse& operator=(Mouse&& other) noexcept;
 
 private:
-    v2s           m_Pos;
-    v2s           m_DeltaPos;
+    Math::v2s     m_Pos;
+    Math::v2s     m_DeltaPos;
     s32           m_Wheel;
     s32           m_DeltaWheel;
     DigitalButton m_LeftButton;
@@ -108,14 +108,14 @@ public:
     Stick(f32 deadzone);
 
     f32                  Deadzone() const { return m_Deadzone; }
-    v2                   Offset()   const { return m_Offset;   }
+    Math::v2             Offset()   const { return m_Offset;   }
     const DigitalButton& Button()   const { return m_Button;   }
 
     void UpdateState(f32 x, f32 y, bool down);
 
 private:
     f32           m_Deadzone;
-    v2            m_Offset;
+    Math::v2      m_Offset;
     DigitalButton m_Button;
 };
 

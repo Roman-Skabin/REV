@@ -30,7 +30,7 @@ public:
 public:
     Window(const Logger&            logger,
            const StaticString<128>& title,
-           v4s                      xywh = S32_MIN
+           Math::v4s                xywh = S32_MIN
     );
 
     ~Window();
@@ -46,9 +46,9 @@ public:
 
     constexpr const HWND               Handle()   const { return m_Handle;  }
     constexpr const StaticString<128>& Title()    const { return m_Title;   }
-    constexpr const v2s&               Position() const { return m_XYWH.xy; }
-    constexpr const v2s&               Size()     const { return m_XYWH.wh; }
-    constexpr const v4s&               XYWH()     const { return m_XYWH;    }
+    constexpr const Math::v2s&         Position() const { return m_XYWH.xy; }
+    constexpr const Math::v2s&         Size()     const { return m_XYWH.wh; }
+    constexpr const Math::v4s&         XYWH()     const { return m_XYWH;    }
 
     constexpr bool Closed()       const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::CLOSED);       }
     constexpr bool Moved()        const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::MOVED);        }
@@ -71,7 +71,7 @@ private:
     HINSTANCE         m_Instance;
     HWND              m_Handle;
     HDC               m_Context;
-    v4s               m_XYWH;
+    Math::v4s         m_XYWH;
     FLAGS             m_Flags;
     Logger            m_Logger;
     StaticString<128> m_Title;

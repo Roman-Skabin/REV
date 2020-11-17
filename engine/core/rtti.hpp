@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "platform.h"
+#include "core/platform.h"
 
 namespace RTTI
 {
@@ -349,11 +349,56 @@ namespace RTTI
     template<typename Callable, typename ...Args>
     inline constexpr bool is_callable_v = callable<Callable, Args...>::is_callable;
 
-    template<typename T> constexpr T max(T left, T right) { return left > right ? left : right; }
-    template<typename T> constexpr T min(T left, T right) { return left < right ? left : right; }
+    template<typename T, typename U>
+    struct comparable
+    {
+        using eq_t = decltype(declval<T>() == declval<U>());
+        using ne_t = decltype(declval<T>() == declval<U>());
+        using lt_t = decltype(declval<T>() <  declval<U>());
+        using gt_t = decltype(declval<T>() >  declval<U>());
+        using le_t = decltype(declval<T>() <= declval<U>());
+        using ge_t = decltype(declval<T>() >= declval<U>());
+    };
+
+    template<typename T, typename U> using comparable_eq_t = typename comparable<T, U>::eq_t;
+    template<typename T, typename U> using comparable_ne_t = typename comparable<T, U>::ne_t;
+    template<typename T, typename U> using comparable_lt_t = typename comparable<T, U>::lt_t;
+    template<typename T, typename U> using comparable_gt_t = typename comparable<T, U>::gt_t;
+    template<typename T, typename U> using comparable_le_t = typename comparable<T, U>::le_t;
+    template<typename T, typename U> using comparable_ge_t = typename comparable<T, U>::ge_t;
+
+    template<typename T, typename U, typename Void> struct _is_comparable_eq                                      : false_type {};
+    template<typename T, typename U               > struct _is_comparable_eq<T, U, void_t<comparable_eq_t<T, U>>> : true_type  {};
+    template<typename T, typename U, typename Void> struct _is_comparable_ne                                      : false_type {};
+    template<typename T, typename U               > struct _is_comparable_ne<T, U, void_t<comparable_ne_t<T, U>>> : true_type  {};
+    template<typename T, typename U, typename Void> struct _is_comparable_lt                                      : false_type {};
+    template<typename T, typename U               > struct _is_comparable_lt<T, U, void_t<comparable_lt_t<T, U>>> : true_type  {};
+    template<typename T, typename U, typename Void> struct _is_comparable_gt                                      : false_type {};
+    template<typename T, typename U               > struct _is_comparable_gt<T, U, void_t<comparable_gt_t<T, U>>> : true_type  {};
+    template<typename T, typename U, typename Void> struct _is_comparable_le                                      : false_type {};
+    template<typename T, typename U               > struct _is_comparable_le<T, U, void_t<comparable_le_t<T, U>>> : true_type  {};
+    template<typename T, typename U, typename Void> struct _is_comparable_ge                                      : false_type {};
+    template<typename T, typename U               > struct _is_comparable_ge<T, U, void_t<comparable_ge_t<T, U>>> : true_type  {};
+
+    template<typename T, typename U> using is_comparable_eq = _is_comparable_eq<T, U, void>;
+    template<typename T, typename U> using is_comparable_ne = _is_comparable_ne<T, U, void>;
+    template<typename T, typename U> using is_comparable_lt = _is_comparable_lt<T, U, void>;
+    template<typename T, typename U> using is_comparable_gt = _is_comparable_gt<T, U, void>;
+    template<typename T, typename U> using is_comparable_le = _is_comparable_le<T, U, void>;
+    template<typename T, typename U> using is_comparable_ge = _is_comparable_ge<T, U, void>;
+
+    template<typename T, typename U> inline constexpr bool is_comparable_eq_v = is_comparable_eq<T, U>::value;
+    template<typename T, typename U> inline constexpr bool is_comparable_ne_v = is_comparable_ne<T, U>::value;
+    template<typename T, typename U> inline constexpr bool is_comparable_lt_v = is_comparable_lt<T, U>::value;
+    template<typename T, typename U> inline constexpr bool is_comparable_gt_v = is_comparable_gt<T, U>::value;
+    template<typename T, typename U> inline constexpr bool is_comparable_le_v = is_comparable_le<T, U>::value;
+    template<typename T, typename U> inline constexpr bool is_comparable_ge_v = is_comparable_ge<T, U>::value;
+
+    template<typename T, typename = enable_if_t<is_comparable_gt_v<T, T>>> constexpr T max(T left, T right) { return left > right ? left : right; }
+    template<typename T, typename = enable_if_t<is_comparable_lt_v<T, T>>> constexpr T min(T left, T right) { return left < right ? left : right; }
 
     #pragma warning(suppress: 4146) // unsigned T warning
-    template<typename T> inline T abs(T val) { return val < 0 ? -val : val; }
+    template<typename T, typename = enable_if_t<is_comparable_lt_v<T, int>>> constexpr T abs(T val) { return val < 0 ? -val : val; }
 
     template<typename Void, typename T> struct _has_to_string                                               : false_type {};
     template<               typename T> struct _has_to_string<void_t<decltype(declval<T>().ToString())>, T> : true_type  {};
@@ -361,4 +406,10 @@ namespace RTTI
     template<typename T> using has_to_string = _has_to_string<void, T>;
 
     template<typename T> inline constexpr bool has_to_string_v = has_to_string<T>::value;
+
+    template<typename T> inline constexpr bool is_scalar_v  = is_integral_v<T>
+                                                           || is_floating_point_v<T>
+                                                           || is_pointer_v<T>;
+
+    template<typename T> using is_scalar = bool_type<is_scalar_v<T>>;
 }

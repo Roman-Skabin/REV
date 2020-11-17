@@ -9,7 +9,7 @@
 
 Window::Window(const Logger&            logger,
                const StaticString<128>& title,
-               v4s                      xywh)
+               Math::v4s                xywh)
     : m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
       m_Handle(null),
       m_Context(null),
@@ -134,7 +134,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
 
         case WM_SIZE: // 0x0005
         {
-            v2s new_size(cast<s32>(lparam & 0xFFFF), cast<s32>(lparam >> 16));
+            Math::v2s new_size(cast<s32>(lparam & 0xFFFF), cast<s32>(lparam >> 16));
 
             if ((window->m_XYWH.wh.w != new_size.w || window->m_XYWH.wh.h != new_size.h) && wparam != SIZE_MINIMIZED)
             {

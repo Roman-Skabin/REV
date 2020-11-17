@@ -11,11 +11,11 @@
 #define SB_RTTI_AND_TYPES_DEFINED
 namespace RTTI
 {
-    template<typename T> inline constexpr bool is_vec_v = is_any_of_v<remove_cv_t<T>, v2, v2s, v2u,
-                                                                                      v3, v3s, v3u,
-                                                                                      v4, v4s, v4u>;
+    template<typename T> inline constexpr bool is_vec_v = is_any_of_v<remove_cv_t<T>, Math::v2, Math::v2s, Math::v2u,
+                                                                                      Math::v3, Math::v3s, Math::v3u,
+                                                                                      Math::v4, Math::v4s, Math::v4u>;
 
-    template<typename T> inline constexpr bool is_mat_v = is_any_of_v<remove_cv_t<T>, m2, m3, m4>;
+    template<typename T> inline constexpr bool is_mat_v = is_any_of_v<remove_cv_t<T>, Math::m2, Math::m3, Math::m4>;
 
     template<typename T>
     inline constexpr bool is_trivially_buildable_v  = is_integral_v<T>
@@ -410,7 +410,7 @@ private:
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_vec_v<T>>>
     void __vectorcall ParseVec(char *buffer, T val)
     {
-        if constexpr (RTTI::is_same_v<T, v2>)
+        if constexpr (RTTI::is_same_v<T, Math::v2>)
         {
             *buffer++ = '{';
             *buffer++ = ' ';
@@ -423,7 +423,7 @@ private:
             *buffer++ = ' ';
             *buffer++ = '}';
         }
-        else if constexpr (RTTI::is_any_of_v<T, v2s, v2u>)
+        else if constexpr (RTTI::is_any_of_v<T, Math::v2s, Math::v2u>)
         {
             *buffer++ = '{';
             *buffer++ = ' ';
@@ -436,7 +436,7 @@ private:
             *buffer++ = ' ';
             *buffer++ = '}';
         }
-        else if constexpr (RTTI::is_same_v<T, v3>)
+        else if constexpr (RTTI::is_same_v<T, Math::v3>)
         {
             *buffer++ = '{';
             *buffer++ = ' ';
@@ -453,7 +453,7 @@ private:
             *buffer++ = ' ';
             *buffer++ = '}';
         }
-        else if constexpr (RTTI::is_any_of_v<T, v3s, v3u>)
+        else if constexpr (RTTI::is_any_of_v<T, Math::v3s, Math::v3u>)
         {
             *buffer++ = '{';
             *buffer++ = ' ';
@@ -470,7 +470,7 @@ private:
             *buffer++ = ' ';
             *buffer++ = '}';
         }
-        else if constexpr (RTTI::is_same_v<T, v4>)
+        else if constexpr (RTTI::is_same_v<T, Math::v4>)
         {
             *buffer++ = '{';
             *buffer++ = ' ';
@@ -491,7 +491,7 @@ private:
             *buffer++ = ' ';
             *buffer++ = '}';
         }
-        else if constexpr (RTTI::is_any_of_v<T, v4s, v4u>)
+        else if constexpr (RTTI::is_any_of_v<T, Math::v4s, Math::v4u>)
         {
             *buffer++ = '{';
             *buffer++ = ' ';
@@ -521,7 +521,7 @@ private:
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_mat_v<T>>>
     void __vectorcall ParseMat(char *buffer, T val)
     {
-        if constexpr (RTTI::is_same_v<T, m2>)
+        if constexpr (RTTI::is_same_v<T, Math::m2>)
         {
             *buffer++ = '\n';
             *buffer++ = '[';
@@ -548,7 +548,7 @@ private:
             *buffer++ = ']';
             *buffer++ = '\n';
         }
-        else if constexpr (RTTI::is_same_v<T, m3>)
+        else if constexpr (RTTI::is_same_v<T, Math::m3>)
         {
             *buffer++ = '\n';
             *buffer++ = '[';
@@ -599,7 +599,7 @@ private:
             *buffer++ = ']';
             *buffer++ = '\n';
         }
-        else if constexpr (RTTI::is_same_v<T, m4>)
+        else if constexpr (RTTI::is_same_v<T, Math::m4>)
         {
             *buffer++ = '\n';
             *buffer++ = '[';

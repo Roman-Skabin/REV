@@ -20,7 +20,7 @@ Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
       m_WorkQueue(WorkQueue::Create(m_Logger)),
       m_Window(m_Logger,
                name,
-               v4s(10, 10, 960, 540)),
+               Math::v4s(10, 10, 960, 540)),
       m_Input(Input::Create(m_Window, m_Logger)),
       m_Timer("EngineMainTimer"),
       m_SceneManager(SceneManager::Create(MB(16)))
@@ -32,7 +32,7 @@ Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
     s_Application = this;
 
     GraphicsAPI::SetGraphicsAPI(api);
-    GraphicsAPI::CreateRenderer(&m_Window, m_Logger, v2s(1920, 1080));
+    GraphicsAPI::CreateRenderer(&m_Window, m_Logger, Math::v2s(1920, 1080));
     GraphicsAPI::CreateGPUMemoryManager(&m_Allocator, m_Logger, GB(2ui64));
     GraphicsAPI::CreateGPUProgramManager(&m_Allocator);
 }

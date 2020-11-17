@@ -9,14 +9,14 @@ DemoScene::DemoScene()
                                                                                    "../sandbox/assets/shaders/shader.pixel")),
       m_VertexBuffer(null),
       m_IndexBuffer(null),
-      m_VertexData{{ v4(-0.5f, -0.5f, 0.5f, 1.0f), gRedA1    },
-                   { v4(-0.5f,  0.5f, 0.5f, 1.0f), gGreenA1  },
-                   { v4( 0.5f,  0.5f, 0.5f, 1.0f), gBlueA1   },
-                   { v4( 0.5f, -0.5f, 0.5f, 1.0f), gYellowA1 }},
+      m_VertexData{{ Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), Math::Color::g_RedA1    },
+                   { Math::v4(-0.5f,  0.5f, 0.5f, 1.0f), Math::Color::g_GreenA1  },
+                   { Math::v4( 0.5f,  0.5f, 0.5f, 1.0f), Math::Color::g_BlueA1   },
+                   { Math::v4( 0.5f, -0.5f, 0.5f, 1.0f), Math::Color::g_YellowA1 }},
       m_IndexData{0, 1, 2,
                   0, 2, 3},
-      m_CBufferData{m4::identity()},
-      m_Translation(m4::identity()),
+      m_CBufferData{Math::m4::identity()},
+      m_Translation(Math::m4::identity()),
       m_OriginalWindowTitle(Application::Get()->GetWindow().Title())
 {
 }
@@ -81,7 +81,7 @@ void DemoScene::OnUpdate()
         renderer->SetVSync(!renderer->VSyncEnabled());
     }
     
-    v4 translation;
+    Math::v4 translation;
 
     if (keyboard[KEY::LEFT].Down())
     {
@@ -100,11 +100,11 @@ void DemoScene::OnUpdate()
         translation.y = -timer.DeltaSeconds();
     }
 
-    m_Translation *= m4::translation(translation);
+    m_Translation *= Math::m4::translation(translation);
 
-    m_CBufferData.MVP = m_Translation * m4::rotation_z(timer.Seconds());
+    m_CBufferData.MVP = m_Translation * Math::m4::rotation_z(timer.Seconds());
 
-    v4 center = m_CBufferData.MVP * ((m_VertexData[0].pos + m_VertexData[2].pos) / 2.0f);
+    Math::v4 center = m_CBufferData.MVP * ((m_VertexData[0].pos + m_VertexData[2].pos) / 2.0f);
     m_CBufferData.center = center.xyz;
 
     {

@@ -10,13 +10,13 @@
 namespace GPU
 {
 
-GraphicsProgramHandle ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& vs_filename, const StaticString<MAX_PATH>& ps_filename)
+GraphicsProgramHandle ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_with_shaders)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
-            return cast<D3D12::ProgramManager *>(platform)->CreateGraphicsProgram(vs_filename, ps_filename);
+            return cast<D3D12::ProgramManager *>(platform)->CreateGraphicsProgram(file_with_shaders);
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -34,54 +34,6 @@ void ProgramManager::SetCurrentGraphicsProgram(GraphicsProgramHandle graphics_pr
         {
             D3D12::ProgramManager *program_manager = cast<D3D12::ProgramManager *>(platform);
             program_manager->SetCurrentGraphicsProgram(program_manager->GetGraphicsProgram(graphics_program));
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void ProgramManager::AttachHullShader(GraphicsProgramHandle graphics_program, const StaticString<MAX_PATH>& filename)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            D3D12::ProgramManager *program_manager = cast<D3D12::ProgramManager *>(platform);
-            program_manager->AttachHullShader(program_manager->GetGraphicsProgram(graphics_program), filename);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void ProgramManager::AttachDomainShader(GraphicsProgramHandle graphics_program, const StaticString<MAX_PATH>& filename)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            D3D12::ProgramManager *program_manager = cast<D3D12::ProgramManager *>(platform);
-            program_manager->AttachDomainShader(program_manager->GetGraphicsProgram(graphics_program), filename);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void ProgramManager::AttachGeometryShader(GraphicsProgramHandle graphics_program, const StaticString<MAX_PATH>& filename)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            D3D12::ProgramManager *program_manager = cast<D3D12::ProgramManager *>(platform);
-            program_manager->AttachGeometryShader(program_manager->GetGraphicsProgram(graphics_program), filename);
         } break;
 
         case GraphicsAPI::API::VULKAN:

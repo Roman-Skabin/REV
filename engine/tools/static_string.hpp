@@ -67,6 +67,15 @@ public:
         memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
     }
 
+    template<u64 other_capacity, u64 other_aligned_capacity>
+    StaticString(StaticString<other_capacity, other_aligned_capacity>&& other) noexcept
+        : m_Length(other.m_Length)
+    {
+        CheckM(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
+        CopyMemory(m_Data, other.m_Data, m_Length);
+        memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
+    }
+
     ~StaticString()
     {
     }
@@ -324,19 +333,21 @@ public:
 
     StaticString& Erase(u64 from, u64 to)
     {
-        CheckM(from < m_Length && from < to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
-
-        u64 delta = to - from;
-
-        if (from < m_Length - 1)
+        CheckM(from < m_Length && from <= to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
+        if (from != to)
         {
-            MoveMemory(m_Data   + from,
-                       m_Data   + to,
-                       m_Length - to);
-        }
+            u64 delta = to - from;
 
-        memset_char(m_Data + m_Length - delta, '\0', delta);
-        m_Length -= delta;
+            if (from < m_Length - 1)
+            {
+                MoveMemory(m_Data   + from,
+                           m_Data   + to,
+                           m_Length - to);
+            }
+
+            memset_char(m_Data + m_Length - delta, '\0', delta);
+            m_Length -= delta;
+        }
         return *this;
     }
 
@@ -430,16 +441,36 @@ public:
 
     StaticString SubString(u64 from) const
     {
-        StaticString sub = *this;
-        sub.Erase(from);
-        return sub;
+        CheckM(from <= m_Length, "Bad arguments: from = %I64u, length = %I64u", from, m_Length);
+        if (from == 0)
+        {
+            return *this;
+        }
+        else if (from == m_Length)
+        {
+            return StaticString();
+        }
+        else
+        {
+            return StaticString(m_Data + from, m_Length - from);
+        }
     }
 
     StaticString SubString(u64 from, u64 to) const
     {
-        StaticString sub = *this;
-        sub.Erase(from, to);
-        return sub;
+        CheckM(from <= to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
+        if (from == 0 && to == m_Length)
+        {
+            return *this;
+        }
+        else if (from == to)
+        {
+            return StaticString();
+        }
+        else
+        {
+            return StaticString(m_Data + from, to - from);
+        }
     }
 
     u64 Find(char what, u64 offset = 0) const
@@ -584,6 +615,25 @@ public:
         return npos;
     }
 
+    u64 RFind(char what, u64 roffset = 0) const
+    {
+        CheckM(roffset < m_Length, "Offset out of bounds.");
+
+        const char *_end = m_Data + m_Length - 1 - roffset;
+
+        for (const char *it = _end; it > m_Data; --it)
+        {
+            if (*it == what)
+            {
+                return it - m_Data;
+            }
+        }
+
+        if (what == *m_Data) return 0;
+
+        return npos;
+    }
+
     StaticString& operator=(nullptr_t)
     {
         memset_char(m_Data, '\0', m_Length);
@@ -639,6 +689,21 @@ public:
         return *this;
     }
 
+    template<u64 other_capacity, u64 other_aligned_capacity>
+    StaticString& operator=(StaticString<other_capacity, other_aligned_capacity>&& other) noexcept
+    {
+        if (this != &other)
+        {
+            CheckM(other.m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
+
+            memset_char(m_Data + other.m_Length, '\0', m_Length - other.m_Length);
+
+            m_Length = other.m_Length;
+            CopyMemory(m_Data, other.m_Data, m_Length);
+        }
+        return *this;
+    }
+
     StaticString& operator+=(char right)
     {
         return PushBack(right);
@@ -671,13 +736,6 @@ public:
         CheckM(index < m_Length, "Index of bound, max allowed is %I64u", m_Length - 1);
         return m_Data[index];
     }
-
-private:
-    template<u64 other_capacity, u64 other_aligned_capacity>
-    StaticString(StaticString<other_capacity, other_aligned_capacity>&&) = delete;
-
-    template<u64 other_capacity, u64 other_aligned_capacity>
-    StaticString& operator=(StaticString<other_capacity, other_aligned_capacity>&&) = delete;
 
 private:
     u64  m_Length;

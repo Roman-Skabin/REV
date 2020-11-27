@@ -6,6 +6,7 @@
 #include "platform/d3d12/d3d12_program_manager.h"
 #include "graphics/graphics_api.h"
 #include "tools/async_file.h"
+#include "tools/const_string.h"
 #include "platform/d3d12/d3d12_common.h"
 
 #include <d3dcompiler.h>
@@ -57,10 +58,11 @@ ComputeProgram& ComputeProgram::operator=(ComputeProgram&& other) noexcept
 // ProgramManager
 //
 
-ProgramManager::ProgramManager(Allocator *allocator)
+ProgramManager::ProgramManager(Allocator *allocator, const Logger& logger)
     : m_Allocator(allocator),
       m_GraphicsPrograms(allocator),
-      m_ComputePrograms(allocator)
+      m_ComputePrograms(allocator),
+      m_Logger(logger, "ProgramManager logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE)
 {
 }
 
@@ -87,10 +89,12 @@ ProgramManager::~ProgramManager()
             SafeRelease(compute_program.pipeline_state);
             SafeRelease(compute_program.shader);
         }
+
+        m_Logger.LogInfo("ProgramManager has been destroyed");
     }
 }
 
-u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& vs_filename, const StaticString<MAX_PATH>& ps_filename)
+u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_with_shaders)
 {
     GraphicsProgram graphics_program(m_Allocator);
     graphics_program.signature       = null;
@@ -102,7 +106,7 @@ u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& vs_filen
     graphics_program.domain_shader   = null;
     graphics_program.geometry_shader = null;
 
-    AttachMainShaders(graphics_program, vs_filename, ps_filename);
+    AttachGraphicsShaders(graphics_program, file_with_shaders);
 
     // @TODO(Roman): Parse shaders?
     // @CleanUp(Roman): Hardcoded.
@@ -224,45 +228,6 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
     }
 }
 
-void ProgramManager::AttachHullShader(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& filename)
-{
-    AsyncFile file(filename, AsyncFile::FLAGS::READ);
-
-    u32   hlsl_code_length = file.Size();
-    char *hlsl_code        = Memory::Get()->PushToTA<char>(hlsl_code_length);
-
-    file.Read(hlsl_code, hlsl_code_length);
-    file.Wait();
-
-    graphics_program.hull_shader = CompileShader(hlsl_code, hlsl_code_length, filename.Data(), "HSMain", "hs_5_1");
-}
-
-void ProgramManager::AttachDomainShader(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& filename)
-{
-    AsyncFile file(filename, AsyncFile::FLAGS::READ);
-
-    u32   hlsl_code_length = file.Size();
-    char *hlsl_code        = Memory::Get()->PushToTA<char>(hlsl_code_length);
-
-    file.Read(hlsl_code, hlsl_code_length);
-    file.Wait();
-
-    graphics_program.domain_shader = CompileShader(hlsl_code, hlsl_code_length, filename.Data(), "DSMain", "ds_5_1");
-}
-
-void ProgramManager::AttachGeometryShader(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& filename)
-{
-    AsyncFile file(filename, AsyncFile::FLAGS::READ);
-
-    u32   hlsl_code_length = file.Size();
-    char *hlsl_code        = Memory::Get()->PushToTA<char>(hlsl_code_length);
-
-    file.Read(hlsl_code, hlsl_code_length);
-    file.Wait();
-
-    graphics_program.geometry_shader = CompileShader(hlsl_code, hlsl_code_length, filename.Data(), "GSMain", "gs_5_1");
-}
-
 void ProgramManager::AttachResource(GraphicsProgram& graphics_program, GPU::ResourceHandle resource_handle)
 {
     CheckM(resource_handle.kind != GPU::RESOURCE_KIND::VB && resource_handle.kind != GPU::RESOURCE_KIND::IB, "You can't attach vertex nor index buffer.");
@@ -322,30 +287,81 @@ ProgramManager& ProgramManager::operator=(ProgramManager&& other) noexcept
         m_Allocator        = other.m_Allocator;
         m_GraphicsPrograms = RTTI::move(other.m_GraphicsPrograms);
         m_ComputePrograms  = RTTI::move(other.m_ComputePrograms);
+        m_Logger           = RTTI::move(other.m_Logger);
 
         other.m_Allocator = null;
     }
     return *this;
 }
 
-void ProgramManager::AttachMainShaders(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& vs_filename, const StaticString<MAX_PATH>& ps_filename)
+void ProgramManager::AttachGraphicsShaders(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& file_with_shaders)
 {
-    AsyncFile vs_file(vs_filename, AsyncFile::FLAGS::READ);
-    AsyncFile ps_file(ps_filename, AsyncFile::FLAGS::READ);
+    AsyncFile file(file_with_shaders, AsyncFile::FLAGS::READ);
 
-    u32 vs_length = vs_file.Size();
-    u32 ps_length = ps_file.Size();
+    u32   hlsl_code_length = file.Size();
+    char *hlsl_code        = Memory::Get()->PushToTA<char>(hlsl_code_length);
 
-    char *vs = Memory::Get()->PushToTA<char>(vs_length + ps_length);
-    char *ps = vs + vs_length;
+    file.Read(hlsl_code, hlsl_code_length);
+    file.Wait();
 
-    vs_file.Read(vs, vs_length);
-    ps_file.Read(ps, ps_length);
+    ConstString const_string(hlsl_code, hlsl_code_length);
+    u8          shaders_count = 0;
 
-    AsyncFile::WaitForAll(vs_file, ps_file);
+    u64 last_dot_index   = file_with_shaders.RFind('.');
+    u64 last_slash_index = file_with_shaders.RFind('/');
 
-    graphics_program.vertex_shader = CompileShader(vs, vs_length, vs_filename.Data(), "VSMain", "vs_5_1");
-    graphics_program.pixel_shader  = CompileShader(ps, ps_length, ps_filename.Data(), "PSMain", "ps_5_1");
+    last_dot_index   = last_dot_index   == StaticString<MAX_PATH>::npos ? file_with_shaders.Length() : last_dot_index;
+    last_slash_index = last_slash_index == StaticString<MAX_PATH>::npos ? 0                          : last_slash_index + 1;
+
+    const StaticString<MAX_PATH>& shaders_name = file_with_shaders.SubString(last_slash_index, last_dot_index);
+    m_Logger.LogInfo("\"%s\" shaders are being compiled...", shaders_name.Data());
+
+    {
+        graphics_program.vertex_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "VSMain", "vs_5_1");
+        m_Logger.LogSuccess("Vertex shader has been compiled.");
+        ++shaders_count;
+    }
+
+    if (const_string.Find("HSMain", CSTRLEN("HSMain"), 0) != ConstString::npos)
+    {
+        graphics_program.hull_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "HSMain", "hs_5_1");
+        m_Logger.LogSuccess("Hull shader has been compiled.");
+        ++shaders_count;
+    }
+    else
+    {
+        m_Logger.LogWarning("Hull shader has not been compiled.");
+    }
+
+    if (const_string.Find("DSMain", CSTRLEN("DSMain"), 0) != ConstString::npos)
+    {
+        graphics_program.domain_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "DSMain", "ds_5_1");
+        m_Logger.LogSuccess("Domain shader has been compiled.");
+        ++shaders_count;
+    }
+    else
+    {
+        m_Logger.LogWarning("Domain shader has not been compiled.");
+    }
+
+    if (const_string.Find("GSMain", CSTRLEN("GSMain"), 0) != ConstString::npos)
+    {
+        graphics_program.geometry_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "GSMain", "gs_5_1");
+        m_Logger.LogSuccess("Geometry shader has been compiled.");
+        ++shaders_count;
+    }
+    else
+    {
+        m_Logger.LogWarning("Geometry shader has not been compiled.");
+    }
+
+    {
+        graphics_program.pixel_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "PSMain", "ps_5_1");
+        m_Logger.LogSuccess("Pixel shader has been compiled.");
+        ++shaders_count;
+    }
+
+    m_Logger.LogInfo("\"%s\" shaders' compilation has been done. %hhu/5 shaders has been successfully compiled.", shaders_name.Data(), shaders_count);
 }
 
 void ProgramManager::CreateRootSignature(GraphicsProgram& graphics_program, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc)

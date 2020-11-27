@@ -11,7 +11,7 @@
 namespace D3D12 {
 
 Renderer::Renderer(Window *window, const Logger& logger, Math::v2s rt_size)
-    : m_Logger(logger, "GPU Manager logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
+    : m_Logger(logger, "Renderer logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_Window(window),
       m_RTSize(rt_size),
       m_ActualRTSize(m_RTSize),

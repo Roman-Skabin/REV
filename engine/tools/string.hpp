@@ -646,22 +646,70 @@ public:
 
     String SubString(u64 from) const &
     {
-        return RTTI::move(String(*this).Erase(from));
+        CheckM(from <= m_Header->length, "Bad arguments: from = %I64u, length = %I64u", from, m_Header->length);
+        if (from == 0)
+        {
+            return *this;
+        }
+        else if (from == m_Header->length)
+        {
+            return RTTI::move(String(m_Header->allocator, 16, m_Header->alignment_in_bytes));
+        }
+        else
+        {
+            return RTTI::move(String(m_Header->allocator, m_Header->data + from, m_Header->length - from, m_Header->alignment_in_bytes));
+        }
     }
 
     String SubString(u64 from, u64 to) const &
     {
-        return RTTI::move(String(*this).Erase(from, to));
+        CheckM(from <= to && to <= m_Header->length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Header->length);
+        if (from == 0 && to == m_Header->length)
+        {
+            return *this;
+        }
+        else if (from == to)
+        {
+            return RTTI::move(String(m_Header->allocator, 16, m_Header->alignment_in_bytes));
+        }
+        else
+        {
+            return RTTI::move(String(m_Header->allocator, m_Header->data + from, to - from, m_Header->alignment_in_bytes));
+        }
     }
 
     String SubString(u64 from) &&
     {
-        return RTTI::move(Erase(from));
+        CheckM(from <= m_Header->length, "Bad arguments: from = %I64u, length = %I64u", from, m_Header->length);
+        if (from == 0)
+        {
+            return RTTI::move(*this);
+        }
+        else if (from == m_Header->length)
+        {
+            return RTTI::move(Clear());
+        }
+        else
+        {
+            return RTTI::move(Erase(0, from));
+        }
     }
 
     String SubString(u64 from, u64 to) &&
     {
-        return RTTI::move(Erase(from, to));
+        CheckM(from <= to && to <= m_Header->length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Header->length);
+        if (from == 0 && to == m_Header->length)
+        {
+            return RTTI::move(*this);
+        }
+        else if (from == to)
+        {
+            return RTTI::move(Clear());
+        }
+        else
+        {
+            return RTTI::move(Erase(to, m_Header->length).Erase(0, from));
+        }
     }
 
     u64 Find(char symbol, u64 offset = 0) const

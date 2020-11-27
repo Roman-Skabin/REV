@@ -56,7 +56,7 @@ void GraphicsAPI::Init(Window *window, Allocator *allocator, const Logger& logge
 
             *cast<D3D12::Renderer *>(s_Renderer->platform)             = D3D12::Renderer(window, logger, rt_size);
             *cast<D3D12::MemoryManager *>(s_MemoryManager->platform)   = D3D12::MemoryManager(allocator);
-            *cast<D3D12::ProgramManager *>(s_ProgramManager->platform) = D3D12::ProgramManager(allocator);
+            *cast<D3D12::ProgramManager *>(s_ProgramManager->platform) = D3D12::ProgramManager(allocator, logger);
 
             d3d12_initialized = true;
         } break;
@@ -79,9 +79,10 @@ void GraphicsAPI::Destroy()
     {
         case API::D3D12:
         {
-            cast<D3D12::Renderer *>(s_Renderer->platform)->~Renderer();
-            cast<D3D12::MemoryManager *>(s_MemoryManager->platform)->~MemoryManager();
+            // @Important(Roman): Renderer's destruction must be the last one
             cast<D3D12::ProgramManager *>(s_ProgramManager->platform)->~ProgramManager();
+            cast<D3D12::MemoryManager *>(s_MemoryManager->platform)->~MemoryManager();
+            cast<D3D12::Renderer *>(s_Renderer->platform)->~Renderer();
         } break;
 
         case API::VULKAN:

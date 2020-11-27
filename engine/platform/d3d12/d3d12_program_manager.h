@@ -53,16 +53,12 @@ namespace D3D12
     class ENGINE_API ProgramManager final
     {
     public:
-        ProgramManager(Allocator *allocator);
+        ProgramManager(Allocator *allocator, const Logger& logger);
         ~ProgramManager();
 
-        u64 CreateGraphicsProgram(const StaticString<MAX_PATH>& vs_filename, const StaticString<MAX_PATH>& ps_filename);
+        u64 CreateGraphicsProgram(const StaticString<MAX_PATH>& file_with_shaders);
 
         void SetCurrentGraphicsProgram(const GraphicsProgram& graphics_program);
-
-        void AttachHullShader(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& filename);
-        void AttachDomainShader(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& filename);
-        void AttachGeometryShader(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& filename);
 
         void AttachResource(GraphicsProgram& graphics_program, GPU::ResourceHandle resource_handle);
 
@@ -81,7 +77,7 @@ namespace D3D12
         ProgramManager& operator=(ProgramManager&& other) noexcept;
 
     private:
-        void AttachMainShaders(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& vs_filename, const StaticString<MAX_PATH>& ps_filename);
+        void AttachGraphicsShaders(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& file_with_shaders);
         void CreateRootSignature(GraphicsProgram& graphics_program, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc);
         void CreatePipelineState(GraphicsProgram& graphics_program, const D3D12_INPUT_LAYOUT_DESC& input_layout, bool blending_enabled, D3D12_CULL_MODE cull_mode, bool depth_test_enabled);
 
@@ -96,5 +92,6 @@ namespace D3D12
         Allocator                 *m_Allocator;
         ::Buffer<GraphicsProgram>  m_GraphicsPrograms;
         ::Buffer<ComputeProgram>   m_ComputePrograms;
+        Logger                     m_Logger;
     };
 }

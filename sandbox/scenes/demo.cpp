@@ -5,8 +5,7 @@
 
 DemoScene::DemoScene()
     : Scene(ConstString("DemoScene", CSTRLEN("DemoScene"))),
-      m_GraphicsProgram(GraphicsAPI::GetProgramManager()->CreateGraphicsProgram("../sandbox/assets/shaders/shader.vert",
-                                                                                "../sandbox/assets/shaders/shader.pixel")),
+      m_GraphicsProgram(GraphicsAPI::GetProgramManager()->CreateGraphicsProgram("../sandbox/assets/shaders/demo_shaders.hlsl")),
       m_VertexBuffer(),
       m_IndexBuffer(),
       m_ConstantBuffer(),

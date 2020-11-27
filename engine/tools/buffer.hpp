@@ -11,7 +11,7 @@ class Buffer final
 {
 public:
     using Type = T;
-    static constexpr u64 npos = U64_MAX;
+    static constexpr const u64 npos = U64_MAX;
 
     template<typename ...U>
     using EnableConditionCA = RTTI::conditional_t<RTTI::is_pointer_v<T>,
@@ -287,11 +287,29 @@ public:
     constexpr T *end()  { return m_Header->data + m_Header->count; }
     constexpr T *rend() { return m_Header->data;                   }
 
-    constexpr const T& First() const { return *m_Header->data;                     }
-    constexpr const T& Last()  const { return m_Header->data[m_Header->count - 1]; }
+    constexpr const T& First() const { return *m_Header->data; }
+    constexpr const T& Last()  const { return m_Header->count ? m_Header->data[m_Header->count - 1] : *m_Header->data; }
 
-    constexpr T& First() { return *m_Header->data;                     }
-    constexpr T& Last()  { return m_Header->data[m_Header->count - 1]; }
+    constexpr T& First() { return *m_Header->data; }
+    constexpr T& Last()  { return m_Header->count ? m_Header->data[m_Header->count - 1] : *m_Header->data; }
+
+    constexpr const T *pFirst() const { return m_Header->data; }
+    constexpr const T *pLast()  const { return m_Header->count ? m_Header->data + m_Header->count - 1 : m_Header->data; }
+
+    constexpr T *pFirst() { return m_Header->data; }
+    constexpr T *pLast()  { return m_Header->count ? m_Header->data + m_Header->count - 1 : m_Header->data; }
+
+    constexpr const T *GetPointer(u64 index) const
+    {
+        CheckM(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
+        return m_Header->data + index;
+    }
+
+    constexpr T *GetPointer(u64 index)
+    {
+        CheckM(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
+        return m_Header->data + index;
+    }
 
     Buffer& operator=(const Buffer& other)
     {

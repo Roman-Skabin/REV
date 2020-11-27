@@ -13,21 +13,6 @@
 class ENGINE_API Window final
 {
 public:
-    enum class FLAGS
-    {
-        NONE                       = 0,
-        CLOSED                     = BIT(0),
-        MOVED                      = BIT(1),
-        RESIZED                    = BIT(2),
-        FULLSCREENED               = BIT(3),
-        MINIMIZED                  = BIT(4),
-
-        // @NOTE(Roman): Internal
-        _FULLSCREEN_SET_REQUESTED   = BIT(30),
-        _FULLSCREEN_UNSET_REQUESTED = BIT(31),
-    };
-
-public:
     Window(const Logger&            logger,
            const StaticString<128>& title,
            Math::v4s                xywh = S32_MIN
@@ -50,11 +35,11 @@ public:
     constexpr const Math::v2s&         Size()     const { return m_XYWH.wh; }
     constexpr const Math::v4s&         XYWH()     const { return m_XYWH;    }
 
-    constexpr bool Closed()       const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::CLOSED);       }
-    constexpr bool Moved()        const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::MOVED);        }
-    constexpr bool Resized()      const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::RESIZED);      }
-    constexpr bool Fullscreened() const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::FULLSCREENED); }
-    constexpr bool Minimized()    const { return cast<u32>(m_Flags) & cast<u32>(FLAGS::MINIMIZED);    }
+    constexpr bool Closed()       const { return m_Closed;       }
+    constexpr bool Moved()        const { return m_Moved;        }
+    constexpr bool Resized()      const { return m_Resized;      }
+    constexpr bool Fullscreened() const { return m_Fullscreened; }
+    constexpr bool Minimized()    const { return m_Minimized;    }
 
 private:
     void ApplyFullscreenRequest();
@@ -72,12 +57,19 @@ private:
     HWND              m_Handle;
     HDC               m_Context;
     Math::v4s         m_XYWH;
-    FLAGS             m_Flags;
+
+    // Flags
+    u32 m_Closed                   : 1;
+    u32 m_Moved                    : 1;
+    u32 m_Resized                  : 1;
+    u32 m_Fullscreened             : 1;
+    u32 m_Minimized                : 1;
+    u32 m_FullscreenSetRequested   : 1; // @NOTE(Roman): Internal
+    u32 m_FullscreenUnsetRequested : 1; // @NOTE(Roman): Internal
+
     Logger            m_Logger;
     StaticString<128> m_Title;
     StaticString<128> m_ClassName;
 
     friend class Application;
 };
-
-ENUM_CLASS_OPERATORS(Window::FLAGS);

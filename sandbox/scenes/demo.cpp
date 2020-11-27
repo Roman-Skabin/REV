@@ -5,10 +5,11 @@
 
 DemoScene::DemoScene()
     : Scene(ConstString("DemoScene", CSTRLEN("DemoScene"))),
-      m_GraphicsProgram(GraphicsAPI::GetGPUProgramManager()->CreateGraphicsProgram("../sandbox/assets/shaders/shader.vert",
-                                                                                   "../sandbox/assets/shaders/shader.pixel")),
-      m_VertexBuffer(null),
-      m_IndexBuffer(null),
+      m_GraphicsProgram(GraphicsAPI::GetProgramManager()->CreateGraphicsProgram("../sandbox/assets/shaders/shader.vert",
+                                                                                "../sandbox/assets/shaders/shader.pixel")),
+      m_VertexBuffer(),
+      m_IndexBuffer(),
+      m_ConstantBuffer(),
       m_VertexData{{ Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), Math::Color::g_RedA1    },
                    { Math::v4(-0.5f,  0.5f, 0.5f, 1.0f), Math::Color::g_GreenA1  },
                    { Math::v4( 0.5f,  0.5f, 0.5f, 1.0f), Math::Color::g_BlueA1   },
@@ -27,27 +28,27 @@ DemoScene::~DemoScene()
 
 void DemoScene::OnSetCurrent()
 {
-    IGPUMemoryManager *gpu_memory_manager = GraphicsAPI::GetGPUMemoryManager();
+    GPU::MemoryManager *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
     {
-        m_VertexBuffer   = gpu_memory_manager->AllocateVB(cast<u32>(ArrayCount(m_VertexData)), sizeof(Vertex));
-        m_IndexBuffer    = gpu_memory_manager->AllocateIB(cast<u32>(ArrayCount(m_IndexData)));
-        m_ConstantBuffer = gpu_memory_manager->AllocateCB(sizeof(CBuffer_MVPMatrix), StaticString<64>("MVPMatrix", CSTRLEN("MVPMatrix")));
+        m_VertexBuffer   = gpu_memory_manager->AllocateVertexBuffer(cast<u32>(ArrayCount(m_VertexData)), sizeof(Vertex));
+        m_IndexBuffer    = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(ArrayCount(m_IndexData)));
+        m_ConstantBuffer = gpu_memory_manager->AllocateConstantBuffer(sizeof(CBufferData), StaticString<64>("MVPMatrix", CSTRLEN("MVPMatrix")));
     }
 
     gpu_memory_manager->StartImmediateExecution();
     {
-        m_VertexBuffer->SetDataImmediate(m_VertexData);
-        m_IndexBuffer->SetDataImmediate(m_IndexData);
-        m_ConstantBuffer->SetDataImmediate(&m_CBufferData);
+        gpu_memory_manager->SetResourceDataImmediate(m_VertexBuffer, m_VertexData);
+        gpu_memory_manager->SetResourceDataImmediate(m_IndexBuffer, m_IndexData);
+        gpu_memory_manager->SetResourceDataImmediate(m_ConstantBuffer, &m_CBufferData);
     }
     gpu_memory_manager->EndImmediateExecution();
 
-    m_GraphicsProgram->AttachResource(m_ConstantBuffer);
+    GraphicsAPI::GetProgramManager()->AttachResource(m_GraphicsProgram, m_ConstantBuffer);
 }
 
 void DemoScene::OnUnsetCurrent()
 {
-    GraphicsAPI::GetGPUMemoryManager()->Reset();
+    GraphicsAPI::GetMemoryManager()->FreeMemory();
 }
 
 void DemoScene::OnUpdate()
@@ -77,7 +78,7 @@ void DemoScene::OnUpdate()
     }
     else if (keyboard[KEY::V].Pressed())
     {
-        IRenderer *renderer = GraphicsAPI::GetRenderer();
+        Renderer *renderer = GraphicsAPI::GetRenderer();
         renderer->SetVSync(!renderer->VSyncEnabled());
     }
     
@@ -108,12 +109,13 @@ void DemoScene::OnUpdate()
     m_CBufferData.center = center.xyz;
 
     {
-        m_ConstantBuffer->SetData(&m_CBufferData);
+        GraphicsAPI::GetMemoryManager()->SetResoucreData(m_ConstantBuffer, &m_CBufferData);
 
-        GraphicsAPI::GetGPUProgramManager()->SetCurrentGraphicsProgram(m_GraphicsProgram);
+        GPU::ProgramManager *program_manager = GraphicsAPI::GetProgramManager();
+        program_manager->SetCurrentGraphicsProgram(m_GraphicsProgram);
 
-        m_GraphicsProgram->BindVertexBuffer(m_VertexBuffer);
-        m_GraphicsProgram->BindIndexBuffer(m_IndexBuffer);
-        m_GraphicsProgram->DrawIndices();
+        program_manager->BindVertexBuffer(m_GraphicsProgram, m_VertexBuffer);
+        program_manager->BindIndexBuffer(m_GraphicsProgram, m_IndexBuffer);
+        program_manager->DrawIndices(m_GraphicsProgram);
     }
 }

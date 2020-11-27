@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/scene.h"
-#include "renderer/gpu_program_manager.h"
+#include "graphics/program_manager.h"
 #include "math/mat.h"
 
 #pragma pack(push, 1)
@@ -12,7 +12,7 @@ struct Vertex
 };
 #pragma pack(pop)
 
-struct ENGINE_ALIGN(256) CBuffer_MVPMatrix
+struct CBufferData
 {
     Math::m4 MVP;
     Math::v3 center;
@@ -30,17 +30,17 @@ public:
     virtual void OnUpdate() override;
 
 private:
-    IGraphicsProgram *m_GraphicsProgram;
+    GPU::GraphicsProgramHandle m_GraphicsProgram;
 
-    IGPUResource     *m_VertexBuffer;
-    IGPUResource     *m_IndexBuffer;
-    IGPUResource     *m_ConstantBuffer;
+    GPU::ResourceHandle m_VertexBuffer;
+    GPU::ResourceHandle m_IndexBuffer;
+    GPU::ResourceHandle m_ConstantBuffer;
 
-    Vertex            m_VertexData[4];
-    u32               m_IndexData[6];
-    CBuffer_MVPMatrix m_CBufferData;
+    Vertex      m_VertexData[4];
+    u32         m_IndexData[6];
+    CBufferData m_CBufferData;
 
-    Math::m4          m_Translation;
+    Math::m4 m_Translation;
 
     StaticString<128> m_OriginalWindowTitle;
 };

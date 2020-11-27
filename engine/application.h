@@ -12,7 +12,7 @@
 #include "core/input.h"
 #include "core/scene.h"
 
-#include "renderer/graphics_api.h"
+#include "graphics/graphics_api.h"
 
 #include "tools/logger.h"
 #include "tools/timer.h"

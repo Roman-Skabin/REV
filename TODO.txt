@@ -4,6 +4,7 @@
     - Get rid of the interface stuff and swith to function pointers?
     - Rethink memory management
     - Scene serialization
+    - Asset manager
 
 - Tools
     - Several simultaneous read operations under the same file?
@@ -20,9 +21,6 @@
     - Quaternions
 
 - GPU
-    - TODOs in engine/platform/d3d12_gpu_memory_manager.h
-    - Switch from Placed Resources to Reserved Resources?
-    - Clean up GPUMemoryManager and GPUProgramManager and Renderer
     - Batch rendering.
     - Save shaders bytecode in some files and compile only shaders that
       source file change time > bytecode file change time?
@@ -60,5 +58,5 @@
 - Other
     - Make that README already!
     - Figure out a new name for the engine
-    - Rewrite parser and sound on C++
+    - Rewrite parser and sound in C++
     - Some documenting?

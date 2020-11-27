@@ -57,12 +57,6 @@ void memset_any(T *mem, const T& val, u64 count)
     while (count--) *mem++ = val;
 }
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8)>>
-void memset_any(T *mem, T&& val, u64 count)
-{
-    while (count--) *mem++ = RTTI::move(val);
-}
-
 class ENGINE_API Memory final
 {
 public:

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "renderer/renderer.h"
+#include "graphics/renderer.h"
 #include "core/memory.h"
 #include "core/window.h"
 #include "tools/event.h"
@@ -21,42 +21,46 @@ namespace D3D12
         SWAP_CHAIN_BUFFERS_COUNT = 2,
     };
 
-    class ENGINE_API Renderer final : public IRenderer
+    class ENGINE_API Renderer final
     {
     public:
         Renderer(Window *window, const Logger& logger, Math::v2s rt_size);
         ~Renderer();
 
-        virtual void Destroy() override;
+        void StartFrame();
+        void EndFrame();
 
-        virtual void StartFrame() override;
-        virtual void EndFrame()   override;
+        bool VSyncEnabled()        { return m_VsyncEnabled;   }
+        void SetVSync(bool enable) { m_VsyncEnabled = enable; }
 
-        virtual bool VSyncEnabled()        override { return m_VsyncEnabled; }
-        virtual void SetVSync(bool enable) override { m_VsyncEnabled = enable; }
-
-        virtual void WaitForGPU() override;
-        virtual void FlushGPU()   override;
-
-        void *operator new(size_t) { return Memory::Get()->PushToPA<Renderer>(); }
-        void  operator delete(void *) {}
+        void WaitForGPU();
 
         constexpr const ID3D12Device              *Device()              const { return m_Device;                         }
         constexpr const ID3D12CommandQueue        *GraphicsQueue()       const { return m_GraphicsQueue;                  }
         constexpr const ID3D12GraphicsCommandList *CurrentGraphicsList() const { return m_GraphicsLists[m_CurrentBuffer]; }
+        constexpr const Logger&                    GetLogger()           const { return m_Logger;                         }
 
         constexpr ID3D12Device              *Device()              { return m_Device;                         }
         constexpr ID3D12CommandQueue        *GraphicsQueue()       { return m_GraphicsQueue;                  }
         constexpr ID3D12GraphicsCommandList *CurrentGraphicsList() { return m_GraphicsLists[m_CurrentBuffer]; }
+        constexpr Logger&                    GetLogger()           { return m_Logger;                         }
 
         constexpr bool                       HalfPrecisionSupported()      const { return m_Features.options.MinPrecisionSupport & D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT; }
         constexpr D3D_ROOT_SIGNATURE_VERSION HighestRootSignatureVersion() const { return m_Features.root_signature.HighestVersion; }
         constexpr u32                        CurrentBuffer()               const { return m_CurrentBuffer; }
         constexpr D3D12_RESOURCE_HEAP_TIER   ResourceHeapTier()            const { return m_Features.options.ResourceHeapTier; }
+        constexpr D3D_SHADER_MODEL           HighestShaderModel()          const { return m_Features.shader_model.HighestShaderModel; }
+
+    #if DEBUG
+        constexpr const IDXGIInfoQueue *InfoQueue() const { return m_InfoQueue; }
+        constexpr       IDXGIInfoQueue *InfoQueue()       { return m_InfoQueue; }
+    #endif
 
         constexpr bool FirstFrame()       const { return m_FirstFrame;       }
         constexpr bool TearingSupported() const { return m_TearingSupported; }
         constexpr bool InFullscreenMode() const { return m_Fullscreen;       }
+
+        Renderer& operator=(Renderer&& other) noexcept;
 
     private:
         void CreateDebugLayer();
@@ -71,15 +75,12 @@ namespace D3D12
 
         void ResizeBuffers();
 
-        virtual void SetFullscreenMode(bool set) override;
-
-        friend u32 WINAPI LogInfoQueueMessages(void *arg);
+        void SetFullscreenMode(bool set);
 
         Renderer(const Renderer&) = delete;
         Renderer(Renderer&&)      = delete;
 
         Renderer& operator=(const Renderer&) = delete;
-        Renderer& operator=(Renderer&&)      = delete;
 
     private:
         Logger                       m_Logger;
@@ -100,10 +101,6 @@ namespace D3D12
         ID3D12CommandQueue          *m_GraphicsQueue;
         ID3D12CommandAllocator      *m_GraphicsAllocators[SWAP_CHAIN_BUFFERS_COUNT];
         ID3D12GraphicsCommandList   *m_GraphicsLists[SWAP_CHAIN_BUFFERS_COUNT];
-    #if DEBUG
-        // @Issue(Roman): Useless??
-        ID3D12DebugCommandList      *m_DebugGraphicsLists[SWAP_CHAIN_BUFFERS_COUNT];
-    #endif
 
         IDXGISwapChain4             *m_SwapChain;
         HANDLE                       m_WaitableObject;
@@ -118,10 +115,8 @@ namespace D3D12
         ID3D12Resource              *m_DSBuffer;
         D3D12_CPU_DESCRIPTOR_HANDLE  m_DSVCPUDescHandle;
 
-        ID3D12Fence                 *m_Fences[SWAP_CHAIN_BUFFERS_COUNT];
+        ID3D12Fence                 *m_Fence;
         HANDLE                       m_FenceEvent;
-
-        HRESULT                      m_Error;
 
         // Flags
         u32 m_VsyncEnabled     : 1;
@@ -145,20 +140,6 @@ namespace D3D12
             D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT virtual_address;
         } m_Features;
 
-        // @Issue(Roman): Ok, what about creating a manager with another API? Kill thread? Store thread handle then?
-    #if DEBUG
-        Event                        m_LoggingEvent;
-        bool                         m_StopLogging;
-    #endif
+        friend class ::Renderer;
     };
-
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_base_of_v<IUnknown, T>>>
-    INLINE void SafeRelease(T *& unknown)
-    {
-        if (unknown)
-        {
-            unknown->Release();
-            unknown = null;
-        }
-    }
-};
+}

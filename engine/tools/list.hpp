@@ -187,12 +187,122 @@ INLINE auto operator!=(const SLinkedListNode<T>& left, const SLinkedListNode<T>&
         || left.Data() != right.Data();
 }
 
+template<typename T, typename Allocator_t = Allocator>
+struct SLinkedListIterator
+{
+    using Node = SLinkedListNode<T, Allocator_t>;
+
+    Node *node;
+
+    constexpr SLinkedListIterator(Node *node)                       : node(node)       {}
+    constexpr SLinkedListIterator(const SLinkedListIterator& other) : node(other.node) {}
+
+    constexpr SLinkedListIterator& operator=(Node *_node)                      { node = _node;      return *this; }
+    constexpr SLinkedListIterator& operator=(const SLinkedListIterator& other) { node = other.node; return *this; }
+
+    constexpr SLinkedListIterator& operator++() { if (node) node = node->next; return *this; }
+
+    constexpr SLinkedListIterator& operator++(int) { if (node) { SLinkedListIterator ret(node); node = node->next; return ret; } else { return *this; } }
+
+    constexpr const T& operator*() const { return node->Data(); }
+    constexpr       T& operator*()       { return node->Data(); }
+
+    constexpr const T *operator->() const { return &node->Data(); }
+    constexpr       T *operator->()       { return &node->Data(); }
+
+    constexpr bool operator==(SLinkedListIterator& other) const { return node == other.other; }
+    constexpr bool operator!=(SLinkedListIterator& other) const { return node != other.other; }
+};
+
+template<typename T, typename Allocator_t = Allocator>
+struct SLinkedListConstIterator
+{
+    using Node = SLinkedListNode<T, Allocator_t>;
+
+    const Node *node;
+
+    constexpr SLinkedListConstIterator(const Node *node)                      : node(node)       {}
+    constexpr SLinkedListConstIterator(const SLinkedListConstIterator& other) : node(other.node) {}
+
+    constexpr SLinkedListConstIterator& operator=(const Node *_node)                     { node = _node;      return *this; }
+    constexpr SLinkedListConstIterator& operator=(const SLinkedListConstIterator& other) { node = other.node; return *this; }
+
+    constexpr SLinkedListConstIterator& operator++() { if (node) node = node->next; return *this; }
+
+    constexpr SLinkedListConstIterator& operator++(int) { if (node) { SLinkedListConstIterator ret(node); node = node->next; return ret; } else { return *this; } }
+
+    constexpr const T& operator*() const { return node->Data(); }
+
+    constexpr const T *operator->() const { return &node->Data(); }
+
+    constexpr bool operator==(SLinkedListConstIterator& other) const { return node == other.other; }
+    constexpr bool operator!=(SLinkedListConstIterator& other) const { return node != other.other; }
+};
+
+template<typename T, typename Allocator_t = Allocator>
+struct DLinkedListIterator
+{
+    using Node = DLinkedListNode<T, Allocator_t>;
+
+    Node *node;
+
+    constexpr DLinkedListIterator(Node *node)                       : node(node)       {}
+    constexpr DLinkedListIterator(const DLinkedListIterator& other) : node(other.node) {}
+
+    constexpr DLinkedListIterator& operator=(Node *_node)                      { node = _node;      return *this; }
+    constexpr DLinkedListIterator& operator=(const DLinkedListIterator& other) { node = other.node; return *this; }
+
+    constexpr DLinkedListIterator& operator++() { if (node) node = node->next; return *this; }
+    constexpr DLinkedListIterator& operator--() { if (node) node = node->prev; return *this; }
+
+    constexpr DLinkedListIterator& operator++(int) { if (node) { DLinkedListIterator ret(node); node = node->next; return ret; } else { return *this; } }
+    constexpr DLinkedListIterator& operator--(int) { if (node) { DLinkedListIterator ret(node); node = node->prev; return ret; } else { return *this; } }
+
+    constexpr const T& operator*() const { return node->Data(); }
+    constexpr       T& operator*()       { return node->Data(); }
+
+    constexpr const T *operator->() const { return &node->Data(); }
+    constexpr       T *operator->()       { return &node->Data(); }
+
+    constexpr bool operator==(DLinkedListIterator& other) const { return node == other.other; }
+    constexpr bool operator!=(DLinkedListIterator& other) const { return node != other.other; }
+};
+
+template<typename T, typename Allocator_t = Allocator>
+struct DLinkedListConstIterator
+{
+    using Node = DLinkedListNode<T, Allocator_t>;
+
+    const Node *node;
+
+    constexpr DLinkedListConstIterator(const Node *node)                      : node(node)       {}
+    constexpr DLinkedListConstIterator(const DLinkedListConstIterator& other) : node(other.node) {}
+
+    constexpr DLinkedListConstIterator& operator=(const Node *_node)                     { node = _node;      return *this; }
+    constexpr DLinkedListConstIterator& operator=(const DLinkedListConstIterator& other) { node = other.node; return *this; }
+
+    constexpr DLinkedListConstIterator& operator++() { if (node) node = node->next; return *this; }
+    constexpr DLinkedListConstIterator& operator--() { if (node) node = node->prev; return *this; }
+
+    constexpr DLinkedListConstIterator& operator++(int) { if (node) { DLinkedListConstIterator ret(node); node = node->next; return ret; } else { return *this; } }
+    constexpr DLinkedListConstIterator& operator--(int) { if (node) { DLinkedListConstIterator ret(node); node = node->prev; return ret; } else { return *this; } }
+
+    constexpr const T& operator*() const { return node->Data(); }
+
+    constexpr const T *operator->() const { return &node->Data(); }
+
+    constexpr bool operator==(DLinkedListConstIterator& other) const { return node == other.other; }
+    constexpr bool operator!=(DLinkedListConstIterator& other) const { return node != other.other; }
+};
+
 template<typename T, bool doubly_linked = false, typename Allocator_t = Allocator>
 class List final
 {
 public:
-    using Type = T;
-    using Node = RTTI::conditional_t<doubly_linked, DLinkedListNode<T, Allocator_t>, SLinkedListNode<T, Allocator_t>>;
+    using Type          = T;
+    using Node          = RTTI::conditional_t<doubly_linked, DLinkedListNode<T, Allocator_t>, SLinkedListNode<T, Allocator_t>>;
+    using Iterator      = RTTI::conditional_t<doubly_linked, DLinkedListIterator<T, Allocator_t>, SLinkedListIterator<T, Allocator_t>>;
+    using ConstIterator = RTTI::conditional_t<doubly_linked, DLinkedListConstIterator<T, Allocator_t>, SLinkedListConstIterator<T, Allocator_t>>;
 
 public:
     List(Allocator_t *allocator)
@@ -239,57 +349,27 @@ public:
     
     constexpr bool Empty() const { return !m_Count; }
 
-    constexpr const Node *First() const { return m_First; }
-    constexpr const Node *Last()  const { return m_Last;  }
+    constexpr ConstIterator& begin()   const { return m_First; }
+    constexpr ConstIterator& cbegin()  const { return m_First; }
+    constexpr ConstIterator& rbegin()  const { return m_Last;  }
+    constexpr ConstIterator& crbegin() const { return m_Last;  }
 
-    constexpr Node *First() { return m_First; }
-    constexpr Node *Last()  { return m_Last;  }
+    constexpr ConstIterator& end()   const { return null; }
+    constexpr ConstIterator& cend()  const { return null; }
+    constexpr ConstIterator& rend()  const { return null; }
+    constexpr ConstIterator& crend() const { return null; }
 
-    void ForEach(Function<void(const Node *)>&& callback) const
-    {
-        for (const Node *it = m_First; it; it = it->m_Next)
-        {
-            callback(it);
-        }
-    }
+    constexpr Iterator& begin()  { return m_First; }
+    constexpr Iterator& rbegin() { return m_Last;  }
 
-    void ForEach(Function<void(Node *)>&& callback)
-    {
-        for (Node *it = m_First; it; it = it->m_Next)
-        {
-            callback(it);
-        }
-    }
+    constexpr Iterator& end()  { return null; }
+    constexpr Iterator& rend() { return null; }
 
-    void ForEachR(Function<void(const Node *)>&& callback) const
-    {
-        if constexpr (doubly_linked)
-        {
-            for (const Node *it = m_Last; it; it = it->m_Prev)
-            {
-                callback(it);
-            }
-        }
-        else
-        {
-            static_assert(false, "Use DLinkedListNode as ListNode to be able to use ForEachR");
-        }
-    }
+    constexpr ConstIterator& First() const { return m_First; }
+    constexpr ConstIterator& Last()  const { return m_Last;  }
 
-    void ForEachR(Function<void(Node *)>&& callback)
-    {
-        if constexpr (doubly_linked)
-        {
-            for (Node *it = m_Last; it; it = it->m_Prev)
-            {
-                callback(it);
-            }
-        }
-        else
-        {
-            static_assert(false, "Use DLinkedListNode as ListNode to be able to use ForEachR");
-        }
-    }
+    constexpr Iterator& First() { return m_First; }
+    constexpr Iterator& Last()  { return m_Last;  }
 
     template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>>
     void Insert(Node *where, U&&... elements)

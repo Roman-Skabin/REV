@@ -5,7 +5,7 @@
 #include "core/pch.h"
 #include "core/window.h"
 #include "core/input.h"
-#include "renderer/graphics_api.h"
+#include "graphics/graphics_api.h"
 
 Window::Window(const Logger&            logger,
                const StaticString<128>& title,
@@ -14,7 +14,13 @@ Window::Window(const Logger&            logger,
       m_Handle(null),
       m_Context(null),
       m_XYWH(xywh),
-      m_Flags(FLAGS::CLOSED),
+      m_Closed(true),
+      m_Moved(false),
+      m_Resized(false),
+      m_Fullscreened(false),
+      m_Minimized(false),
+      m_FullscreenSetRequested(false),
+      m_FullscreenUnsetRequested(false),
       m_Logger(logger),
       m_Title(title),
       m_ClassName(title)
@@ -26,6 +32,8 @@ Window::Window(const Logger&            logger,
     wca.hCursor       = LoadCursorA(0, IDC_ARROW);
     wca.lpszClassName = m_ClassName.Data();
     DebugResult(RegisterClassA(&wca));
+
+    sizeof(StaticString<128>);
 
     s32 width  = m_XYWH.z;
     s32 height = m_XYWH.w;
@@ -52,7 +60,7 @@ Window::~Window()
 {
     if (m_Instance)
     {
-        DebugResult(UnregisterClassA(m_ClassName.Data(), m_Instance));
+//      DebugResult(UnregisterClassA(m_ClassName.Data(), m_Instance));
         m_Instance = null;
         m_Logger.LogInfo("Window \"%s\" has been destroyed", m_Title.Data());
     }
@@ -60,23 +68,17 @@ Window::~Window()
 
 void Window::RequstFullscreen(bool set)
 {
-    if (set)
+    if (set != m_Fullscreened)
     {
-        if ((m_Flags & FLAGS::FULLSCREENED) == FLAGS::NONE)
-        {
-            m_Flags |= FLAGS::_FULLSCREEN_SET_REQUESTED;
-        }
-    }
-    else if ((m_Flags & FLAGS::FULLSCREENED) != FLAGS::NONE)
-    {
-        m_Flags |= FLAGS::_FULLSCREEN_UNSET_REQUESTED;
+        if (set) m_FullscreenSetRequested   = true;
+        else     m_FullscreenUnsetRequested = true;
     }
 }
 
 void Window::Resset()
 {
-    m_Flags &= ~FLAGS::RESIZED;
-    m_Flags &= ~FLAGS::MOVED;
+    m_Resized = false;
+    m_Moved   = false;
 }
 
 void Window::PollEvents()
@@ -92,8 +94,8 @@ void Window::PollEvents()
 void Window::Show()
 {
     ShowWindow(m_Handle, SW_SHOW);
-    m_Flags &= ~FLAGS::CLOSED;
-    m_Flags &= ~FLAGS::MOVED;
+    m_Closed = false;
+    m_Moved  = false;
 }
 
 void Window::SetTitle(const StaticString<128>& new_title)
@@ -104,17 +106,17 @@ void Window::SetTitle(const StaticString<128>& new_title)
 
 void Window::ApplyFullscreenRequest()
 {
-    if ((m_Flags & FLAGS::_FULLSCREEN_SET_REQUESTED) != FLAGS::NONE)
+    if (m_FullscreenSetRequested)
     {
-        m_Flags &= ~FLAGS::_FULLSCREEN_SET_REQUESTED;
-        m_Flags |=  FLAGS::FULLSCREENED;
+        m_FullscreenSetRequested = false;
+        m_Fullscreened           = true;
 
         GraphicsAPI::GetRenderer()->SetFullscreenMode(true);
     }
-    else if ((m_Flags & FLAGS::_FULLSCREEN_UNSET_REQUESTED) != FLAGS::NONE)
+    else if (m_FullscreenUnsetRequested)
     {
-        m_Flags &= ~FLAGS::_FULLSCREEN_UNSET_REQUESTED;
-        m_Flags &= ~FLAGS::FULLSCREENED;
+        m_FullscreenUnsetRequested = false;
+        m_Fullscreened             = false;
 
         GraphicsAPI::GetRenderer()->SetFullscreenMode(false);
     }
@@ -129,7 +131,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
     {
         case WM_DESTROY: // 0x0002
         {
-            window->m_Flags |= Window::FLAGS::CLOSED;
+            window->m_Closed = true;
         } break;
 
         case WM_SIZE: // 0x0005
@@ -138,15 +140,15 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
 
             if ((window->m_XYWH.wh.w != new_size.w || window->m_XYWH.wh.h != new_size.h) && wparam != SIZE_MINIMIZED)
             {
-                window->m_XYWH.wh  = new_size;
-                window->m_Flags   &= ~Window::FLAGS::MINIMIZED;
-                window->m_Flags   |=  Window::FLAGS::RESIZED;
+                window->m_XYWH.wh   = new_size;
+                window->m_Minimized = false;
+                window->m_Resized   = true;
 
                 window->m_Logger.LogInfo("Window \"%s\" has been resized: [%I32u, %I32u]", window->m_Title.Data(), window->m_XYWH.wh.w, window->m_XYWH.wh.h);
             }
             else if (wparam == SIZE_MINIMIZED)
             {
-                window->m_Flags |= Window::FLAGS::MINIMIZED;
+                window->m_Minimized = true;
             }
         } break;
 
@@ -155,9 +157,9 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             WINDOWPOS *window_pos = cast<WINDOWPOS *>(lparam);
             if (window->m_XYWH.x != window_pos->x || window->m_XYWH.y != window_pos->y)
             {
-                window->m_XYWH.x  = window_pos->x;
-                window->m_XYWH.y  = window_pos->y;
-                window->m_Flags  |= Window::FLAGS::MOVED;
+                window->m_XYWH.x = window_pos->x;
+                window->m_XYWH.y = window_pos->y;
+                window->m_Moved  = true;
             }
 
             result = DefWindowProcA(handle, message, wparam, lparam);

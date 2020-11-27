@@ -5,7 +5,8 @@
 #pragma once
 
 #include "core/pch.h"
-#include "platform/d3d12_renderer.h"
+#include "platform/d3d12/d3d12_renderer.h"
+#include "platform/d3d12/d3d12_common.h"
 
 namespace D3D12 {
 
@@ -23,34 +24,27 @@ Renderer::Renderer(Window *window, const Logger& logger, Math::v2s rt_size)
       m_Adapter(null),
       m_Device(null),
       m_GraphicsQueue(null),
+      m_GraphicsAllocators{},
+      m_GraphicsLists{},
       m_SwapChain(null),
       m_WaitableObject(null),
       m_RTVHeapDesc(null),
+      m_RTBuffers{},
       m_RTVCPUDescHandle(),
       m_RTVDescSize(0),
       m_CurrentBuffer(0),
       m_DSVHeapDesc(null),
       m_DSBuffer(null),
       m_DSVCPUDescHandle(),
-      m_Fences(),
+      m_Fence(null),
       m_FenceEvent(null),
       m_VsyncEnabled(0),
       m_FirstFrame(true),
       m_TearingSupported(0),
       m_Fullscreen(0),
-      m_Features(),
-#if DEBUG
-      m_LoggingEvent("StopLoggingEvent", Event::FLAGS::RESETTABLE),
-      m_StopLogging(false),
-#endif
-      m_Error(S_OK)
+      m_Features{}
 {
     CreateDebugLayer();
-
-#if DEBUG
-    DebugResult(CloseHandle(CreateThread(null, 0, LogInfoQueueMessages, this, 0, null)));
-#endif
-
     CreateFactory();
     CreateAdapterAndDevice();
     GetInfoAboutFeatures();
@@ -59,66 +53,58 @@ Renderer::Renderer(Window *window, const Logger& logger, Math::v2s rt_size)
     GetSwapChainRenderTargets();
     CreateDepthBuffer();
     CreateFences();
-
     m_Logger.LogSuccess("Renderer has been created");
 }
 
 Renderer::~Renderer()
 {
-    if (m_Fullscreen)
+    if (m_Device)
     {
-        m_Error = m_SwapChain->SetFullscreenState(false, null);
-        Check(SUCCEEDED(m_Error));
-    }
+        HRESULT error = S_OK;
 
-    FlushGPU();
+        if (m_Fullscreen)
+        {
+            error = m_SwapChain->SetFullscreenState(false, null);
+            Check(CheckResultAndPrintMessages(error, this));
+        }
 
-    if (m_FenceEvent) DebugResult(CloseHandle(m_FenceEvent));
+        WaitForGPU();
 
-    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-    {
-        SafeRelease(m_Fences[i]);
-        SafeRelease(m_RTBuffers[i]);
+        if (m_FenceEvent) DebugResult(CloseHandle(m_FenceEvent));
+        SafeRelease(m_Fence);
+
+        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+        {
+            SafeRelease(m_RTBuffers[i]);
+            SafeRelease(m_GraphicsLists[i]);
+            SafeRelease(m_GraphicsAllocators[i]);
+        }
+
+        SafeRelease(m_DSBuffer);
+        SafeRelease(m_DSVHeapDesc);
+        SafeRelease(m_RTVHeapDesc);
+        SafeRelease(m_SwapChain);
+        SafeRelease(m_GraphicsQueue);
+        SafeRelease(m_Device);
+        SafeRelease(m_Adapter);
+        SafeRelease(m_Factory);
+
     #if DEBUG
-        SafeRelease(m_DebugGraphicsLists[i]);
+        if (m_DXGIDebug)
+        {
+            error = m_DXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, cast<DXGI_DEBUG_RLO_FLAGS>(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+            Check(CheckResultAndPrintMessages(error, this));
+
+            m_DXGIDebug->DisableLeakTrackingForThread();
+        }
+
+        SafeRelease(m_InfoQueue);
+        SafeRelease(m_DXGIDebug);
+        SafeRelease(m_Debug);
     #endif
-        SafeRelease(m_GraphicsLists[i]);
-        SafeRelease(m_GraphicsAllocators[i]);
+
+        m_Logger.LogInfo("Renderer has been destroyed");
     }
-
-    SafeRelease(m_DSBuffer);
-    SafeRelease(m_DSVHeapDesc);
-    SafeRelease(m_RTVHeapDesc);
-    SafeRelease(m_SwapChain);
-    SafeRelease(m_GraphicsQueue);
-    SafeRelease(m_Device);
-    SafeRelease(m_Adapter);
-    SafeRelease(m_Factory);
-
-#if DEBUG
-    if (m_DXGIDebug)
-    {
-        m_Error = m_DXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, cast<DXGI_DEBUG_RLO_FLAGS>(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-        Check(SUCCEEDED(m_Error));
-
-        m_DXGIDebug->DisableLeakTrackingForThread();
-    }
-
-    m_StopLogging = true;
-    m_LoggingEvent.Wait();
-
-    SafeRelease(m_InfoQueue);
-    SafeRelease(m_DXGIDebug);
-    SafeRelease(m_Debug);
-#endif
-
-    m_Logger.LogInfo("Renderer has been destroyed");
-}
-
-void Renderer::Destroy()
-{
-    // @NOTE(Roman): Necessary for destructing vtable from the interface (IRenderer).
-    this->~Renderer();
 }
 
 void Renderer::StartFrame()
@@ -132,10 +118,10 @@ void Renderer::StartFrame()
     {
     }
 
-    m_Error = graphics_allocator->Reset();
-    Check(SUCCEEDED(m_Error));
-    m_Error = graphics_list->Reset(graphics_allocator, null);
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = graphics_allocator->Reset();
+    Check(CheckResultAndPrintMessages(error, this));
+    error = graphics_list->Reset(graphics_allocator, null);
+    Check(CheckResultAndPrintMessages(error, this));
 
     // Set viewport
     D3D12_VIEWPORT viewport;
@@ -192,8 +178,6 @@ void Renderer::StartFrame()
                                          D3D12_CLEAR_FLAG_DEPTH,
                                          1.0f, 0,
                                          0, null);
-
-    // m_Logger.LogInfo("Current Buffer: %I32u", m_CurrentBuffer);
 }
 
 void Renderer::EndFrame()
@@ -221,8 +205,8 @@ void Renderer::EndFrame()
     graphics_list->ResourceBarrier(cast<UINT>(ArrayCount(end_barriers)), end_barriers);
 
     // Close and execute lists
-    m_Error = graphics_list->Close();
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = graphics_list->Close();
+    Check(CheckResultAndPrintMessages(error, this));
 
     ID3D12CommandList *command_lists[] =
     {
@@ -247,8 +231,8 @@ void Renderer::EndFrame()
         present_flags |= DXGI_PRESENT_DO_NOT_SEQUENCE;
     }
 
-    m_Error = m_SwapChain->Present(0, present_flags);
-    Check(SUCCEEDED(m_Error));
+    error = m_SwapChain->Present(0, present_flags);
+    Check(CheckResultAndPrintMessages(error, this));
 
     // Swap buffers
     m_CurrentBuffer = m_SwapChain->GetCurrentBackBufferIndex();
@@ -259,16 +243,15 @@ void Renderer::EndFrame()
 
 void Renderer::WaitForGPU()
 {
-    ID3D12Fence *current_fence       = m_Fences[m_CurrentBuffer];
-    u64          current_fence_value = current_fence->GetCompletedValue() + 1;
+    u64 current_fence_value = m_Fence->GetCompletedValue() + 1;
 
-    m_Error = m_GraphicsQueue->Signal(current_fence, current_fence_value);
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = m_GraphicsQueue->Signal(m_Fence, current_fence_value);
+    Check(CheckResultAndPrintMessages(error, this));
 
-    if (current_fence->GetCompletedValue() < current_fence_value)
+    if (m_Fence->GetCompletedValue() < current_fence_value)
     {
-        m_Error = current_fence->SetEventOnCompletion(current_fence_value, m_FenceEvent);
-        Check(SUCCEEDED(m_Error));
+        error = m_Fence->SetEventOnCompletion(current_fence_value, m_FenceEvent);
+        Check(CheckResultAndPrintMessages(error, this));
 
         while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
         {
@@ -276,57 +259,50 @@ void Renderer::WaitForGPU()
     }
 }
 
-void Renderer::FlushGPU()
+Renderer& Renderer::operator=(Renderer&& other) noexcept
 {
-    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+    if (this != &other)
     {
-        ID3D12Fence *fence       = m_Fences[i];
-        u64          fence_value = fence->GetCompletedValue() + 1;
+        m_Logger = RTTI::move(other.m_Logger);
 
-        m_Error = m_GraphicsQueue->Signal(fence, fence_value);
-        Check(SUCCEEDED(m_Error));
-
-        if (fence->GetCompletedValue() < fence_value)
-        {
-            m_Error = fence->SetEventOnCompletion(fence_value, m_FenceEvent);
-            Check(SUCCEEDED(m_Error));
-
-            while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
-            {
-            }
-        }
+        CopyMemory(cast<byte *>(this)   + StructFieldOffset(Renderer, m_Window),
+                   cast<byte *>(&other) + StructFieldOffset(Renderer, m_Window),
+                   sizeof(Renderer)     - StructFieldOffset(Renderer, m_Window));
+        
+        ZeroMemory(cast<byte *>(&other) + StructFieldOffset(Renderer, m_Window),
+                   sizeof(Renderer)     - StructFieldOffset(Renderer, m_Window));
     }
+    return *this;
 }
 
 void Renderer::CreateDebugLayer()
 {
 #if DEBUG
-    m_Error = D3D12GetDebugInterface(IID_PPV_ARGS(&m_Debug));
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = D3D12GetDebugInterface(IID_PPV_ARGS(&m_Debug));
+    Check(Succeeded(error));
 
     m_Debug->EnableDebugLayer();
 //  m_Debug->SetEnableGPUBasedValidation(true);
     m_Debug->SetEnableSynchronizedCommandQueueValidation(true);
 
-    m_Error = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&m_DXGIDebug));
-    Check(SUCCEEDED(m_Error));
+    error = DXGIGetDebugInterface1(0, IID_PPV_ARGS(&m_DXGIDebug));
+    Check(Succeeded(error));
 
     m_DXGIDebug->EnableLeakTrackingForThread();
 
-    m_Error = m_DXGIDebug->QueryInterface(&m_InfoQueue);
-    Check(SUCCEEDED(m_Error));
+    error = m_DXGIDebug->QueryInterface(&m_InfoQueue);
+    Check(CheckResultAndPrintMessages(error, this));
 #endif
 }
 
 void Renderer::CreateFactory()
 {
-    UINT factory_create_flags = 0;
 #if DEBUG
-    factory_create_flags = DXGI_CREATE_FACTORY_DEBUG;
+    HRESULT error = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&m_Factory));
+#else
+    HRESULT error = CreateDXGIFactory2(0, IID_PPV_ARGS(&m_Factory));
 #endif
-
-    m_Error = CreateDXGIFactory2(factory_create_flags, IID_PPV_ARGS(&m_Factory));
-    Check(SUCCEEDED(m_Error));
+    Check(CheckResultAndPrintMessages(error, this));
 }
 
 void Renderer::CreateAdapterAndDevice()
@@ -334,14 +310,15 @@ void Renderer::CreateAdapterAndDevice()
     SIZE_T             max_vram      = 0;
     UINT               adapter_index = 0;
     DXGI_ADAPTER_DESC1 adapter_desc  = {0};
+    HRESULT            error         = S_OK;
 
     for (UINT i = 0; m_Factory->EnumAdapters1(i, &m_Adapter) != DXGI_ERROR_NOT_FOUND; ++i)
     {
-        m_Error = m_Adapter->GetDesc1(&adapter_desc);
-        Check(SUCCEEDED(m_Error));
+        error = m_Adapter->GetDesc1(&adapter_desc);
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_Device));
-        if (SUCCEEDED(m_Error) && max_vram < adapter_desc.DedicatedVideoMemory && !(adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
+        error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_Device));
+        if (Succeeded(error) && max_vram < adapter_desc.DedicatedVideoMemory && !(adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
         {
             max_vram      = adapter_desc.DedicatedVideoMemory;
             adapter_index = i;
@@ -352,26 +329,26 @@ void Renderer::CreateAdapterAndDevice()
 
     if (max_vram)
     {
-        m_Error = m_Factory->EnumAdapters1(adapter_index, &m_Adapter);
-        Check(SUCCEEDED(m_Error));
+        error = m_Factory->EnumAdapters1(adapter_index, &m_Adapter);
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_Device));
-        Check(SUCCEEDED(m_Error));
+        error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_Device));
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Error = m_Adapter->GetDesc1(&adapter_desc);
-        Check(SUCCEEDED(m_Error));
+        error = m_Adapter->GetDesc1(&adapter_desc);
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: %S, Feature Level: %s", adapter_desc.Description, CSTR(D3D_FEATURE_LEVEL_12_1));
+        m_Logger.LogInfo("GPU Adapter: %S, Feature Level: D3D_FEATURE_LEVEL_12_1", adapter_desc.Description);
     }
     else
     {
         for (UINT i = 0; m_Factory->EnumAdapters1(i, &m_Adapter) != D3D12_ERROR_ADAPTER_NOT_FOUND; ++i)
         {
-            m_Error = m_Adapter->GetDesc1(&adapter_desc);
-            Check(SUCCEEDED(m_Error));
+            error = m_Adapter->GetDesc1(&adapter_desc);
+            Check(CheckResultAndPrintMessages(error, this));
 
-            m_Error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
-            if (SUCCEEDED(m_Error) && max_vram < adapter_desc.DedicatedVideoMemory && !(adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
+            error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
+            if (Succeeded(error) && max_vram < adapter_desc.DedicatedVideoMemory && !(adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
             {
                 max_vram      = adapter_desc.DedicatedVideoMemory;
                 adapter_index = i;
@@ -382,56 +359,56 @@ void Renderer::CreateAdapterAndDevice()
 
         CheckM(max_vram, "Direct3D 12 is not supported by your hardware");
 
-        m_Error = m_Factory->EnumAdapters1(adapter_index, &m_Adapter);
-        Check(SUCCEEDED(m_Error));
+        error = m_Factory->EnumAdapters1(adapter_index, &m_Adapter);
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
-        Check(SUCCEEDED(m_Error));
+        error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Error = m_Adapter->GetDesc1(&adapter_desc);
-        Check(SUCCEEDED(m_Error));
+        error = m_Adapter->GetDesc1(&adapter_desc);
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: %S, Feature Level: %s", adapter_desc.Description, CSTR(D3D_FEATURE_LEVEL_12_0));
+        m_Logger.LogInfo("GPU Adapter: %S, Feature Level: D3D_FEATURE_LEVEL_12_0", adapter_desc.Description);
     }
 }
 
 void Renderer::GetInfoAboutFeatures()
 {
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &m_Features.options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS));
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &m_Features.options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS));
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &m_Features.options1, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS1));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS1, &m_Features.options1, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS1));
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &m_Features.options2, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS2, &m_Features.options2, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS2));
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &m_Features.options3, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS3));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, &m_Features.options3, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS3));
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &m_Features.options4, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS4));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &m_Features.options4, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS4));
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &m_Features.options5, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &m_Features.options5, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5));
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &m_Features.options6, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS6));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &m_Features.options6, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS6));
+    Check(CheckResultAndPrintMessages(error, this));
 
     m_Features.architecture.NodeIndex = 0;
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE1, &m_Features.architecture, sizeof(D3D12_FEATURE_DATA_ARCHITECTURE1));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE1, &m_Features.architecture, sizeof(D3D12_FEATURE_DATA_ARCHITECTURE1));
+    Check(CheckResultAndPrintMessages(error, this));
 
     m_Features.root_signature.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &m_Features.root_signature, sizeof(D3D12_FEATURE_DATA_ROOT_SIGNATURE));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &m_Features.root_signature, sizeof(D3D12_FEATURE_DATA_ROOT_SIGNATURE));
+    Check(CheckResultAndPrintMessages(error, this));
 
     m_Features.shader_model.HighestShaderModel = D3D_SHADER_MODEL_6_5;
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &m_Features.shader_model, sizeof(D3D12_FEATURE_DATA_SHADER_MODEL));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &m_Features.shader_model, sizeof(D3D12_FEATURE_DATA_SHADER_MODEL));
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = m_Device->CheckFeatureSupport(D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT, &m_Features.virtual_address, sizeof(D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT));
-    Check(SUCCEEDED(m_Error));
+    error = m_Device->CheckFeatureSupport(D3D12_FEATURE_GPU_VIRTUAL_ADDRESS_SUPPORT, &m_Features.virtual_address, sizeof(D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT));
+    Check(CheckResultAndPrintMessages(error, this));
 }
 
 void Renderer::CreateGraphicsQueueAllocatorsAndLists()
@@ -442,11 +419,11 @@ void Renderer::CreateGraphicsQueueAllocatorsAndLists()
     graphics_queue_desc.Flags    = D3D12_COMMAND_QUEUE_FLAG_NONE;
     graphics_queue_desc.NodeMask = 0;
 
-    m_Error = m_Device->CreateCommandQueue(&graphics_queue_desc, IID_PPV_ARGS(&m_GraphicsQueue));
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = m_Device->CreateCommandQueue(&graphics_queue_desc, IID_PPV_ARGS(&m_GraphicsQueue));
+    Check(CheckResultAndPrintMessages(error, this));
     
-    m_Error = m_GraphicsQueue->SetPrivateData(WKPDID_D3DDebugObjectName, CSTRLEN("Graphics Queue"), "Graphics Queue");
-    Check(SUCCEEDED(m_Error));
+    error = m_GraphicsQueue->SetPrivateData(WKPDID_D3DDebugObjectName, CSTRLEN("Graphics Queue"), "Graphics Queue");
+    Check(CheckResultAndPrintMessages(error, this));
 
     char name[64];
     s32  name_len = 0;
@@ -456,44 +433,39 @@ void Renderer::CreateGraphicsQueueAllocatorsAndLists()
         ID3D12CommandAllocator    **graphics_allocator = m_GraphicsAllocators + i;
         ID3D12GraphicsCommandList **graphics_list      = m_GraphicsLists      + i;
 
-        m_Error = m_Device->CreateCommandAllocator(graphics_queue_desc.Type, IID_PPV_ARGS(graphics_allocator));
-        Check(SUCCEEDED(m_Error));
+        error = m_Device->CreateCommandAllocator(graphics_queue_desc.Type, IID_PPV_ARGS(graphics_allocator));
+        Check(CheckResultAndPrintMessages(error, this));
 
         name_len = sprintf(name, "Graphics Allocator #%I32u", i);
-        m_Error = (*graphics_allocator)->SetPrivateData(WKPDID_D3DDebugObjectName, name_len, name);
-        Check(SUCCEEDED(m_Error));
+        error = (*graphics_allocator)->SetPrivateData(WKPDID_D3DDebugObjectName, name_len, name);
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Error = m_Device->CreateCommandList(graphics_queue_desc.NodeMask,
+        error = m_Device->CreateCommandList(graphics_queue_desc.NodeMask,
                                               graphics_queue_desc.Type,
                                               *graphics_allocator,
                                               null,
                                               IID_PPV_ARGS(graphics_list));
-        Check(SUCCEEDED(m_Error));
+        Check(CheckResultAndPrintMessages(error, this));
 
         name_len = sprintf(name, "Graphics List #%I32u", i);
-        m_Error = (*graphics_list)->SetPrivateData(WKPDID_D3DDebugObjectName, name_len, name);
-        Check(SUCCEEDED(m_Error));
+        error = (*graphics_list)->SetPrivateData(WKPDID_D3DDebugObjectName, name_len, name);
+        Check(CheckResultAndPrintMessages(error, this));
 
-        m_Error = (*graphics_list)->Close();
-        Check(SUCCEEDED(m_Error));
-
-    #if DEBUG
-        m_Error = (*graphics_list)->QueryInterface(m_DebugGraphicsLists + i);
-        Check(SUCCEEDED(m_Error));
-    #endif
+        error = (*graphics_list)->Close();
+        Check(CheckResultAndPrintMessages(error, this));
     }
 }
 
 void Renderer::CreateSwapChain()
 {
     IDXGIFactory5 *factory5 = null;
-    m_Error = m_Factory->QueryInterface(&factory5);
-    Check(SUCCEEDED(m_Error));
+    HRESULT        error    = m_Factory->QueryInterface(&factory5);
+    Check(CheckResultAndPrintMessages(error, this));
 
     b32 tearing_supported = false;
-    m_Error = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearing_supported, sizeof(b32));
+    error = factory5->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &tearing_supported, sizeof(b32));
     m_TearingSupported = tearing_supported;
-    Check(SUCCEEDED(m_Error));
+    Check(CheckResultAndPrintMessages(error, this));
 
     SafeRelease(factory5);
 
@@ -524,24 +496,24 @@ void Renderer::CreateSwapChain()
     swap_chain_fullscreen_desc.Windowed                = true;
 
     IDXGISwapChain1 *swap_chain1 = null;
-    m_Error = m_Factory->CreateSwapChainForHwnd(m_GraphicsQueue,
-                                                m_Window->Handle(),
-                                                &swap_chain_desc1,
-                                                &swap_chain_fullscreen_desc,
-                                                null,
-                                                &swap_chain1);
-    Check(SUCCEEDED(m_Error));
+    error = m_Factory->CreateSwapChainForHwnd(m_GraphicsQueue,
+                                              m_Window->Handle(),
+                                              &swap_chain_desc1,
+                                              &swap_chain_fullscreen_desc,
+                                              null,
+                                              &swap_chain1);
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = swap_chain1->QueryInterface(&m_SwapChain);
-    Check(SUCCEEDED(m_Error));
+    error = swap_chain1->QueryInterface(&m_SwapChain);
+    Check(CheckResultAndPrintMessages(error, this));
 
     SafeRelease(swap_chain1);
 
-    m_Error = m_Factory->MakeWindowAssociation(m_Window->Handle(), DXGI_MWA_NO_ALT_ENTER);
-    Check(SUCCEEDED(m_Error));
+    error = m_Factory->MakeWindowAssociation(m_Window->Handle(), DXGI_MWA_NO_ALT_ENTER);
+    Check(CheckResultAndPrintMessages(error, this));
 
-    m_Error = m_SwapChain->SetMaximumFrameLatency(1);
-    Check(SUCCEEDED(m_Error));
+    error = m_SwapChain->SetMaximumFrameLatency(1);
+    Check(CheckResultAndPrintMessages(error, this));
 
     DebugResult(m_WaitableObject = m_SwapChain->GetFrameLatencyWaitableObject());
 }
@@ -554,8 +526,8 @@ void Renderer::GetSwapChainRenderTargets()
     rtv_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     rtv_desc_heap_desc.NodeMask       = 0;
 
-    m_Error = m_Device->CreateDescriptorHeap(&rtv_desc_heap_desc, IID_PPV_ARGS(&m_RTVHeapDesc));
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = m_Device->CreateDescriptorHeap(&rtv_desc_heap_desc, IID_PPV_ARGS(&m_RTVHeapDesc));
+    Check(CheckResultAndPrintMessages(error, this));
 
     m_RTVDescSize      = m_Device->GetDescriptorHandleIncrementSize(rtv_desc_heap_desc.Type);
     m_RTVCPUDescHandle = m_RTVHeapDesc->GetCPUDescriptorHandleForHeapStart();
@@ -563,8 +535,8 @@ void Renderer::GetSwapChainRenderTargets()
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
         ID3D12Resource **rt_buffer = m_RTBuffers + i;
-        m_Error = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(rt_buffer));
-        Check(SUCCEEDED(m_Error));
+        error = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(rt_buffer));
+        Check(CheckResultAndPrintMessages(error, this));
 
         m_Device->CreateRenderTargetView(m_RTBuffers[i], null, m_RTVCPUDescHandle);
 
@@ -583,8 +555,8 @@ void Renderer::CreateDepthBuffer()
     dsv_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     dsv_desc_heap_desc.NodeMask       = 0;
 
-    m_Error = m_Device->CreateDescriptorHeap(&dsv_desc_heap_desc, IID_PPV_ARGS(&m_DSVHeapDesc));
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = m_Device->CreateDescriptorHeap(&dsv_desc_heap_desc, IID_PPV_ARGS(&m_DSVHeapDesc));
+    Check(CheckResultAndPrintMessages(error, this));
 
     m_DSVCPUDescHandle = m_DSVHeapDesc->GetCPUDescriptorHandleForHeapStart();
 
@@ -613,13 +585,13 @@ void Renderer::CreateDepthBuffer()
     ds_clear_value.DepthStencil.Depth   = 1.0f;
     ds_clear_value.DepthStencil.Stencil = 0;
 
-    m_Error = m_Device->CreateCommittedResource(&ds_heap_properties,
+    error = m_Device->CreateCommittedResource(&ds_heap_properties,
                                                 D3D12_HEAP_FLAG_SHARED,
                                                 &ds_resource_desc,
                                                 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
                                                 &ds_clear_value,
                                                 IID_PPV_ARGS(&m_DSBuffer));
-    Check(SUCCEEDED(m_Error));
+    Check(CheckResultAndPrintMessages(error, this));
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
     dsv_desc.Format             = DXGI_FORMAT_D32_FLOAT;
@@ -632,21 +604,16 @@ void Renderer::CreateDepthBuffer()
 
 void Renderer::CreateFences()
 {
-    for (u64 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-    {
-        ID3D12Fence **fence = m_Fences + i;
-
-        m_Error = m_Device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(fence));
-        Check(SUCCEEDED(m_Error));
-    }
+    HRESULT error = m_Device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_Fence));
+    Check(CheckResultAndPrintMessages(error, this));
 
     DebugResult(m_FenceEvent = CreateEventExA(null, "Fence Event", 0, EVENT_ALL_ACCESS));
 }
 
 void Renderer::ResizeBuffers()
 {
-    // Wait for the GPU, release swap chain buffers buffers
-    FlushGPU();
+    // Wait for the GPU, release swap chain buffers and DS buffer
+    WaitForGPU();
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
         SafeRelease(m_RTBuffers[i]);
@@ -661,12 +628,12 @@ void Renderer::ResizeBuffers()
         flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     }
 
-    m_Error = m_SwapChain->ResizeBuffers(SWAP_CHAIN_BUFFERS_COUNT,
-                                         m_ActualRTSize.w,
-                                         m_ActualRTSize.h,
-                                         DXGI_FORMAT_R8G8B8A8_UNORM,
-                                         flags);
-    Check(SUCCEEDED(m_Error));
+    HRESULT error = m_SwapChain->ResizeBuffers(SWAP_CHAIN_BUFFERS_COUNT,
+                                               m_ActualRTSize.w,
+                                               m_ActualRTSize.h,
+                                               DXGI_FORMAT_R8G8B8A8_UNORM,
+                                               flags);
+    Check(CheckResultAndPrintMessages(error, this));
 
     // Recreate RT buffer & RTV
     m_RTVCPUDescHandle = m_RTVHeapDesc->GetCPUDescriptorHandleForHeapStart();
@@ -674,8 +641,8 @@ void Renderer::ResizeBuffers()
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
         ID3D12Resource **rt_buffer = m_RTBuffers + i;
-        m_Error = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(rt_buffer));
-        Check(SUCCEEDED(m_Error));
+        error = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(rt_buffer));
+        Check(CheckResultAndPrintMessages(error, this));
 
         m_Device->CreateRenderTargetView(m_RTBuffers[i], null, m_RTVCPUDescHandle);
 
@@ -714,13 +681,13 @@ void Renderer::ResizeBuffers()
     ds_clear_value.DepthStencil.Depth   = 1.0f;
     ds_clear_value.DepthStencil.Stencil = 0;
 
-    m_Error = m_Device->CreateCommittedResource(&ds_heap_properties,
+    error = m_Device->CreateCommittedResource(&ds_heap_properties,
                                                 D3D12_HEAP_FLAG_SHARED,
                                                 &ds_resource_desc,
                                                 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
                                                 &ds_clear_value,
                                                 IID_PPV_ARGS(&m_DSBuffer));
-    Check(SUCCEEDED(m_Error));
+    Check(CheckResultAndPrintMessages(error, this));
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
     dsv_desc.Format             = DXGI_FORMAT_D32_FLOAT;
@@ -735,10 +702,10 @@ void Renderer::ResizeBuffers()
 
 void Renderer::SetFullscreenMode(bool set)
 {
-    if (set ^ m_Fullscreen)
+    if (set != m_Fullscreen)
     {
-        m_Error = m_SwapChain->SetFullscreenState(set, null);
-        Check(SUCCEEDED(m_Error));
+        HRESULT error = m_SwapChain->SetFullscreenState(set, null);
+        Check(CheckResultAndPrintMessages(error, this));
 
         if (set)
         {
@@ -753,109 +720,6 @@ void Renderer::SetFullscreenMode(bool set)
             m_Fullscreen = false;
         }
     }
-}
-
-template<u64 cstr_len>
-internal INLINE void AddCSTR(char *message, u64& message_len, const char (&cstr)[cstr_len])
-{
-    CopyMemory(message + message_len, cstr, cstr_len - 1);
-    message_len += cstr_len - 1;
-}
-
-template<u64 cat_len>
-internal INLINE void AddCategory(char *message, u64& message_len, const char (&category)[cat_len], int id)
-{
-    message_len += sprintf(message + message_len,
-                           " [%.*s MESSAGE, MESSAGE_ID = %I32d]",
-                           cast<int>(cat_len - 1),
-                           category,
-                           id);
-}
-
-u32 WINAPI LogInfoQueueMessages(void *arg)
-{
-#if DEBUG
-    Renderer *renderer = cast<Renderer *>(arg);
-
-    Memory *memory = Memory::Get();
-
-    while (!renderer->m_StopLogging)
-    {
-        renderer->m_LoggingEvent.Reset();
-
-        u64 num_messages = renderer->m_InfoQueue->GetNumStoredMessages(DXGI_DEBUG_ALL);
-        if (num_messages)
-        {
-            char composed_message[1024] = {0};
-            u64  composed_message_len   = 0;
-
-            for (u64 i = 0; i < num_messages; ++i)
-            {
-                u64 message_length = 0;
-                renderer->m_Error = renderer->m_InfoQueue->GetMessage(DXGI_DEBUG_ALL, i, null, &message_length);
-                Check(SUCCEEDED(renderer->m_Error));
-
-                DXGI_INFO_QUEUE_MESSAGE *message = cast<DXGI_INFO_QUEUE_MESSAGE *>(memory->PushToTransientArea(message_length));
-                renderer->m_Error = renderer->m_InfoQueue->GetMessage(DXGI_DEBUG_ALL, i, message, &message_length);
-                Check(SUCCEEDED(renderer->m_Error));
-
-                composed_message_len = 0;
-
-                /**/ if (Math::mm_equals(&message->Producer, &DXGI_DEBUG_D3D12)) AddCSTR(composed_message, composed_message_len, "D3D12 ");
-                else if (Math::mm_equals(&message->Producer, &DXGI_DEBUG_DXGI))  AddCSTR(composed_message, composed_message_len, "DXGI ");
-                else if (Math::mm_equals(&message->Producer, &DXGI_DEBUG_APP))   AddCSTR(composed_message, composed_message_len, "APP ");
-                else                                                             AddCSTR(composed_message, composed_message_len, "<UNKNOWN> ");
-
-                switch (message->Severity)
-                {
-                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION: AddCSTR(composed_message, composed_message_len, "CORRUPTION: "); break;
-                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR:      AddCSTR(composed_message, composed_message_len, "ERROR: ");      break;
-                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING:    AddCSTR(composed_message, composed_message_len, "WARNING: ");    break;
-                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_INFO:       AddCSTR(composed_message, composed_message_len, "INFO: ");       break;
-                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_MESSAGE:    AddCSTR(composed_message, composed_message_len, "MESSAGE: ");    break;
-                }
-
-                while (isspace(*message->pDescription))
-                {
-                    ++message->pDescription;
-                    --message->DescriptionByteLength;
-                }
-
-                CopyMemory(composed_message + composed_message_len, message->pDescription, message->DescriptionByteLength);
-                composed_message_len += message->DescriptionByteLength;
-
-                switch (message->Category)
-                {
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_UNKNOWN:               AddCategory(composed_message, composed_message_len, "UNKNOWN", message->ID);               break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_MISCELLANEOUS:         AddCategory(composed_message, composed_message_len, "MISCELLANEOUS", message->ID);         break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_INITIALIZATION:        AddCategory(composed_message, composed_message_len, "INITIALIZATION", message->ID);        break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_CLEANUP:               AddCategory(composed_message, composed_message_len, "CLEANUP", message->ID);               break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_COMPILATION:           AddCategory(composed_message, composed_message_len, "COMPILATION", message->ID);           break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_STATE_CREATION:        AddCategory(composed_message, composed_message_len, "STATE CREATION", message->ID);        break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_STATE_SETTING:         AddCategory(composed_message, composed_message_len, "STATE SETTING", message->ID);         break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_STATE_GETTING:         AddCategory(composed_message, composed_message_len, "STATE GETTING", message->ID);         break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_RESOURCE_MANIPULATION: AddCategory(composed_message, composed_message_len, "RESOURCE MANIPULATION", message->ID); break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_EXECUTION:             AddCategory(composed_message, composed_message_len, "EXECUTION", message->ID);             break;
-                    case DXGI_INFO_QUEUE_MESSAGE_CATEGORY_SHADER:                AddCategory(composed_message, composed_message_len, "SHADER", message->ID);                break;
-                };
-
-                switch (message->Severity)
-                {
-                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR:   renderer->m_Logger.LogError(  "%.*s", composed_message_len, composed_message); break;
-                    case DXGI_INFO_QUEUE_MESSAGE_SEVERITY_WARNING: renderer->m_Logger.LogWarning("%.*s", composed_message_len, composed_message); break;
-                    default:                                       renderer->m_Logger.LogInfo(   "%.*s", composed_message_len, composed_message); break;
-                }
-
-                ZeroMemory(composed_message, composed_message_len);
-            }
-
-            renderer->m_InfoQueue->ClearStoredMessages(DXGI_DEBUG_ALL);
-        }
-
-        renderer->m_LoggingEvent.Set();
-    }
-#endif
-    return 0;
 }
 
 }

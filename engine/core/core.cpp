@@ -68,7 +68,9 @@ void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...)
     {
         case MESSAGE_TYPE::ERROR:
         {
-            sprintf(title, "Error: 0x%08I32X!", GetLastError());
+            u32 error = GetLastError();
+            if (error) sprintf(title, "Error: 0x%08I32X!", error);
+            else       CopyMemory(title, "Error!", CSTRLEN("Error!"));
         } break;
         
         case MESSAGE_TYPE::WARNING:
@@ -119,7 +121,9 @@ void __cdecl ShowDebugMessage(
     u32 last_error = GetLastError();
 
     char box_title[64];
-    sprintf(box_title, "%s: 0x%08I32X!", title, last_error);
+
+    if (last_error) sprintf(box_title, "%s: 0x%08I32X!", title, last_error);
+    else            sprintf(box_title, "%s!", title);
 
     va_list args;
     va_start(args, format);

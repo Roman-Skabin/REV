@@ -9,7 +9,7 @@
 class ENGINE_API Event final
 {
 public:
-    enum class FLAGS
+    enum class FLAGS : u32
     {
         NONE        = 0,
         RESETTABLE  = CREATE_EVENT_MANUAL_RESET,
@@ -20,7 +20,8 @@ public:
     Event(const Event& other);
     Event(Event&& other) noexcept;
 
-    constexpr operator HANDLE() const { return m_Handle; }
+    constexpr const HANDLE Handle() const { return m_Handle; }
+    constexpr       HANDLE Handle()       { return m_Handle; }
 
     ~Event();
 

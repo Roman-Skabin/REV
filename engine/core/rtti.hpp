@@ -226,10 +226,10 @@ namespace RTTI
     template<typename Base, typename ...Deriveds> inline constexpr bool are_base_of_v = are_base_of<Base, Deriveds...>::value;
 
     template<typename T> struct remove_pointer                    { using type = T; };
-    template<typename T> struct remove_pointer<T *>               { using type = T; };
-    template<typename T> struct remove_pointer<T *const>          { using type = T; };
-    template<typename T> struct remove_pointer<T *volatile>       { using type = T; };
-    template<typename T> struct remove_pointer<T *const volatile> { using type = T; };
+    template<typename T> struct remove_pointer<T *>               { using type = typename remove_pointer<T>::type; };
+    template<typename T> struct remove_pointer<T *const>          { using type = typename remove_pointer<T>::type; };
+    template<typename T> struct remove_pointer<T *volatile>       { using type = typename remove_pointer<T>::type; };
+    template<typename T> struct remove_pointer<T *const volatile> { using type = typename remove_pointer<T>::type; };
 
     template<typename T> using remove_pointer_t = typename remove_pointer<T>::type;
 

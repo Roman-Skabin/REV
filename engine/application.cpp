@@ -32,22 +32,18 @@ Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
     s_Application = this;
 
     GraphicsAPI::SetGraphicsAPI(api);
-    GraphicsAPI::CreateRenderer(&m_Window, m_Logger, Math::v2s(1920, 1080));
-    GraphicsAPI::CreateGPUMemoryManager(&m_Allocator, m_Logger, GB(2ui64));
-    GraphicsAPI::CreateGPUProgramManager(&m_Allocator);
+    GraphicsAPI::Init(&m_Window, &m_Allocator, m_Logger, Math::v2s(1920, 1080));
 }
 
 Application::~Application()
 {
-    GraphicsAPI::GetGPUProgramManager()->Destroy();
-    GraphicsAPI::GetGPUMemoryManager()->Destroy();
-    GraphicsAPI::GetRenderer()->Destroy();
+    GraphicsAPI::Destroy();
     s_Application = null;
 }
 
 void Application::Run()
 {
-    IRenderer *renderer = GraphicsAPI::GetRenderer();
+    Renderer *renderer = GraphicsAPI::GetRenderer();
 
     m_Timer.Start();
 
@@ -73,7 +69,7 @@ void Application::Run()
         }
     }
 
-    m_WorkQueue->AddWork([this    ]{ m_Timer.Stop();       });
-    m_WorkQueue->AddWork([renderer]{ renderer->FlushGPU(); });
+    m_WorkQueue->AddWork([this    ]{ m_Timer.Stop();         });
+    m_WorkQueue->AddWork([renderer]{ renderer->WaitForGPU(); });
     m_WorkQueue->Wait();
 }

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 #include "tools/static_string.hpp"
 
 // @Issue(Roman): Several simultaneous read operations under the same file?

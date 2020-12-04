@@ -24,7 +24,7 @@ struct BlockHeader
     byte         data[0];
 };
 
-Allocator::Allocator(void *base_address, u64 capacity, b32 clear_memory)
+Allocator::Allocator(void *base_address, u64 capacity, bool clear_memory, const ConstString& name)
     : m_FreeList(null),
       m_First(null),
       m_LastAllocated(null),
@@ -35,14 +35,15 @@ Allocator::Allocator(void *base_address, u64 capacity, b32 clear_memory)
       m_ReAllocationsCount(0),
       m_DeAllocationsCount(0),
 #endif
-      m_VallocUsed(false),
-      m_CriticalSection()
+      m_CriticalSection(),
+      m_Name(name),
+      m_VallocUsed(false)
 {
-    CheckM(m_Capacity, "Allocator's capacity can't be 0");
+    CheckM(m_Capacity, "Allocator \"%s\", Allocator's capacity can't be 0", m_Name.Data());
 
     if (!base_address)
     {
-        DebugResult(base_address = VirtualAlloc(null, m_Capacity, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+        DebugResultM(base_address = VirtualAlloc(null, m_Capacity, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE), "Allocator \"%s\": Internal error", m_Name.Data());
         m_VallocUsed = true;
     }
     else
@@ -76,15 +77,22 @@ Allocator::~Allocator()
 {
     if (m_VallocUsed)
     {
-        if (m_First) DebugResult(VirtualFree(m_First, 0, MEM_RELEASE));
+        if (m_First) DebugResultM(VirtualFree(m_First, 0, MEM_RELEASE), "Allocator \"%s\": Internal error.", m_Name.Data());
     }
 #if DEBUG
-    else if (m_AllocationsCount > m_DeAllocationsCount)
+    if (m_AllocationsCount > m_DeAllocationsCount)
     {
-        DebugFC(DEBUG_IN::CONSOLE, DEBUG_COLOR::ERROR, "Memory leak in allocator detected!!!:\n");
-        DebugF(DEBUG_IN::CONSOLE, "    Allocations overall: %I64u\n", m_AllocationsCount);
-        DebugF(DEBUG_IN::CONSOLE, "    Reallocations overall: %I64u\n", m_ReAllocationsCount);
-        DebugF(DEBUG_IN::CONSOLE, "    Deallocations overall: %I64u\n", m_DeAllocationsCount);
+        DebugFC(DEBUG_COLOR::ERROR, "Allocator \"%s\": Memory leak detected:", m_Name.Data());
+        DebugFC(DEBUG_COLOR::ERROR, "    Allocations overall: %I64u", m_AllocationsCount);
+        DebugFC(DEBUG_COLOR::ERROR, "    Reallocations overall: %I64u", m_ReAllocationsCount);
+        DebugFC(DEBUG_COLOR::ERROR, "    Deallocations overall: %I64u", m_DeAllocationsCount);
+    }
+    else
+    {
+        DebugFC(DEBUG_COLOR::INFO, "Allocator \"%s\": Stats:", m_Name.Data());
+        DebugFC(DEBUG_COLOR::INFO, "    Allocations overall: %I64u", m_AllocationsCount);
+        DebugFC(DEBUG_COLOR::INFO, "    Reallocations overall: %I64u", m_ReAllocationsCount);
+        DebugFC(DEBUG_COLOR::INFO, "    Deallocations overall: %I64u", m_DeAllocationsCount);
     }
 #endif
     ZeroMemory(this, StructFieldOffset(Allocator, m_CriticalSection));
@@ -100,7 +108,7 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
          it;
          prev_free = it, it = it->next_free)
     {
-        Check(it->block_state == BLOCK_STATE::IN_FREE_LIST);
+        CheckM(it->block_state == BLOCK_STATE::IN_FREE_LIST, "Allocator \"%s\": Internal error", m_Name.Data());
 
         if (it->data_bytes == bytes)
         {
@@ -169,7 +177,7 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
 
     if (header)
     {
-        Check(header->block_state == BLOCK_STATE::NONE);
+        CheckM(header->block_state == BLOCK_STATE::NONE, "Allocator \"%s\": Internal error", m_Name.Data());
 
         header->block_state = BLOCK_STATE::ALLOCATED;
         header->data_bytes  = bytes;
@@ -186,25 +194,27 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
 
 void *Allocator::Allocate(u64 bytes)
 {
-    CheckM(bytes, "bytes can't be 0");
+    CheckM(bytes, "Allocator \"%s\": bytes can't be 0", m_Name.Data());
 
     m_CriticalSection.Enter();
 
     CheckM(bytes <= m_Capacity - m_Used,
-           "Memory overflow.\n"
-           "Bytes to allocate: %I64u.\n"
-           "Remain allocator capacity: %I64u.\n"
-           "Maximum bytes can be allocated: %I64u",
+           "Allocator \"%s\": Memory overflow.\n"
+           "    Bytes to allocate: %I64u.\n"
+           "    Remain allocator capacity: %I64u.\n"
+           "    Maximum bytes can be allocated: %I64u",
+           m_Name.Data(),
            bytes,
            m_Capacity - m_Used,
            m_Capacity - m_Used - sizeof(BlockHeader));
 
     BlockHeader *header = FindBestMatch(bytes);
     CheckM(header,
-           "Memory overflow.\n"
-           "Bytes to allocate: %I64u.\n"
-           "Remain allocator capacity: %I64u.\n"
-           "Maximum bytes can be allocated: %I64u\n",
+           "Allocator \"%s\": Memory overflow.\n"
+           "    Bytes to allocate: %I64u.\n"
+           "    Remain allocator capacity: %I64u.\n"
+           "    Maximum bytes can be allocated: %I64u\n",
+           m_Name.Data(),
            bytes,
            m_Capacity - m_Used,
            m_Capacity - m_Used - sizeof(BlockHeader));
@@ -241,8 +251,10 @@ void Allocator::MergeNearbyBlocksInFreeList(BlockHeader *header)
             if (BlockInAllocatorRange(nexts_next))
             {
                 CheckM(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
-                       "Next's next block can't be free list because next block is already free list. "
-                       "There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.");
+                       "Allocator \"%s\": Internal error.\n"
+                       "    Next's next block can't be free list because next block is already free list.\n"
+                       "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.",
+                       m_Name.Data());
 
                 if (nexts_next->block_state != BLOCK_STATE::NONE)
                 {
@@ -305,14 +317,16 @@ void Allocator::DeAllocate(void *&mem)
         m_CriticalSection.Enter();
 
         CheckM(MemInAllocatorRange(mem),
-               "This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p].",
+               "Allocator \"%s\": This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p].",
+               m_Name.Data(),
                mem,
                m_First->data,
                cast<byte *>(m_First) + m_Capacity - 1);
 
         BlockHeader *header = cast<BlockHeader *>(cast<byte *>(mem) - sizeof(BlockHeader));
         CheckM(header->block_state == BLOCK_STATE::ALLOCATED,
-               "This memory block (0x%p) is not allocated yet/already",
+               "Allocator \"%s\": This memory block (0x%p) is not allocated yet/already",
+               m_Name.Data(),
                mem);
 
         header->block_state = BLOCK_STATE::IN_FREE_LIST;
@@ -360,8 +374,10 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     CheckM(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
-                           "Next's next block can't be free list because next block is already free list. "
-                           "There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.");
+                           "Allocator \"%s\": Internal error.\n"
+                           "    Next's next block can't be free list because next block is already free list.\n"
+                           "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.",
+                           m_Name.Data());
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
                     {
@@ -395,8 +411,10 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     CheckM(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
-                           "Next's next block can't be free list because next block is already free list. "
-                           "There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.");
+                           "Allocator \"%s\": Internal error.\n"
+                           "    Next's next block can't be free list because next block is already free list.\n"
+                           "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.",
+                           m_Name.Data());
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
                     {
@@ -430,8 +448,10 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     CheckM(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
-                           "Next's next block can't be free list because next block is already free list. "
-                           "There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.");
+                           "Allocator \"%s\": Internal error.\n"
+                           "    Next's next block can't be free list because next block is already free list.\n"
+                           "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.",
+                           m_Name.Data());
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
                     {
@@ -487,7 +507,8 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
     m_CriticalSection.Enter();
 
     CheckM(MemInAllocatorRange(mem),
-           "This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p].",
+           "Allocator \"%s\": This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p].",
+           m_Name.Data(),
            mem,
            m_First->data,
            cast<byte *>(m_First) + m_Capacity - 1);
@@ -495,7 +516,8 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
     BlockHeader *header = cast<BlockHeader *>(cast<byte *>(mem) - sizeof(BlockHeader));
 
     CheckM(header->block_state == BLOCK_STATE::ALLOCATED,
-           "This memory block (0x%p) is not allocated yet/already.",
+           "Allocator \"%s\": This memory block (0x%p) is not allocated yet/already.",
+           m_Name.Data(),
            mem);
 
     if (header->data_bytes == bytes)
@@ -505,10 +527,11 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
     }
 
     CheckM(bytes < header->data_bytes || bytes - header->data_bytes <= m_Capacity - m_Used,
-           "Memory overflow.\n"
-           "Additional bytes to allocate: %I64u.\n"
-           "Remain allocator capacity: %I64u.\n"
-           "Maximum bytes can be allocated: %I64u",
+           "Allocator \"%s\": Memory overflow.\n"
+           "    Additional bytes to allocate: %I64u.\n"
+           "    Remain allocator capacity: %I64u.\n"
+           "    Maximum bytes can be allocated: %I64u",
+           m_Name.Data(),
            bytes - header->data_bytes,
            m_Capacity - m_Used,
            m_Capacity - m_Used - sizeof(BlockHeader));
@@ -518,10 +541,11 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
     if (!new_header)
     {
         DebugResultM(new_header = FindBestMatch(bytes),
-                     "Memory overflow.\n"
-                     "Bytes to allocate: %I64u.\n"
-                     "Remain allocator capacity: %I64u.\n"
-                     "Maximum bytes can be allocated: %I64u",
+                     "Allocator \"%s\": Memory overflow.\n"
+                     "    Bytes to allocate: %I64u.\n"
+                     "    Remain allocator capacity: %I64u.\n"
+                     "    Maximum bytes can be allocated: %I64u",
+                     m_Name.Data(),
                      bytes,
                      m_Capacity - m_Used,
                      m_Capacity - m_Used - sizeof(BlockHeader));
@@ -550,7 +574,7 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
 void *Allocator::AllocateAligned(u64 bytes, u64 alignment)
 {
     if (alignment < ENGINE_DEFAULT_ALIGNMENT) alignment = ENGINE_DEFAULT_ALIGNMENT;
-    CheckM(IsPowOf2(alignment), "Alignment must be power of 2");
+    CheckM(IsPowOf2(alignment), "Allocator \"%s\": Alignment must be power of 2", m_Name.Data());
     return Allocate(AlignUp(bytes, alignment));
 }
 
@@ -562,7 +586,7 @@ void Allocator::DeAllocateAligned(void *&mem)
 void *Allocator::ReAllocateAligned(void *&mem, u64 bytes, u64 alignment)
 {
     if (alignment < ENGINE_DEFAULT_ALIGNMENT) alignment = ENGINE_DEFAULT_ALIGNMENT;
-    CheckM(IsPowOf2(alignment), "Alignment must be power of 2");
+    CheckM(IsPowOf2(alignment), "Allocator \"%s\": Alignment must be power of 2", m_Name.Data());
     return ReAllocate(mem, AlignUp(bytes, alignment));
 }
 

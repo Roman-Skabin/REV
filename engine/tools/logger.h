@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 
 class ENGINE_API Logger final
 {

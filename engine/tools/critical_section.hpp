@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 
 template<bool waitable>
 class CriticalSection;

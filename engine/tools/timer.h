@@ -34,7 +34,7 @@ public:
     f32 DeltaSeconds() const { return m_DeltaSeconds; }
     f32 TotalSeconds() const { return m_TotalSeconds; }
 
-    b32 Stopped() const { return m_Stopped; }
+    bool Stopped() const { return m_Stopped; }
 
     const StaticString<256>& Name() const { return m_Name; }
 
@@ -89,7 +89,7 @@ public:
     f32 DeltaSeconds() const { return m_Timer.m_DeltaSeconds; }
     f32 TotalSeconds() const { return m_Timer.m_TotalSeconds; }
 
-    b32 Stopped() const { return m_Timer.m_Stopped; }
+    bool Stopped() const { return m_Timer.m_Stopped; }
 
     const StaticString<256>& Name() const { return m_Timer.m_Name; }
 

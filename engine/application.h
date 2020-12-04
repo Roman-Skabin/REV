@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 #include "core/memory.h"
 #include "core/allocator.h"
 #include "core/work_queue.h"
@@ -16,7 +16,7 @@
 
 #include "tools/logger.h"
 #include "tools/timer.h"
-#include "tools/buffer.hpp"
+#include "tools/array.hpp"
 #include "tools/static_string.hpp"
 
 class ENGINE_API Application

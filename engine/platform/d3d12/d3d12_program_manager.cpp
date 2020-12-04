@@ -96,15 +96,16 @@ ProgramManager::~ProgramManager()
 
 u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_with_shaders)
 {
-    GraphicsProgram graphics_program(m_Allocator);
-    graphics_program.signature       = null;
-    graphics_program.root_signature  = null;
-    graphics_program.pipeline_state  = null;
-    graphics_program.vertex_shader   = null;
-    graphics_program.pixel_shader    = null;
-    graphics_program.hull_shader     = null;
-    graphics_program.domain_shader   = null;
-    graphics_program.geometry_shader = null;
+    GraphicsProgram *graphics_program = m_GraphicsPrograms.PushBack();
+    *graphics_program                 = GraphicsProgram(m_Allocator);
+    graphics_program->signature       = null;
+    graphics_program->root_signature  = null;
+    graphics_program->pipeline_state  = null;
+    graphics_program->vertex_shader   = null;
+    graphics_program->pixel_shader    = null;
+    graphics_program->hull_shader     = null;
+    graphics_program->domain_shader   = null;
+    graphics_program->geometry_shader = null;
 
     AttachGraphicsShaders(graphics_program, file_with_shaders);
 
@@ -138,8 +139,7 @@ u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_wit
     input_layout.NumElements        = cast<u32>(ArrayCount(elements));
 
     CreatePipelineState(graphics_program, input_layout, false, D3D12_CULL_MODE_NONE, true);
-
-    m_GraphicsPrograms.PushBack(RTTI::forward<GraphicsProgram>(graphics_program));
+    
     return m_GraphicsPrograms.Count() - 1;
 }
 
@@ -231,7 +231,7 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
 void ProgramManager::AttachResource(GraphicsProgram& graphics_program, GPU::ResourceHandle resource_handle)
 {
     CheckM(resource_handle.kind != GPU::RESOURCE_KIND::VB && resource_handle.kind != GPU::RESOURCE_KIND::IB, "You can't attach vertex nor index buffer.");
-    graphics_program.bound_resources.PushBack(resource_handle);
+    *graphics_program.bound_resources.PushBack() = resource_handle;
 }
 
 void ProgramManager::BindVertexBuffer(GraphicsProgram& graphics_program, GPU::ResourceHandle resource_handle)
@@ -294,7 +294,7 @@ ProgramManager& ProgramManager::operator=(ProgramManager&& other) noexcept
     return *this;
 }
 
-void ProgramManager::AttachGraphicsShaders(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& file_with_shaders)
+void ProgramManager::AttachGraphicsShaders(GraphicsProgram *graphics_program, const StaticString<MAX_PATH>& file_with_shaders)
 {
     AsyncFile file(file_with_shaders, AsyncFile::FLAGS::READ);
 
@@ -317,14 +317,14 @@ void ProgramManager::AttachGraphicsShaders(GraphicsProgram& graphics_program, co
     m_Logger.LogInfo("\"%s\" shaders are being compiled...", shaders_name.Data());
 
     {
-        graphics_program.vertex_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "VSMain", "vs_5_1");
+        graphics_program->vertex_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "VSMain", "vs_5_1");
         m_Logger.LogSuccess("Vertex shader has been compiled.");
         ++shaders_count;
     }
 
     if (const_string.Find("HSMain", CSTRLEN("HSMain"), 0) != ConstString::npos)
     {
-        graphics_program.hull_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "HSMain", "hs_5_1");
+        graphics_program->hull_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "HSMain", "hs_5_1");
         m_Logger.LogSuccess("Hull shader has been compiled.");
         ++shaders_count;
     }
@@ -335,7 +335,7 @@ void ProgramManager::AttachGraphicsShaders(GraphicsProgram& graphics_program, co
 
     if (const_string.Find("DSMain", CSTRLEN("DSMain"), 0) != ConstString::npos)
     {
-        graphics_program.domain_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "DSMain", "ds_5_1");
+        graphics_program->domain_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "DSMain", "ds_5_1");
         m_Logger.LogSuccess("Domain shader has been compiled.");
         ++shaders_count;
     }
@@ -346,7 +346,7 @@ void ProgramManager::AttachGraphicsShaders(GraphicsProgram& graphics_program, co
 
     if (const_string.Find("GSMain", CSTRLEN("GSMain"), 0) != ConstString::npos)
     {
-        graphics_program.geometry_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "GSMain", "gs_5_1");
+        graphics_program->geometry_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "GSMain", "gs_5_1");
         m_Logger.LogSuccess("Geometry shader has been compiled.");
         ++shaders_count;
     }
@@ -356,7 +356,7 @@ void ProgramManager::AttachGraphicsShaders(GraphicsProgram& graphics_program, co
     }
 
     {
-        graphics_program.pixel_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "PSMain", "ps_5_1");
+        graphics_program->pixel_shader = CompileShader(hlsl_code, hlsl_code_length, file_with_shaders.Data(), "PSMain", "ps_5_1");
         m_Logger.LogSuccess("Pixel shader has been compiled.");
         ++shaders_count;
     }
@@ -364,7 +364,7 @@ void ProgramManager::AttachGraphicsShaders(GraphicsProgram& graphics_program, co
     m_Logger.LogInfo("\"%s\" shaders' compilation has been done. %hhu/5 shaders has been successfully compiled.", shaders_name.Data(), shaders_count);
 }
 
-void ProgramManager::CreateRootSignature(GraphicsProgram& graphics_program, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc)
+void ProgramManager::CreateRootSignature(GraphicsProgram *graphics_program, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc)
 {
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC vrsd = {};
     vrsd.Version = D3D_ROOT_SIGNATURE_VERSION_1_0; // renderer->HighestRootSignatureVersion();
@@ -389,7 +389,7 @@ void ProgramManager::CreateRootSignature(GraphicsProgram& graphics_program, cons
     }
 
     ID3DBlob *error_blob = null;
-    HRESULT   error      = D3D12SerializeVersionedRootSignature(&vrsd, &graphics_program.signature, &error_blob);
+    HRESULT   error      = D3D12SerializeVersionedRootSignature(&vrsd, &graphics_program->signature, &error_blob);
     if (Failed(error))
     {
         FailedM("Versioned Root Signature creation failure: %s", error_blob->GetBufferPointer());
@@ -397,13 +397,13 @@ void ProgramManager::CreateRootSignature(GraphicsProgram& graphics_program, cons
     SafeRelease(error_blob);
 
     error = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device()->CreateRootSignature(0,
-                                                                                        graphics_program.signature->GetBufferPointer(),
-                                                                                        graphics_program.signature->GetBufferSize(),
-                                                                                        IID_PPV_ARGS(&graphics_program.root_signature));
+                                                                                        graphics_program->signature->GetBufferPointer(),
+                                                                                        graphics_program->signature->GetBufferSize(),
+                                                                                        IID_PPV_ARGS(&graphics_program->root_signature));
     Check(CheckResultAndPrintMessages(error));
 }
 
-void ProgramManager::CreatePipelineState(GraphicsProgram& graphics_program, const D3D12_INPUT_LAYOUT_DESC& input_layout, bool blending_enabled, D3D12_CULL_MODE cull_mode, bool depth_test_enabled)
+void ProgramManager::CreatePipelineState(GraphicsProgram *graphics_program, const D3D12_INPUT_LAYOUT_DESC& input_layout, bool blending_enabled, D3D12_CULL_MODE cull_mode, bool depth_test_enabled)
 {
     // @TODO(Roman): support stream output
     D3D12_STREAM_OUTPUT_DESC sod;
@@ -508,25 +508,25 @@ void ProgramManager::CreatePipelineState(GraphicsProgram& graphics_program, cons
     cached_pipeline_state.CachedBlobSizeInBytes = 0;
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC gpsd = {0};
-    gpsd.pRootSignature        = graphics_program.root_signature;
-    gpsd.VS.pShaderBytecode    = graphics_program.vertex_shader->GetBufferPointer();
-    gpsd.VS.BytecodeLength     = graphics_program.vertex_shader->GetBufferSize();
-    gpsd.PS.pShaderBytecode    = graphics_program.pixel_shader->GetBufferPointer();
-    gpsd.PS.BytecodeLength     = graphics_program.pixel_shader->GetBufferSize();
-    if (graphics_program.domain_shader)
+    gpsd.pRootSignature        = graphics_program->root_signature;
+    gpsd.VS.pShaderBytecode    = graphics_program->vertex_shader->GetBufferPointer();
+    gpsd.VS.BytecodeLength     = graphics_program->vertex_shader->GetBufferSize();
+    gpsd.PS.pShaderBytecode    = graphics_program->pixel_shader->GetBufferPointer();
+    gpsd.PS.BytecodeLength     = graphics_program->pixel_shader->GetBufferSize();
+    if (graphics_program->domain_shader)
     {
-        gpsd.DS.pShaderBytecode = graphics_program.domain_shader->GetBufferPointer();
-        gpsd.DS.BytecodeLength  = graphics_program.domain_shader->GetBufferSize();
+        gpsd.DS.pShaderBytecode = graphics_program->domain_shader->GetBufferPointer();
+        gpsd.DS.BytecodeLength  = graphics_program->domain_shader->GetBufferSize();
     }
-    if (graphics_program.hull_shader)
+    if (graphics_program->hull_shader)
     {
-        gpsd.HS.pShaderBytecode = graphics_program.hull_shader->GetBufferPointer();
-        gpsd.HS.BytecodeLength  = graphics_program.hull_shader->GetBufferSize();
+        gpsd.HS.pShaderBytecode = graphics_program->hull_shader->GetBufferPointer();
+        gpsd.HS.BytecodeLength  = graphics_program->hull_shader->GetBufferSize();
     }
-    if (graphics_program.geometry_shader)
+    if (graphics_program->geometry_shader)
     {
-        gpsd.GS.pShaderBytecode = graphics_program.geometry_shader->GetBufferPointer();
-        gpsd.GS.BytecodeLength  = graphics_program.geometry_shader->GetBufferSize();
+        gpsd.GS.pShaderBytecode = graphics_program->geometry_shader->GetBufferPointer();
+        gpsd.GS.BytecodeLength  = graphics_program->geometry_shader->GetBufferSize();
     }
     gpsd.StreamOutput          = sod;
     gpsd.BlendState            = blend_desc;
@@ -563,7 +563,7 @@ void ProgramManager::CreatePipelineState(GraphicsProgram& graphics_program, cons
     gpsd.CachedPSO             = cached_pipeline_state;
     gpsd.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-    HRESULT error = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device()->CreateGraphicsPipelineState(&gpsd, IID_PPV_ARGS(&graphics_program.pipeline_state));
+    HRESULT error = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device()->CreateGraphicsPipelineState(&gpsd, IID_PPV_ARGS(&graphics_program->pipeline_state));
     Check(CheckResultAndPrintMessages(error));
 }
 

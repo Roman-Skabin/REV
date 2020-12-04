@@ -4,19 +4,20 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 #include "tools/critical_section.hpp"
+#include "tools/const_string.h"
 
 struct BlockHeader;
 
-// @TODO(Roman): Allocator gotta has a name?
 class ENGINE_API Allocator final
 {
 public:
     Allocator(
-        void *base_address,
-        u64   capacity,
-        b32   clear_memory // @NOTE(Roman): There is a sence to use it only if base_address != null.
+        void              *base_address,
+        u64                capacity,
+        bool               clear_memory, // @NOTE(Roman): There is a sence to use it only if base_address != null.
+        const ConstString& name
     );
     Allocator(Allocator&& other) noexcept;
     ~Allocator();
@@ -70,6 +71,7 @@ private:
     u64                     m_ReAllocationsCount;
     u64                     m_DeAllocationsCount;
 #endif
-    b32                     m_VallocUsed;
     CriticalSection<false>  m_CriticalSection;
+    ConstString             m_Name;
+    bool                    m_VallocUsed;
 };

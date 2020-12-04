@@ -165,7 +165,7 @@ void Mouse::UpdateState(const RAWMOUSE& raw_mouse)
         m_Wheel      += m_DeltaWheel;
     }
 
-    b32 down = m_LeftButton.Down();
+    bool down = m_LeftButton.Down();
     if (raw_mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) down = true;
     if (raw_mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP  ) down = false;
     m_LeftButton.UpdateState(down);
@@ -300,7 +300,7 @@ void Gamepad::UpdateState(const Logger& logger)
 {
     XINPUT_STATE xinput_state = {0};
 
-    b32 was_connected = m_Connected;
+    bool was_connected = m_Connected;
     m_Connected = s_XInputGetState(0, &xinput_state) == ERROR_SUCCESS;
 
     /**/ if (!was_connected &&  m_Connected) logger.LogInfo("gamepad has been connected");

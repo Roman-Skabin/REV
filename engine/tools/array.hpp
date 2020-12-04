@@ -7,24 +7,13 @@
 #include "core/allocator.h"
 
 template<typename T, typename Allocator_t = Allocator>
-class Buffer final
+class Array final
 {
 public:
     using Type = T;
     static constexpr const u64 npos = U64_MAX;
 
-    template<typename ...U>
-    using EnableConditionCA = RTTI::conditional_t<RTTI::is_pointer_v<T>,
-                                                  RTTI::enable_if_t<RTTI::are_base_of_v<RTTI::remove_pointer_t<T>, RTTI::remove_pointer_t<U>...>>,
-                                                  RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>>;
-    template<typename ...U>
-    using EnableConditionMA = RTTI::conditional_t<RTTI::is_pointer_v<T>,
-                                                  RTTI::enable_if_t<RTTI::are_base_of_v<RTTI::remove_pointer_t<T>, RTTI::remove_pointer_t<U>...>>,
-                                                  RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>>;
-    using EnableCA = RTTI::conditional_t<RTTI::is_pointer_v<T>, void, RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>>;
-    using EnableMA = RTTI::conditional_t<RTTI::is_pointer_v<T>, void, RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>>;
-
-    explicit Buffer(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
+    explicit Array(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = ENGINE_DEFAULT_ALIGNMENT)
         : m_Header(null)
     {
         Check(allocator);
@@ -37,7 +26,7 @@ public:
         m_Header->alignment_in_bytes = alignment_in_bytes;
     }
 
-    Buffer(const Buffer& other)
+    Array(const Array& other)
         : m_Header(null)
     {
         m_Header = cast<Header *>(other.m_Header->allocator->AllocateAligned(sizeof(Header) + other.m_Header->capacity * sizeof(T),
@@ -45,13 +34,13 @@ public:
         CopyMemory(m_Header, other.m_Header, sizeof(Header) + other.m_Header->count * sizeof(T));
     }
 
-    Buffer(Buffer&& other) noexcept
+    Array(Array&& other) noexcept
         : m_Header(other.m_Header)
     {
         other.m_Header = null;
     }
 
-    ~Buffer()
+    ~Array()
     {
         if (m_Header)
         {
@@ -60,44 +49,7 @@ public:
         }
     }
 
-    template<typename ...U, typename = EnableConditionMA<U...>>
-    void Insert(u64 where, U&&... elements)
-    {
-        u64 old_count = m_Header->count;
-
-        m_Header->count += sizeof...(elements);
-        Expand();
-
-        if (where != old_count)
-        {
-            MoveMemory(m_Header->data + where + sizeof...(elements),
-                       m_Header->data + where,
-                       (old_count - where) * sizeof(T));
-        }
-
-        (..., (m_Header->data[where++] = RTTI::move(elements)));
-    }
-
-    template<typename ...U, typename = EnableConditionCA<U...>>
-    void Insert(u64 where, const U&... elements)
-    {
-        u64 old_count = m_Header->count;
-
-        m_Header->count += sizeof...(elements);
-        Expand();
-
-        if (where != old_count)
-        {
-            MoveMemory(m_Header->data + where + sizeof...(elements),
-                       m_Header->data + where,
-                       (old_count - where) * sizeof(T));
-        }
-
-        (..., (m_Header->data[where++] = elements));
-    }
-
-    template<u64 count, typename = EnableCA>
-    void Insert(u64 where, const T (&elements)[count])
+    T *Insert(u64 where, u64 count = 1)
     {
         u64 old_count = m_Header->count;
 
@@ -111,72 +63,18 @@ public:
                        (old_count - where) * sizeof(T));
         }
 
-        for (u64 i = 0; i < count; ++i)
-        {
-            m_Header->data[where + i] = elements[i];
-        }
+        return m_Header->data + where;
     }
 
-    template<typename = EnableCA>
-    void Insert(u64 where, T *const elements, u64 count)
-    {
-        u64 old_count = m_Header->count;
-
-        m_Header->count += count;
-        Expand();
-
-        if (where != old_count)
-        {
-            MoveMemory(m_Header->data + where + count,
-                       m_Header->data + where,
-                       (old_count - where) * sizeof(T));
-        }
-
-        for (u64 i = 0; i < count; ++i)
-        {
-            m_Header->data[where + i] = elements[i];
-        }
-    }
-
-    template<typename ...U, typename = EnableConditionCA<U...>> constexpr void PushFront(const U&... elements) { Insert(0,               elements...); }
-    template<typename ...U, typename = EnableConditionCA<U...>> constexpr void PushBack(const U&... elements)  { Insert(m_Header->count, elements...); }
-
-    template<typename ...U, typename = EnableConditionMA<U...>> constexpr void PushFront(U&&... elements) { Insert(0,               RTTI::forward<U>(elements)...); }
-    template<typename ...U, typename = EnableConditionMA<U...>> constexpr void PushBack(U&&... elements)  { Insert(m_Header->count, RTTI::forward<U>(elements)...); }
-
-    template<u64 count, typename = EnableCA> constexpr void PushFront(const T (&elements)[count]) { Insert(0,               elements); }
-    template<u64 count, typename = EnableCA> constexpr void PushBack(const T (&elements)[count])  { Insert(m_Header->count, elements); }
-
-    template<typename = EnableCA> constexpr void PushFront(T *const elements, u64 count) { Insert(0,               elements, count); }
-    template<typename = EnableCA> constexpr void PushBack(T *const elements, u64 count)  { Insert(m_Header->count, elements, count); }
-
-    template<typename ...ConstructorArgs, typename = EnableMA>
-    void Emplace(u64 where, ConstructorArgs&&... args)
-    {
-        u64 old_count = m_Header->count;
-
-        ++m_Header->count;
-        Expand();
-
-        if (where != old_count)
-        {
-            MoveMemory(m_Header->data + where + 1,
-                       m_Header->data + where,
-                       (old_count - where) * sizeof(T));
-        }
-
-        return m_Header->data[where] = T(RTTI::forward<ConstructorArgs>(args)...);
-    }
-
-    template<typename ...ConstructorArgs, typename = EnableMA> constexpr void EmplaceBack(ConstructorArgs&&... args)  { return Emplace(m_Header->count, RTTI::forward<ConstructorArgs>(args)...); }
-    template<typename ...ConstructorArgs, typename = EnableMA> constexpr void EmplaceFront(ConstructorArgs&&... args) { return Emplace(0,               RTTI::forward<ConstructorArgs>(args)...); }
+    constexpr T *PushFront(u64 count = 1) { return Insert(0,               count); }
+    constexpr T *PushBack(u64 count  = 1) { return Insert(m_Header->count, count); }
 
     void Erase(u64 from, u64 to = npos)
     {
         if (to == npos) to = from + 1;
         CheckM(from < m_Header->count && from < to && to <= m_Header->count, "Bad arguments: from = %I64u, to = %I64u, count = %I64u", from, to, m_Header->count);
 
-        // @NOTE(Roman): Duh, we gotta do that because of destructors.
+        // @NOTE(Roman): Ugh, we gotta do that because of destructors.
         if constexpr (RTTI::is_destructible_v<T>)
         {
             for (T *it = m_Header->data + from; it < m_Header->data + to; ++it)
@@ -311,7 +209,7 @@ public:
         return m_Header->data + index;
     }
 
-    Buffer& operator=(const Buffer& other)
+    Array& operator=(const Array& other)
     {
         if (m_Header != other.m_Header)
         {
@@ -324,7 +222,7 @@ public:
         return *this;
     }
 
-    Buffer& operator=(Buffer&& other) noexcept
+    Array& operator=(Array&& other) noexcept
     {
         if (m_Header != other.m_Header)
         {

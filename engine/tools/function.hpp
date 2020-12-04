@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 #include <functional>
 
 // @NOTE(Roman): Function has been implemented incorrectly

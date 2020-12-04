@@ -16,7 +16,7 @@ Application *Application::Get()
 Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
     : m_Logger("Engine logger", "../log/engine.log", Logger::TARGET::FILE),
       m_Memory(Memory::Get()),
-      m_Allocator(m_Memory->PushToPermanentArea(GB(1)), GB(1), false),
+      m_Allocator(m_Memory->PushToPermanentArea(GB(1)), GB(1), false, "Internal"),
       m_WorkQueue(WorkQueue::Create(m_Logger)),
       m_Window(m_Logger,
                name,

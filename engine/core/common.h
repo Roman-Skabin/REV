@@ -198,23 +198,8 @@ constexpr bool IsPowOf2(T x)
 // Debugging
 //
 
-enum class DEBUG_IN
-{
-    CONSOLE = BIT(0),
-    WINDBG  = BIT(1),
-};
-ENUM_CLASS_OPERATORS(DEBUG_IN)
-
 #define WIN32_ERROR ERROR
 #undef ERROR
-
-enum class MESSAGE_TYPE
-{
-    ERROR   = MB_ICONERROR,
-    WARNING = MB_ICONWARNING,
-    INFO    = MB_ICONINFORMATION,
-};
-ENUM_CLASS_OPERATORS(MESSAGE_TYPE)
 
 enum class DEBUG_COLOR : u16
 {
@@ -224,33 +209,24 @@ enum class DEBUG_COLOR : u16
     SUCCESS = 0xA,
 };
 
-ENGINE_API void __cdecl DebugF(DEBUG_IN debug_in, const char *format, ...);
-ENGINE_API void __cdecl DebugFC(DEBUG_IN debug_in, DEBUG_COLOR color, const char *format, ...);
-ENGINE_API void __cdecl MessageF(MESSAGE_TYPE type, const char *format, ...);
-ENGINE_API void __cdecl ShowDebugMessage(
-    b32         message_is_expr,
-    const char *file,
-    u64         line,
-    const char *function,
-    const char *title,
-    const char *format,
-    ...
-);
+ENGINE_API void __cdecl DebugF(const char *format, ...);
+ENGINE_API void __cdecl DebugFC(DEBUG_COLOR color, const char *format, ...);
+ENGINE_API void __cdecl PrintDebugMessage(const char *file, u64 line, const char *format, ...);
 
 #if (DEVDEBUG || defined(_ENGINE_CHECKS_BREAK)) && !defined(_ENGINE_NO_CHECKS)
 
-    #define CheckM(expr, message, ...) { if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); __debugbreak(); ExitProcess(1); } }
-    #define Check(expr)                { if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); __debugbreak(); ExitProcess(1); } }
-    #define FailedM(message, ...)      {                ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Failed",      message,   __VA_ARGS__); __debugbreak(); ExitProcess(1);   }
+    #define CheckM(expr, message, ...) { if (!(expr)) { PrintDebugMessage(__FILE__, __LINE__, message,   __VA_ARGS__); __debugbreak(); ExitProcess(1); } }
+    #define Check(expr)                { if (!(expr)) { PrintDebugMessage(__FILE__, __LINE__, CSTR(expr)            ); __debugbreak(); ExitProcess(1); } }
+    #define FailedM(message, ...)      {                PrintDebugMessage(__FILE__, __LINE__, message,   __VA_ARGS__); __debugbreak(); ExitProcess(1);   }
 
     #define DebugResult(expr)                Check(expr)
     #define DebugResultM(expr, message, ...) CheckM(expr, message, __VA_ARGS__)
 
 #elif !defined(_ENGINE_NO_CHECKS)
 
-    #define CheckM(expr, message, ...) { if (!(expr)) { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Debug Error", message,   __VA_ARGS__); ExitProcess(1); } }
-    #define Check(expr)                { if (!(expr)) { ShowDebugMessage(true,  __FILE__, __LINE__, __FUNCSIG__, "Debug Error", CSTR(expr)            ); ExitProcess(1); } }
-    #define FailedM(message, ...)      {                ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Failed",      message,   __VA_ARGS__); ExitProcess(1);   }
+    #define CheckM(expr, message, ...) { if (!(expr)) { PrintDebugMessage(__FILE__, __LINE__, message,   __VA_ARGS__); ExitProcess(1); } }
+    #define Check(expr)                { if (!(expr)) { PrintDebugMessage(__FILE__, __LINE__, CSTR(expr)            ); ExitProcess(1); } }
+    #define FailedM(message, ...)      {                PrintDebugMessage(__FILE__, __LINE__, message,   __VA_ARGS__); ExitProcess(1);   }
 
     #define DebugResult(expr)                Check(expr)
     #define DebugResultM(expr, message, ...) CheckM(expr, message, __VA_ARGS__)
@@ -259,7 +235,7 @@ ENGINE_API void __cdecl ShowDebugMessage(
 
     #define CheckM(expr, message, ...)
     #define Check(expr)
-    #define FailedM(message, ...)      { ShowDebugMessage(false, __FILE__, __LINE__, __FUNCSIG__, "Failed", message, __VA_ARGS__); ExitProcess(1); }
+    #define FailedM(message, ...)      { PrintDebugMessage(__FILE__, __LINE__, message, __VA_ARGS__); ExitProcess(1); }
 
     #define DebugResult(expr)                { expr }
     #define DebugResultM(expr, message, ...) { expr }

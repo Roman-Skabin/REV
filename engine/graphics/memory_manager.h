@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 #include "tools/static_string.hpp"
 
 class GraphicsAPI;
@@ -28,8 +28,6 @@ namespace GPU
 
         constexpr ResourceHandle(u64 index = U64_MAX, RESOURCE_KIND kind = RESOURCE_KIND::UNKNOWN) : index(index), kind(kind) {}
     };
-
-    #define GPU_CBUFFER_STRUCT struct ENGINE_ALIGN(256)
 
     class ENGINE_API MemoryManager final
     {

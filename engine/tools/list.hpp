@@ -305,7 +305,7 @@ public:
     using ConstIterator = RTTI::conditional_t<doubly_linked, DLinkedListConstIterator<T, Allocator_t>, SLinkedListConstIterator<T, Allocator_t>>;
 
 public:
-    List(Allocator_t *allocator)
+    explicit List(Allocator_t *allocator)
         : m_Allocator(allocator),
           m_Count(0),
           m_First(null),
@@ -365,11 +365,11 @@ public:
     constexpr Iterator& end()  { return null; }
     constexpr Iterator& rend() { return null; }
 
-    constexpr ConstIterator& First() const { return m_First; }
-    constexpr ConstIterator& Last()  const { return m_Last;  }
+    constexpr const Node *First() const { return m_First; }
+    constexpr const Node *Last()  const { return m_Last;  }
 
-    constexpr Iterator& First() { return m_First; }
-    constexpr Iterator& Last()  { return m_Last;  }
+    constexpr Node *First() { return m_First; }
+    constexpr Node *Last()  { return m_Last;  }
 
     template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>>
     void Insert(Node *where, U&&... elements)

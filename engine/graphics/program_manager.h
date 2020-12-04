@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 #include "graphics/memory_manager.h"
 #include "tools/static_string.hpp"
 

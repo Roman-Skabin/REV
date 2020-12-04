@@ -5,7 +5,7 @@
 #pragma once
 
 #include "core/memory.h"
-#include "tools/buffer.hpp"
+#include "tools/array.hpp"
 #include "tools/const_string.h"
 
 class ENGINE_API Scene

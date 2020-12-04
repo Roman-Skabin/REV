@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 #include "core/window.h"
 #include "core/key_codes.h"
 #include "math/vec.h"

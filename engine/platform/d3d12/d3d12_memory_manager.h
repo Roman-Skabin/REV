@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "tools/buffer.hpp"
+#include "tools/array.hpp"
 #include "platform/d3d12/d3d12_renderer.h"
 
 // @TODO(Roman): Thread safety
@@ -51,8 +51,8 @@ namespace D3D12
 
     struct BufferMemory final
     {
-        ::Buffer<Buffer>           buffers;
-        ::Buffer<BufferMemoryPage> pages;
+        Array<Buffer>           buffers;
+        Array<BufferMemoryPage> pages;
 
         BufferMemory(Allocator *allocator) : buffers(allocator), pages(allocator) {}
         ~BufferMemory() {}
@@ -76,7 +76,7 @@ namespace D3D12
 
     struct TextureMemory final
     {
-        ::Buffer<Texture> textures;
+        Array<Texture> textures;
 
         TextureMemory(Allocator *allocator) : textures(allocator) {}
         ~TextureMemory() {}
@@ -93,7 +93,7 @@ namespace D3D12
 
     struct DescHeapMemory final
     {
-        ::Buffer<DescHeap> desc_heaps;
+        Array<DescHeap> desc_heaps;
 
         DescHeapMemory(Allocator *allocator) : desc_heaps(allocator) {}
         ~DescHeapMemory() {}
@@ -144,9 +144,9 @@ namespace D3D12
     private:
         void CreateNewPage(D3D12_RESOURCE_STATES initial_state);
 
-        Buffer& AllocateBuffer(u64 size, D3D12_RESOURCE_STATES initial_state, u64& index);
+        Buffer *AllocateBuffer(u64 size, D3D12_RESOURCE_STATES initial_state, u64& index);
 
-        DescHeap& CreateDescHeapForConstantBuffer(Buffer& buffer, u64 resource_index);
+        DescHeap *CreateDescHeapForConstantBuffer(Buffer *buffer, u64 resource_index);
 
         void SetBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data);
 

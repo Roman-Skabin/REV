@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/core.h"
+#include "core/common.h"
 #include "tools/critical_section.hpp"
 
 enum REGULAR_MEMORY_SPECS

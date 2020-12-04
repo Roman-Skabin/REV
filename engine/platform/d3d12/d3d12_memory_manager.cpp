@@ -49,12 +49,12 @@ MemoryManager::~MemoryManager()
 u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, u32 vertex_stride, const StaticString<64>& name)
 {
     u64     index  = U64_MAX;
-    Buffer& buffer = AllocateBuffer(vertex_count * vertex_stride, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
+    Buffer *buffer = AllocateBuffer(vertex_count * vertex_stride, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
 
-    buffer.kind    = BUFFER_KIND::VERTEX_BUFFER;
-    buffer.vcount  = vertex_count;
-    buffer.vstride = vertex_stride;
-    buffer.name    = name;
+    buffer->kind    = BUFFER_KIND::VERTEX_BUFFER;
+    buffer->vcount  = vertex_count;
+    buffer->vstride = vertex_stride;
+    buffer->name    = name;
 
     return index;
 }
@@ -62,12 +62,12 @@ u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, u32 vertex_stride, con
 u64 MemoryManager::AllocateIndexBuffer(u32 index_count, const StaticString<64>& name)
 {
     u64     index  = U64_MAX;
-    Buffer& buffer = AllocateBuffer(index_count * sizeof(u32), D3D12_RESOURCE_STATE_INDEX_BUFFER, index);
+    Buffer *buffer = AllocateBuffer(index_count * sizeof(u32), D3D12_RESOURCE_STATE_INDEX_BUFFER, index);
 
-    buffer.kind    = BUFFER_KIND::INDEX_BUFFER;
-    buffer.vcount  = index_count;
-    buffer.vstride = sizeof(u32);
-    buffer.name    = name;
+    buffer->kind    = BUFFER_KIND::INDEX_BUFFER;
+    buffer->vcount  = index_count;
+    buffer->vstride = sizeof(u32);
+    buffer->name    = name;
 
     return index;
 }
@@ -75,19 +75,19 @@ u64 MemoryManager::AllocateIndexBuffer(u32 index_count, const StaticString<64>& 
 u64 MemoryManager::AllocateConstantBuffer(u32 bytes, const StaticString<64>& name)
 {
     u64     index  = U64_MAX;
-    Buffer& buffer = AllocateBuffer(bytes, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
+    Buffer *buffer = AllocateBuffer(bytes, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
 
-    buffer.kind = BUFFER_KIND::CONSTANT_BUFFER;
-    buffer.name = name;
+    buffer->kind = BUFFER_KIND::CONSTANT_BUFFER;
+    buffer->name = name;
 
-    DescHeap& desc_heap = CreateDescHeapForConstantBuffer(buffer, index);
+    DescHeap *desc_heap = CreateDescHeapForConstantBuffer(buffer, index);
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc;
-    cbv_desc.BufferLocation = m_BufferMemory.pages[buffer.page_index].def_mem->GetGPUVirtualAddress() + buffer.offset;
-    cbv_desc.SizeInBytes    = cast<u32>(buffer.aligned_size);
+    cbv_desc.BufferLocation = m_BufferMemory.pages[buffer->page_index].def_mem->GetGPUVirtualAddress() + buffer->offset;
+    cbv_desc.SizeInBytes    = cast<u32>(buffer->aligned_size);
 
     ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
-    device->CreateConstantBufferView(&cbv_desc, desc_heap.handle->GetCPUDescriptorHandleForHeapStart());
+    device->CreateConstantBufferView(&cbv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
 
     return index;
 }
@@ -208,8 +208,8 @@ void MemoryManager::CreateNewPage(D3D12_RESOURCE_STATES initial_state)
     resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     resource_desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
-    BufferMemoryPage page = {};
-    page.initial_state    = initial_state;
+    BufferMemoryPage *page = m_BufferMemory.pages.PushBack();
+    page->initial_state    = initial_state;
 
     ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
 
@@ -218,7 +218,7 @@ void MemoryManager::CreateNewPage(D3D12_RESOURCE_STATES initial_state)
                                                     &resource_desc,
                                                     initial_state,
                                                     null,
-                                                    IID_PPV_ARGS(&page.def_mem));
+                                                    IID_PPV_ARGS(&page->def_mem));
     Check(CheckResultAndPrintMessages(error));
 
     D3D12_HEAP_PROPERTIES upload_heap_properties;
@@ -237,80 +237,76 @@ void MemoryManager::CreateNewPage(D3D12_RESOURCE_STATES initial_state)
                                                 &resource_desc,
                                                 D3D12_RESOURCE_STATE_GENERIC_READ,
                                                 null,
-                                                IID_PPV_ARGS(page.upl_mem + i));
+                                                IID_PPV_ARGS(page->upl_mem + i));
         Check(CheckResultAndPrintMessages(error));
 
-        error = page.upl_mem[i]->Map(0, &read_range, cast<void **>(page.upl_ptrs + i));
+        error = page->upl_mem[i]->Map(0, &read_range, cast<void **>(page->upl_ptrs + i));
         Check(CheckResultAndPrintMessages(error));
     }
-
-    m_BufferMemory.pages.PushBack(page);
 }
 
-Buffer& MemoryManager::AllocateBuffer(u64 size, D3D12_RESOURCE_STATES initial_state, u64& index)
+Buffer *MemoryManager::AllocateBuffer(u64 size, D3D12_RESOURCE_STATES initial_state, u64& index)
 {
-    Buffer buffer;
-    buffer.page_index      = U64_MAX;
-    buffer.offset          = U64_MAX;
-    buffer.kind            = BUFFER_KIND::UNKNOWN;
-    buffer.desc_heap_index = U64_MAX;
-    buffer.vcount          = 0;
-    buffer.vstride         = 0;
-    buffer.actual_size     = size;
-    buffer.aligned_size    = AlignUp(size, 256);
+    index = m_BufferMemory.buffers.Count();
+
+    Buffer *buffer          = m_BufferMemory.buffers.PushBack();
+    buffer->page_index      = U64_MAX;
+    buffer->offset          = U64_MAX;
+    buffer->kind            = BUFFER_KIND::UNKNOWN;
+    buffer->desc_heap_index = U64_MAX;
+    buffer->vcount          = 0;
+    buffer->vstride         = 0;
+    buffer->actual_size     = size;
+    buffer->aligned_size    = AlignUp(size, 256);
 
     u64 page_index = 0;
     for (BufferMemoryPage& page : m_BufferMemory.pages)
     {
-        if (page.initial_state == initial_state && page.occupied_bytes <= BUFFER_MEMORY_PAGE_SIZE - buffer.aligned_size)
+        if (page.initial_state == initial_state && page.occupied_bytes <= BUFFER_MEMORY_PAGE_SIZE - buffer->aligned_size)
         {
-            buffer.page_index = page_index;
-            buffer.offset     = page.occupied_bytes;
+            buffer->page_index = page_index;
+            buffer->offset     = page.occupied_bytes;
 
-            page.occupied_bytes += buffer.aligned_size;
+            page.occupied_bytes += buffer->aligned_size;
             break;
         }
         ++page_index;
     }
 
-    if (buffer.page_index == U64_MAX)
+    if (buffer->page_index == U64_MAX)
     {
         CreateNewPage(initial_state);
 
-        buffer.page_index = m_BufferMemory.pages.Count() - 1;
-        buffer.offset     = 0;
+        buffer->page_index = m_BufferMemory.pages.Count() - 1;
+        buffer->offset     = 0;
 
-        m_BufferMemory.pages.Last().occupied_bytes = buffer.aligned_size;
+        m_BufferMemory.pages.Last().occupied_bytes = buffer->aligned_size;
     }
 
-    index = m_BufferMemory.buffers.Count();
-    m_BufferMemory.buffers.PushBack(buffer);
-
-    return m_BufferMemory.buffers.Last();
+    return buffer;
 }
 
-DescHeap& MemoryManager::CreateDescHeapForConstantBuffer(Buffer& buffer, u64 resource_index)
+DescHeap *MemoryManager::CreateDescHeapForConstantBuffer(Buffer *buffer, u64 resource_index)
 {
+    buffer->desc_heap_index = m_DescHeapMemory.desc_heaps.Count();
+
     D3D12_DESCRIPTOR_HEAP_DESC desc_heap_desc;
     desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     desc_heap_desc.NumDescriptors = 1;
     desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     desc_heap_desc.NodeMask       = 0;
 
-    DescHeap desc_heap;
-    desc_heap.handle         = null;
-    desc_heap.resoucre_index = resource_index;
-    desc_heap.desc           = desc_heap_desc;
+    DescHeap *desc_heap       = m_DescHeapMemory.desc_heaps.PushBack();
+    desc_heap->handle         = null;
+    desc_heap->resoucre_index = resource_index;
+    desc_heap->desc           = desc_heap_desc;
 
     Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
     
-    HRESULT error = renderer->Device()->CreateDescriptorHeap(&desc_heap.desc, IID_PPV_ARGS(&desc_heap.handle));
+    HRESULT error = renderer->Device()->CreateDescriptorHeap(&desc_heap->desc, IID_PPV_ARGS(&desc_heap->handle));
     Check(CheckResultAndPrintMessages(error));
 
-    buffer.desc_heap_index = m_DescHeapMemory.desc_heaps.Count();
-    m_DescHeapMemory.desc_heaps.PushBack(desc_heap);
-
-    return m_DescHeapMemory.desc_heaps.Last();
+    return desc_heap;
 }
 
 void MemoryManager::SetBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data)

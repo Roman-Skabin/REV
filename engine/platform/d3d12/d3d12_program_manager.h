@@ -7,7 +7,7 @@
 #include "graphics/program_manager.h"
 #include "core/memory.h"
 #include "tools/list.hpp"
-#include "tools/buffer.hpp"
+#include "tools/array.hpp"
 #include "platform/d3d12/d3d12_memory_manager.h"
 
 #include <d3d12.h>
@@ -21,7 +21,7 @@ namespace D3D12
         ID3D12PipelineState           *pipeline_state;
         GPU::ResourceHandle            vertex_buffer;   // @CleanUp(Roman): redundant?
         GPU::ResourceHandle            index_buffer;    // @CleanUp(Roman): redundant?
-        ::Buffer<GPU::ResourceHandle>  bound_resources; // @CleanUp(Roman): redundant?
+        Array<GPU::ResourceHandle>  bound_resources; // @CleanUp(Roman): redundant?
         ID3DBlob                      *vertex_shader;
         ID3DBlob                      *pixel_shader;
         ID3DBlob                      *hull_shader;
@@ -41,7 +41,7 @@ namespace D3D12
         ID3D12RootSignature           *root_signature;
         ID3D12PipelineState           *pipeline_state;
         ID3DBlob                      *shader;
-        ::Buffer<GPU::ResourceHandle>  bound_resources; // @CleanUp(Roman): redundant?
+        Array<GPU::ResourceHandle>  bound_resources; // @CleanUp(Roman): redundant?
 
         ComputeProgram(Allocator *allocator) : bound_resources(allocator) {}
         ~ComputeProgram() {}
@@ -77,9 +77,9 @@ namespace D3D12
         ProgramManager& operator=(ProgramManager&& other) noexcept;
 
     private:
-        void AttachGraphicsShaders(GraphicsProgram& graphics_program, const StaticString<MAX_PATH>& file_with_shaders);
-        void CreateRootSignature(GraphicsProgram& graphics_program, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc);
-        void CreatePipelineState(GraphicsProgram& graphics_program, const D3D12_INPUT_LAYOUT_DESC& input_layout, bool blending_enabled, D3D12_CULL_MODE cull_mode, bool depth_test_enabled);
+        void AttachGraphicsShaders(GraphicsProgram *graphics_program, const StaticString<MAX_PATH>& file_with_shaders);
+        void CreateRootSignature(GraphicsProgram *graphics_program, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc);
+        void CreatePipelineState(GraphicsProgram *graphics_program, const D3D12_INPUT_LAYOUT_DESC& input_layout, bool blending_enabled, D3D12_CULL_MODE cull_mode, bool depth_test_enabled);
 
         ID3DBlob *CompileShader(const char *hlsl_code, u32 hlsl_code_length, const char *name, const char *entry_point, const char *target);
 
@@ -90,8 +90,8 @@ namespace D3D12
 
     private:
         Allocator                 *m_Allocator;
-        ::Buffer<GraphicsProgram>  m_GraphicsPrograms;
-        ::Buffer<ComputeProgram>   m_ComputePrograms;
+        Array<GraphicsProgram>  m_GraphicsPrograms;
+        Array<ComputeProgram>   m_ComputePrograms;
         Logger                     m_Logger;
     };
 }

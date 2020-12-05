@@ -3,7 +3,7 @@
 #include "application.h"
 #include "scenes/demo.h"
 
-class Sandbox final : public Application
+class Sandbox final : public REV::Application
 {
 public:
     Sandbox();
@@ -16,9 +16,9 @@ private:
     Sandbox& operator=(const Sandbox&) = delete;
     Sandbox& operator=(Sandbox&&)      = delete;
 
-    const Logger& GetLogger() const { return m_Logger; }
-          Logger& GetLogger()       { return m_Logger; }
+    const REV::Logger& GetLogger() const { return m_Logger; }
+          REV::Logger& GetLogger()       { return m_Logger; }
 
 private:
-    Logger m_Logger;
+    REV::Logger m_Logger;
 };

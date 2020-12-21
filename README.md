@@ -20,3 +20,10 @@
   * Data orientied design (I try at least)
   * Work queue for CPU
   * \+ the biggest problem that has slowed down all the productivity: the engine has been rewritten in C++ beacause DirectX 12 doesn't support C.
+
+---
+
+### How to build:
+1. open console in the build directory
+2. run compiler.bat
+3. run build.bat (see usage in [file](build/build.bat))

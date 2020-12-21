@@ -80,11 +80,11 @@ namespace REV
         void *PushToPermanentArea(u64 bytes);
         void *PushToPermanentAreaAligned(u64 bytes, u64 alignment);
 
-        template<typename T> constexpr T *PushToTA(u64 count = 1)                     { return cast<T *>(PushToTransientArea(count * sizeof(T)));                   }
-        template<typename T> constexpr T *PushToTAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToTransientAreaAligned(count * sizeof(T), alignment)); }
+        template<typename T> REV_INLINE T *PushToTA(u64 count = 1)                     { return cast<T *>(PushToTransientArea(count * sizeof(T)));                   }
+        template<typename T> REV_INLINE T *PushToTAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToTransientAreaAligned(count * sizeof(T), alignment)); }
 
-        template<typename T> constexpr T *PushToPA(u64 count = 1)                     { return cast<T *>(PushToPermanentArea(count * sizeof(T)));                   }
-        template<typename T> constexpr T *PushToPAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToPermanentAreaAligned(count * sizeof(T), alignment)); }
+        template<typename T> REV_INLINE T *PushToPA(u64 count = 1)                     { return cast<T *>(PushToPermanentArea(count * sizeof(T)));                   }
+        template<typename T> REV_INLINE T *PushToPAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToPermanentAreaAligned(count * sizeof(T), alignment)); }
 
     private:
         Memory(const Memory&) = delete;

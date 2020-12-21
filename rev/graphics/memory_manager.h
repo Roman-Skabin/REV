@@ -7,7 +7,7 @@
 #include "core/common.h"
 #include "tools/static_string.hpp"
 
-class GraphicsAPI;
+namespace REV { class GraphicsAPI; }
 
 namespace REV::GPU
 {
@@ -21,24 +21,23 @@ namespace REV::GPU
         UA,
     };
 
-    struct ResourceHandle
+    struct ResourceHandle final
     {
-        u64           index;
-        RESOURCE_KIND kind;
-
-        constexpr ResourceHandle(u64 index = REV_U64_MAX, RESOURCE_KIND kind = RESOURCE_KIND::UNKNOWN) : index(index), kind(kind) {}
+        u64           index = REV_U64_MAX;
+        RESOURCE_KIND kind  = RESOURCE_KIND::UNKNOWN;
     };
 
     class REV_API MemoryManager final
     {
     public:
-        ResourceHandle AllocateVertexBuffer(u32 vertex_count, u32 vertex_stride, const StaticString<64>& name = null);
-        ResourceHandle AllocateIndexBuffer(u32 index_count, const StaticString<64>& name = null); // stride = sizeof(u32)
+        // @Optimize(Roman): Use (upload pointer + offset) as a CPU data storage for buffers?
+        ResourceHandle AllocateVertexBuffer(u32 vertex_count, const StaticString<64>& name = null); // stride = sizeof(REV::Vertex)
+        ResourceHandle AllocateIndexBuffer(u32 index_count, const StaticString<64>& name = null); // stride = sizeof(REV::Index)
         ResourceHandle AllocateConstantBuffer(u32 bytes, const StaticString<64>& name /* required */);
 
-        void SetResoucreData(ResourceHandle resource, const void *data);
+        void SetResourceData(ResourceHandle resource, const void *data);
 
-        void SetResourceDataImmediate(ResourceHandle resource, const void *data);
+        void SetResourceDataImmediately(ResourceHandle resource, const void *data);
 
         void StartImmediateExecution();
         void EndImmediateExecution();
@@ -59,6 +58,6 @@ namespace REV::GPU
         #pragma warning(suppress: 4200)
         byte platform[0];
 
-        friend GraphicsAPI;
+        friend class ::REV::GraphicsAPI;
     };
 }

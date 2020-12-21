@@ -39,15 +39,15 @@ namespace REV
             u64    alignment // @NOTE(Roman): if alignment < REV::DEFAULT_ALIGNMENT then alignment = REV::DEFAULT_ALIGNMENT
         );
 
-        template<typename T> constexpr T    *Alloc(u64 count = 1)        { return cast<T *>(Allocate(count * sizeof(T)));                       }
-        template<typename T> constexpr void  DeAlloc(T *&mem)            { DeAllocate(cast<void *&>(mem));                                      }
-        template<typename T> constexpr T    *ReAlloc(T *&mem, u64 count) { return cast<T *>(ReAllocate(cast<void *&>(mem), count * sizeof(T))); }
+        template<typename T> REV_INLINE T    *Alloc(u64 count = 1)        { return cast<T *>(Allocate(count * sizeof(T)));                       }
+        template<typename T> REV_INLINE void  DeAlloc(T *&mem)            { DeAllocate(cast<void *&>(mem));                                      }
+        template<typename T> REV_INLINE T    *ReAlloc(T *&mem, u64 count) { return cast<T *>(ReAllocate(cast<void *&>(mem), count * sizeof(T))); }
         
-        template<typename T> constexpr T    *AllocA(u64 count = 1, u64 alignment = 0)        { return cast<T *>(AllocateAligned(count * sizeof(T), alignment));                       }
-        template<typename T> constexpr void  DeAllocA(T *&mem)                               { DeAllocateAligned(cast<void *&>(mem));                                                 }
-        template<typename T> constexpr T    *ReAllocA(T *&mem, u64 count, u64 alignment = 0) { return cast<T *>(ReAllocateAligned(cast<void *&>(mem), count * sizeof(T), alignment)); }
+        template<typename T> REV_INLINE T    *AllocA(u64 count = 1, u64 alignment = 0)        { return cast<T *>(AllocateAligned(count * sizeof(T), alignment));                       }
+        template<typename T> REV_INLINE void  DeAllocA(T *&mem)                               { DeAllocateAligned(cast<void *&>(mem));                                                 }
+        template<typename T> REV_INLINE T    *ReAllocA(T *&mem, u64 count, u64 alignment = 0) { return cast<T *>(ReAllocateAligned(cast<void *&>(mem), count * sizeof(T), alignment)); }
 
-        template<typename T> constexpr bool ContainsPointer(T *ptr) const { return MemInAllocatorRange(this, cast<void *>(ptr)); }
+        template<typename T> REV_INLINE bool ContainsPointer(T *ptr) const { return MemInAllocatorRange(this, cast<void *>(ptr)); }
 
         Allocator& operator=(Allocator&& other) noexcept;
 

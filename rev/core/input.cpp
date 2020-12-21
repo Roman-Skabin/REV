@@ -4,86 +4,24 @@
 
 #include "core/pch.h"
 #include "core/input.h"
+#include <vcruntime_new.h>
 
 namespace REV
 {
 
 //
-// DigitalButton
-//
-
-void DigitalButton::Reset()
-{
-    m_Pressed  = false;
-    m_Released = false;
-}
-
-void DigitalButton::UpdateState(bool down)
-{
-    bool was_down = m_Down;
-
-    m_Down     =  down;
-    m_Pressed  = !was_down &&  down;
-    m_Released =  was_down && !down;
-}
-
-//
-// AnalogButton
-//
-
-AnalogButton::AnalogButton(f32 threshold)
-    : m_Value(0.0f),
-      m_Threshold(threshold),
-      m_Down(false),
-      m_Pressed(false),
-      m_Released(false)
-{
-}
-
-void AnalogButton::UpdateState(f32 value)
-{
-    bool was_down = m_Down;
-
-    m_Value    =  value;
-    m_Down     =  m_Value >= m_Threshold;
-    m_Pressed  = !was_down &&  m_Down;
-    m_Released =  was_down && !m_Down;
-}
-
-//
 // Keyboard
 //
 
-Keyboard::Keyboard()
+void Keyboard::Update()
 {
-    ZeroMemory(m_Keys, sizeof(m_Keys));
-}
+    byte keyboard_state[256];
+    REV_DEBUG_RESULT(GetKeyboardState(keyboard_state));
 
-Keyboard::Keyboard(Keyboard&& other) noexcept
-{
-    CopyMemory(m_Keys, other.m_Keys, sizeof(m_Keys));
-    ZeroMemory(other.m_Keys, sizeof(other.m_Keys));
-}
-
-void Keyboard::UpdateState()
-{
-    BYTE keyboard_state[256];
-    GetKeyboardState(keyboard_state);
-
-    for (u16 key = cast<u16>(KEY::FIRST); key < cast<u16>(KEY::MAX); ++key)
+    for (u32 key = cast<u32>(KEY::FIRST); key < cast<u32>(KEY::MAX); ++key)
     {
-        m_Keys[key].UpdateState(keyboard_state[key] >> 7);
+        m_Keys[key].Update(keyboard_state[key] >> 7);
     }
-}
-
-Keyboard& Keyboard::operator=(Keyboard&& other) noexcept
-{
-    if (this != &other)
-    {
-        CopyMemory(m_Keys, other.m_Keys, sizeof(m_Keys));
-        ZeroMemory(other.m_Keys, sizeof(other.m_Keys));
-    }
-    return *this;
 }
 
 //
@@ -127,19 +65,6 @@ Mouse::Mouse(const Logger& logger, HWND window_handle)
     }
 }
 
-Mouse::Mouse(Mouse&& other) noexcept
-    : m_Pos(RTTI::move(other.m_Pos)),
-      m_DeltaPos(RTTI::move(other.m_DeltaPos)),
-      m_Wheel(RTTI::move(other.m_Wheel)),
-      m_DeltaWheel(RTTI::move(other.m_DeltaWheel)),
-      m_LeftButton(RTTI::move(other.m_LeftButton)),
-      m_MiddleButton(RTTI::move(other.m_MiddleButton)),
-      m_RightButton(RTTI::move(other.m_RightButton)),
-      m_X1Button(RTTI::move(other.m_X1Button)),
-      m_X2Button(RTTI::move(other.m_X2Button))
-{
-}
-
 void Mouse::Reset()
 {
     m_DeltaPos.x = 0;
@@ -154,7 +79,7 @@ void Mouse::Reset()
     m_X2Button.Reset();
 }
 
-void Mouse::UpdateState(const RAWMOUSE& raw_mouse)
+void Mouse::Update(const RAWMOUSE& raw_mouse)
 {
     m_DeltaPos.x =  raw_mouse.lLastX;
     m_DeltaPos.y = -raw_mouse.lLastY;
@@ -171,103 +96,67 @@ void Mouse::UpdateState(const RAWMOUSE& raw_mouse)
     bool down = m_LeftButton.Down();
     if (raw_mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_DOWN) down = true;
     if (raw_mouse.usButtonFlags & RI_MOUSE_LEFT_BUTTON_UP  ) down = false;
-    m_LeftButton.UpdateState(down);
+    m_LeftButton.Update(down);
 
     down = m_RightButton.Down();
     if (raw_mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_DOWN) down = true;
     if (raw_mouse.usButtonFlags & RI_MOUSE_RIGHT_BUTTON_UP  ) down = false;
-    m_RightButton.UpdateState(down);
+    m_RightButton.Update(down);
 
     down = m_MiddleButton.Down();
     if (raw_mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_DOWN) down = true;
     if (raw_mouse.usButtonFlags & RI_MOUSE_MIDDLE_BUTTON_UP  ) down = false;
-    m_MiddleButton.UpdateState(down);
+    m_MiddleButton.Update(down);
 
     down = m_X1Button.Down();
     if (raw_mouse.usButtonFlags & RI_MOUSE_BUTTON_4_DOWN) down = true;
     if (raw_mouse.usButtonFlags & RI_MOUSE_BUTTON_4_UP  ) down = false;
-    m_X1Button.UpdateState(down);
+    m_X1Button.Update(down);
 
     down = m_X2Button.Down();
     if (raw_mouse.usButtonFlags & RI_MOUSE_BUTTON_5_DOWN) down = true;
     if (raw_mouse.usButtonFlags & RI_MOUSE_BUTTON_5_UP  ) down = false;
-    m_X2Button.UpdateState(down);
-}
-
-Mouse& Mouse::operator=(Mouse&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_Pos          = RTTI::move(other.m_Pos);
-        m_DeltaPos     = RTTI::move(other.m_DeltaPos);
-        m_Wheel        = RTTI::move(other.m_Wheel);
-        m_DeltaWheel   = RTTI::move(other.m_DeltaWheel);
-        m_LeftButton   = RTTI::move(other.m_LeftButton);
-        m_MiddleButton = RTTI::move(other.m_MiddleButton);
-        m_RightButton  = RTTI::move(other.m_RightButton);
-        m_X1Button     = RTTI::move(other.m_X1Button);
-        m_X2Button     = RTTI::move(other.m_X2Button);
-    }
-    return *this;
-}
-
-//
-// Stick
-//
-
-Stick::Stick(f32 deadzone)
-    : m_Deadzone(deadzone),
-      m_Offset(0.0f),
-      m_Button()
-{
-}
-
-void Stick::UpdateState(f32 x, f32 y, bool down)
-{
-    #define ABSF(val) ((val) < 0.0f ? (-(val)) : (val))
-    m_Offset.x = ABSF(x) <= m_Deadzone ? x : 0;
-    m_Offset.y = ABSF(y) <= m_Deadzone ? y : 0;
-    #undef ABSF
-
-    m_Button.UpdateState(down);
+    m_X2Button.Update(down);
 }
 
 //
 // Gamepad
 //
 
-HMODULE                      Gamepad::s_Xinput         = null;
-Gamepad::XInputGetStateProc *Gamepad::s_XInputGetState = null;
+typedef DWORD WINAPI XInputGetStateProc(DWORD dwUserIndex, XINPUT_STATE *pState);
+
+REV_GLOBAL HMODULE             g_Xinput         = null;
+REV_GLOBAL XInputGetStateProc *g_XInputGetState = null;
 
 Gamepad::Gamepad(const Logger& logger)
     : m_ButtonA(),
       m_ButtonB(),
       m_ButtonX(),
       m_ButtonY(),
-      m_LeftTrigger(XINPUT_GAMEPAD_TRIGGER_THRESHOLD / cast<f32>(MAXBYTE)),
-      m_RightTrigger(XINPUT_GAMEPAD_TRIGGER_THRESHOLD / cast<f32>(MAXBYTE)),
+      m_LeftTrigger(XINPUT_GAMEPAD_TRIGGER_THRESHOLD  / cast<f32>(REV_BYTE_MAX)),
+      m_RightTrigger(XINPUT_GAMEPAD_TRIGGER_THRESHOLD / cast<f32>(REV_BYTE_MAX)),
       m_LeftShoulder(),
       m_RightShoulder(),
       m_ButtonUp(),
       m_ButtonDown(),
       m_ButtonLeft(),
       m_ButtonRight(),
-      m_LeftStick(XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE  / cast<f32>(MAXSHORT)),
-      m_RightStick(XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / cast<f32>(MAXSHORT)),
+      m_LeftStick(XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE   / cast<f32>(REV_S16_MAX)),
+      m_RightStick(XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / cast<f32>(REV_S16_MAX)),
       m_ButtonStart(),
       m_ButtonBack(),
       m_Connected(false)
 {
-    if (!s_Xinput)
+    if (!g_Xinput)
     {
-        REV_DEBUG_RESULT(s_Xinput         = LoadLibraryA(XINPUT_DLL_A));
-        REV_DEBUG_RESULT(s_XInputGetState = cast<XInputGetStateProc *>(GetProcAddress(s_Xinput, "XInputGetState")));
+        REV_DEBUG_RESULT(g_Xinput         = LoadLibraryA(XINPUT_DLL_A));
+        REV_DEBUG_RESULT(g_XInputGetState = cast<XInputGetStateProc *>(GetProcAddress(g_Xinput, "XInputGetState")));
     }
 
     logger.LogSuccess("Gamepad has been created");
 
     XINPUT_STATE xinput_state = {0};
-    if (m_Connected = (s_XInputGetState(0, &xinput_state) == ERROR_SUCCESS))
+    if (m_Connected = (g_XInputGetState(0, &xinput_state) == ERROR_SUCCESS))
     {
         logger.LogInfo("Gamepad is connected");
     }
@@ -299,12 +188,12 @@ Gamepad::Gamepad(Gamepad&& other) noexcept
     other.m_Connected = false;
 }
 
-void Gamepad::UpdateState(const Logger& logger)
+void Gamepad::Update(const Logger& logger)
 {
     XINPUT_STATE xinput_state = {0};
 
     bool was_connected = m_Connected;
-    m_Connected = s_XInputGetState(0, &xinput_state) == ERROR_SUCCESS;
+    m_Connected = g_XInputGetState(0, &xinput_state) == ERROR_SUCCESS;
 
     /**/ if (!was_connected &&  m_Connected) logger.LogInfo("gamepad has been connected");
     else if ( was_connected && !m_Connected) logger.LogInfo("gamepad has been disconnected");
@@ -313,76 +202,49 @@ void Gamepad::UpdateState(const Logger& logger)
     {
         #define IS_DIGITAL_DOWN(button) ((xinput_state.Gamepad.wButtons & (button)) != 0)
 
-        m_ButtonA.UpdateState(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_A));
-        m_ButtonB.UpdateState(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_B));
-        m_ButtonX.UpdateState(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_X));
-        m_ButtonY.UpdateState(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_Y));
+        m_ButtonA.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_A));
+        m_ButtonB.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_B));
+        m_ButtonX.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_X));
+        m_ButtonY.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_Y));
 
-        m_LeftShoulder.UpdateState(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_LEFT_SHOULDER));
-        m_RightShoulder.UpdateState(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_RIGHT_SHOULDER));
+        m_LeftShoulder.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_LEFT_SHOULDER));
+        m_RightShoulder.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_RIGHT_SHOULDER));
 
-        m_ButtonStart.UpdateState(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_START));
-        m_ButtonBack.UpdateState(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_BACK));
+        m_ButtonStart.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_START));
+        m_ButtonBack.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_BACK));
 
-        m_LeftTrigger.UpdateState(xinput_state.Gamepad.bLeftTrigger / cast<f32>(MAXBYTE));
-        m_RightTrigger.UpdateState(xinput_state.Gamepad.bRightTrigger / cast<f32>(MAXBYTE));
+        m_LeftTrigger.Update(xinput_state.Gamepad.bLeftTrigger / cast<f32>(REV_BYTE_MAX));
+        m_RightTrigger.Update(xinput_state.Gamepad.bRightTrigger / cast<f32>(REV_BYTE_MAX));
 
-        #define STICK_OFFSET(stick_dir) (2.0f * (((stick_dir) + 0x8000) / cast<f32>(MAXWORD) - 0.5f))
+        // @NOTE(Roman): negative invlerp (ret = [-1, 1])
+        #define ADAPT_OFFSET(stick_dir) ((((stick_dir) + 0x8000) / cast<f32>(0xFFFF) - 0.5f) * 2.0f)
 
-        m_LeftStick.UpdateState(STICK_OFFSET(xinput_state.Gamepad.sThumbLX), STICK_OFFSET(xinput_state.Gamepad.sThumbLY), IS_DIGITAL_DOWN(XINPUT_GAMEPAD_LEFT_THUMB));
-        m_RightStick.UpdateState(STICK_OFFSET(xinput_state.Gamepad.sThumbRX), STICK_OFFSET(xinput_state.Gamepad.sThumbRY), IS_DIGITAL_DOWN(XINPUT_GAMEPAD_RIGHT_THUMB));
+        m_LeftStick.Update(ADAPT_OFFSET(xinput_state.Gamepad.sThumbLX), ADAPT_OFFSET(xinput_state.Gamepad.sThumbLY), IS_DIGITAL_DOWN(XINPUT_GAMEPAD_LEFT_THUMB));
+        m_RightStick.Update(ADAPT_OFFSET(xinput_state.Gamepad.sThumbRX), ADAPT_OFFSET(xinput_state.Gamepad.sThumbRY), IS_DIGITAL_DOWN(XINPUT_GAMEPAD_RIGHT_THUMB));
 
-        #undef STICK_OFFSET
+        #undef ADAPT_OFFSET
 
         #undef IS_DIGITAL_DOWN
     }
-}
-
-Gamepad& Gamepad::operator=(Gamepad&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_ButtonA       = RTTI::move(other.m_ButtonA);
-        m_ButtonB       = RTTI::move(other.m_ButtonB);
-        m_ButtonX       = RTTI::move(other.m_ButtonX);
-        m_ButtonY       = RTTI::move(other.m_ButtonY);
-        m_LeftTrigger   = RTTI::move(other.m_LeftTrigger);
-        m_RightTrigger  = RTTI::move(other.m_RightTrigger);
-        m_LeftShoulder  = RTTI::move(other.m_LeftShoulder);
-        m_RightShoulder = RTTI::move(other.m_RightShoulder);
-        m_ButtonUp      = RTTI::move(other.m_ButtonUp);
-        m_ButtonDown    = RTTI::move(other.m_ButtonDown);
-        m_ButtonLeft    = RTTI::move(other.m_ButtonLeft);
-        m_ButtonRight   = RTTI::move(other.m_ButtonRight);
-        m_LeftStick     = RTTI::move(other.m_LeftStick);
-        m_RightStick    = RTTI::move(other.m_RightStick);
-        m_ButtonStart   = RTTI::move(other.m_ButtonStart);
-        m_ButtonBack    = RTTI::move(other.m_ButtonBack);
-        m_Connected     = other.m_Connected;
-
-        other.m_Connected = false;
-    }
-    return *this;
 }
 
 //
 // Input
 //
 
-Input *Input::s_Input = null;
+REV_GLOBAL Input *g_Input = null;
 
 Input *Input::Create(const Window& window, const Logger& logger)
 {
-    REV_CHECK_M(!s_Input, "Input is already created. Use Input::Get() function instead");
-    s_Input  = Memory::Get()->PushToPA<Input>();
-    *s_Input = Input(window, logger);
-    return s_Input;
+    REV_CHECK_M(!g_Input, "Input is already created. Use Input::Get() function instead");
+    g_Input = new (Memory::Get()->PushToPA<Input>()) Input(window, logger);
+    return g_Input;
 }
 
 Input *Input::Get()
 {
-    REV_CHECK_M(s_Input, "Input is not created yet");
-    return s_Input;
+    REV_CHECK_M(g_Input, "Input is not created yet");
+    return g_Input;
 }
 
 Input::Input(const Window& window, const Logger& logger)
@@ -400,19 +262,8 @@ void Input::Reset()
 
 void Input::Update(const Logger& logger)
 {
-    m_Keyboard.UpdateState();
-    m_Gamepad.UpdateState(logger);
-}
-
-Input& Input::operator=(Input&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_Mouse    = RTTI::move(other.m_Mouse);
-        m_Gamepad  = RTTI::move(other.m_Gamepad);
-        m_Keyboard = RTTI::move(other.m_Keyboard);
-    }
-    return *this;
+    m_Keyboard.Update();
+    m_Gamepad.Update(logger);
 }
 
 }

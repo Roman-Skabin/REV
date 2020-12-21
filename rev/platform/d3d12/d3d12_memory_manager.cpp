@@ -7,6 +7,7 @@
 #include "graphics/graphics_api.h"
 #include "core/memory.h"
 #include "platform/d3d12/d3d12_common.h"
+#include "core/scene.h"
 
 namespace REV::D3D12
 {
@@ -46,14 +47,14 @@ MemoryManager::~MemoryManager()
     }
 }
 
-u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, u32 vertex_stride, const StaticString<64>& name)
+u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, const StaticString<64>& name)
 {
     u64     index  = REV_U64_MAX;
-    Buffer *buffer = AllocateBuffer(vertex_count * vertex_stride, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
+    Buffer *buffer = AllocateBuffer(vertex_count * sizeof(Vertex), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
 
     buffer->kind    = BUFFER_KIND::VERTEX_BUFFER;
     buffer->vcount  = vertex_count;
-    buffer->vstride = vertex_stride;
+    buffer->vstride = sizeof(Vertex);
     buffer->name    = name;
 
     return index;
@@ -62,11 +63,11 @@ u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, u32 vertex_stride, con
 u64 MemoryManager::AllocateIndexBuffer(u32 index_count, const StaticString<64>& name)
 {
     u64     index  = REV_U64_MAX;
-    Buffer *buffer = AllocateBuffer(index_count * sizeof(u32), D3D12_RESOURCE_STATE_INDEX_BUFFER, index);
+    Buffer *buffer = AllocateBuffer(index_count * sizeof(Index), D3D12_RESOURCE_STATE_INDEX_BUFFER, index);
 
     buffer->kind    = BUFFER_KIND::INDEX_BUFFER;
-    buffer->vcount  = index_count;
-    buffer->vstride = sizeof(u32);
+    buffer->icount  = index_count;
+    buffer->istride = sizeof(Index);
     buffer->name    = name;
 
     return index;
@@ -97,7 +98,7 @@ void MemoryManager::SetBufferData(const Buffer& buffer, const void *data)
     SetBufferData(cast<Renderer *>(GraphicsAPI::GetRenderer())->CurrentGraphicsList(), buffer, data);
 }
 
-void MemoryManager::SetBufferDataImmediate(const Buffer& buffer, const void *data)
+void MemoryManager::SetBufferDataImmediately(const Buffer& buffer, const void *data)
 {
     SetBufferData(m_CommandList, buffer, data);
 }
@@ -165,25 +166,6 @@ void MemoryManager::FreeMemory()
         SafeRelease(desc_heap.handle);
     }
     m_DescHeapMemory.desc_heaps.Clear();
-}
-
-MemoryManager& MemoryManager::operator=(MemoryManager&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_CommandAllocator = other.m_CommandAllocator;
-        m_CommandList      = other.m_CommandList;
-        m_Fence            = other.m_Fence;
-        m_FenceEvent       = RTTI::move(other.m_FenceEvent);
-        m_DescHeapMemory   = RTTI::move(other.m_DescHeapMemory);
-        m_BufferMemory     = RTTI::move(other.m_BufferMemory);
-        m_TextureMemory    = RTTI::move(other.m_TextureMemory);
-
-        other.m_CommandAllocator = null;
-        other.m_CommandList      = null;
-        other.m_Fence            = null;
-    }
-    return *this;
 }
 
 void MemoryManager::CreateNewPage(D3D12_RESOURCE_STATES initial_state)

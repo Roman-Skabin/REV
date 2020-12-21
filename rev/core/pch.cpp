@@ -15,7 +15,7 @@
     #pragma comment(lib, "d3dcompiler.lib") // DirectX
 //  #pragma comment(lib, "mfplat.lib")      // MFAPI
 //  #pragma comment(lib, "mfreadwrite.lib") // MFAPI
-#elif REV_PLATFORM_OSX_X64
+#elif REV_PLATFORM_MACOS
     // @TODO(Roman): Platform-specific links
 #elif REV_PLATFORM_LINUX
     // @TODO(Roman): Platform-specific links

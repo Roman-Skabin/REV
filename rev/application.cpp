@@ -19,14 +19,14 @@ Application *Application::Get()
 Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
     : m_Logger("REV logger", "../log/rev.log", Logger::TARGET::FILE),
       m_Memory(Memory::Get()),
-      m_Allocator(m_Memory->PushToPermanentArea(GB(1)), GB(1), false, "Internal"),
+      m_Allocator(m_Memory->PushToPermanentArea(GB(1)), GB(1), false, "Default"),
       m_WorkQueue(WorkQueue::Create(m_Logger)),
       m_Window(m_Logger,
                name,
                Math::v4s(10, 10, 960, 540)),
       m_Input(Input::Create(m_Window, m_Logger)),
       m_Timer("REVMainTimer"),
-      m_SceneManager(SceneManager::Create(MB(16)))
+      m_CurrentScene(null)
 {
     REV_CHECK_M(!s_Application,
                 "Only one application alowed. "
@@ -44,9 +44,16 @@ Application::~Application()
     s_Application = null;
 }
 
+void Application::SetCurrentScene(SceneBase *scene)
+{
+    if (m_CurrentScene) m_CurrentScene->OnUnsetCurrentEx();
+    m_CurrentScene = scene;
+    m_CurrentScene->OnSetCurrentEx();
+}
+
 void Application::Run()
 {
-    Renderer *renderer = GraphicsAPI::GetRenderer();
+    GPU::Renderer *renderer = GraphicsAPI::GetRenderer();
 
     m_Timer.Start();
 
@@ -67,7 +74,8 @@ void Application::Run()
             m_Window.ApplyFullscreenRequest();
 
             renderer->StartFrame();
-            m_SceneManager->CurrentScene()->OnUpdate();
+            m_CurrentScene->OnUpdate();
+            m_CurrentScene->FlushBatch();
             renderer->EndFrame();
         }
     }
@@ -75,6 +83,8 @@ void Application::Run()
     m_WorkQueue->AddWork([this    ]{ m_Timer.Stop();         });
     m_WorkQueue->AddWork([renderer]{ renderer->WaitForGPU(); });
     m_WorkQueue->Wait();
+
+    m_CurrentScene->OnUnsetCurrentEx();
 }
 
 }

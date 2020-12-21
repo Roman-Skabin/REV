@@ -41,7 +41,7 @@ namespace REV
 
         void LogVA(MESSAGE_KIND message_kind, const char *format, va_list args) const;
 
-        void __cdecl Log(MESSAGE_KIND message_kind, const char *format, ...) const
+        void REV_CDECL Log(MESSAGE_KIND message_kind, const char *format, ...) const
         {
             va_list args;
             va_start(args, format);
@@ -49,7 +49,7 @@ namespace REV
             va_end(args);
         }
 
-        void __cdecl LogInfo(const char *format, ...) const
+        void REV_CDECL LogInfo(const char *format, ...) const
         {
             va_list args;
             va_start(args, format);
@@ -57,7 +57,7 @@ namespace REV
             va_end(args);
         }
 
-        void __cdecl LogSuccess(const char *format, ...) const
+        void REV_CDECL LogSuccess(const char *format, ...) const
         {
             va_list args;
             va_start(args, format);
@@ -65,7 +65,7 @@ namespace REV
             va_end(args);
         }
 
-        void __cdecl LogWarning(const char *format, ...) const
+        void REV_CDECL LogWarning(const char *format, ...) const
         {
             va_list args;
             va_start(args, format);
@@ -73,7 +73,7 @@ namespace REV
             va_end(args);
         }
 
-        void __cdecl LogError(const char *format, ...) const
+        void REV_CDECL LogError(const char *format, ...) const
         {
             va_list args;
             va_start(args, format);
@@ -100,5 +100,5 @@ namespace REV
         } m_Attribs;
     };
 
-    ENUM_CLASS_OPERATORS(Logger::TARGET)
+    REV_ENUM_CLASS_OPERATORS(Logger::TARGET)
 }

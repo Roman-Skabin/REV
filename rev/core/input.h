@@ -12,34 +12,68 @@
 
 namespace REV
 {
-    class REV_API DigitalButton final
+    class DigitalButton final
     {
     public:
-        bool Down()     const { return m_Down;     }
-        bool Pressed()  const { return m_Pressed;  }
-        bool Released() const { return m_Released; }
+        REV_INLINE DigitalButton()
+            : m_Down(0),
+              m_Pressed(0),
+              m_Released(0)
+        {
+        }
 
-        void Reset();
-        void UpdateState(bool down);
+        REV_INLINE bool Down()     const { return m_Down;     }
+        REV_INLINE bool Pressed()  const { return m_Pressed;  }
+        REV_INLINE bool Released() const { return m_Released; }
+
+        REV_INLINE void Reset()
+        {
+            m_Pressed  = false;
+            m_Released = false;
+        }
+
+        REV_INLINE void Update(bool down)
+        {
+            bool was_down = m_Down;
+
+            m_Down     =  down;
+            m_Pressed  = !was_down &&  down;
+            m_Released =  was_down && !down;
+        }
 
     private:
-        bool m_Down     = false;
-        bool m_Pressed  = false;
-        bool m_Released = false;
+        u8 m_Down     : 1;
+        u8 m_Pressed  : 1;
+        u8 m_Released : 1;
     };
 
-    class REV_API AnalogButton final
+    class AnalogButton final
     {
     public:
-        AnalogButton(f32 threshold);
+        REV_INLINE AnalogButton(f32 threshold)
+            : m_Value(0.0f),
+              m_Threshold(threshold),
+              m_Down(false),
+              m_Pressed(false),
+              m_Released(false)
+        {
+        }
 
-        f32  Value()     const { return m_Value;     }
-        f32  Threshold() const { return m_Threshold; }
-        bool Down()      const { return m_Down;      }
-        bool Pressed()   const { return m_Pressed;   }
-        bool Released()  const { return m_Released;  }
+        REV_INLINE f32  Value()     const { return m_Value;     }
+        REV_INLINE f32  Threshold() const { return m_Threshold; }
+        REV_INLINE bool Down()      const { return m_Down;      }
+        REV_INLINE bool Pressed()   const { return m_Pressed;   }
+        REV_INLINE bool Released()  const { return m_Released;  }
 
-        void UpdateState(f32 value);
+        REV_INLINE void Update(f32 value)
+        {
+            bool was_down = m_Down;
+
+            m_Value    =  value;
+            m_Down     =  m_Value  >=  m_Threshold;
+            m_Pressed  = !was_down &&  m_Down;
+            m_Released =  was_down && !m_Down;
+        }
 
     private:
         f32  m_Value;
@@ -54,43 +88,40 @@ namespace REV
     public:
         using Key = DigitalButton;
 
-        Keyboard();
-        Keyboard(Keyboard&& other) noexcept;
-
-        void UpdateState();
-
-        const Key& operator[](KEY key) const
+        REV_INLINE Keyboard()
         {
-            REV_CHECK(KEY::FIRST <= key && key <= KEY::LAST);
-            return m_Keys[cast<u16>(key)];
+            ZeroMemory(m_Keys, sizeof(m_Keys));
         }
 
-        Keyboard& operator=(Keyboard&& other) noexcept;
+        void Update();
+
+        REV_INLINE const Key& operator[](KEY key) const
+        {
+            REV_CHECK(KEY::FIRST <= key && key <= KEY::LAST);
+            return m_Keys[cast<u32>(key)];
+        }
 
     private:
-        Key m_Keys[cast<u16>(KEY::MAX)];
+        Key m_Keys[cast<u32>(KEY::MAX)];
     };
 
     class REV_API Mouse final
     {
     public:
         Mouse(const Logger& logger, HWND window_handle);
-        Mouse(Mouse&& other) noexcept;
 
-        Math::v2s            Pos()          const { return m_Pos;          }
-        Math::v2s            DeltaPos()     const { return m_DeltaPos;     }
-        s32                  Wheel()        const { return m_Wheel;        }
-        s32                  DeltaWheel()   const { return m_DeltaWheel;   }
-        const DigitalButton& LeftButton()   const { return m_LeftButton;   }
-        const DigitalButton& MiddleButton() const { return m_MiddleButton; }
-        const DigitalButton& RightButton()  const { return m_RightButton;  }
-        const DigitalButton& X1Button()     const { return m_X1Button;     }
-        const DigitalButton& X2Button()     const { return m_X2Button;     }
+        REV_INLINE Math::v2s            Pos()          const { return m_Pos;          }
+        REV_INLINE Math::v2s            DeltaPos()     const { return m_DeltaPos;     }
+        REV_INLINE s32                  Wheel()        const { return m_Wheel;        }
+        REV_INLINE s32                  DeltaWheel()   const { return m_DeltaWheel;   }
+        REV_INLINE const DigitalButton& LeftButton()   const { return m_LeftButton;   }
+        REV_INLINE const DigitalButton& MiddleButton() const { return m_MiddleButton; }
+        REV_INLINE const DigitalButton& RightButton()  const { return m_RightButton;  }
+        REV_INLINE const DigitalButton& X1Button()     const { return m_X1Button;     }
+        REV_INLINE const DigitalButton& X2Button()     const { return m_X2Button;     }
 
         void Reset();
-        void UpdateState(const RAWMOUSE& raw_mouse);
-
-        Mouse& operator=(Mouse&& other) noexcept;
+        void Update(const RAWMOUSE& raw_mouse);
 
     private:
         Math::v2s     m_Pos;
@@ -104,16 +135,26 @@ namespace REV
         DigitalButton m_X2Button;
     };
 
-    class REV_API Stick final
+    class Stick final
     {
     public:
-        Stick(f32 deadzone);
+        REV_INLINE Stick(f32 deadzone)
+            : m_Deadzone(deadzone),
+              m_Offset(0.0f),
+              m_Button()
+        {
+        }
 
-        f32                  Deadzone() const { return m_Deadzone; }
-        Math::v2             Offset()   const { return m_Offset;   }
-        const DigitalButton& Button()   const { return m_Button;   }
+        REV_INLINE f32                  Deadzone() const { return m_Deadzone; }
+        REV_INLINE Math::v2             Offset()   const { return m_Offset;   }
+        REV_INLINE const DigitalButton& Button()   const { return m_Button;   }
 
-        void UpdateState(f32 x, f32 y, bool down);
+        REV_INLINE void Update(f32 x, f32 y, bool down)
+        {
+            m_Offset.x = fabs(x) <= m_Deadzone ? 0 : x;
+            m_Offset.y = fabs(y) <= m_Deadzone ? 0 : y;
+            m_Button.Update(down);
+        }
 
     private:
         f32           m_Deadzone;
@@ -127,27 +168,25 @@ namespace REV
         Gamepad(const Logger& logger);
         Gamepad(Gamepad&& other) noexcept;
 
-        const DigitalButton& ButtonA()       const { return m_ButtonA;       }
-        const DigitalButton& ButtonB()       const { return m_ButtonB;       }
-        const DigitalButton& ButtonX()       const { return m_ButtonX;       }
-        const DigitalButton& ButtonY()       const { return m_ButtonY;       }
-        const AnalogButton&  LeftTrigger()   const { return m_LeftTrigger;   }
-        const AnalogButton&  RightTrigger()  const { return m_RightTrigger;  }
-        const DigitalButton& LeftShoulder()  const { return m_LeftShoulder;  }
-        const DigitalButton& RightShoulder() const { return m_RightShoulder; }
-        const DigitalButton& ButtonUp()      const { return m_ButtonUp;      }
-        const DigitalButton& ButtonDown()    const { return m_ButtonDown;    }
-        const DigitalButton& ButtonLeft()    const { return m_ButtonLeft;    }
-        const DigitalButton& ButtonRight()   const { return m_ButtonRight;   }
-        const Stick&         LeftStick()     const { return m_LeftStick;     }
-        const Stick&         RightStick()    const { return m_RightStick;    }
-        const DigitalButton& ButtonStart()   const { return m_ButtonStart;   }
-        const DigitalButton& ButtonBack()    const { return m_ButtonBack;    }
-        bool                 Connected()     const { return m_Connected;     }
+        REV_INLINE const DigitalButton& ButtonA()       const { return m_ButtonA;       }
+        REV_INLINE const DigitalButton& ButtonB()       const { return m_ButtonB;       }
+        REV_INLINE const DigitalButton& ButtonX()       const { return m_ButtonX;       }
+        REV_INLINE const DigitalButton& ButtonY()       const { return m_ButtonY;       }
+        REV_INLINE const AnalogButton&  LeftTrigger()   const { return m_LeftTrigger;   }
+        REV_INLINE const AnalogButton&  RightTrigger()  const { return m_RightTrigger;  }
+        REV_INLINE const DigitalButton& LeftShoulder()  const { return m_LeftShoulder;  }
+        REV_INLINE const DigitalButton& RightShoulder() const { return m_RightShoulder; }
+        REV_INLINE const DigitalButton& ButtonUp()      const { return m_ButtonUp;      }
+        REV_INLINE const DigitalButton& ButtonDown()    const { return m_ButtonDown;    }
+        REV_INLINE const DigitalButton& ButtonLeft()    const { return m_ButtonLeft;    }
+        REV_INLINE const DigitalButton& ButtonRight()   const { return m_ButtonRight;   }
+        REV_INLINE const Stick&         LeftStick()     const { return m_LeftStick;     }
+        REV_INLINE const Stick&         RightStick()    const { return m_RightStick;    }
+        REV_INLINE const DigitalButton& ButtonStart()   const { return m_ButtonStart;   }
+        REV_INLINE const DigitalButton& ButtonBack()    const { return m_ButtonBack;    }
+        REV_INLINE bool                 Connected()     const { return m_Connected;     }
 
-        void UpdateState(const Logger& logger);
-
-        Gamepad& operator=(Gamepad&& other) noexcept;
+        void Update(const Logger& logger);
 
     private:
         DigitalButton m_ButtonA;
@@ -167,11 +206,6 @@ namespace REV
         DigitalButton m_ButtonStart;
         DigitalButton m_ButtonBack;
         bool          m_Connected;
-
-        typedef DWORD WINAPI XInputGetStateProc(DWORD dwUserIndex, XINPUT_STATE *pState);
-
-        static HMODULE             s_Xinput;
-        static XInputGetStateProc *s_XInputGetState;
     };
 
     class REV_API Input final
@@ -187,24 +221,21 @@ namespace REV
         void Reset();
         void Update(const Logger& logger);
 
-        const Mouse&    GetMouse()    const { return m_Mouse;    }
-        const Keyboard& GetKeyboard() const { return m_Keyboard; }
-        const Gamepad&  GetGamepad()  const { return m_Gamepad;  }
+        REV_INLINE const Mouse&    GetMouse()    const { return m_Mouse;    }
+        REV_INLINE const Keyboard& GetKeyboard() const { return m_Keyboard; }
+        REV_INLINE const Gamepad&  GetGamepad()  const { return m_Gamepad;  }
 
     private:
-        Input& operator=(Input&& other) noexcept;
-
         Input(const Input&) = delete;
         Input(Input&&)      = delete;
 
         Input& operator=(const Input&) = delete;
+        Input& operator=(Input&&)      = delete;
 
     private:
         Mouse    m_Mouse;
         Gamepad  m_Gamepad;
         Keyboard m_Keyboard;
-
-        static Input *s_Input;
 
         friend LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lparam);
     };

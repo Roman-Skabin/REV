@@ -18,21 +18,21 @@ namespace REV
     public:
         using Type = T;
     
-        DLinkedListNode()
+        REV_INLINE DLinkedListNode()
             : m_Prev(null),
               m_Next(null),
               m_Data()
         {
         }
 
-        DLinkedListNode(const DLinkedListNode& other)
+        REV_INLINE DLinkedListNode(const DLinkedListNode& other)
             : m_Prev(other.m_Prev),
               m_Next(other.m_Next),
               m_Data(other.m_Data)
         {
         }
 
-        DLinkedListNode(DLinkedListNode&& other) noexcept
+        REV_INLINE DLinkedListNode(DLinkedListNode&& other) noexcept
             : m_Prev(other.m_Prev),
               m_Next(other.m_Next),
               m_Data(RTTI::move(other.m_Data))
@@ -41,19 +41,19 @@ namespace REV
             other.m_Next = null;
         }
 
-        ~DLinkedListNode()
+        REV_INLINE ~DLinkedListNode()
         {
             m_Prev = null;
             m_Next = null;
         }
 
-        constexpr DLinkedListNode *Prev() { return m_Prev; }
-        constexpr DLinkedListNode *Next() { return m_Next; }
-        constexpr T&               Data() { return m_Data; }
+        REV_INLINE DLinkedListNode *Prev() { return m_Prev; }
+        REV_INLINE DLinkedListNode *Next() { return m_Next; }
+        REV_INLINE T&               Data() { return m_Data; }
 
-        constexpr const DLinkedListNode *Prev() const { return m_Prev; }
-        constexpr const DLinkedListNode *Next() const { return m_Next; }
-        constexpr const T&               Data() const { return m_Data; }
+        REV_INLINE const DLinkedListNode *Prev() const { return m_Prev; }
+        REV_INLINE const DLinkedListNode *Next() const { return m_Next; }
+        REV_INLINE const T&               Data() const { return m_Data; }
 
         DLinkedListNode& operator=(const DLinkedListNode& other)
         {
@@ -112,35 +112,35 @@ namespace REV
     public:
         using Type = T;
     
-        SLinkedListNode()
+        REV_INLINE SLinkedListNode()
             : m_Next(null),
               m_Data()
         {
         }
     
-        SLinkedListNode(const SLinkedListNode& other)
+        REV_INLINE SLinkedListNode(const SLinkedListNode& other)
             : m_Next(other.m_Next),
               m_Data(other.m_Data)
         {
         }
     
-        SLinkedListNode(SLinkedListNode&& other) noexcept
+        REV_INLINE SLinkedListNode(SLinkedListNode&& other) noexcept
             : m_Next(other.m_Next),
               m_Data(RTTI::move(other.m_Data))
         {
             other.m_Next = null;
         }
     
-        ~SLinkedListNode()
+        REV_INLINE ~SLinkedListNode()
         {
             m_Next = null;
         }
     
-        constexpr SLinkedListNode *Next() { return m_Next; }
-        constexpr T&               Data() { return m_Data; }
+        REV_INLINE SLinkedListNode *Next() { return m_Next; }
+        REV_INLINE T&               Data() { return m_Data; }
     
-        constexpr const SLinkedListNode *Next() const { return m_Next; }
-        constexpr const T&               Data() const { return m_Data; }
+        REV_INLINE const SLinkedListNode *Next() const { return m_Next; }
+        REV_INLINE const T&               Data() const { return m_Data; }
     
         SLinkedListNode& operator=(const SLinkedListNode& other)
         {
@@ -194,24 +194,26 @@ namespace REV
     
         Node *node;
     
-        constexpr SLinkedListIterator(Node *node)                       : node(node)       {}
-        constexpr SLinkedListIterator(const SLinkedListIterator& other) : node(other.node) {}
+        REV_INLINE SLinkedListIterator(Node *node)                       : node(node)       {}
+        REV_INLINE SLinkedListIterator(const SLinkedListIterator& other) : node(other.node) {}
+
+        REV_INLINE ~SLinkedListIterator() { node = null; }
     
-        constexpr SLinkedListIterator& operator=(Node *_node)                      { node = _node;      return *this; }
-        constexpr SLinkedListIterator& operator=(const SLinkedListIterator& other) { node = other.node; return *this; }
+        REV_INLINE SLinkedListIterator& operator=(Node *_node)                      { node = _node;      return *this; }
+        REV_INLINE SLinkedListIterator& operator=(const SLinkedListIterator& other) { node = other.node; return *this; }
     
-        constexpr SLinkedListIterator& operator++() { if (node) node = node->next; return *this; }
+        REV_INLINE SLinkedListIterator& operator++() { if (node) node = node->next; return *this; }
     
-        constexpr SLinkedListIterator& operator++(int) { if (node) { SLinkedListIterator ret(node); node = node->next; return ret; } else { return *this; } }
+        REV_INLINE SLinkedListIterator& operator++(int) { if (node) { SLinkedListIterator ret(node); node = node->next; return ret; } else { return *this; } }
     
-        constexpr const T& operator*() const { return node->Data(); }
-        constexpr       T& operator*()       { return node->Data(); }
+        REV_INLINE const T& operator*() const { return node->Data(); }
+        REV_INLINE       T& operator*()       { return node->Data(); }
     
-        constexpr const T *operator->() const { return &node->Data(); }
-        constexpr       T *operator->()       { return &node->Data(); }
+        REV_INLINE const T *operator->() const { return &node->Data(); }
+        REV_INLINE       T *operator->()       { return &node->Data(); }
     
-        constexpr bool operator==(SLinkedListIterator& other) const { return node == other.other; }
-        constexpr bool operator!=(SLinkedListIterator& other) const { return node != other.other; }
+        REV_INLINE bool operator==(SLinkedListIterator& other) const { return node == other.other; }
+        REV_INLINE bool operator!=(SLinkedListIterator& other) const { return node != other.other; }
     };
 
     template<typename T, typename Allocator_t = Allocator>
@@ -221,22 +223,24 @@ namespace REV
 
         const Node *node;
 
-        constexpr SLinkedListConstIterator(const Node *node)                      : node(node)       {}
-        constexpr SLinkedListConstIterator(const SLinkedListConstIterator& other) : node(other.node) {}
+        REV_INLINE SLinkedListConstIterator(const Node *node)                      : node(node)       {}
+        REV_INLINE SLinkedListConstIterator(const SLinkedListConstIterator& other) : node(other.node) {}
 
-        constexpr SLinkedListConstIterator& operator=(const Node *_node)                     { node = _node;      return *this; }
-        constexpr SLinkedListConstIterator& operator=(const SLinkedListConstIterator& other) { node = other.node; return *this; }
+        REV_INLINE ~SLinkedListConstIterator() { node = null; }
 
-        constexpr SLinkedListConstIterator& operator++() { if (node) node = node->next; return *this; }
+        REV_INLINE SLinkedListConstIterator& operator=(const Node *_node)                     { node = _node;      return *this; }
+        REV_INLINE SLinkedListConstIterator& operator=(const SLinkedListConstIterator& other) { node = other.node; return *this; }
 
-        constexpr SLinkedListConstIterator& operator++(int) { if (node) { SLinkedListConstIterator ret(node); node = node->next; return ret; } else { return *this; } }
+        REV_INLINE SLinkedListConstIterator& operator++() { if (node) node = node->next; return *this; }
 
-        constexpr const T& operator*() const { return node->Data(); }
+        REV_INLINE SLinkedListConstIterator& operator++(int) { if (node) { SLinkedListConstIterator ret(node); node = node->next; return ret; } else { return *this; } }
 
-        constexpr const T *operator->() const { return &node->Data(); }
+        REV_INLINE const T& operator*() const { return node->Data(); }
 
-        constexpr bool operator==(SLinkedListConstIterator& other) const { return node == other.other; }
-        constexpr bool operator!=(SLinkedListConstIterator& other) const { return node != other.other; }
+        REV_INLINE const T *operator->() const { return &node->Data(); }
+
+        REV_INLINE bool operator==(SLinkedListConstIterator& other) const { return node == other.other; }
+        REV_INLINE bool operator!=(SLinkedListConstIterator& other) const { return node != other.other; }
     };
 
     template<typename T, typename Allocator_t = Allocator>
@@ -246,26 +250,28 @@ namespace REV
 
         Node *node;
 
-        constexpr DLinkedListIterator(Node *node)                       : node(node)       {}
-        constexpr DLinkedListIterator(const DLinkedListIterator& other) : node(other.node) {}
+        REV_INLINE DLinkedListIterator(Node *node)                       : node(node)       {}
+        REV_INLINE DLinkedListIterator(const DLinkedListIterator& other) : node(other.node) {}
 
-        constexpr DLinkedListIterator& operator=(Node *_node)                      { node = _node;      return *this; }
-        constexpr DLinkedListIterator& operator=(const DLinkedListIterator& other) { node = other.node; return *this; }
+        REV_INLINE ~DLinkedListIterator() { node = null; }
 
-        constexpr DLinkedListIterator& operator++() { if (node) node = node->next; return *this; }
-        constexpr DLinkedListIterator& operator--() { if (node) node = node->prev; return *this; }
+        REV_INLINE DLinkedListIterator& operator=(Node *_node)                      { node = _node;      return *this; }
+        REV_INLINE DLinkedListIterator& operator=(const DLinkedListIterator& other) { node = other.node; return *this; }
 
-        constexpr DLinkedListIterator& operator++(int) { if (node) { DLinkedListIterator ret(node); node = node->next; return ret; } else { return *this; } }
-        constexpr DLinkedListIterator& operator--(int) { if (node) { DLinkedListIterator ret(node); node = node->prev; return ret; } else { return *this; } }
+        REV_INLINE DLinkedListIterator& operator++() { if (node) node = node->next; return *this; }
+        REV_INLINE DLinkedListIterator& operator--() { if (node) node = node->prev; return *this; }
 
-        constexpr const T& operator*() const { return node->Data(); }
-        constexpr       T& operator*()       { return node->Data(); }
+        REV_INLINE DLinkedListIterator& operator++(int) { if (node) { DLinkedListIterator ret(node); node = node->next; return ret; } else { return *this; } }
+        REV_INLINE DLinkedListIterator& operator--(int) { if (node) { DLinkedListIterator ret(node); node = node->prev; return ret; } else { return *this; } }
 
-        constexpr const T *operator->() const { return &node->Data(); }
-        constexpr       T *operator->()       { return &node->Data(); }
+        REV_INLINE const T& operator*() const { return node->Data(); }
+        REV_INLINE       T& operator*()       { return node->Data(); }
 
-        constexpr bool operator==(DLinkedListIterator& other) const { return node == other.other; }
-        constexpr bool operator!=(DLinkedListIterator& other) const { return node != other.other; }
+        REV_INLINE const T *operator->() const { return &node->Data(); }
+        REV_INLINE       T *operator->()       { return &node->Data(); }
+
+        REV_INLINE bool operator==(DLinkedListIterator& other) const { return node == other.other; }
+        REV_INLINE bool operator!=(DLinkedListIterator& other) const { return node != other.other; }
     };
 
     template<typename T, typename Allocator_t = Allocator>
@@ -275,24 +281,26 @@ namespace REV
 
         const Node *node;
 
-        constexpr DLinkedListConstIterator(const Node *node)                      : node(node)       {}
-        constexpr DLinkedListConstIterator(const DLinkedListConstIterator& other) : node(other.node) {}
+        REV_INLINE DLinkedListConstIterator(const Node *node)                      : node(node)       {}
+        REV_INLINE DLinkedListConstIterator(const DLinkedListConstIterator& other) : node(other.node) {}
 
-        constexpr DLinkedListConstIterator& operator=(const Node *_node)                     { node = _node;      return *this; }
-        constexpr DLinkedListConstIterator& operator=(const DLinkedListConstIterator& other) { node = other.node; return *this; }
+        REV_INLINE ~DLinkedListConstIterator() { node = null; }
 
-        constexpr DLinkedListConstIterator& operator++() { if (node) node = node->next; return *this; }
-        constexpr DLinkedListConstIterator& operator--() { if (node) node = node->prev; return *this; }
+        REV_INLINE DLinkedListConstIterator& operator=(const Node *_node)                     { node = _node;      return *this; }
+        REV_INLINE DLinkedListConstIterator& operator=(const DLinkedListConstIterator& other) { node = other.node; return *this; }
 
-        constexpr DLinkedListConstIterator& operator++(int) { if (node) { DLinkedListConstIterator ret(node); node = node->next; return ret; } else { return *this; } }
-        constexpr DLinkedListConstIterator& operator--(int) { if (node) { DLinkedListConstIterator ret(node); node = node->prev; return ret; } else { return *this; } }
+        REV_INLINE DLinkedListConstIterator& operator++() { if (node) node = node->next; return *this; }
+        REV_INLINE DLinkedListConstIterator& operator--() { if (node) node = node->prev; return *this; }
 
-        constexpr const T& operator*() const { return node->Data(); }
+        REV_INLINE DLinkedListConstIterator& operator++(int) { if (node) { DLinkedListConstIterator ret(node); node = node->next; return ret; } else { return *this; } }
+        REV_INLINE DLinkedListConstIterator& operator--(int) { if (node) { DLinkedListConstIterator ret(node); node = node->prev; return ret; } else { return *this; } }
 
-        constexpr const T *operator->() const { return &node->Data(); }
+        REV_INLINE const T& operator*() const { return node->Data(); }
 
-        constexpr bool operator==(DLinkedListConstIterator& other) const { return node == other.other; }
-        constexpr bool operator!=(DLinkedListConstIterator& other) const { return node != other.other; }
+        REV_INLINE const T *operator->() const { return &node->Data(); }
+
+        REV_INLINE bool operator==(DLinkedListConstIterator& other) const { return node == other.other; }
+        REV_INLINE bool operator!=(DLinkedListConstIterator& other) const { return node != other.other; }
     };
 
     template<typename T, bool doubly_linked = false, typename Allocator_t = Allocator>
@@ -305,7 +313,7 @@ namespace REV
         using ConstIterator = RTTI::conditional_t<doubly_linked, DLinkedListConstIterator<T, Allocator_t>, SLinkedListConstIterator<T, Allocator_t>>;
     
     public:
-        explicit List(Allocator_t *allocator)
+        REV_INLINE explicit List(Allocator_t *allocator)
             : m_Allocator(allocator),
               m_Count(0),
               m_First(null),
@@ -315,7 +323,7 @@ namespace REV
         }
     
         template<typename = RTTI::enable_if_t<RTTI::is_copy_assignable_v<T>>>
-        List(const List& other)
+        REV_INLINE List(const List& other)
             : m_Allocator(other.m_Allocator),
               m_Count(0),
               m_First(null),
@@ -327,7 +335,7 @@ namespace REV
             }
         }
     
-        List(List&& other) noexcept
+        REV_INLINE List(List&& other) noexcept
             : m_Allocator(other.m_Allocator),
               m_Count(other.m_Count),
               m_First(other.m_First),
@@ -339,37 +347,37 @@ namespace REV
             other.m_Last      = null;
         }
     
-        ~List()
+        REV_INLINE ~List()
         {
             Clear();
             m_Allocator = null;
         }
     
-        constexpr u64 Count() const { return m_Count; }
+        REV_INLINE u64 Count() const { return m_Count; }
         
-        constexpr bool Empty() const { return !m_Count; }
+        REV_INLINE bool Empty() const { return !m_Count; }
     
-        constexpr ConstIterator& begin()   const { return m_First; }
-        constexpr ConstIterator& cbegin()  const { return m_First; }
-        constexpr ConstIterator& rbegin()  const { return m_Last;  }
-        constexpr ConstIterator& crbegin() const { return m_Last;  }
+        REV_INLINE ConstIterator& begin()   const { return m_First; }
+        REV_INLINE ConstIterator& cbegin()  const { return m_First; }
+        REV_INLINE ConstIterator& rbegin()  const { return m_Last;  }
+        REV_INLINE ConstIterator& crbegin() const { return m_Last;  }
     
-        constexpr ConstIterator& end()   const { return null; }
-        constexpr ConstIterator& cend()  const { return null; }
-        constexpr ConstIterator& rend()  const { return null; }
-        constexpr ConstIterator& crend() const { return null; }
+        REV_INLINE ConstIterator& end()   const { return null; }
+        REV_INLINE ConstIterator& cend()  const { return null; }
+        REV_INLINE ConstIterator& rend()  const { return null; }
+        REV_INLINE ConstIterator& crend() const { return null; }
     
-        constexpr Iterator& begin()  { return m_First; }
-        constexpr Iterator& rbegin() { return m_Last;  }
+        REV_INLINE Iterator& begin()  { return m_First; }
+        REV_INLINE Iterator& rbegin() { return m_Last;  }
     
-        constexpr Iterator& end()  { return null; }
-        constexpr Iterator& rend() { return null; }
+        REV_INLINE Iterator& end()  { return null; }
+        REV_INLINE Iterator& rend() { return null; }
     
-        constexpr const Node *First() const { return m_First; }
-        constexpr const Node *Last()  const { return m_Last;  }
+        REV_INLINE const Node *First() const { return m_First; }
+        REV_INLINE const Node *Last()  const { return m_Last;  }
     
-        constexpr Node *First() { return m_First; }
-        constexpr Node *Last()  { return m_Last;  }
+        REV_INLINE Node *First() { return m_First; }
+        REV_INLINE Node *Last()  { return m_Last;  }
     
         template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>>
         void Insert(Node *where, U&&... elements)
@@ -383,11 +391,11 @@ namespace REV
             (..., (InsertOne(where)->m_Data = elements));
         }
     
-        template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> constexpr void PushFront(U&&... elements) { Insert(m_First, RTTI::forward<U>(elements)...); }
-        template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> constexpr void PushBack(U&&... elements)  { Insert(null,    RTTI::forward<U>(elements)...); }
+        template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> REV_INLINE void PushFront(U&&... elements) { Insert(m_First, RTTI::forward<U>(elements)...); }
+        template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_move_assignable_v<T>>> REV_INLINE void PushBack(U&&... elements)  { Insert(null,    RTTI::forward<U>(elements)...); }
     
-        template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> constexpr void PushFront(const U&... elements) { Insert(m_First, elements...); }
-        template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> constexpr void PushBack(const U&... elements)  { Insert(null,    elements...); }
+        template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> REV_INLINE void PushFront(const U&... elements) { Insert(m_First, elements...); }
+        template<typename ...U, typename = RTTI::enable_if_t<RTTI::are_same_v<T, U...> && RTTI::is_copy_assignable_v<T>>> REV_INLINE void PushBack(const U&... elements)  { Insert(null,    elements...); }
     
         template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>>
         void Emplace(Node *where, ConstructorArgs&&... args)
@@ -395,8 +403,8 @@ namespace REV
             InsertOne(where)->m_Data = T(RTTI::forward<ConstructorArgs>(args)...);
         }
     
-        template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr void EmplaceFront(ConstructorArgs&&... args) { Emplace(m_First, RTTI::forward<ConstructorArgs>(args)...); }
-        template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> constexpr void EmplaceBack(ConstructorArgs&&... args)  { Emplace(null,    RTTI::forward<ConstructorArgs>(args)...); }
+        template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> REV_INLINE void EmplaceFront(ConstructorArgs&&... args) { Emplace(m_First, RTTI::forward<ConstructorArgs>(args)...); }
+        template<typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_move_assignable_v<T>>> REV_INLINE void EmplaceBack(ConstructorArgs&&... args)  { Emplace(null,    RTTI::forward<ConstructorArgs>(args)...); }
     
         template<typename ...Nodes, typename = RTTI::enable_if_t<RTTI::are_same_v<Node, Nodes...>>>
         void Erase(Nodes *... what)
@@ -404,8 +412,8 @@ namespace REV
             (..., EraseOne(what));
         }
     
-        constexpr void EraseFront() { EraseOne(m_First); }
-        constexpr void EraseBack()  { EraseOne(m_Back);  }
+        REV_INLINE void EraseFront() { EraseOne(m_First); }
+        REV_INLINE void EraseBack()  { EraseOne(m_Back);  }
     
         void Clear()
         {

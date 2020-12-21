@@ -4,14 +4,16 @@
 
 #pragma once
 
-#include "graphics/renderer.h"
 #include "core/memory.h"
 #include "core/window.h"
 #include "tools/event.h"
+#include "core/scene.h"
 
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
+
+namespace REV::GPU { class Renderer; }
 
 namespace REV::D3D12
 {
@@ -21,7 +23,7 @@ namespace REV::D3D12
         SWAP_CHAIN_BUFFERS_COUNT = 2,
     };
 
-    class REV_API Renderer final
+    class Renderer final
     {
     public:
         Renderer(Window *window, const Logger& logger, Math::v2s rt_size);
@@ -35,32 +37,31 @@ namespace REV::D3D12
 
         void WaitForGPU();
 
-        constexpr const ID3D12Device              *Device()              const { return m_Device;                         }
-        constexpr const ID3D12CommandQueue        *GraphicsQueue()       const { return m_GraphicsQueue;                  }
-        constexpr const ID3D12GraphicsCommandList *CurrentGraphicsList() const { return m_GraphicsLists[m_CurrentBuffer]; }
-        constexpr const Logger&                    GetLogger()           const { return m_Logger;                         }
+        REV_INLINE const ID3D12Device              *Device()              const { return m_Device;                         }
+        REV_INLINE const ID3D12CommandQueue        *GraphicsQueue()       const { return m_GraphicsQueue;                  }
+        REV_INLINE const ID3D12GraphicsCommandList *CurrentGraphicsList() const { return m_GraphicsLists[m_CurrentBuffer]; }
+        REV_INLINE const Logger&                    GetLogger()           const { return m_Logger;                         }
 
-        constexpr ID3D12Device              *Device()              { return m_Device;                         }
-        constexpr ID3D12CommandQueue        *GraphicsQueue()       { return m_GraphicsQueue;                  }
-        constexpr ID3D12GraphicsCommandList *CurrentGraphicsList() { return m_GraphicsLists[m_CurrentBuffer]; }
-        constexpr Logger&                    GetLogger()           { return m_Logger;                         }
+        REV_INLINE ID3D12Device              *Device()              { return m_Device;                         }
+        REV_INLINE ID3D12CommandQueue        *GraphicsQueue()       { return m_GraphicsQueue;                  }
+        REV_INLINE ID3D12GraphicsCommandList *CurrentGraphicsList() { return m_GraphicsLists[m_CurrentBuffer]; }
+        REV_INLINE Logger&                    GetLogger()           { return m_Logger;                         }
 
-        constexpr bool                       HalfPrecisionSupported()      const { return m_Features.options.MinPrecisionSupport & D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT; }
-        constexpr D3D_ROOT_SIGNATURE_VERSION HighestRootSignatureVersion() const { return m_Features.root_signature.HighestVersion; }
-        constexpr u32                        CurrentBuffer()               const { return m_CurrentBuffer; }
-        constexpr D3D12_RESOURCE_HEAP_TIER   ResourceHeapTier()            const { return m_Features.options.ResourceHeapTier; }
-        constexpr D3D_SHADER_MODEL           HighestShaderModel()          const { return m_Features.shader_model.HighestShaderModel; }
+        REV_INLINE bool                       HalfPrecisionSupported()      const { return m_Features.options.MinPrecisionSupport & D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT; }
+        REV_INLINE D3D_ROOT_SIGNATURE_VERSION HighestRootSignatureVersion() const { return m_Features.root_signature.HighestVersion; }
+        REV_INLINE u32                        CurrentBuffer()               const { return m_CurrentBuffer; }
+        REV_INLINE D3D12_RESOURCE_HEAP_TIER   ResourceHeapTier()            const { return m_Features.options.ResourceHeapTier; }
+        REV_INLINE D3D_SHADER_MODEL           HighestShaderModel()          const { return m_Features.shader_model.HighestShaderModel; }
 
     #if REV_DEBUG
-        constexpr const IDXGIInfoQueue *InfoQueue() const { return m_InfoQueue; }
-        constexpr       IDXGIInfoQueue *InfoQueue()       { return m_InfoQueue; }
+        REV_INLINE const IDXGIInfoQueue *InfoQueue() const { return m_InfoQueue; }
+        REV_INLINE       IDXGIInfoQueue *InfoQueue()       { return m_InfoQueue; }
     #endif
 
-        constexpr bool FirstFrame()       const { return m_FirstFrame;       }
-        constexpr bool TearingSupported() const { return m_TearingSupported; }
-        constexpr bool InFullscreenMode() const { return m_Fullscreen;       }
-
-        Renderer& operator=(Renderer&& other) noexcept;
+        REV_INLINE bool FirstFrame()       const { return m_FirstFrame;       }
+        REV_INLINE bool TearingSupported() const { return m_TearingSupported; }
+        REV_INLINE bool InFullscreenMode() const { return m_Fullscreen;       }
+        REV_INLINE bool FrameStarted()     const { return m_FrameStarted;     }
 
     private:
         void CreateDebugLayer();
@@ -81,6 +82,7 @@ namespace REV::D3D12
         Renderer(Renderer&&)      = delete;
 
         Renderer& operator=(const Renderer&) = delete;
+        Renderer& operator=(Renderer&&)      = delete;
 
     private:
         Logger                       m_Logger;
@@ -123,6 +125,7 @@ namespace REV::D3D12
         u32 m_FirstFrame       : 1;
         u32 m_TearingSupported : 1;
         u32 m_Fullscreen       : 1;
+        u32 m_FrameStarted     : 1;
 
         // @TODO(Roman): Do we need it all???
         struct
@@ -140,6 +143,6 @@ namespace REV::D3D12
             D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT virtual_address;
         } m_Features;
 
-        friend class ::REV::Renderer;
+        friend class ::REV::GPU::Renderer;
     };
 }

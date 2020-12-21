@@ -1,46 +1,37 @@
 #pragma once
 
 #include "core/scene.h"
-#include "graphics/program_manager.h"
 #include "math/mat.h"
 
-#pragma pack(push, 1)
-struct Vertex
-{
-    REV::Math::v4 pos;
-    REV::Math::v4 col;
-};
-#pragma pack(pop)
-
-struct CBufferData
-{
-    REV::Math::m4 MVP;
-    REV::Math::v3 center;
-};
-
-class DemoScene final : public REV::Scene
+class DemoScene final : public REV::SceneBase
 {
 public:
-    DemoScene();
+    DemoScene(REV::Allocator *allocator);
     ~DemoScene();
 
-    virtual void OnSetCurrent() override;
+    virtual void OnSetCurrent()   override;
     virtual void OnUnsetCurrent() override;
+
+    virtual void OnSetResourcesData() override;
 
     virtual void OnUpdate() override;
 
 private:
-    REV::GPU::GraphicsProgramHandle m_GraphicsProgram;
+    #pragma pack(push, 1)
+    struct REV_ALIGN(1) CBufferData
+    {
+        REV::Math::m4 mvp;
+        REV::Math::v4 sun_color;
+        REV::Math::v3 center;
+    };
+    #pragma pack(pop)
 
-    REV::GPU::ResourceHandle m_VertexBuffer;
-    REV::GPU::ResourceHandle m_IndexBuffer;
     REV::GPU::ResourceHandle m_ConstantBuffer;
+    CBufferData              m_CBufferData;
 
-    Vertex      m_VertexData[4];
-    REV::u32    m_IndexData[6];
-    CBufferData m_CBufferData;
+    REV::Math::m4            m_Translation;
 
-    REV::Math::m4 m_Translation;
+    REV::Entity              m_Rect;
 
-    REV::StaticString<128> m_OriginalWindowTitle;
+    REV::StaticString<128>   m_OriginalWindowTitle;
 };

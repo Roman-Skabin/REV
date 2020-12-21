@@ -19,7 +19,7 @@
 #include "tools/array.hpp"
 #include "tools/static_string.hpp"
 
-int main(int argc, char **argv);
+int REV_CDECL main(int argc, char **argv);
 
 namespace REV
 {
@@ -37,13 +37,15 @@ namespace REV
     public:
         virtual ~Application();
 
+        void SetCurrentScene(SceneBase *scene);
+
         const Memory       *GetMemory()       const { return m_Memory;       }
         const Allocator&    GetAllocator()    const { return m_Allocator;    }
         const WorkQueue    *GetWorkQueue()    const { return m_WorkQueue;    }
         const Window&       GetWindow()       const { return m_Window;       }
         const Input        *GetInput()        const { return m_Input;        }
         const Timer&        GetTimer()        const { return m_Timer;        }
-        const SceneManager *GetSceneManager() const { return m_SceneManager; }
+        const SceneBase    *GetCurrentScene() const { return m_CurrentScene; }
 
         Memory       *GetMemory()       { return m_Memory;       }
         Allocator&    GetAllocator()    { return m_Allocator;    }
@@ -51,7 +53,7 @@ namespace REV
         Window&       GetWindow()       { return m_Window;       }
         Input        *GetInput()        { return m_Input;        }
         Timer&        GetTimer()        { return m_Timer;        }
-        SceneManager *GetSceneManager() { return m_SceneManager; }
+        SceneBase    *GetCurrentScene() { return m_CurrentScene; }
 
     private:
         void Run();
@@ -72,11 +74,11 @@ namespace REV
         Window        m_Window;
         Input        *m_Input;
         Timer         m_Timer;
-        SceneManager *m_SceneManager;
+        SceneBase    *m_CurrentScene;
 
     private:
         static Application *s_Application;
 
-        friend int ::main(int argc, char **argv);
+        friend int REV_CDECL ::main(int argc, char **argv);
     };
 }

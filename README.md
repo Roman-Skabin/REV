@@ -1,8 +1,7 @@
 # REV
 
 ### Am working on right now:
-* 3D Batch renderer
-* Redesigning vec and (probably) mat types because I can't align my vertex struct to 1 byte so I can't "pack" them to a vertex buffer correctly. (surprisingly #pragma pack(1) and __declspec(align(1)) didn't help)
+* Textures
 * Scene management
 
 ---

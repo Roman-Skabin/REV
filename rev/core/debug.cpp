@@ -12,7 +12,7 @@ namespace REV
 REV_GLOBAL HANDLE                 g_Console         = GetStdHandle(STD_OUTPUT_HANDLE);
 REV_GLOBAL CriticalSection<false> g_CriticalSection;
 
-void __cdecl DebugF(const char *format, ...)
+void REV_CDECL DebugF(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -29,7 +29,7 @@ void __cdecl DebugF(const char *format, ...)
     va_end(args);
 }
 
-void __cdecl DebugFC(DEBUG_COLOR color, const char *format, ...)
+void REV_CDECL DebugFC(DEBUG_COLOR color, const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -48,7 +48,7 @@ void __cdecl DebugFC(DEBUG_COLOR color, const char *format, ...)
     va_end(args);
 }
 
-void __cdecl PrintDebugMessage(const char *file, u64 line, const char *format, ...)
+void REV_CDECL PrintDebugMessage(const char *file, u64 line, const char *format, ...)
 {
     va_list args;
     va_start(args, format);

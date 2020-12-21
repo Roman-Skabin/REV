@@ -45,7 +45,9 @@ namespace REV
                 // @NOTE(Roman): If more than one thread is waiting on a semaphore, a waiting thread is selected.
                 //               Do not assume a first-in, first-out (FIFO) order.
                 //               External events such as kernel-mode APCs can change the wait order.
-                while (WaitForSingleObjectEx(m_Semaphore, INFINITE, false) != WAIT_OBJECT_0);
+                while (WaitForSingleObjectEx(m_Semaphore, INFINITE, false) != WAIT_OBJECT_0)
+                {
+                }
                 _InterlockedExchangePointer(&m_Owner, new_owner);
             }
             _InterlockedIncrement64(&m_RecursionCount);
@@ -60,7 +62,7 @@ namespace REV
             }
         }
     
-        constexpr bool Waitable() const { return true; }
+        REV_INLINE bool Waitable() const { return true; }
     
         CriticalSection& operator=(CriticalSection&& other)
         {
@@ -121,7 +123,9 @@ namespace REV
             if (new_owner != old_owner)
             {
                 s64 current = _InterlockedIncrement64(&m_CurrentThreadID) - 1;
-                while (current != m_NextThreadID);
+                while (current != m_NextThreadID)
+                {
+                }
                 _InterlockedExchangePointer(&m_Owner, new_owner);
             }
             _InterlockedIncrement64(&m_RecursionCount);
@@ -136,7 +140,7 @@ namespace REV
             }
         }
     
-        constexpr bool Waitable() const { return false; }
+        REV_INLINE bool Waitable() const { return false; }
     
         CriticalSection& operator=(CriticalSection&& other)
         {

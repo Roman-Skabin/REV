@@ -28,15 +28,14 @@ Window::Window(const Logger&            logger,
       m_Title(title),
       m_ClassName(title)
 {
-    WNDCLASSA wca     = {0};
-    wca.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
-    wca.lpfnWndProc   = WindowProc;
-    wca.hInstance     = m_Instance;
-    wca.hCursor       = LoadCursorA(0, IDC_ARROW);
-    wca.lpszClassName = m_ClassName.Data();
-    REV_DEBUG_RESULT(RegisterClassA(&wca));
-
-    sizeof(StaticString<128>);
+    WNDCLASSEXA wcexa   = {0};
+    wcexa.cbSize        = sizeof(WNDCLASSEXA);
+    wcexa.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
+    wcexa.lpfnWndProc   = WindowProc;
+    wcexa.hInstance     = m_Instance;
+    wcexa.hCursor       = LoadCursorA(0, IDC_ARROW);
+    wcexa.lpszClassName = m_ClassName.Data();
+    REV_DEBUG_RESULT(RegisterClassExA(&wcexa));
 
     s32 width  = m_XYWH.z;
     s32 height = m_XYWH.w;
@@ -51,7 +50,7 @@ Window::Window(const Logger&            logger,
         }
     }
 
-    REV_DEBUG_RESULT(m_Handle = CreateWindowA(wca.lpszClassName, m_Title.Data(), WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wca.hInstance, 0));
+    REV_DEBUG_RESULT(m_Handle  = CreateWindowExA(0, wcexa.lpszClassName, m_Title.Data(), WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wcexa.hInstance, 0));
     REV_DEBUG_RESULT(m_Context = GetDC(m_Handle));
 
     m_Logger.LogSuccess("Window \"%s\" has been created", m_Title.Data());
@@ -180,7 +179,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             if (GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &bytes, sizeof(RAWINPUTHEADER)) == bytes
             &&  raw_input->header.dwType == RIM_TYPEMOUSE)
             {
-                Input::Get()->m_Mouse.UpdateState(raw_input->data.mouse);
+                Input::Get()->m_Mouse.Update(raw_input->data.mouse);
             }
 
             result = DefWindowProcA(handle, message, wparam, lparam);

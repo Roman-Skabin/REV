@@ -17,6 +17,7 @@ namespace REV::D3D12
         VERTEX_BUFFER,
         INDEX_BUFFER,
         CONSTANT_BUFFER,
+        RW_BUFFER        // @TODO(Roman): ...
     };
 
     struct Buffer final
@@ -101,18 +102,18 @@ namespace REV::D3D12
         DescHeapMemory& operator=(DescHeapMemory&& other) noexcept { desc_heaps = RTTI::move(other.desc_heaps); return *this; }
     };
 
-    class REV_API MemoryManager final
+    class MemoryManager final
     {
     public:
         MemoryManager(Allocator *allocator);
         ~MemoryManager();
 
-        u64 AllocateVertexBuffer(u32 vertex_count, u32 vertex_stride, const StaticString<64>& name = null);
+        u64 AllocateVertexBuffer(u32 vertex_count, const StaticString<64>& name = null);
         u64 AllocateIndexBuffer(u32 index_count, const StaticString<64>& name = null);
         u64 AllocateConstantBuffer(u32 bytes, const StaticString<64>& name);
 
         void SetBufferData(const Buffer& buffer, const void *data);
-        void SetBufferDataImmediate(const Buffer& buffer, const void *data);
+        void SetBufferDataImmediately(const Buffer& buffer, const void *data);
 
         void StartImmediateExecution();
         void EndImmediateExecution();
@@ -139,8 +140,6 @@ namespace REV::D3D12
         Texture&  GetTexture(u64 index)  { return m_TextureMemory.textures[index];    }
         DescHeap& GetDescHeap(u64 index) { return m_DescHeapMemory.desc_heaps[index]; }
 
-        MemoryManager& operator=(MemoryManager&& other) noexcept;
-
     private:
         void CreateNewPage(D3D12_RESOURCE_STATES initial_state);
 
@@ -154,6 +153,7 @@ namespace REV::D3D12
         MemoryManager(MemoryManager&&)      = delete;
 
         MemoryManager& operator=(const MemoryManager&) = delete;
+        MemoryManager& operator=(MemoryManager&&)      = delete;
 
     private:
         ID3D12CommandAllocator    *m_CommandAllocator;

@@ -15,10 +15,7 @@ namespace REV
     class REV_API Window final
     {
     public:
-        Window(const Logger&            logger,
-               const StaticString<128>& title,
-               Math::v4s                xywh = REV_S32_MIN
-        );
+        Window(const Logger& logger, const StaticString<128>& title, Math::v4s xywh = REV_S32_MIN);
 
         ~Window();
 
@@ -31,17 +28,17 @@ namespace REV
 
         void SetTitle(const StaticString<128>& new_title);
 
-        constexpr const HWND               Handle()   const { return m_Handle;  }
-        constexpr const StaticString<128>& Title()    const { return m_Title;   }
-        constexpr const Math::v2s&         Position() const { return m_XYWH.xy; }
-        constexpr const Math::v2s&         Size()     const { return m_XYWH.wh; }
-        constexpr const Math::v4s&         XYWH()     const { return m_XYWH;    }
+        REV_INLINE const HWND               Handle()   const { return m_Handle;  }
+        REV_INLINE const StaticString<128>& Title()    const { return m_Title;   }
+        REV_INLINE const Math::v2s&         Position() const { return m_XYWH.xy; }
+        REV_INLINE const Math::v2s&         Size()     const { return m_XYWH.wh; }
+        REV_INLINE const Math::v4s&         XYWH()     const { return m_XYWH;    }
 
-        constexpr bool Closed()       const { return m_Closed;       }
-        constexpr bool Moved()        const { return m_Moved;        }
-        constexpr bool Resized()      const { return m_Resized;      }
-        constexpr bool Fullscreened() const { return m_Fullscreened; }
-        constexpr bool Minimized()    const { return m_Minimized;    }
+        REV_INLINE bool Closed()       const { return m_Closed;       }
+        REV_INLINE bool Moved()        const { return m_Moved;        }
+        REV_INLINE bool Resized()      const { return m_Resized;      }
+        REV_INLINE bool Fullscreened() const { return m_Fullscreened; }
+        REV_INLINE bool Minimized()    const { return m_Minimized;    }
 
     private:
         void ApplyFullscreenRequest();

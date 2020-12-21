@@ -10,20 +10,20 @@
 namespace REV::GPU
 {
 
-ResourceHandle MemoryManager::AllocateVertexBuffer(u32 vertex_count, u32 vertex_stride, const StaticString<64>& name)
+ResourceHandle MemoryManager::AllocateVertexBuffer(u32 vertex_count, const StaticString<64>& name)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
-            return ResourceHandle(cast<D3D12::MemoryManager *>(platform)->AllocateVertexBuffer(vertex_count, vertex_stride, name), RESOURCE_KIND::VB);
+            return { cast<D3D12::MemoryManager *>(platform)->AllocateVertexBuffer(vertex_count, name), RESOURCE_KIND::VB };
         } break;
 
         case GraphicsAPI::API::VULKAN:
         {
         } break;
     }
-    return ResourceHandle(REV_U64_MAX, RESOURCE_KIND::VB);
+    return { REV_U64_MAX, RESOURCE_KIND::VB };
 }
 
 ResourceHandle MemoryManager::AllocateIndexBuffer(u32 index_count, const StaticString<64>& name)
@@ -32,14 +32,14 @@ ResourceHandle MemoryManager::AllocateIndexBuffer(u32 index_count, const StaticS
     {
         case GraphicsAPI::API::D3D12:
         {
-            return ResourceHandle(cast<D3D12::MemoryManager *>(platform)->AllocateIndexBuffer(index_count, name), RESOURCE_KIND::IB);
+            return { cast<D3D12::MemoryManager *>(platform)->AllocateIndexBuffer(index_count, name), RESOURCE_KIND::IB };
         } break;
 
         case GraphicsAPI::API::VULKAN:
         {
         } break;
     }
-    return ResourceHandle(REV_U64_MAX, RESOURCE_KIND::IB);
+    return { REV_U64_MAX, RESOURCE_KIND::IB };
 }
 
 ResourceHandle MemoryManager::AllocateConstantBuffer(u32 bytes, const StaticString<64>& name)
@@ -48,17 +48,17 @@ ResourceHandle MemoryManager::AllocateConstantBuffer(u32 bytes, const StaticStri
     {
         case GraphicsAPI::API::D3D12:
         {
-            return ResourceHandle(cast<D3D12::MemoryManager *>(platform)->AllocateConstantBuffer(bytes, name), RESOURCE_KIND::CB);
+            return { cast<D3D12::MemoryManager *>(platform)->AllocateConstantBuffer(bytes, name), RESOURCE_KIND::CB };
         } break;
 
         case GraphicsAPI::API::VULKAN:
         {
         } break;
     }
-    return ResourceHandle(REV_U64_MAX, RESOURCE_KIND::CB);
+    return { REV_U64_MAX, RESOURCE_KIND::CB };
 }
 
-void MemoryManager::SetResoucreData(ResourceHandle resource, const void *data)
+void MemoryManager::SetResourceData(ResourceHandle resource, const void *data)
 {
     switch (GraphicsAPI::GetAPI())
     {
@@ -91,7 +91,7 @@ void MemoryManager::SetResoucreData(ResourceHandle resource, const void *data)
     }
 }
 
-void MemoryManager::SetResourceDataImmediate(ResourceHandle resource, const void *data)
+void MemoryManager::SetResourceDataImmediately(ResourceHandle resource, const void *data)
 {
     switch (GraphicsAPI::GetAPI())
     {
@@ -105,7 +105,7 @@ void MemoryManager::SetResourceDataImmediate(ResourceHandle resource, const void
                 case RESOURCE_KIND::IB:
                 case RESOURCE_KIND::CB:
                 {
-                    memory_manager->SetBufferDataImmediate(memory_manager->GetBuffer(resource.index), data);
+                    memory_manager->SetBufferDataImmediately(memory_manager->GetBuffer(resource.index), data);
                 } break;
 
                 case RESOURCE_KIND::SR:

@@ -21,4 +21,6 @@ private:
 
 private:
     REV::Logger m_Logger;
+
+    DemoScene m_DemoScene;
 };

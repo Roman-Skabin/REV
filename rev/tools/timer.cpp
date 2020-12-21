@@ -37,12 +37,12 @@ Timer::Timer(const StaticString<256>& name)
 Timer::Timer(const Timer& other)
     : m_Name(other.m_Name)
 {
-    CopyMemory(this, &other, StructFieldOffset(Timer, m_Name));
+    CopyMemory(this, &other, REV_StructFieldOffset(Timer, m_Name));
 }
 
 Timer::~Timer()
 {
-    ZeroMemory(this, StructFieldOffset(Timer, m_Name));
+    ZeroMemory(this, REV_StructFieldOffset(Timer, m_Name));
 }
 
 void Timer::Tick()
@@ -88,7 +88,7 @@ Timer& Timer::operator=(const Timer& other)
 {
     if (this != &other)
     {
-        CopyMemory(this, &other, StructFieldOffset(Timer, m_Name));
+        CopyMemory(this, &other, REV_StructFieldOffset(Timer, m_Name));
         m_Name = other.m_Name;
     }
     return *this;

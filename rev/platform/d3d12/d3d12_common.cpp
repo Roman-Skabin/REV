@@ -115,7 +115,10 @@ bool CheckResultAndPrintMessages(HRESULT hr, Renderer *renderer)
 
 bool CheckResultAndPrintMessages(HRESULT hr)
 {
+#if REV_DEBUG
     return CheckResultAndPrintMessages(hr, cast<Renderer *>(GraphicsAPI::GetRenderer()));
+#endif
+    return true;
 }
 
 }

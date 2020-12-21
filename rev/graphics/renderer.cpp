@@ -7,7 +7,7 @@
 #include "graphics/graphics_api.h"
 #include "platform/d3d12/d3d12_renderer.h"
 
-namespace REV
+namespace REV::GPU
 {
 
 void Renderer::StartFrame()
@@ -84,6 +84,22 @@ void Renderer::WaitForGPU()
         {
         } break;
     }
+}
+
+bool Renderer::FrameStarted()
+{
+    switch (GraphicsAPI::GetAPI())
+    {
+        case GraphicsAPI::API::D3D12:
+        {
+            return cast<D3D12::Renderer *>(platform)->FrameStarted();
+        } break;
+
+        case GraphicsAPI::API::VULKAN:
+        {
+        } break;
+    }
+    return false;
 }
 
 void Renderer::SetFullscreenMode(bool set)

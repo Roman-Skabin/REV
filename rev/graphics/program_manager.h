@@ -8,7 +8,7 @@
 #include "graphics/memory_manager.h"
 #include "tools/static_string.hpp"
 
-class GraphicsAPI;
+namespace REV { class GraphicsAPI; }
 
 namespace REV::GPU
 {
@@ -28,8 +28,7 @@ namespace REV::GPU
         void BindVertexBuffer(GraphicsProgramHandle graphics_program, ResourceHandle resource_handle);
         void BindIndexBuffer(GraphicsProgramHandle graphics_program, ResourceHandle resource_handle);
 
-        void DrawVertices(GraphicsProgramHandle graphics_program);
-        void DrawIndices(GraphicsProgramHandle graphics_program);
+        void Draw(GraphicsProgramHandle graphics_program);
 
     private:
         ProgramManager()                      = delete;
@@ -45,6 +44,6 @@ namespace REV::GPU
         #pragma warning(suppress: 4200)
         byte platform[0];
 
-        friend GraphicsAPI;
+        friend class ::REV::GraphicsAPI;
     };
 }

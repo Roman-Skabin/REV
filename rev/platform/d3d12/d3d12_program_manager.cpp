@@ -25,7 +25,6 @@ GraphicsProgram& GraphicsProgram::operator=(GraphicsProgram&& other) noexcept
         signature       = other.signature;
         root_signature  = other.root_signature;
         pipeline_state  = other.pipeline_state;
-        vertex_buffer   = other.vertex_buffer;
         index_buffer    = other.index_buffer;
         bound_resources = RTTI::move(other.bound_resources);
         vertex_shader   = other.vertex_shader;
@@ -109,7 +108,6 @@ u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_wit
 
     AttachGraphicsShaders(graphics_program, file_with_shaders);
 
-    // @TODO(Roman): Parse shaders?
     // @CleanUp(Roman): Hardcoded.
 
     D3D12_ROOT_PARAMETER parameter;
@@ -126,13 +124,12 @@ u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_wit
     root_signature_desc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
     CreateRootSignature(graphics_program, root_signature_desc);
-    
+
     D3D12_INPUT_ELEMENT_DESC elements[] =
     {
-        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,                            D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-        { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-//      { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-//      { "NORMAL",   0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "NORMAL",   0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
     };
     D3D12_INPUT_LAYOUT_DESC input_layout;
     input_layout.pInputElementDescs = elements;
@@ -247,8 +244,6 @@ void ProgramManager::BindVertexBuffer(GraphicsProgram& graphics_program, GPU::Re
     vbv.StrideInBytes  = buffer.vstride;
 
     cast<Renderer *>(GraphicsAPI::GetRenderer())->CurrentGraphicsList()->IASetVertexBuffers(0, 1, &vbv);
-
-    graphics_program.vertex_buffer = resource_handle;
 }
 
 void ProgramManager::BindIndexBuffer(GraphicsProgram& graphics_program, GPU::ResourceHandle resource_handle)
@@ -268,30 +263,10 @@ void ProgramManager::BindIndexBuffer(GraphicsProgram& graphics_program, GPU::Res
     graphics_program.index_buffer = resource_handle;
 }
 
-void ProgramManager::DrawVertices(const GraphicsProgram& graphics_program)
-{
-    Buffer& buffer = cast<MemoryManager *>(GraphicsAPI::GetMemoryManager())->GetBuffer(graphics_program.vertex_buffer.index);
-    cast<Renderer *>(GraphicsAPI::GetRenderer())->CurrentGraphicsList()->DrawInstanced(buffer.vcount, 1, 0, 0);
-}
-
-void ProgramManager::DrawIndices(const GraphicsProgram& graphics_program)
+void ProgramManager::Draw(const GraphicsProgram& graphics_program)
 {
     Buffer& buffer = cast<MemoryManager *>(GraphicsAPI::GetMemoryManager())->GetBuffer(graphics_program.index_buffer.index);
     cast<Renderer *>(GraphicsAPI::GetRenderer())->CurrentGraphicsList()->DrawIndexedInstanced(buffer.icount, 1, 0, 0, 0);
-}
-
-ProgramManager& ProgramManager::operator=(ProgramManager&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_Allocator        = other.m_Allocator;
-        m_GraphicsPrograms = RTTI::move(other.m_GraphicsPrograms);
-        m_ComputePrograms  = RTTI::move(other.m_ComputePrograms);
-        m_Logger           = RTTI::move(other.m_Logger);
-
-        other.m_Allocator = null;
-    }
-    return *this;
 }
 
 void ProgramManager::AttachGraphicsShaders(GraphicsProgram *graphics_program, const StaticString<MAX_PATH>& file_with_shaders)
@@ -588,7 +563,7 @@ ID3DBlob *ProgramManager::CompileShader(const char *hlsl_code, u32 hlsl_code_len
 
     if (Failed(error))
     {
-        REV_FAILED_M("Shader compilation failure:\n\n%s", errors->GetBufferPointer());
+        REV_FAILED_M("Shader compilation failure:\n%s", errors->GetBufferPointer());
     }
 
     SafeRelease(errors);

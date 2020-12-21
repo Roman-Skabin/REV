@@ -22,23 +22,23 @@ namespace REV
         void Start();
         void Stop();
 
-        s64 TicksPerSecond() const { return m_TicksPerSecond; }
-        s64 InitialTicks()   const { return m_InitialTicks;   }
+        constexpr s64 TicksPerSecond() const { return m_TicksPerSecond; }
+        constexpr s64 InitialTicks()   const { return m_InitialTicks;   }
 
-        s64 Ticks()      const { return m_Ticks;      }
-        s64 DeltaTicks() const { return m_DeltaTicks; }
+        constexpr s64 Ticks()      const { return m_Ticks;      }
+        constexpr s64 DeltaTicks() const { return m_DeltaTicks; }
 
-        s64 StopBegin()        const { return m_StopBegin;        }
-        s64 StopDuration()     const { return m_StopDuration;     }
-        s64 StopLastDuration() const { return m_StopLastDuration; }
+        constexpr s64 StopBegin()        const { return m_StopBegin;        }
+        constexpr s64 StopDuration()     const { return m_StopDuration;     }
+        constexpr s64 StopLastDuration() const { return m_StopLastDuration; }
 
-        f32 Seconds()      const { return m_Seconds;      }
-        f32 DeltaSeconds() const { return m_DeltaSeconds; }
-        f32 TotalSeconds() const { return m_TotalSeconds; }
+        constexpr f32 Seconds()      const { return m_Seconds;      }
+        constexpr f32 DeltaSeconds() const { return m_DeltaSeconds; }
+        constexpr f32 TotalSeconds() const { return m_TotalSeconds; }
 
-        bool Stopped() const { return m_Stopped; }
+        constexpr bool Stopped() const { return m_Stopped; }
 
-        const StaticString<256>& Name() const { return m_Name; }
+        constexpr const StaticString<256>& Name() const { return m_Name; }
 
         Timer& operator=(const Timer& other);
 
@@ -77,23 +77,23 @@ namespace REV
 
         void StopProfiling(const Logger& logger);
 
-        s64 TicksPerSecond() const { return m_Timer.m_TicksPerSecond; }
-        s64 InitialTicks()   const { return m_Timer.m_InitialTicks;   }
+        constexpr s64 TicksPerSecond() const { return m_Timer.m_TicksPerSecond; }
+        constexpr s64 InitialTicks()   const { return m_Timer.m_InitialTicks;   }
 
-        s64 Ticks()      const { return m_Timer.m_Ticks;      }
-        s64 DeltaTicks() const { return m_Timer.m_DeltaTicks; }
+        constexpr s64 Ticks()      const { return m_Timer.m_Ticks;      }
+        constexpr s64 DeltaTicks() const { return m_Timer.m_DeltaTicks; }
 
-        s64 StopBegin()        const { return m_Timer.m_StopBegin;        }
-        s64 StopDuration()     const { return m_Timer.m_StopDuration;     }
-        s64 StopLastDuration() const { return m_Timer.m_StopLastDuration; }
+        constexpr s64 StopBegin()        const { return m_Timer.m_StopBegin;        }
+        constexpr s64 StopDuration()     const { return m_Timer.m_StopDuration;     }
+        constexpr s64 StopLastDuration() const { return m_Timer.m_StopLastDuration; }
 
-        f32 Seconds()      const { return m_Timer.m_Seconds;      }
-        f32 DeltaSeconds() const { return m_Timer.m_DeltaSeconds; }
-        f32 TotalSeconds() const { return m_Timer.m_TotalSeconds; }
+        constexpr f32 Seconds()      const { return m_Timer.m_Seconds;      }
+        constexpr f32 DeltaSeconds() const { return m_Timer.m_DeltaSeconds; }
+        constexpr f32 TotalSeconds() const { return m_Timer.m_TotalSeconds; }
 
-        bool Stopped() const { return m_Timer.m_Stopped; }
+        constexpr bool Stopped() const { return m_Timer.m_Stopped; }
 
-        const StaticString<256>& Name() const { return m_Timer.m_Name; }
+        constexpr const StaticString<256>& Name() const { return m_Timer.m_Name; }
 
     private:
         ProfilingTimer(const ProfilingTimer&)            = delete;

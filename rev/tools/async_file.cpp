@@ -83,7 +83,7 @@ AsyncFile::AsyncFile(const AsyncFile& other)
 
 AsyncFile::AsyncFile(AsyncFile&& other) noexcept
 {
-    CopyMemory(this, &other, StructFieldOffset(AsyncFile, m_Name));
+    CopyMemory(this, &other, REV_StructFieldOffset(AsyncFile, m_Name));
     m_Name = other.m_Name;
 
     m_Handle            = null;
@@ -104,7 +104,7 @@ AsyncFile::~AsyncFile()
         REV_DEBUG_RESULT(CloseHandle(m_Overlapped.hEvent));
     }
 
-    ZeroMemory(this, StructFieldOffset(AsyncFile, m_Name));
+    ZeroMemory(this, REV_StructFieldOffset(AsyncFile, m_Name));
 }
 
 void AsyncFile::Clear()
@@ -261,7 +261,7 @@ AsyncFile& AsyncFile::operator=(AsyncFile&& other) noexcept
 {
     if (this != &other)
     {
-        CopyMemory(this, &other, StructFieldOffset(AsyncFile, m_Name));
+        CopyMemory(this, &other, REV_StructFieldOffset(AsyncFile, m_Name));
         m_Name = other.m_Name;
 
         m_Handle            = null;
@@ -277,7 +277,7 @@ void WINAPI OverlappedReadCompletionRoutine(
 {
     // @Important(Roman): NOT SAFETY!!!
     AsyncFile *file = cast<AsyncFile *>(cast<byte *>(overlapped)
-                    - StructFieldOffset(AsyncFile, m_Overlapped));
+                    - REV_StructFieldOffset(AsyncFile, m_Overlapped));
 
     file->m_Offset += bytes_transfered;
 
@@ -291,7 +291,7 @@ void WINAPI OverlappedWriteCompletionRoutine(
 {
     // @Important(Roman): NOT SAFETY!!!
     AsyncFile *file = cast<AsyncFile *>(cast<byte *>(overlapped)
-                    - StructFieldOffset(AsyncFile, m_Overlapped));
+                    - REV_StructFieldOffset(AsyncFile, m_Overlapped));
 
     file->m_Offset += bytes_transfered;
 

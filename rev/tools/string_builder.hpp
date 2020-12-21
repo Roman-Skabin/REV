@@ -52,7 +52,7 @@ template<typename Allocator_t = Allocator>
 class StringBuilder final
 {
 public:
-    StringBuilder(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT)
+    REV_INLINE explicit StringBuilder(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT)
         : Base(BASE::DEC),
           Width(0),
           Precision(0),
@@ -64,7 +64,7 @@ public:
     {
     }
 
-    StringBuilder(const String<Allocator_t>& string)
+    REV_INLINE StringBuilder(const String<Allocator_t>& string)
         : Base(BASE::DEC),
           Width(0),
           Precision(0),
@@ -76,7 +76,7 @@ public:
     {
     }
 
-    StringBuilder(String<Allocator_t>&& string)
+    REV_INLINE StringBuilder(String<Allocator_t>&& string)
         : Base(BASE::DEC),
           Width(0),
           Precision(0),
@@ -88,7 +88,7 @@ public:
     {
     }
 
-    StringBuilder(const StringBuilder& other)
+    REV_INLINE StringBuilder(const StringBuilder& other)
         : Base(other.Base),
           Width(other.Width),
           Precision(other.Precision),
@@ -100,7 +100,7 @@ public:
     {
     }
 
-    StringBuilder(StringBuilder&& other)
+    REV_INLINE StringBuilder(StringBuilder&& other)
         : Base(other.Base),
           Width(other.Width),
           Precision(other.Precision),
@@ -112,12 +112,12 @@ public:
     {
     }
 
-    ~StringBuilder()
+    REV_INLINE ~StringBuilder()
     {
     }
 
-    constexpr const String<Allocator_t>& ToString() const { return m_String; }
-    constexpr       String<Allocator_t>& ToString()       { return m_String; }
+    REV_INLINE  const String<Allocator_t>& ToString() const { return m_String; }
+    REV_INLINE        String<Allocator_t>& ToString()       { return m_String; }
 
     template<typename ...Args>
     void Build(const Args&... args)
@@ -145,12 +145,12 @@ public:
         ForceSign     = false;
     }
 
-    void Clear()
+    REV_INLINE void Clear()
     {
         m_String.Clear();
     }
 
-    StringBuilder& operator=(const StringBuilder& other)
+    REV_INLINE StringBuilder& operator=(const StringBuilder& other)
     {
         if (this != &other)
         {
@@ -166,7 +166,7 @@ public:
         return *this;
     }
 
-    StringBuilder& operator=(StringBuilder&& other)
+    REV_INLINE StringBuilder& operator=(StringBuilder&& other)
     {
         if (this != &other)
         {
@@ -184,7 +184,7 @@ public:
 
 private:
     template<typename T>
-    void BuildOne(const T& arg)
+    REV_INLINE void BuildOne(const T& arg)
     {
         if constexpr (RTTI::is_trivially_buildable_v<T>)
         {
@@ -411,7 +411,7 @@ private:
     }
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_vec_v<T>>>
-    void __vectorcall ParseVec(char *buffer, T val)
+    void REV_VECTORCALL ParseVec(char *buffer, T val)
     {
         if constexpr (RTTI::is_same_v<T, Math::v2>)
         {
@@ -522,7 +522,7 @@ private:
     }
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_mat_v<T>>>
-    void __vectorcall ParseMat(char *buffer, T val)
+    void REV_VECTORCALL ParseMat(char *buffer, T val)
     {
         if constexpr (RTTI::is_same_v<T, Math::m2>)
         {

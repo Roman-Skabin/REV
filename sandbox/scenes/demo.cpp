@@ -1,21 +1,11 @@
 #include "scenes/demo.h"
 #include "application.h"
-#include "math/color.h"
 #include "tools/static_string_builder.hpp"
 
-DemoScene::DemoScene()
-    : Scene(REV::ConstString("DemoScene", REV_CSTRLEN("DemoScene"))),
-      m_GraphicsProgram(REV::GraphicsAPI::GetProgramManager()->CreateGraphicsProgram("../sandbox/assets/shaders/demo_shaders.hlsl")),
-      m_VertexBuffer(),
-      m_IndexBuffer(),
+DemoScene::DemoScene(REV::Allocator *allocator)
+    : SceneBase(allocator, "DemoScene", "../sandbox/assets/shaders/demo_shaders.hlsl", 1024, 36*1024),
       m_ConstantBuffer(),
-      m_VertexData{{ REV::Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), REV::Math::Color::g_RedA1    },
-                   { REV::Math::v4(-0.5f,  0.5f, 0.5f, 1.0f), REV::Math::Color::g_GreenA1  },
-                   { REV::Math::v4( 0.5f,  0.5f, 0.5f, 1.0f), REV::Math::Color::g_BlueA1   },
-                   { REV::Math::v4( 0.5f, -0.5f, 0.5f, 1.0f), REV::Math::Color::g_YellowA1 }},
-      m_IndexData{0, 1, 2,
-                  0, 2, 3},
-      m_CBufferData{REV::Math::m4::identity()},
+      m_CBufferData{ REV::Math::m4::identity(), REV::Math::v4(252.0f, 212.0f, 64.0f, 255.0f) / REV::Math::v4(255.0f), REV::Math::v3() },
       m_Translation(REV::Math::m4::identity()),
       m_OriginalWindowTitle(REV::Application::Get()->GetWindow().Title())
 {
@@ -29,25 +19,40 @@ void DemoScene::OnSetCurrent()
 {
     REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
     {
-        m_VertexBuffer   = gpu_memory_manager->AllocateVertexBuffer(REV::cast<REV::u32>(REV::ArrayCount(m_VertexData)), sizeof(Vertex));
-        m_IndexBuffer    = gpu_memory_manager->AllocateIndexBuffer(REV::cast<REV::u32>(REV::ArrayCount(m_IndexData)));
-        m_ConstantBuffer = gpu_memory_manager->AllocateConstantBuffer(sizeof(CBufferData), REV::StaticString<64>("MVPMatrix", REV_CSTRLEN("MVPMatrix")));
+        m_ConstantBuffer = gpu_memory_manager->AllocateConstantBuffer(sizeof(m_CBufferData), REV::StaticString<64>("CB_DemoScene", REV_CSTRLEN("CB_DemoScene")));
     }
-
-    gpu_memory_manager->StartImmediateExecution();
-    {
-        gpu_memory_manager->SetResourceDataImmediate(m_VertexBuffer, m_VertexData);
-        gpu_memory_manager->SetResourceDataImmediate(m_IndexBuffer, m_IndexData);
-        gpu_memory_manager->SetResourceDataImmediate(m_ConstantBuffer, &m_CBufferData);
-    }
-    gpu_memory_manager->EndImmediateExecution();
-
     REV::GraphicsAPI::GetProgramManager()->AttachResource(m_GraphicsProgram, m_ConstantBuffer);
+
+    REV::Vertex vertices[] =
+    {
+        { REV::Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
+        { REV::Math::v4(-0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
+        { REV::Math::v4( 0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
+        { REV::Math::v4( 0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
+    };
+    REV::Index indices[] =
+    {
+        0, 1, 2,
+        0, 2, 3
+    };
+
+    m_Rect.allocator = m_Allocator;
+    m_Rect.Create(REV::ArrayCount(vertices), REV::ArrayCount(indices));
+    CopyMemory(m_Rect.vertices, vertices, sizeof(vertices));
+    CopyMemory(m_Rect.indices, indices, sizeof(indices));
 }
 
 void DemoScene::OnUnsetCurrent()
 {
-    REV::GraphicsAPI::GetMemoryManager()->FreeMemory();
+    m_Rect.Destroy();
+}
+
+void DemoScene::OnSetResourcesData()
+{
+    REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
+    {
+        gpu_memory_manager->SetResourceData(m_ConstantBuffer, &m_CBufferData); 
+    }
 }
 
 void DemoScene::OnUpdate()
@@ -77,10 +82,10 @@ void DemoScene::OnUpdate()
     }
     else if (keyboard[REV::KEY::V].Pressed())
     {
-        REV::Renderer *renderer = REV::GraphicsAPI::GetRenderer();
+        REV::GPU::Renderer *renderer = REV::GraphicsAPI::GetRenderer();
         renderer->SetVSync(!renderer->VSyncEnabled());
     }
-    
+
     REV::Math::v4 translation;
 
     if (keyboard[REV::KEY::LEFT].Down())
@@ -102,19 +107,8 @@ void DemoScene::OnUpdate()
 
     m_Translation *= REV::Math::m4::translation(translation);
 
-    m_CBufferData.MVP = m_Translation * REV::Math::m4::rotation_z(timer.Seconds());
+    m_CBufferData.mvp    = m_Translation * REV::Math::m4::rotation_z(timer.Seconds());
+    m_CBufferData.center = (m_CBufferData.mvp * ((m_Rect.vertices[0].position + m_Rect.vertices[2].position) / 2.0f)).xyz;
 
-    REV::Math::v4 center = m_CBufferData.MVP * ((m_VertexData[0].pos + m_VertexData[2].pos) / 2.0f);
-    m_CBufferData.center = center.xyz;
-
-    {
-        REV::GraphicsAPI::GetMemoryManager()->SetResoucreData(m_ConstantBuffer, &m_CBufferData);
-
-        REV::GPU::ProgramManager *program_manager = REV::GraphicsAPI::GetProgramManager();
-        program_manager->SetCurrentGraphicsProgram(m_GraphicsProgram);
-
-        program_manager->BindVertexBuffer(m_GraphicsProgram, m_VertexBuffer);
-        program_manager->BindIndexBuffer(m_GraphicsProgram, m_IndexBuffer);
-        program_manager->DrawIndices(m_GraphicsProgram);
-    }
+    SubmitEntity(&m_Rect);
 }

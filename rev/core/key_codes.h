@@ -4,11 +4,13 @@
 
 #pragma once
 
-#undef DELETE
+#if REV_PLATFORM_WIN64
+    #undef DELETE
+#endif
 
 namespace REV
 {
-    enum class KEY : unsigned short
+    enum class KEY
     {
         FIRST       = 0x08,
     
@@ -146,7 +148,7 @@ namespace REV
         OEM_7       = 0xDE, // ['"] for US
         OEM_8       = 0xDF,
         OEM_102     = 0xE2, // [<>] or [\|] on RT 102-key kbd.
-    
+
         LAST        = 0xFF,
         MAX
     };

@@ -17,13 +17,13 @@ class StaticString final
 public:
     static constexpr u64 npos = REV_U64_MAX;
 
-    StaticString()
+    REV_INLINE StaticString()
         : m_Length(0)
     {
         memset_char(m_Data, '\0', aligned_capacity);
     }
 
-    StaticString(nullptr_t)
+    REV_INLINE StaticString(nullptr_t)
         : m_Length(0)
     {
         memset_char(m_Data, '\0', aligned_capacity);
@@ -79,43 +79,43 @@ public:
         memset_char(m_Data + m_Length, '\0', aligned_capacity - m_Length);
     }
 
-    ~StaticString()
+    REV_INLINE ~StaticString()
     {
     }
 
-    constexpr u64 Length() const { return m_Length; }
+    REV_INLINE u64 Length() const { return m_Length; }
 
-    constexpr const char *Data() const { return m_Data; }
-    constexpr       char *Data()       { return m_Data; }
+    REV_INLINE const char *Data() const { return m_Data; }
+    REV_INLINE       char *Data()       { return m_Data; }
 
-    constexpr const StaticString& ToString() const { return *this; }
-    constexpr       StaticString& ToString()       { return *this; }
+    REV_INLINE const StaticString& ToString() const { return *this; }
+    REV_INLINE       StaticString& ToString()       { return *this; }
 
-    constexpr bool Empty() const { return !m_Length; }
+    REV_INLINE bool Empty() const { return !m_Length; }
 
-    constexpr const char *begin()   const { return m_Data;            }
-    constexpr const char *cbegin()  const { return m_Data;            }
-    constexpr const char *rbegin()  const { return m_Data + m_Length; }
-    constexpr const char *crbegin() const { return m_Data + m_Length; }
+    REV_INLINE const char *begin()   const { return m_Data;            }
+    REV_INLINE const char *cbegin()  const { return m_Data;            }
+    REV_INLINE const char *rbegin()  const { return m_Data + m_Length; }
+    REV_INLINE const char *crbegin() const { return m_Data + m_Length; }
 
-    constexpr const char *end()   const { return m_Data + m_Length; }
-    constexpr const char *cend()  const { return m_Data + m_Length; }
-    constexpr const char *rend()  const { return m_Data;            }
-    constexpr const char *crend() const { return m_Data;            }
+    REV_INLINE const char *end()   const { return m_Data + m_Length; }
+    REV_INLINE const char *cend()  const { return m_Data + m_Length; }
+    REV_INLINE const char *rend()  const { return m_Data;            }
+    REV_INLINE const char *crend() const { return m_Data;            }
 
-    constexpr char *begin()  { return m_Data;            }
-    constexpr char *rbegin() { return m_Data + m_Length; }
+    REV_INLINE char *begin()  { return m_Data;            }
+    REV_INLINE char *rbegin() { return m_Data + m_Length; }
 
-    constexpr char *end()  { return m_Data + m_Length; }
-    constexpr char *rend() { return m_Data;            }
+    REV_INLINE char *end()  { return m_Data + m_Length; }
+    REV_INLINE char *rend() { return m_Data;            }
 
-    constexpr char First() const { return *m_Data;              }
-    constexpr char Last()  const { return m_Data[m_Length - 1]; }
+    REV_INLINE char First() const { return *m_Data;              }
+    REV_INLINE char Last()  const { return m_Data[m_Length - 1]; }
 
-    constexpr char& First() { return *m_Data;              }
-    constexpr char& Last()  { return m_Data[m_Length - 1]; }
+    REV_INLINE char& First() { return *m_Data;              }
+    REV_INLINE char& Last()  { return m_Data[m_Length - 1]; }
 
-    void Clear()
+    REV_INLINE void Clear()
     {
         memset_char(m_Data, '\0', m_Length);
         m_Length = 0;
@@ -176,23 +176,23 @@ public:
         return 0;
     }
 
-    bool Equals(const char *cstring) const
+    REV_INLINE bool Equals(const char *cstring) const
     {
         return m_Length == strlen(cstring) && !Compare(cstring);
     }
 
-    bool Equals(const char *cstring, u64 length) const
+    REV_INLINE bool Equals(const char *cstring, u64 length) const
     {
         return m_Length == length && !Compare(cstring);
     }
 
-    bool Equals(const ConstString& const_string) const
+    REV_INLINE bool Equals(const ConstString& const_string) const
     {
         return m_Length == const_string.Length() && !Compare(const_string);
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    bool Equals(const StaticString<other_capacity, other_aligned_capacity>& static_string) const
+    REV_INLINE bool Equals(const StaticString<other_capacity, other_aligned_capacity>& static_string) const
     {
         if constexpr (aligned_capacity == 16 && other_aligned_capacity == 16)
         {
@@ -354,28 +354,28 @@ public:
         return *this;
     }
 
-    StaticString& Replace(u64 from, u64 to, char symbol, u64 count = 1)
+    REV_INLINE StaticString& Replace(u64 from, u64 to, char symbol, u64 count = 1)
     {
         Erase(from, to);
         Insert(from, symbol, count);
         return *this;
     }
 
-    StaticString& Replace(u64 from, u64 to, const char *cstring)
+    REV_INLINE StaticString& Replace(u64 from, u64 to, const char *cstring)
     {
         Erase(from, to);
         Insert(from, cstring);
         return *this;
     }
 
-    StaticString& Replace(u64 from, u64 to, const char *cstring, u64 length)
+    REV_INLINE StaticString& Replace(u64 from, u64 to, const char *cstring, u64 length)
     {
         Erase(from, to);
         Insert(from, cstring, length);
         return *this;
     }
 
-    StaticString& Replace(u64 from, u64 to, const ConstString& const_string)
+    REV_INLINE StaticString& Replace(u64 from, u64 to, const ConstString& const_string)
     {
         Erase(from, to);
         Insert(from, const_string);
@@ -383,66 +383,66 @@ public:
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    StaticString& Replace(u64 from, u64 to, const StaticString<other_capacity, other_aligned_capacity>& static_string)
+    REV_INLINE StaticString& Replace(u64 from, u64 to, const StaticString<other_capacity, other_aligned_capacity>& static_string)
     {
         Erase(from, to);
         Insert(from, static_string);
         return *this;
     }
 
-    StaticString& PushFront(char symbol, u64 count = 1)
+    REV_INLINE StaticString& PushFront(char symbol, u64 count = 1)
     {
         return Insert(0, symbol, count);
     }
 
-    StaticString& PushFront(const char *cstring)
+    REV_INLINE StaticString& PushFront(const char *cstring)
     {
         return Insert(0, cstring);
     }
 
-    StaticString& PushFront(const char *cstring, u64 length)
+    REV_INLINE StaticString& PushFront(const char *cstring, u64 length)
     {
         return Insert(0, cstring, length);
     }
 
-    StaticString& PushFront(const ConstString& const_string)
+    REV_INLINE StaticString& PushFront(const ConstString& const_string)
     {
         return Insert(0, const_string);
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    StaticString& PushFront(const StaticString<other_capacity, other_aligned_capacity>& static_string)
+    REV_INLINE StaticString& PushFront(const StaticString<other_capacity, other_aligned_capacity>& static_string)
     {
         return Insert(0, static_string);
     }
 
-    StaticString& PushBack(char symbol, u64 count = 1)
+    REV_INLINE StaticString& PushBack(char symbol, u64 count = 1)
     {
         return Insert(m_Length, symbol, count);
     }
 
-    StaticString& PushBack(const char *cstring)
+    REV_INLINE StaticString& PushBack(const char *cstring)
     {
         return Insert(m_Length, cstring);
     }
 
-    StaticString& PushBack(const char *cstring, u64 length)
+    REV_INLINE StaticString& PushBack(const char *cstring, u64 length)
     {
         return Insert(m_Length, cstring, length);
     }
 
-    StaticString& PushBack(const ConstString& const_string)
+    REV_INLINE StaticString& PushBack(const ConstString& const_string)
     {
         return Insert(m_Length, const_string);
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    StaticString& PushBack(const StaticString<other_capacity, other_aligned_capacity>& static_string)
+    REV_INLINE StaticString& PushBack(const StaticString<other_capacity, other_aligned_capacity>& static_string)
     {
         return Insert(m_Length, static_string);
     }
 
-    StaticString SubString(u64 from) const
+    REV_INLINE StaticString SubString(u64 from) const
     {
         REV_CHECK_M(from <= m_Length, "Bad arguments: from = %I64u, length = %I64u", from, m_Length);
         if (from == 0)
@@ -459,7 +459,7 @@ public:
         }
     }
 
-    StaticString SubString(u64 from, u64 to) const
+    REV_INLINE StaticString SubString(u64 from, u64 to) const
     {
         REV_CHECK_M(from <= to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
         if (from == 0 && to == m_Length)
@@ -637,14 +637,14 @@ public:
         return npos;
     }
 
-    StaticString& operator=(nullptr_t)
+    REV_INLINE StaticString& operator=(nullptr_t)
     {
         memset_char(m_Data, '\0', m_Length);
         m_Length = 0;
         return *this;
     }
 
-    StaticString& operator=(char symbol)
+    REV_INLINE StaticString& operator=(char symbol)
     {
         memset_char(m_Data + 1, '\0', m_Length - 1);
         m_Length = 1;
@@ -707,34 +707,34 @@ public:
         return *this;
     }
 
-    StaticString& operator+=(char right)
+    REV_INLINE StaticString& operator+=(char right)
     {
         return PushBack(right);
     }
 
-    StaticString& operator+=(const char *right)
+    REV_INLINE StaticString& operator+=(const char *right)
     {
         return PushBack(right);
     }
 
-    StaticString& operator+=(const ConstString& right)
+    REV_INLINE StaticString& operator+=(const ConstString& right)
     {
         return PushBack(right);
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    StaticString& operator+=(const StaticString<other_capacity, other_aligned_capacity>& right)
+    REV_INLINE StaticString& operator+=(const StaticString<other_capacity, other_aligned_capacity>& right)
     {
         return PushBack(right);
     }
 
-    char operator[](u64 index) const
+    REV_INLINE char operator[](u64 index) const
     {
         REV_CHECK_M(index < m_Length, "Index of bound, max allowed is %I64u", m_Length - 1);
         return m_Data[index];
     }
 
-    char& operator[](u64 index)
+    REV_INLINE char& operator[](u64 index)
     {
         REV_CHECK_M(index < m_Length, "Index of bound, max allowed is %I64u", m_Length - 1);
         return m_Data[index];

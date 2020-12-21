@@ -61,9 +61,9 @@ namespace REV
 
         void SetOffset(u32 offset);
 
-        constexpr       u32                     Offset() const { return m_Offset; }
-        constexpr       u32                     Size()   const { return m_Size;   }
-        constexpr const StaticString<MAX_PATH>& Name()   const { return m_Name;   }
+        REV_INLINE       u32                     Offset() const { return m_Offset; }
+        REV_INLINE       u32                     Size()   const { return m_Size;   }
+        REV_INLINE const StaticString<MAX_PATH>& Name()   const { return m_Name;   }
 
         AsyncFile& operator=(const AsyncFile& other);
         AsyncFile& operator=(AsyncFile&& other) noexcept;
@@ -90,5 +90,5 @@ namespace REV
         StaticString<MAX_PATH> m_Name;
     };
 
-    ENUM_CLASS_OPERATORS(AsyncFile::FLAGS);
+    REV_ENUM_CLASS_OPERATORS(AsyncFile::FLAGS);
 }

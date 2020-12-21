@@ -4,101 +4,80 @@
 
 #pragma once
 
-#include "core/memory.h"
-#include "tools/array.hpp"
+#include "graphics/program_manager.h"
+#include "math/vec.h"
 #include "tools/const_string.h"
+#include "tools/static_string.hpp"
+#include "core/allocator.h"
 
 namespace REV
 {
-    class REV_API Scene
+    // @TODO(Roman): Better place for Vertex?
+    #pragma pack(push, 1)
+    struct REV_ALIGN(1) Vertex
     {
-    protected:
-        explicit Scene(const ConstString& name = ConstString("Scene", REV_CSTRLEN("Scene")))
-            : m_Name(name)
-        {}
+        Math::v4 position;
+        Math::v4 normal;
+        Math::v2 tex_coord;
+    };
+    #pragma pack(pop)
 
-        Scene(const Scene& other)     : m_Name(other.m_Name)             {}
-        Scene(Scene&& other) noexcept : m_Name(RTTI::move(other.m_Name)) {}
+    typedef u32 Index;
 
-        Scene& operator=(const Scene& other)     { m_Name = other.m_Name;             return *this; }
-        Scene& operator=(Scene&& other) noexcept { m_Name = RTTI::move(other.m_Name); return *this; }
+    // @Cleanup(Roman): Temporary
+    struct REV_API Entity
+    {
+        Vertex    *vertices;
+        u64        vcount;
+        Index     *indices;
+        u64        icount;
+        Allocator *allocator;
 
-    public:
-        virtual ~Scene() {}
-
-        void Destroy() { this->~Scene(); }
-
-        virtual void OnSetCurrent()   {}
-        virtual void OnUnsetCurrent() {}
-
-        virtual void OnUpdate() {}
-
-        constexpr const ConstString& GetName() const { return m_Name; }
-        constexpr       ConstString& GetName()       { return m_Name; }
-
-    protected:
-        ConstString m_Name;
+        void Create(u64 vcount, u64 icount);
+        void Destroy();
     };
 
-    class REV_API SceneManager final
+    class REV_API SceneBase
     {
-    public:
-        static SceneManager *Create(u64 capacity);
-        static SceneManager *Get();
-
-    private:
-        SceneManager(u64 capacity);
+    protected:
+        SceneBase(Allocator *allocator, const ConstString& name, const StaticString<MAX_PATH>& file_with_shaders, u64 max_vertices, u64 max_indices);
 
     public:
-        ~SceneManager();
+        virtual ~SceneBase() {}
 
-        template<typename SceneInstance, typename ...ConstructorArgs, typename = RTTI::enable_if_t<RTTI::is_base_of_v<Scene, SceneInstance>>>
-        Scene *PushScene(const ConstructorArgs&... args)
-        {
-            // @TODO(Roman): if (m_Scenes.size + sizeof(SceneInstance) > m_Scenes.cap) Grow();
-            REV_CHECK(m_Scenes.size + sizeof(SceneInstance) < m_Scenes.cap);
-            ArenaBlock *block = m_Scenes.base + m_Scenes.size;
-            block->size = sizeof(SceneInstance);
-            CopyMemory(block->scene, &SceneInstance(args...), block->size);
-            m_Scenes.size += StructFieldOffset(ArenaBlock, scene) + sizeof(SceneInstance);
-            return block->scene;
-        }
+        virtual void OnSetCurrent()   = 0;
+        virtual void OnUnsetCurrent() = 0;
 
-        void SetCurrentScene(Scene *scene);
+        virtual void OnSetResourcesData() = 0;
 
-        Scene *FindScene(const ConstString& name) const;
+        virtual void OnUpdate() = 0;
 
-        constexpr const Scene *CurrentScene() const { return m_CurrentScene; }
-        constexpr       Scene *CurrentScene()       { return m_CurrentScene; }
+        void OnSetCurrentEx();
+        void OnUnsetCurrentEx();
+
+        void SubmitEntity(Entity *entity);
+
+        void FlushBatch();
 
     private:
-        constexpr void *operator new(size_t)    { return Memory::Get()->PushToPA<SceneManager>(); }
-        constexpr void  operator delete(void *) {}
+        REV_DELETE_CONSTRS_AND_OPS(SceneBase);
+        SceneBase() = delete;
+    
+    protected:
+        ConstString                m_Name;
+        Allocator                 *m_Allocator;
 
-        SceneManager(const SceneManager&) = delete;
-        SceneManager(SceneManager&&)      = delete;
+        GPU::GraphicsProgramHandle m_GraphicsProgram;
+        GPU::ResourceHandle        m_VertexBuffer;
+        GPU::ResourceHandle        m_IndexBuffer;
 
-        SceneManager& operator=(const SceneManager&) = delete;
-        SceneManager& operator=(SceneManager&&)      = delete;
+        Vertex                    *m_Vertices;
+        u64                        m_VerticesCount;
+        const u64                  m_VerticesCapacity;
 
-    private:
-        struct ArenaBlock
-        {
-            u64   size;
-            #pragma warning(suppress: 4200)
-            Scene scene[0];
-        };
-
-        struct Arena
-        {
-            ArenaBlock *base = null;
-            u64         size = 0;
-            u64         cap  = 0;
-        };
-
-        Scene *m_CurrentScene;
-        Arena  m_Scenes;
-
-        static SceneManager *s_SceneManager;
+        Index                     *m_Indices;
+        u64                        m_IndicesCount;
+        const u64                  m_IndicesCapacity;
+        Index                      m_MaxIndex;
     };
 }

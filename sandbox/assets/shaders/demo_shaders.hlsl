@@ -1,30 +1,39 @@
 
-cbuffer MVPMatrix : register(b0, space0)
+cbuffer CB_DemoScene : register(b0, space0)
 {
     float4x4 cMVP;
-    float3 center;
+    float4   cSunColor;
+    float3   cCenter;
+};
+
+struct VSInput
+{
+    float4 position  : POSITION;
+    float4 normal    : NORMAL;
+    float2 tex_coord : TEXCOORD;
 };
 
 struct VSOutput
 {
-    float4 pos : SV_Position;
-    float4 col : COLOR;
-    float3 tex : TEXCOORD;
+    float4 position  : SV_Position;
+    float4 normal    : NORMAL;
+    float3 world_pos : TEXCOORD0;
+    float2 tex_coord : TEXCOORD1;
 };
+typedef VSOutput PSInput;
 
-VSOutput VSMain(float4 pos : POSITION, float4 col : COLOR)
+VSOutput VSMain(VSInput input)
 {
     VSOutput output;
-    output.pos    = mul(cMVP, pos);
-    output.col    = col;
-    output.tex    = output.pos;
+    output.position  = mul(cMVP, input.position);
+    output.normal    = input.normal;
+    output.world_pos = output.position.xyz;
+    output.tex_coord = input.tex_coord;
     return output;
 }
 
-float4 PSMain(VSOutput vs_output) : SV_Target
+float4 PSMain(PSInput input) : SV_Target
 {
-    float intense = 1.0f / (5*length(vs_output.tex - center));
-
-    // return intense * float4(1.0f, 0.0f, 0.0f, 1.0f);
-    return intense * vs_output.col;
+    float  intensity = 1.0f / (8 * length(input.world_pos - cCenter));
+    return intensity * cSunColor;
 }

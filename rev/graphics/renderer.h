@@ -8,6 +8,12 @@
 
 namespace REV
 {
+    class Window;
+    class GraphicsAPI;
+}
+
+namespace REV::GPU
+{
     class REV_API Renderer final
     {
     public:
@@ -18,6 +24,8 @@ namespace REV
         void SetVSync(bool enable);
 
         void WaitForGPU();
+
+        bool FrameStarted();
 
     private:
         void SetFullscreenMode(bool set);
@@ -35,7 +43,7 @@ namespace REV
         #pragma warning(suppress: 4200)
         byte platform[0];
 
-        friend class Window;
-        friend class GraphicsAPI;
+        friend class ::REV::Window;
+        friend class ::REV::GraphicsAPI;
     };
 }

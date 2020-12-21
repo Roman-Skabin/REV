@@ -28,7 +28,7 @@ set /A COMPILE_CENGINE = 0
 
 if /I "!PROJECT!" == "sandbox" (
     set /A COMPILE_SANDBOX = 1
-) else if /I "!PROJECT!" == "rev" (
+) else if /I "!PROJECT!" == "engine" (
     set /A COMPILE_CENGINE = 1
 ) else if "!PROJECT!" == "" (
     set /A COMPILE_SANDBOX = 1
@@ -37,11 +37,11 @@ if /I "!PROJECT!" == "sandbox" (
 
 ctime -begin full.time
 
-REM REV
+REM engine
 if !COMPILE_CENGINE! == 1 (
     set OPTIMIZATION= -Ob2 -Oi -favor:blend
-    set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
-    set LANGUAGE= -Zc:wchar_t- -Zc:inline -std:c++17
+    set CODE_GENERATION= -fp:fast -Qpar -arch:AVX2
+    set LANGUAGE= -Zc:wchar_t- -Zc:inline -Zc:alignedNew- -std:c++17
     set DIAGNOSTICS= -W3
     set IMPORT_LIBS=
     set LINKER= -link
@@ -84,9 +84,9 @@ if !COMPILE_CENGINE! == 1 (
     ctime -begin rev.time
 
     pushd ..
-        echo ==========================    Compiling REV...    ==========================
-        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yccore\pch.h !LINKING! !DIAGNOSTICS! rev\core\pch.cpp !OUTPUT_FILES! !LINKER! !IMPORT_LIBS! -nologo
-        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yucore\pch.h !LINKING! !DIAGNOSTICS! !INPUT_FILES! !OUTPUT_FILES! !LINKER! bin\obj\rev\pch.obj !IMPORT_LIBS! -nologo
+        echo ==========================    Compiling engine...    ==========================
+        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yccore\pch.h !LINKING! !DIAGNOSTICS! rev\core\pch.cpp !OUTPUT_FILES! !LINKER!                     !IMPORT_LIBS! -nologo
+        cl !OPTIMIZATION! !CODE_GENERATION! !PREPROCESSOR! !LANGUAGE! !MISCELLANEOUS! -Yucore\pch.h !LINKING! !DIAGNOSTICS! !INPUT_FILES!    !OUTPUT_FILES! !LINKER! bin\obj\rev\pch.obj !IMPORT_LIBS! -nologo
     popd
 
     ctime -end rev.time
@@ -97,8 +97,8 @@ if !COMPILE_CENGINE! == 1 (
 REM sandbox
 if !COMPILE_SANDBOX! == 1 (
     set OPTIMIZATION= -Ob2 -Oi -favor:blend
-    set CODE_GENERATION= -fp:fast -Qpar -arch:AVX
-    set LANGUAGE= -Zc:wchar_t- -Zc:inline -std:c++17
+    set CODE_GENERATION= -fp:fast -Qpar -arch:AVX2
+    set LANGUAGE= -Zc:wchar_t- -Zc:inline -Zc:alignedNew- -std:c++17
     set DIAGNOSTICS= -W3
     set IMPORT_LIBS= bin\rev.lib
     set LINKER= -link

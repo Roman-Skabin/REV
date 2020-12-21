@@ -5,6 +5,8 @@
     - Rethink memory management
     - Scene serialization
     - Asset manager
+    - Custom memcpy and memcmp
+    - Single namespace for everything? (get rid of Math and GPU namespaces)
 
 - Tools
     - Several simultaneous read operations under the same file?
@@ -21,7 +23,7 @@
     - Quaternions
 
 - GPU
-    - Batch rendering.
+    - Add textures to the batch render.
     - Save shaders bytecode in some files and compile only shaders that
       source file change time > bytecode file change time?
     - Custom compute shader's parser and ComputeProgram generation
@@ -29,17 +31,13 @@
     - Cross platform shaders.
 
 - Graphics
-    - Do I really need custom shaders??? UPD: Yes, probably (SPIR-V even maybe or something)
-    - Custom graphics shader's parser and GraphicsProgram generation
-        - SRVs, UAVs, static samplers, tables (, constants?)
-        - Hash table for interns
-        - Add Root Signature v1.1 specific settings.
-        - Includes
-        - Parse templates (Buffer<type> name; vector<type, dim> name; ...)
-        - Stream output
+    - SRVs (textures), UAVs (rwbuffers, rwtextures), static samplers, (tables, constants?)
+    - Add Root Signature v1.1 specific settings.
+    - Includes
+    - Stream output
     - Switch from 1 to 3 Render Targets for OIT
     - Weighted Blended OIT
-    - Support triangle strips (define topology in shaders?)
+    - Support triangle strips (define topology in shaders?). Probably needs for batch rendering.
     - Support stream output (define it in shaders too?)
     - Meshes
     - SubTextures
@@ -56,7 +54,5 @@
     - UI (ImGUI or Nuklear or write my own?)
 
 - Other
-    - Make that README already!
-    - Figure out a new name for the engine
-    - Rewrite parser and sound in C++
+    - Rewrite sound in C++
     - Some documenting?

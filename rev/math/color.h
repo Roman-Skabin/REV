@@ -33,7 +33,7 @@ namespace REV::Math::Color
     // norm_to_*
     //
 
-    REV_INLINE u32 __vectorcall norm_to_hex(v4 color)
+    REV_INLINE u32 REV_VECTORCALL norm_to_hex(v4 color)
     {
         __m128  clamped = _mm_max_ps(_mm_setzero_ps(), _mm_min_ps(_mm_set_ps1(1.0f), color.mm));
         __m128i mm      = _mm_cvtps_epi32(_mm_mul_ps(_mm_set_ps1(255.0f), clamped));
@@ -43,13 +43,13 @@ namespace REV::Math::Color
              | (mm_extract_u32<2>(mm)      );
     }
 
-    REV_INLINE v4 __vectorcall norm_to_v4(v4 color)
+    REV_INLINE v4 REV_VECTORCALL norm_to_v4(v4 color)
     {
         __m128 clamped = _mm_max_ps(_mm_setzero_ps(), _mm_min_ps(_mm_set_ps1(1.0f), color.mm));
         return v4(_mm_mul_ps(_mm_set_ps1(255.0f), clamped));
     }
 
-    REV_INLINE v4u __vectorcall norm_to_v4u(v4 color)
+    REV_INLINE v4u REV_VECTORCALL norm_to_v4u(v4 color)
     {
         __m128 clamped = _mm_max_ps(_mm_setzero_ps(), _mm_min_ps(_mm_set_ps1(1.0f), color.mm));
         return v4u(_mm_cvtps_epi32(_mm_mul_ps(_mm_set_ps1(255.0f), clamped)));
@@ -59,14 +59,14 @@ namespace REV::Math::Color
     // v4_to_*
     //
 
-    REV_INLINE v4 __vectorcall v4_to_norm(v4 color)
+    REV_INLINE v4 REV_VECTORCALL v4_to_norm(v4 color)
     {
         __m128 mm_255  = _mm_set_ps1(255.0f);
         __m128 clamped = _mm_max_ps(_mm_setzero_ps(), _mm_min_ps(mm_255, color.mm));
         return v4(_mm_div_ps(clamped, mm_255));
     }
 
-    REV_INLINE u32 __vectorcall v4_to_hex(v4 color)
+    REV_INLINE u32 REV_VECTORCALL v4_to_hex(v4 color)
     {
         __m128i mm = _mm_cvtps_epi32(color.mm);
         return (mm_extract_u32<3>(mm) << 24)
@@ -79,7 +79,7 @@ namespace REV::Math::Color
     // hex_to_*
     //
 
-    REV_INLINE v4 __vectorcall hex_to_norm(u32 color)
+    REV_INLINE v4 REV_VECTORCALL hex_to_norm(u32 color)
     {
         __m128 mm_255  = _mm_set_ps1(255.0f);
         __m128 vcolor  = _mm_cvtepi32_ps(_mm_setr_epi32(color >> 16, color >> 8, color, color >> 24));
@@ -87,14 +87,14 @@ namespace REV::Math::Color
         return v4(_mm_div_ps(clamped, mm_255));
     }
 
-    REV_INLINE v4 __vectorcall hex_to_v4(u32 color)
+    REV_INLINE v4 REV_VECTORCALL hex_to_v4(u32 color)
     {
         __m128 vcolor  = _mm_cvtepi32_ps(_mm_setr_epi32(color >> 16, color >> 8, color, color >> 24));
         __m128 clamped = _mm_max_ps(_mm_setzero_ps(), _mm_min_ps(_mm_set_ps1(255.0f), vcolor));
         return v4(clamped);
     }
 
-    REV_INLINE v4u __vectorcall hex_to_v4u(u32 color)
+    REV_INLINE v4u REV_VECTORCALL hex_to_v4u(u32 color)
     {
         __m128i vcolor  = _mm_setr_epi32(color >> 16, color >> 8, color, color >> 24);
         __m128i clamped = _mm_max_epi32(_mm_setzero_si128(), _mm_min_epi32(_mm_set1_epi32(0xFF), vcolor));
@@ -105,14 +105,14 @@ namespace REV::Math::Color
     // v4u_to_*
     //
 
-    REV_INLINE v4 __vectorcall v4u_to_norm(v4u color)
+    REV_INLINE v4 REV_VECTORCALL v4u_to_norm(v4u color)
     {
         __m128 mm_255 = _mm_set_ps1(255.0f);
         __m128 clamped = _mm_max_ps(_mm_setzero_ps(), _mm_min_ps(mm_255, _mm_cvtepi32_ps(color.mm)));
         return v4(_mm_div_ps(clamped, mm_255));
     }
 
-    REV_INLINE u32 __vectorcall v4u_to_hex(v4u color)
+    REV_INLINE u32 REV_VECTORCALL v4u_to_hex(v4u color)
     {
         return (mm_extract_u32<3>(color.mm) << 24)
              | (mm_extract_u32<0>(color.mm) << 16)

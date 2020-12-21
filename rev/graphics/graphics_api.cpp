@@ -13,7 +13,7 @@ namespace REV
 {
 
 GraphicsAPI::API     GraphicsAPI::s_API            = GraphicsAPI::API::NONE;
-Renderer            *GraphicsAPI::s_Renderer       = null;
+GPU::Renderer       *GraphicsAPI::s_Renderer       = null;
 GPU::MemoryManager  *GraphicsAPI::s_MemoryManager  = null;
 GPU::ProgramManager *GraphicsAPI::s_ProgramManager = null;
 
@@ -24,7 +24,7 @@ void GraphicsAPI::SetGraphicsAPI(API api)
     s_API = api;
 }
 
-Renderer *GraphicsAPI::GetRenderer()
+GPU::Renderer *GraphicsAPI::GetRenderer()
 {
     REV_CHECK_M(s_Renderer, "Renderer is not created yet");
     return s_Renderer;
@@ -51,15 +51,17 @@ void GraphicsAPI::Init(Window *window, Allocator *allocator, const Logger& logge
             REV_LOCAL bool d3d12_initialized = false;
             REV_CHECK_M(!d3d12_initialized, "Graphics API for D3D12 is already created.");
 
-            s_Renderer = cast<Renderer *>(Memory::Get()->PushToPermanentArea(sizeof(D3D12::Renderer)
-                                                                           + sizeof(D3D12::MemoryManager)
-                                                                           + sizeof(D3D12::ProgramManager)));
-            s_MemoryManager  = cast<GPU::MemoryManager *>(cast<byte *>(s_Renderer) + sizeof(D3D12::Renderer));
-            s_ProgramManager = cast<GPU::ProgramManager *>(cast<byte *>(s_MemoryManager) + sizeof(D3D12::MemoryManager));
+            byte *d3d12_area = Memory::Get()->PushToPA<byte>(sizeof(D3D12::Renderer)
+                                                           + sizeof(D3D12::MemoryManager)
+                                                           + sizeof(D3D12::ProgramManager));
 
-            *cast<D3D12::Renderer *>(s_Renderer->platform)             = D3D12::Renderer(window, logger, rt_size);
-            *cast<D3D12::MemoryManager *>(s_MemoryManager->platform)   = D3D12::MemoryManager(allocator);
-            *cast<D3D12::ProgramManager *>(s_ProgramManager->platform) = D3D12::ProgramManager(allocator, logger);
+            byte *renderer_area        = d3d12_area;
+            byte *memory_manager_area  = renderer_area       + sizeof(D3D12::Renderer);
+            byte *program_manager_area = memory_manager_area + sizeof(D3D12::MemoryManager);
+
+            s_Renderer       = cast<GPU::Renderer       *>(new (renderer_area)        D3D12::Renderer(window, logger, rt_size));
+            s_MemoryManager  = cast<GPU::MemoryManager  *>(new (memory_manager_area)  D3D12::MemoryManager(allocator));
+            s_ProgramManager = cast<GPU::ProgramManager *>(new (program_manager_area) D3D12::ProgramManager(allocator, logger));
 
             d3d12_initialized = true;
         } break;

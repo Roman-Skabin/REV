@@ -36,7 +36,7 @@ namespace REV
             CopyMemory(m_Header, other.m_Header, sizeof(Header) + other.m_Header->count * sizeof(T));
         }
     
-        Array(Array&& other) noexcept
+        REV_INLINE Array(Array&& other) noexcept
             : m_Header(other.m_Header)
         {
             other.m_Header = null;
@@ -68,8 +68,8 @@ namespace REV
             return m_Header->data + where;
         }
     
-        constexpr T *PushFront(u64 count = 1) { return Insert(0,               count); }
-        constexpr T *PushBack(u64 count  = 1) { return Insert(m_Header->count, count); }
+        REV_INLINE T *PushFront(u64 count = 1) { return Insert(0,               count); }
+        REV_INLINE T *PushBack(u64 count  = 1) { return Insert(m_Header->count, count); }
     
         void Erase(u64 from, u64 to = npos)
         {
@@ -162,50 +162,50 @@ namespace REV
             return *first == what ? 0 : npos;
         }
     
-        constexpr u64 Count()     const { return m_Header->count;             }
-        constexpr u64 Capacity()  const { return m_Header->capacity;          }
-        constexpr u64 Alignment() const { return m_Header->alinment_in_bytes; }
+        REV_INLINE u64 Count()     const { return m_Header->count;             }
+        REV_INLINE u64 Capacity()  const { return m_Header->capacity;          }
+        REV_INLINE u64 Alignment() const { return m_Header->alinment_in_bytes; }
     
-        constexpr const T *Data() const { return m_Header->data; }
-        constexpr       T *Data()       { return m_Header->data; }
+        REV_INLINE const T *Data() const { return m_Header->data; }
+        REV_INLINE       T *Data()       { return m_Header->data; }
     
-        constexpr bool Empty() const { return !m_Header->count; }
+        REV_INLINE bool Empty() const { return !m_Header->count; }
     
-        constexpr const T *begin()   const { return m_Header->data;                   }
-        constexpr const T *cbegin()  const { return m_Header->data;                   }
-        constexpr const T *rbegin()  const { return m_Header->data + m_Header->count; }
-        constexpr const T *crbegin() const { return m_Header->data + m_Header->count; }
+        REV_INLINE const T *begin()   const { return m_Header->data;                   }
+        REV_INLINE const T *cbegin()  const { return m_Header->data;                   }
+        REV_INLINE const T *rbegin()  const { return m_Header->data + m_Header->count; }
+        REV_INLINE const T *crbegin() const { return m_Header->data + m_Header->count; }
     
-        constexpr const T *end()   const { return m_Header->data + m_Header->count; }
-        constexpr const T *cend()  const { return m_Header->data + m_Header->count; }
-        constexpr const T *rend()  const { return m_Header->data;                   }
-        constexpr const T *crend() const { return m_Header->data;                   }
+        REV_INLINE const T *end()   const { return m_Header->data + m_Header->count; }
+        REV_INLINE const T *cend()  const { return m_Header->data + m_Header->count; }
+        REV_INLINE const T *rend()  const { return m_Header->data;                   }
+        REV_INLINE const T *crend() const { return m_Header->data;                   }
     
-        constexpr T *begin()  { return m_Header->data;                   }
-        constexpr T *rbegin() { return m_Header->data + m_Header->count; }
+        REV_INLINE T *begin()  { return m_Header->data;                   }
+        REV_INLINE T *rbegin() { return m_Header->data + m_Header->count; }
     
-        constexpr T *end()  { return m_Header->data + m_Header->count; }
-        constexpr T *rend() { return m_Header->data;                   }
+        REV_INLINE T *end()  { return m_Header->data + m_Header->count; }
+        REV_INLINE T *rend() { return m_Header->data;                   }
     
-        constexpr const T& First() const { return *m_Header->data; }
-        constexpr const T& Last()  const { return m_Header->count ? m_Header->data[m_Header->count - 1] : *m_Header->data; }
+        REV_INLINE const T& First() const { return *m_Header->data; }
+        REV_INLINE const T& Last()  const { return m_Header->count ? m_Header->data[m_Header->count - 1] : *m_Header->data; }
     
-        constexpr T& First() { return *m_Header->data; }
-        constexpr T& Last()  { return m_Header->count ? m_Header->data[m_Header->count - 1] : *m_Header->data; }
+        REV_INLINE T& First() { return *m_Header->data; }
+        REV_INLINE T& Last()  { return m_Header->count ? m_Header->data[m_Header->count - 1] : *m_Header->data; }
     
-        constexpr const T *pFirst() const { return m_Header->data; }
-        constexpr const T *pLast()  const { return m_Header->count ? m_Header->data + m_Header->count - 1 : m_Header->data; }
+        REV_INLINE const T *pFirst() const { return m_Header->data; }
+        REV_INLINE const T *pLast()  const { return m_Header->count ? m_Header->data + m_Header->count - 1 : m_Header->data; }
     
-        constexpr T *pFirst() { return m_Header->data; }
-        constexpr T *pLast()  { return m_Header->count ? m_Header->data + m_Header->count - 1 : m_Header->data; }
+        REV_INLINE T *pFirst() { return m_Header->data; }
+        REV_INLINE T *pLast()  { return m_Header->count ? m_Header->data + m_Header->count - 1 : m_Header->data; }
     
-        constexpr const T *GetPointer(u64 index) const
+        REV_INLINE const T *GetPointer(u64 index) const
         {
             REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
             return m_Header->data + index;
         }
     
-        constexpr T *GetPointer(u64 index)
+        REV_INLINE T *GetPointer(u64 index)
         {
             REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
             return m_Header->data + index;
@@ -236,13 +236,13 @@ namespace REV
             return *this;
         }
     
-        const T& operator[](u64 index) const
+        REV_INLINE const T& operator[](u64 index) const
         {
             REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
             return m_Header->data[index];
         }
     
-        T& operator[](u64 index)
+        REV_INLINE T& operator[](u64 index)
         {
             REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
             return m_Header->data[index];

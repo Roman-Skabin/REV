@@ -52,7 +52,7 @@ template<u64 capacity, u64 aligned_capacity = AlignUp(capacity, CACHE_LINE_SIZE)
 class StaticStringBuilder final
 {
 public:
-    StaticStringBuilder()
+    REV_INLINE StaticStringBuilder()
         : Base(BASE::DEC),
           Width(0),
           Precision(0),
@@ -64,7 +64,7 @@ public:
     {
     }
 
-    StaticStringBuilder(const StaticString<capacity, aligned_capacity>& static_string)
+    REV_INLINE StaticStringBuilder(const StaticString<capacity, aligned_capacity>& static_string)
         : Base(BASE::DEC),
           Width(0),
           Precision(0),
@@ -76,7 +76,7 @@ public:
     {
     }
 
-    StaticStringBuilder(const StaticStringBuilder& other)
+    REV_INLINE StaticStringBuilder(const StaticStringBuilder& other)
         : Base(other.Base),
           Width(other.Width),
           Precision(other.Precision),
@@ -88,12 +88,12 @@ public:
     {
     }
 
-    ~StaticStringBuilder()
+    REV_INLINE ~StaticStringBuilder()
     {
     }
 
-    constexpr const StaticString<capacity, aligned_capacity>& ToString() const { return m_StaticString; }
-    constexpr       StaticString<capacity, aligned_capacity>& ToString()       { return m_StaticString; }
+    REV_INLINE const StaticString<capacity, aligned_capacity>& ToString() const { return m_StaticString; }
+    REV_INLINE       StaticString<capacity, aligned_capacity>& ToString()       { return m_StaticString; }
 
     template<typename ...Args>
     void Build(const Args&... args)
@@ -121,7 +121,7 @@ public:
         ForceSign     = false;
     }
 
-    void Clear()
+    REV_INLINE void Clear()
     {
         m_StaticString.Clear();
     }
@@ -371,7 +371,7 @@ private:
     }
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_vec_v<T>>>
-    void __vectorcall ParseVec(char *buffer, T val)
+    void REV_VECTORCALL ParseVec(char *buffer, T val)
     {
         if constexpr (RTTI::is_same_v<T, Math::v2>)
         {
@@ -482,7 +482,7 @@ private:
     }
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_mat_v<T>>>
-    void __vectorcall ParseMat(char *buffer, T val)
+    void REV_VECTORCALL ParseMat(char *buffer, T val)
     {
         if constexpr (RTTI::is_same_v<T, Math::m2>)
         {

@@ -22,8 +22,8 @@ namespace REV
         Event(const Event& other);
         Event(Event&& other) noexcept;
 
-        constexpr const HANDLE Handle() const { return m_Handle; }
-        constexpr       HANDLE Handle()       { return m_Handle; }
+        REV_INLINE const HANDLE Handle() const { return m_Handle; }
+        REV_INLINE       HANDLE Handle()       { return m_Handle; }
 
         ~Event();
 
@@ -40,5 +40,5 @@ namespace REV
         FLAGS  m_Flags;
     };
 
-    ENUM_CLASS_OPERATORS(Event::FLAGS);
+    REV_ENUM_CLASS_OPERATORS(Event::FLAGS);
 }

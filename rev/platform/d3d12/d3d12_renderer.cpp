@@ -38,10 +38,11 @@ Renderer::Renderer(Window *window, const Logger& logger, Math::v2s rt_size)
       m_DSVCPUDescHandle(),
       m_Fence(null),
       m_FenceEvent(null),
-      m_VsyncEnabled(0),
+      m_VsyncEnabled(false),
       m_FirstFrame(true),
-      m_TearingSupported(0),
-      m_Fullscreen(0),
+      m_TearingSupported(false),
+      m_Fullscreen(false),
+      m_FrameStarted(false),
       m_Features{}
 {
     CreateDebugLayer();
@@ -178,10 +179,14 @@ void Renderer::StartFrame()
                                          D3D12_CLEAR_FLAG_DEPTH,
                                          1.0f, 0,
                                          0, null);
+
+    m_FrameStarted = true;
 }
 
 void Renderer::EndFrame()
 {
+    m_FrameStarted = false;
+
     ID3D12GraphicsCommandList *graphics_list = m_GraphicsLists[m_CurrentBuffer];
 
     // Set Resource Barriers
@@ -257,22 +262,6 @@ void Renderer::WaitForGPU()
         {
         }
     }
-}
-
-Renderer& Renderer::operator=(Renderer&& other) noexcept
-{
-    if (this != &other)
-    {
-        m_Logger = RTTI::move(other.m_Logger);
-
-        CopyMemory(cast<byte *>(this)   + StructFieldOffset(Renderer, m_Window),
-                   cast<byte *>(&other) + StructFieldOffset(Renderer, m_Window),
-                   sizeof(Renderer)     - StructFieldOffset(Renderer, m_Window));
-        
-        ZeroMemory(cast<byte *>(&other) + StructFieldOffset(Renderer, m_Window),
-                   sizeof(Renderer)     - StructFieldOffset(Renderer, m_Window));
-    }
-    return *this;
 }
 
 void Renderer::CreateDebugLayer()

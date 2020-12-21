@@ -90,30 +90,14 @@ void ProgramManager::BindIndexBuffer(GraphicsProgramHandle graphics_program, Res
     }
 }
 
-void ProgramManager::DrawVertices(GraphicsProgramHandle graphics_program)
+void ProgramManager::Draw(GraphicsProgramHandle graphics_program)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
             D3D12::ProgramManager *program_manager = cast<D3D12::ProgramManager *>(platform);
-            program_manager->DrawVertices(program_manager->GetGraphicsProgram(graphics_program));
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void ProgramManager::DrawIndices(GraphicsProgramHandle graphics_program)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            D3D12::ProgramManager *program_manager = cast<D3D12::ProgramManager *>(platform);
-            program_manager->DrawIndices(program_manager->GetGraphicsProgram(graphics_program));
+            program_manager->Draw(program_manager->GetGraphicsProgram(graphics_program));
         } break;
 
         case GraphicsAPI::API::VULKAN:

@@ -15,7 +15,7 @@ enum class BLOCK_STATE
     ALLOCATED,
     IN_FREE_LIST,
 };
-ENUM_CLASS_OPERATORS(BLOCK_STATE)
+REV_ENUM_CLASS_OPERATORS(BLOCK_STATE)
 
 struct BlockHeader
 {
@@ -98,7 +98,7 @@ Allocator::~Allocator()
         DebugFC(DEBUG_COLOR::INFO, "    Deallocations overall: %I64u", m_DeAllocationsCount);
     }
 #endif
-    ZeroMemory(this, StructFieldOffset(Allocator, m_CriticalSection));
+    ZeroMemory(this, REV_StructFieldOffset(Allocator, m_CriticalSection));
 }
 
 BlockHeader *Allocator::FindBestMatch(u64 bytes)
@@ -553,7 +553,7 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
                            m_Capacity - m_Used,
                            m_Capacity - m_Used - sizeof(BlockHeader));
 
-        CopyMemory(new_header->data, header->data, __min(new_header->data_bytes, header->data_bytes));
+        CopyMemory(new_header->data, header->data, RTTI::min(new_header->data_bytes, header->data_bytes));
 
         header->block_state = BLOCK_STATE::IN_FREE_LIST;
         ZeroMemory(header->data, header->data_bytes);
@@ -597,10 +597,10 @@ Allocator& Allocator::operator=(Allocator&& other) noexcept
 {
     if (this != &other)
     {
-        CopyMemory(this, &other, StructFieldOffset(Allocator, m_CriticalSection));
+        CopyMemory(this, &other, REV_StructFieldOffset(Allocator, m_CriticalSection));
         m_CriticalSection = RTTI::move(other.m_CriticalSection);
 
-        ZeroMemory(&other, StructFieldOffset(Allocator, m_CriticalSection));
+        ZeroMemory(&other, REV_StructFieldOffset(Allocator, m_CriticalSection));
     }
     return *this;
 }

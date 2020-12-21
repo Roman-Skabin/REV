@@ -38,9 +38,9 @@
 // Platform
 //
 
-#define REV_PLATFORM_WIN64   0
-#define REV_PLATFORM_OSX_X64 0
-#define REV_PLATFORM_LINUX   0
+#define REV_PLATFORM_WIN64 0
+#define REV_PLATFORM_MACOS 0
+#define REV_PLATFORM_LINUX 0
 
 #if defined(_WIN64)
     #define REV_PLATFORM_WIN64 1
@@ -50,9 +50,9 @@
         #error iOS is not supported!
     #elif defined(TARGET_OS_MAC)
         #if TARGET_CPU_X86_64
-            #define REV_PLATFORM_OSX_X64 1
+            #define REV_PLATFORM_MACOS 1
         #else
-            #error Unsupported OSX platform!
+            #error Unsupported Apple OS!
         #endif
     #else
         #error Unsupported Apple platform!
@@ -94,10 +94,13 @@
     #endif
 #elif REV_COMPILER_GCC
     // @TODO(Roman): Compiler-specific ISA defines
+    #define REV_ISA REV_ISA_SSE
 #elif REV_COMPILER_CLANG
     // @TODO(Roman): Compiler-specific ISA defines
+    #define REV_ISA REV_ISA_SSE
 #elif REV_COMPILER_MINGW
     // @TODO(Roman): Compiler-specific ISA defines
+    #define REV_ISA REV_ISA_SSE
 #endif
 
 //
@@ -131,7 +134,7 @@
 //  #include <mfidl.h>
 //  #include <mfapi.h>
 //  #include <mfreadwrite.h>
-#elif REV_PLATFORM_OSX_X64
+#elif REV_PLATFORM_MACOS
     // @TODO(Roman): Platform-specific includes
 #elif REV_PLATFORM_LINUX
     // @TODO(Roman): Platform-specific includes
@@ -170,20 +173,36 @@
     #define REV_EXPORT        __declspec(dllexport)
     #define REV_IMPORT        __declspec(dllimport)
     #define REV_NOINLINE      __declspec(noinline)
-    #define REV_FINLINE       __forceinline
+    #define REV_INLINE        __forceinline
     #define REV_ALIGN(_bytes) __declspec(align(_bytes))
     #define REV_INTRIN_TYPE   __declspec(intrin_type)
     #define REV_SELECTANY     __declspec(selectany)
     #define REV_NOVTABLE      __declspec(novtable)
+    #if 0 // @NOTE(Roman): We can't use naked on x64 builds
+        #define REV_NAKED     __declspec(naked)
+    #else
+        #define REV_NAKED
+    #endif
+    #define REV_CDECL         __cdecl
+    #define REV_FASTCALL      __fastcall
+    #define REV_VECTORCALL    __vectorcall
+    #define REV_THISCALL      __thiscall
+    #define REV_STDCALL       __stdcall
 #elif REV_COMPILER_GCC || REV_COMPILER_CLANG || REV_COMPILER_MINGW
     #define REV_EXPORT        __attribute__((dllexport))
     #define REV_IMPORT        __attribute__((dllimport))
     #define REV_NOINLINE      __attribute__((noinline))
-    #define REV_FINLINE       inline  __attribute__((always_inline))
+    #define REV_INLINE        inline  __attribute__((always_inline))
     #define REV_ALIGN(_bytes) __attribute__((aligned(_bytes)))
     #define REV_INTRIN_TYPE
     #define REV_SELECTANY     __attribute__((selectany))
     #define REV_NOVTABLE
+    #define REV_NAKED         __attribute__((naked))
+    #define REV_CDECL         // Only x86 builds
+    #define REV_FASTCALL      // Only x86 builds
+    #define REV_VECTORCALL    // Only x86 builds
+    #define REV_THISCALL      // Only x86 builds
+    #define REV_STDCALL       // Only x86 builds
 #endif
 
 #pragma warning(pop)

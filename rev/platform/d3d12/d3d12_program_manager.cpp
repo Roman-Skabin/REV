@@ -108,7 +108,7 @@ u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_wit
 
     AttachGraphicsShaders(graphics_program, file_with_shaders);
 
-    // @CleanUp(Roman): Hardcoded.
+    // @Cleanup(Roman): Hardcoded.
 
     D3D12_ROOT_PARAMETER parameter;
     parameter.ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -170,7 +170,13 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
                     desc_heaps[desc_heap_index++] = desc_heap.handle;
                 } break;
 
-                case GPU::RESOURCE_KIND::SR:
+                case GPU::RESOURCE_KIND::SR_1D:
+                case GPU::RESOURCE_KIND::SR_1DA:
+                case GPU::RESOURCE_KIND::SR_2D:
+                case GPU::RESOURCE_KIND::SR_2DA:
+                case GPU::RESOURCE_KIND::SR_3D:
+                case GPU::RESOURCE_KIND::SR_C:
+                case GPU::RESOURCE_KIND::SR_CA:
                 {
                     Texture&  texture   = memory_manager->GetTexture(resource.index);
                     DescHeap& desc_heap = memory_manager->GetDescHeap(texture.desc_heap_index);
@@ -178,10 +184,10 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
                     desc_heaps[desc_heap_index++] = desc_heap.handle;
                 } break;
 
-                case GPU::RESOURCE_KIND::UA:
-                {
-                    REV_FAILED_M("Write-back resources are not supported yet");
-                } break;
+                // case GPU::RESOURCE_KIND::UA:
+                // {
+                //     REV_FAILED_M("Write-back resources are not supported yet");
+                // } break;
 
                 default:
                 {
@@ -202,18 +208,24 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
                     graphics_list->SetGraphicsRootConstantBufferView(resource_index, memory_manager->GetBufferGPUVirtualAddress(resource.index));
                 } break;
 
-                case GPU::RESOURCE_KIND::SR:
+                case GPU::RESOURCE_KIND::SR_1D:
+                case GPU::RESOURCE_KIND::SR_1DA:
+                case GPU::RESOURCE_KIND::SR_2D:
+                case GPU::RESOURCE_KIND::SR_2DA:
+                case GPU::RESOURCE_KIND::SR_3D:
+                case GPU::RESOURCE_KIND::SR_C:
+                case GPU::RESOURCE_KIND::SR_CA:
                 {
                     // @TODO(Roman): Rethink GPU::RESOURCE_KINDs.
                     REV_FAILED_M("Wrong API call. Textures are not supported, only buffers.");
                     graphics_list->SetGraphicsRootShaderResourceView(resource_index, memory_manager->GetTextureGPUVirtualAddress(resource.index));
                 } break;
 
-                case GPU::RESOURCE_KIND::UA:
-                {
-                    REV_FAILED_M("Write-back resources are not supported yet");
-                    // graphics_list->SetGraphicsRootUnorderedAccessView(resource_index, memory_manager->GetUAGPUVirtualAddress());
-                } break;
+                // case GPU::RESOURCE_KIND::UA:
+                // {
+                //     REV_FAILED_M("Write-back resources are not supported yet");
+                //     // graphics_list->SetGraphicsRootUnorderedAccessView(resource_index, memory_manager->GetUAGPUVirtualAddress());
+                // } break;
 
                 default:
                 {

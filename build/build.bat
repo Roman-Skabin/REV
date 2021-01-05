@@ -24,21 +24,21 @@ if not exist ..\bin\obj\sandbox mkdir ..\bin\obj\sandbox
 if not exist ..\log             mkdir ..\log
 
 set /A COMPILE_SANDBOX = 0
-set /A COMPILE_CENGINE = 0
+set /A COMPILE_ENGINE  = 0
 
 if /I "!PROJECT!" == "sandbox" (
     set /A COMPILE_SANDBOX = 1
 ) else if /I "!PROJECT!" == "engine" (
-    set /A COMPILE_CENGINE = 1
+    set /A COMPILE_ENGINE = 1
 ) else if "!PROJECT!" == "" (
     set /A COMPILE_SANDBOX = 1
-    set /A COMPILE_CENGINE = 1
+    set /A COMPILE_ENGINE  = 1
 )
 
 ctime -begin full.time
 
 REM engine
-if !COMPILE_CENGINE! == 1 (
+if !COMPILE_ENGINE! == 1 (
     set OPTIMIZATION= -Ob2 -Oi -favor:blend
     set CODE_GENERATION= -fp:fast -Qpar -arch:AVX2
     set LANGUAGE= -Zc:wchar_t- -Zc:inline -Zc:alignedNew- -std:c++17

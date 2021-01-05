@@ -186,25 +186,38 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
     // @NOTE(Roman): Theoretically we could not have free blocks after last allocated block.
     //               so our target block (that we want to find/return) will be next block
     //               right after last allocated block.
-    BlockHeader *header = m_LastAllocated->block_state == BLOCK_STATE::NONE
-                        ? m_LastAllocated
-                        : cast<BlockHeader *>(m_LastAllocated->data + m_LastAllocated->data_bytes);
-
-    if (header < cast<BlockHeader *>(cast<byte *>(m_First) + m_Capacity - sizeof(BlockHeader)))
+    if (m_LastAllocated->block_state == BLOCK_STATE::NONE)
     {
-        REV_CHECK_M(header->block_state == BLOCK_STATE::NONE,
-                    "Allocator \"%s\": Internal error.\n"
-                    "    This block gotta be none block because it is not in the free list nor allocated.",
-                    m_Name.Data());
+        BlockHeader *header = m_LastAllocated;
 
         header->block_state = BLOCK_STATE::ALLOCATED;
         header->data_bytes  = bytes;
-        header->prev        = m_LastAllocated;
 
-        m_LastAllocated  = header;
-        m_Used          += sizeof(BlockHeader) + header->data_bytes;
+        m_Used += sizeof(BlockHeader) + header->data_bytes;
 
         return header;
+    }
+    else
+    {
+        BlockHeader *header = cast<BlockHeader *>(m_LastAllocated->data + m_LastAllocated->data_bytes);
+
+        if (BlockInAllocatorRange(header))
+        {
+            REV_CHECK_M(header->block_state == BLOCK_STATE::NONE,
+                        "Allocator \"%s\": Internal error.\n"
+                        "    This block gotta be none block because it is not in the free list nor allocated.",
+                        m_Name.Data());
+
+            header->block_state = BLOCK_STATE::ALLOCATED;
+            header->data_bytes  = bytes;
+
+            header->prev    = m_LastAllocated;
+            m_LastAllocated = header;
+
+            m_Used += sizeof(BlockHeader) + header->data_bytes;
+
+            return header;
+        }
     }
 
     return null;
@@ -295,9 +308,10 @@ void Allocator::MergeNearbyBlocksInFreeList(BlockHeader *header)
         }
         else if (next_header->block_state == BLOCK_STATE::NONE)
         {
-            REV_CHECK_M(header == m_LastAllocated,
+            REV_CHECK_M(header >= m_LastAllocated,
                         "Allocator \"%s\": Internal error.\n"
-                        "    If next block is none, then there must be no allocated blocks after it.",
+                        "    If next block is none, then our block must be last allocated.\n"
+                        "    Or if we're merging previous block, then it gotta be after last allocated block.",
                         m_Name.Data());
 
             for (BlockHeader *it = header->prev; it; it = it->prev)

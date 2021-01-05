@@ -52,7 +52,6 @@ namespace REV::D3D12
         REV_INLINE u32                        CurrentBuffer()               const { return m_CurrentBuffer; }
         REV_INLINE D3D12_RESOURCE_HEAP_TIER   ResourceHeapTier()            const { return m_Features.options.ResourceHeapTier; }
         REV_INLINE D3D_SHADER_MODEL           HighestShaderModel()          const { return m_Features.shader_model.HighestShaderModel; }
-        REV_INLINE u32                        MaxBufferSize()               const { return m_Features.virtual_address.MaxGPUVirtualAddressBitsPerProcess; }
 
     #if REV_DEBUG
         REV_INLINE const IDXGIInfoQueue *InfoQueue() const { return m_InfoQueue; }

@@ -204,6 +204,8 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
 
                 case GPU::RESOURCE_KIND::SR:
                 {
+                    // @TODO(Roman): Rethink GPU::RESOURCE_KINDs.
+                    REV_FAILED_M("Wrong API call. Textures are not supported, only buffers.");
                     graphics_list->SetGraphicsRootShaderResourceView(resource_index, memory_manager->GetTextureGPUVirtualAddress(resource.index));
                 } break;
 

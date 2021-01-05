@@ -32,6 +32,7 @@
 
 - Graphics
     - SRVs (textures), UAVs (rwbuffers, rwtextures), static samplers, (tables, constants?)
+    - Multisampling
     - Add Root Signature v1.1 specific settings.
     - Includes
     - Stream output

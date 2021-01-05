@@ -104,7 +104,7 @@ if !COMPILE_SANDBOX! == 1 (
     set LINKER= -link
     set LINKING=
     set INPUT_FILES=
-    set PREPROCESSOR= -Irev -Isandbox -D_REV_CHECKS_BREAK
+    set PREPROCESSOR= -Irev -Isandbox -D_REV_CHECKS_BREAK -D_REV_GLOBAL_TYPES -D_REV_GLOBAL_HELPERS
     set MISCELLANEOUS= -TP
     set OUTPUT_FILES= -Fo:bin\obj\sandbox\ -Fe:bin\sandbox.exe
 

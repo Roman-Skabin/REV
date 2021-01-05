@@ -9,6 +9,13 @@
 
 #pragma warning(disable: 4251) // class 'type1' needs to have dll-interface to be used by clients of class 'type2'
 
+// REV predefined macros:
+//     _REV_DEV            - for engine developers, is used to build DLL.
+//     _REV_CHECKS_BREAK   - __debugbreak in checks before ExitProcess.
+//     _REV_NO_CHECKS      - turns off all checks except REV_FAILED_M
+//     _REV_GLOBAL_TYPES   - can use types without REV:: prefix
+//     _REV_GLOBAL_HELPERS - can use helpers without REV:: prefix
+
 namespace REV
 {
 
@@ -69,6 +76,9 @@ enum
 // Types
 //
 
+namespace Types
+{
+
 typedef signed char      s8;
 typedef signed short     s16;
 typedef signed long      s32;
@@ -98,6 +108,19 @@ typedef s64 b64;
 
 typedef u8 byte;
 
+} // Types
+
+using namespace Types;
+
+#if _REV_GLOBAL_TYPES
+} // REV
+
+using namespace REV::Types;
+
+namespace REV
+{
+#endif
+
 #define REV_S8_MIN  0x80i8
 #define REV_S16_MIN 0x8000i16
 #define REV_S32_MIN 0x80000000i32
@@ -123,26 +146,29 @@ typedef u8 byte;
 #define REV_F32_POS_MIN 0h00800000
 #define REV_F32_INF     0h7F800000
 #define REV_F32_NEG_INF 0hFF800000
-#define REV_F32_NAN     0h00000000
-#define REV_F32_NEG_NAN 0h80000000
 
 #define REV_F64_MIN     0hFFEFFFFFFFFFFFFF
 #define REV_F64_MAX     0h7FEFFFFFFFFFFFFF
 #define REV_F64_POS_MIN 0h0010000000000000
 #define REV_F64_INF     0h7FF0000000000000
 #define REV_F64_NEG_INF 0hFFF0000000000000
-#define REV_F64_NAN     0h0000000000000000
-#define REV_F64_NEG_NAN 0h8000000000000000
 
 #define REV_BYTE_MAX REV_U8_MAX
 #define REV_BYTE_MIN REV_U8_MIN
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T KB(T x) { return    x  * 1024; }
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T MB(T x) { return KB(x) * 1024; }
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T GB(T x) { return MB(x) * 1024; }
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T TB(T x) { return GB(x) * 1024; }
+//
+// Helpers
+//
 
-template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE T BIT(T x) { return 1 << x; }
+namespace Helpers
+{
+
+template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T KB(T x) { return    x  * 1024; }
+template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T MB(T x) { return KB(x) * 1024; }
+template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T GB(T x) { return MB(x) * 1024; }
+template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T TB(T x) { return GB(x) * 1024; }
+
+template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_integral_v<T>>> constexpr REV_INLINE T BIT(T x) { return 1 << x; }
 
 #pragma warning(suppress: 4172)
 template<typename To, typename From> constexpr REV_INLINE To cast(From x) { return (To)x; }
@@ -170,6 +196,19 @@ constexpr REV_INLINE bool IsPowOf2(T x)
 {
     return x && ((x & (x - 1)) == 0);
 }
+
+} // Helpers
+
+using namespace Helpers;
+
+#if _REV_GLOBAL_HELPERS
+} // REV
+
+using namespace REV::Helpers;
+
+namespace REV
+{
+#endif
 
 #define REV_ENUM_CLASS_OPERATORS(ENUM_CLASS)                                                                                                                                                                                                                                                \
                                                                                constexpr REV_INLINE ENUM_CLASS  operator| (ENUM_CLASS  left, ENUM_CLASS right) { return cast<ENUM_CLASS >( cast<RTTI::underlying_type_t<ENUM_CLASS> >(left) |  cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); } \
@@ -234,6 +273,7 @@ REV_API void REV_CDECL PrintDebugMessage(const char *file, u64 line, const char 
     #define REV_CHECK_M(expr, message, ...) { if (!(expr)) { ::REV::PrintDebugMessage(__FILE__, __LINE__, message,   __VA_ARGS__); __debugbreak(); ExitProcess(1); } }
     #define REV_CHECK(expr)                 { if (!(expr)) { ::REV::PrintDebugMessage(__FILE__, __LINE__, REV_CSTR(expr)        ); __debugbreak(); ExitProcess(1); } }
     #define REV_FAILED_M(message, ...)      {                ::REV::PrintDebugMessage(__FILE__, __LINE__, message,   __VA_ARGS__); __debugbreak(); ExitProcess(1);   }
+    #define REV_FAILED()                    {                ::REV::PrintDebugMessage(__FILE__, __LINE__, null                  ); __debugbreak(); ExitProcess(1);   }
 
     #define REV_DEBUG_RESULT(expr)                 REV_CHECK(expr)
     #define REV_DEBUG_RESULT_M(expr, message, ...) REV_CHECK_M(expr, message, __VA_ARGS__)
@@ -243,6 +283,7 @@ REV_API void REV_CDECL PrintDebugMessage(const char *file, u64 line, const char 
     #define REV_CHECK_M(expr, message, ...) { if (!(expr)) { ::REV::PrintDebugMessage(__FILE__, __LINE__, message,   __VA_ARGS__); ExitProcess(1); } }
     #define REV_CHECK(expr)                 { if (!(expr)) { ::REV::PrintDebugMessage(__FILE__, __LINE__, REV_CSTR(expr)        ); ExitProcess(1); } }
     #define REV_FAILED_M(message, ...)      {                ::REV::PrintDebugMessage(__FILE__, __LINE__, message,   __VA_ARGS__); ExitProcess(1);   }
+    #define REV_FAILED()                    {                ::REV::PrintDebugMessage(__FILE__, __LINE__, null                  ); ExitProcess(1);   }
 
     #define REV_DEBUG_RESULT(expr)                 REV_CHECK(expr)
     #define REV_DEBUG_RESULT_M(expr, message, ...) REV_CHECK_M(expr, message, __VA_ARGS__)
@@ -252,6 +293,7 @@ REV_API void REV_CDECL PrintDebugMessage(const char *file, u64 line, const char 
     #define REV_CHECK_M(expr, message, ...)
     #define REV_CHECK(expr)
     #define REV_FAILED_M(message, ...)      { ::REV::PrintDebugMessage(__FILE__, __LINE__, message, __VA_ARGS__); ExitProcess(1); }
+    #define REV_FAILED()                    { ::REV::PrintDebugMessage(__FILE__, __LINE__, null                ); ExitProcess(1); }
 
     #define REV_DEBUG_RESULT(expr)                 { expr }
     #define REV_DEBUG_RESULT_M(expr, message, ...) { expr }

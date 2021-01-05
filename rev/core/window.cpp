@@ -15,7 +15,6 @@ Window::Window(const Logger&            logger,
                Math::v4s                xywh)
     : m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
       m_Handle(null),
-      m_Context(null),
       m_XYWH(xywh),
       m_Closed(true),
       m_Moved(false),
@@ -50,8 +49,7 @@ Window::Window(const Logger&            logger,
         }
     }
 
-    REV_DEBUG_RESULT(m_Handle  = CreateWindowExA(0, wcexa.lpszClassName, m_Title.Data(), WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wcexa.hInstance, 0));
-    REV_DEBUG_RESULT(m_Context = GetDC(m_Handle));
+    REV_DEBUG_RESULT(m_Handle = CreateWindowExA(0, wcexa.lpszClassName, m_Title.Data(), WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wcexa.hInstance, 0));
 
     m_Logger.LogSuccess("Window \"%s\" has been created", m_Title.Data());
 

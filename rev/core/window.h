@@ -54,7 +54,6 @@ namespace REV
     private:
         HINSTANCE         m_Instance;
         HWND              m_Handle;
-        HDC               m_Context;
         Math::v4s         m_XYWH;
 
         // Flags

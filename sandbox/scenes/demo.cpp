@@ -62,10 +62,10 @@ void DemoScene::OnUpdate()
     REV::Window&         window      = application->GetWindow();
     REV::Timer&          timer       = application->GetTimer();
 
-    REV_LOCAL REV::f32 last_print_time;
+    REV_LOCAL f32 last_print_time;
     if (!window.Fullscreened() && timer.Seconds() - last_print_time >= 0.1)
     {
-        REV::f32 FPS = timer.TicksPerSecond() / REV::cast<REV::f32>(timer.DeltaTicks());
+        f32 FPS = timer.TicksPerSecond() / cast<f32>(timer.DeltaTicks());
 
         REV::StaticStringBuilder<128> ssb;
         ssb.Precision = 2;

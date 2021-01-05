@@ -55,28 +55,43 @@ void REV_CDECL PrintDebugMessage(const char *file, u64 line, const char *format,
 
     char message[2048] = {'\0'};
 
-    if (args)
+    if (format)
     {
-        int len = sprintf(message, "%s(%I64u): REV_CHECK failed: ", file, line);
-        len += vsprintf(message + len, format, args);
+        if (args)
+        {
+            int len = sprintf(message, "%s(%I64u): Check failed: ", file, line);
+            len += vsprintf(message + len, format, args);
+            message[len++] = '\n';
 
-        g_CriticalSection.Enter();
-        SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::ERROR));
-        WriteConsoleA(g_Console, message, len, null, null);
-        SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::INFO));
-        OutputDebugStringA(message);
-        g_CriticalSection.Leave();
+            g_CriticalSection.Enter();
+            REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::ERROR)));
+            REV_DEBUG_RESULT(WriteConsoleA(g_Console, message, len, null, null));
+            REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::INFO)));
+            OutputDebugStringA(message);
+            g_CriticalSection.Leave();
 
-        va_end(args);
+            va_end(args);
+        }
+        else
+        {
+            int len = sprintf(message, "%s(%I64u): Check failed: %s\n", file, line, format);
+
+            g_CriticalSection.Enter();
+            REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::ERROR)));
+            REV_DEBUG_RESULT(WriteConsoleA(g_Console, message, len, null, null));
+            REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::INFO)));
+            OutputDebugStringA(message);
+            g_CriticalSection.Leave();
+        }
     }
     else
     {
-        int len = sprintf(message, "%s(%I64u): REV_CHECK failed: %s\n", file, line, format);
+        int len = sprintf(message, "%s(%I64u): Check failed\n", file, line);
 
         g_CriticalSection.Enter();
-        SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::ERROR));
-        WriteConsoleA(g_Console, message, len, null, null);
-        SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::INFO));
+        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::ERROR)));
+        REV_DEBUG_RESULT(WriteConsoleA(g_Console, message, len, null, null));
+        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::INFO)));
         OutputDebugStringA(message);
         g_CriticalSection.Leave();
     }

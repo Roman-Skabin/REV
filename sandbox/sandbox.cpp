@@ -14,7 +14,7 @@ Sandbox::~Sandbox()
 
 int REV_CDECL main(int argc, char **argv)
 {
-    REV::Memory::Create(REV::GB(1ui64), REV::GB(3ui64));
+    REV::Memory::Create(GB(1ui64), GB(3ui64));
     Sandbox().Run();
     return 0;
 }

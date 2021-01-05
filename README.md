@@ -1,6 +1,7 @@
 # REV
 
 ## Am working on right now:
+* Asset manager
 * Textures
 * Scene management
 

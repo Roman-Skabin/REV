@@ -1,0 +1,3 @@
+scene DemoScene:
+    textures:
+        "../sandbox/assets/textures/runtime/wood.dds": WoodWall;

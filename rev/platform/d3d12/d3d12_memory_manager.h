@@ -9,6 +9,14 @@
 
 // @TODO(Roman): Thread safety
 
+namespace REV
+{
+    enum
+    {
+        D3D12_REQ_TEXTURECUBE_ARRAY_AXIS_DIMENSION = (D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION / 6),
+    };
+}
+
 namespace REV::D3D12
 {
     enum class BUFFER_KIND
@@ -68,11 +76,13 @@ namespace REV::D3D12
 
     struct Texture final
     {
-        ID3D12Resource      *def_resoucre;
-        ID3D12Resource      *upl_resource[SWAP_CHAIN_BUFFERS_COUNT];
+        ID3D12Resource      *def_resource;
+        ID3D12Resource      *upl_resource;
         u64                  desc_heap_index;
         StaticString<64>     name;
-        D3D12_RESOURCE_DESC  desc;
+        D3D12_RESOURCE_DESC  desc; // @Cleanup(Roman): choose data that we really need to store
+        u8                   cube  : 1;
+        u8                   array : 1;
     };
 
     struct TextureMemory final
@@ -110,10 +120,22 @@ namespace REV::D3D12
 
         u64 AllocateVertexBuffer(u32 vertex_count, const StaticString<64>& name = null);
         u64 AllocateIndexBuffer(u32 index_count, const StaticString<64>& name = null);
-        u64 AllocateConstantBuffer(u32 bytes, const StaticString<64>& name);
+        u64 AllocateConstantBuffer(u32 bytes, const StaticString<64>& name = null);
+
+        u64 AllocateTexture1D(  u16 width,                                        DXGI_FORMAT texture_format, const StaticString<64>& name = null);
+        u64 AllocateTexture2D(  u16 width, u16 height,            u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name = null);
+        u64 AllocateTexture3D(  u16 width, u16 height, u16 depth, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name = null);
+        u64 AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name = null);
+
+        u64 AllocateTexture1DArray(  u16 width,             u16 count,                 DXGI_FORMAT texture_format, const StaticString<64>& name = null);
+        u64 AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name = null);
+        u64 AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name = null);
 
         void SetBufferData(const Buffer& buffer, const void *data);
         void SetBufferDataImmediately(const Buffer& buffer, const void *data);
+
+        void SetTextureData(Texture *texture, GPU::TextureDesc *texture_desc);
+        void SetTextureDataImmediately(Texture *texture, GPU::TextureDesc *texture_desc);
 
         void StartImmediateExecution();
         void EndImmediateExecution();
@@ -129,7 +151,7 @@ namespace REV::D3D12
         D3D12_GPU_VIRTUAL_ADDRESS GetTextureGPUVirtualAddress(u64 index) const
         {
             const Texture& texture = m_TextureMemory.textures[index];
-            return texture.def_resoucre->GetGPUVirtualAddress();
+            return texture.def_resource->GetGPUVirtualAddress();
         }
 
         const Buffer&   GetBuffer(u64 index)   const { return m_BufferMemory.buffers[index];      }
@@ -144,10 +166,12 @@ namespace REV::D3D12
         void CreateNewPage(D3D12_RESOURCE_STATES initial_state);
 
         Buffer *AllocateBuffer(u64 size, D3D12_RESOURCE_STATES initial_state, u64& index);
+        Texture *AllocateTexture(const D3D12_RESOURCE_DESC& desc, u64& index);
 
-        DescHeap *CreateDescHeapForConstantBuffer(Buffer *buffer, u64 resource_index);
+        DescHeap *CreateDescHeap(u64 resource_index, u64& desc_heap_index);
 
-        void SetBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data);
+        void UploadBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data);
+        void UploadTextureData(ID3D12GraphicsCommandList *command_list, Texture *texture, u32 subres_count, D3D12_SUBRESOURCE_DATA *subresources);
 
         MemoryManager(const MemoryManager&) = delete;
         MemoryManager(MemoryManager&&)      = delete;

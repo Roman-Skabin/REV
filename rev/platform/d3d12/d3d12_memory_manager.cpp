@@ -49,6 +49,8 @@ MemoryManager::~MemoryManager()
 
 u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, const StaticString<64>& name)
 {
+    REV_CHECK(vertex_count);
+
     u64     index  = REV_U64_MAX;
     Buffer *buffer = AllocateBuffer(vertex_count * sizeof(Vertex), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
 
@@ -62,6 +64,8 @@ u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, const StaticString<64>
 
 u64 MemoryManager::AllocateIndexBuffer(u32 index_count, const StaticString<64>& name)
 {
+    REV_CHECK(index_count);
+
     u64     index  = REV_U64_MAX;
     Buffer *buffer = AllocateBuffer(index_count * sizeof(Index), D3D12_RESOURCE_STATE_INDEX_BUFFER, index);
 
@@ -75,13 +79,15 @@ u64 MemoryManager::AllocateIndexBuffer(u32 index_count, const StaticString<64>& 
 
 u64 MemoryManager::AllocateConstantBuffer(u32 bytes, const StaticString<64>& name)
 {
+    REV_CHECK(bytes);
+
     u64     index  = REV_U64_MAX;
     Buffer *buffer = AllocateBuffer(bytes, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
 
     buffer->kind = BUFFER_KIND::CONSTANT_BUFFER;
     buffer->name = name;
 
-    DescHeap *desc_heap = CreateDescHeapForConstantBuffer(buffer, index);
+    DescHeap *desc_heap = CreateDescHeap(index, buffer->desc_heap_index);
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc;
     cbv_desc.BufferLocation = m_BufferMemory.pages[buffer->page_index].def_mem->GetGPUVirtualAddress() + buffer->offset;
@@ -93,14 +99,397 @@ u64 MemoryManager::AllocateConstantBuffer(u32 bytes, const StaticString<64>& nam
     return index;
 }
 
+REV_INTERNAL u16 GetMaxMipLevels(u16 width, u16 height)
+{
+    u32 count = 0;
+    _BitScanReverse(&count, width & height);
+    return cast<u16>(count + 1);
+}
+
+REV_INTERNAL u16 GetMaxMipLevels(u16 width, u16 height, u16 depth)
+{
+    u32 count = 0;
+    _BitScanReverse(&count, width & height & depth);
+    return cast<u16>(count + 1);
+}
+
+u64 MemoryManager::AllocateTexture1D(u16 width, DXGI_FORMAT texture_format, const StaticString<64>& name)
+{
+    REV_CHECK_M(1 <= width && width <= D3D12_REQ_TEXTURE1D_U_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_U_DIMENSION);
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = 1;
+    desc.DepthOrArraySize   = 1;
+    desc.MipLevels          = 1;
+    desc.Format             = texture_format;
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    u64      index   = REV_U64_MAX;
+    Texture *texture = AllocateTexture(desc, index);
+
+    texture->name  = name;
+    texture->desc  = desc;
+    texture->cube  = false;
+    texture->array = false;
+
+    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+    srv_desc.Format                        = texture_format;
+    srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE1D;
+    srv_desc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.Texture1D.MostDetailedMip     = 0;    // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+    srv_desc.Texture1D.MipLevels           = 1;    // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+    srv_desc.Texture1D.ResourceMinLODClamp = 0.5f; // scale bound
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+    device->CreateShaderResourceView(texture->def_resource, &srv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name)
+{
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
+
+    u16 max_mip_levels = GetMaxMipLevels(width, height);
+    if (mip_levels > max_mip_levels)
+    {
+        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+    }
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = height;
+    desc.DepthOrArraySize   = 1;
+    desc.MipLevels          = mip_levels;
+    desc.Format             = texture_format;
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    u64      index   = REV_U64_MAX;
+    Texture *texture = AllocateTexture(desc, index);
+
+    texture->name  = name;
+    texture->desc  = desc;
+    texture->cube  = false;
+    texture->array = false;
+
+    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+    srv_desc.Format                        = texture_format;
+    srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srv_desc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.Texture2D.MostDetailedMip     = 0;          // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+    srv_desc.Texture2D.MipLevels           = mip_levels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+    srv_desc.Texture2D.PlaneSlice          = 0;          // plane index (z index in 2D)
+    srv_desc.Texture2D.ResourceMinLODClamp = 0.5f;       // scale bound
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+    device->CreateShaderResourceView(texture->def_resource, &srv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name)
+{
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION , "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
+    REV_CHECK_M(1 <= depth  && depth  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION , "Depth gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
+
+    u16 max_mip_levels = GetMaxMipLevels(width, height, depth);
+    if (mip_levels > max_mip_levels)
+    {
+        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+    }
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = height;
+    desc.DepthOrArraySize   = depth;
+    desc.MipLevels          = mip_levels;
+    desc.Format             = texture_format;
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    u64      index   = REV_U64_MAX;
+    Texture *texture = AllocateTexture(desc, index);
+
+    texture->name  = name;
+    texture->desc  = desc;
+    texture->cube  = false;
+    texture->array = false;
+
+    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+    srv_desc.Format                        = texture_format;
+    srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE3D;
+    srv_desc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.Texture3D.MostDetailedMip     = 0;          // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+    srv_desc.Texture3D.MipLevels           = mip_levels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+    srv_desc.Texture3D.ResourceMinLODClamp = 0.5f;       // scale bound
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+    device->CreateShaderResourceView(texture->def_resource, &srv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name)
+{
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURECUBE_DIMENSION, "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURECUBE_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
+
+    u16 max_mip_levels = GetMaxMipLevels(width, height);
+    if (mip_levels > max_mip_levels)
+    {
+        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+    }
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = height;
+    desc.DepthOrArraySize   = 6;
+    desc.MipLevels          = mip_levels;
+    desc.Format             = texture_format;
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    u64      index   = REV_U64_MAX;
+    Texture *texture = AllocateTexture(desc, index);
+
+    texture->name  = name;
+    texture->desc  = desc;
+    texture->cube  = true;
+    texture->array = false;
+
+    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+    srv_desc.Format                          = texture_format;
+    srv_desc.ViewDimension                   = D3D12_SRV_DIMENSION_TEXTURECUBE;
+    srv_desc.Shader4ComponentMapping         = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.TextureCube.MostDetailedMip     = 0;          // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+    srv_desc.TextureCube.MipLevels           = mip_levels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+    srv_desc.TextureCube.ResourceMinLODClamp = 0.5f;       // scale bound
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+    device->CreateShaderResourceView(texture->def_resource, &srv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTexture1DArray(u16 width, u16 count, DXGI_FORMAT texture_format, const StaticString<64>& name)
+{
+    REV_CHECK_M(1 <= width && width <= D3D12_REQ_TEXTURE1D_U_DIMENSION,          "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_U_DIMENSION);
+    REV_CHECK_M(1 <= count && count <= D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION, "Count gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION);
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = 1;
+    desc.DepthOrArraySize   = count;
+    desc.MipLevels          = 1;
+    desc.Format             = texture_format;
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    u64      index   = REV_U64_MAX;
+    Texture *texture = AllocateTexture(desc, index);
+
+    texture->name  = name;
+    texture->desc  = desc;
+    texture->cube  = false;
+    texture->array = true;
+
+    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+    srv_desc.Format                             = texture_format;
+    srv_desc.ViewDimension                      = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
+    srv_desc.Shader4ComponentMapping            = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.Texture1DArray.MostDetailedMip     = 0;     // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+    srv_desc.Texture1DArray.MipLevels           = 1;     // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+    srv_desc.Texture1DArray.FirstArraySlice     = 0;     // First texture in an array to access [0, desc.DepthOrArraySize)
+    srv_desc.Texture1DArray.ArraySize           = count; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
+    srv_desc.Texture1DArray.ResourceMinLODClamp = 0.5f;  // scale bound
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+    device->CreateShaderResourceView(texture->def_resource, &srv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name)
+{
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION,     "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION,     "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
+    REV_CHECK_M(1 <= count  && count  <= D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION, "Count gotta be = [1, %hu].",  D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION);
+
+    u16 max_mip_levels = GetMaxMipLevels(width, height);
+    if (mip_levels > max_mip_levels)
+    {
+        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+    }
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = height;
+    desc.DepthOrArraySize   = count;
+    desc.MipLevels          = 1;
+    desc.Format             = texture_format;
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    u64      index   = REV_U64_MAX;
+    Texture *texture = AllocateTexture(desc, index);
+
+    texture->name  = name;
+    texture->desc  = desc;
+    texture->cube  = false;
+    texture->array = true;
+
+    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+    srv_desc.Format                             = texture_format;
+    srv_desc.ViewDimension                      = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+    srv_desc.Shader4ComponentMapping            = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.Texture2DArray.MostDetailedMip     = 0;          // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+    srv_desc.Texture2DArray.MipLevels           = mip_levels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+    srv_desc.Texture2DArray.FirstArraySlice     = 0;          // First texture in an array to access [0, desc.DepthOrArraySize)
+    srv_desc.Texture2DArray.ArraySize           = count;      // Numbre of textrues in array. [1, desc.DepthOrArraySize]
+    srv_desc.Texture2DArray.PlaneSlice          = 0;          // plane index (z index in 2D)
+    srv_desc.Texture2DArray.ResourceMinLODClamp = 0.5f;       // scale bound
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+    device->CreateShaderResourceView(texture->def_resource, &srv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name)
+{
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURECUBE_DIMENSION,            "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURECUBE_DIMENSION,            "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
+    REV_CHECK_M(1 <= count  && count  <= D3D12_REQ_TEXTURECUBE_ARRAY_AXIS_DIMENSION, "Count gotta be = [1, %hu].",  D3D12_REQ_TEXTURECUBE_ARRAY_AXIS_DIMENSION);
+
+    u16 max_mip_levels = GetMaxMipLevels(width, height);
+    if (mip_levels > max_mip_levels)
+    {
+        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+    }
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = height;
+    desc.DepthOrArraySize   = 6 * count;
+    desc.MipLevels          = 1;
+    desc.Format             = texture_format;
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    u64      index   = REV_U64_MAX;
+    Texture *texture = AllocateTexture(desc, index);
+
+    texture->name  = name;
+    texture->desc  = desc;
+    texture->cube  = true;
+    texture->array = true;
+
+    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+    srv_desc.Format                               = texture_format;
+    srv_desc.ViewDimension                        = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+    srv_desc.Shader4ComponentMapping              = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srv_desc.TextureCubeArray.MostDetailedMip     = 0;          // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+    srv_desc.TextureCubeArray.MipLevels           = mip_levels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+    srv_desc.TextureCubeArray.First2DArrayFace    = 0;          // First texture in an array to access [0, desc.DepthOrArraySize)
+    srv_desc.TextureCubeArray.NumCubes            = count;      // Numbre of textrues in array. [1, desc.DepthOrArraySize]
+    srv_desc.TextureCubeArray.ResourceMinLODClamp = 0.5f;       // scale bound
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+    device->CreateShaderResourceView(texture->def_resource, &srv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
+
+    return index;
+}
+
 void MemoryManager::SetBufferData(const Buffer& buffer, const void *data)
 {
-    SetBufferData(cast<Renderer *>(GraphicsAPI::GetRenderer())->CurrentGraphicsList(), buffer, data);
+    UploadBufferData(cast<Renderer *>(GraphicsAPI::GetRenderer())->CurrentGraphicsList(), buffer, data);
 }
 
 void MemoryManager::SetBufferDataImmediately(const Buffer& buffer, const void *data)
 {
-    SetBufferData(m_CommandList, buffer, data);
+    UploadBufferData(m_CommandList, buffer, data);
+}
+
+void MemoryManager::SetTextureData(Texture *texture, GPU::TextureDesc *texture_desc)
+{
+    REV_CHECK_M(texture_desc->subtextures_count <= D3D12_REQ_SUBRESOURCES,
+                "Too many subresources: %I64u, max expected: %I64u",
+                texture_desc->subtextures_count,
+                D3D12_REQ_SUBRESOURCES);
+
+    static_assert(sizeof(GPU::SubTextureDesc) == sizeof(D3D12_SUBRESOURCE_DATA));
+
+    UploadTextureData(cast<Renderer *>(GraphicsAPI::GetRenderer())->CurrentGraphicsList(),
+                      texture,
+                      cast<u32>(texture_desc->subtextures_count),
+                      cast<D3D12_SUBRESOURCE_DATA *>(texture_desc->subtexture_desc));
+}
+
+void MemoryManager::SetTextureDataImmediately(Texture *texture, GPU::TextureDesc *texture_desc)
+{
+    REV_CHECK_M(texture_desc->subtextures_count <= D3D12_REQ_SUBRESOURCES,
+                "Too many subresources: %I64u, max expected: %I64u",
+                texture_desc->subtextures_count,
+                D3D12_REQ_SUBRESOURCES);
+
+    static_assert(sizeof(GPU::SubTextureDesc) == sizeof(D3D12_SUBRESOURCE_DATA));
+
+    UploadTextureData(m_CommandList,
+                      texture,
+                      cast<u32>(texture_desc->subtextures_count),
+                      cast<D3D12_SUBRESOURCE_DATA *>(texture_desc->subtexture_desc));
 }
 
 void MemoryManager::StartImmediateExecution()
@@ -152,12 +541,7 @@ void MemoryManager::FreeMemory()
 
     for (Texture& texture : m_TextureMemory.textures)
     {
-        SafeRelease(texture.def_resoucre);
-
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-        {
-            SafeRelease(texture.upl_resource[i]);
-        }
+        SafeRelease(texture.def_resource);
     }
     m_TextureMemory.textures.Clear();
 
@@ -196,7 +580,7 @@ void MemoryManager::CreateNewPage(D3D12_RESOURCE_STATES initial_state)
     ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
 
     HRESULT error = device->CreateCommittedResource(&default_heap_properties,
-                                                    D3D12_HEAP_FLAG_NONE | D3D12_HEAP_FLAG_SHARED,
+                                                    D3D12_HEAP_FLAG_SHARED,
                                                     &resource_desc,
                                                     initial_state,
                                                     null,
@@ -268,9 +652,35 @@ Buffer *MemoryManager::AllocateBuffer(u64 size, D3D12_RESOURCE_STATES initial_st
     return buffer;
 }
 
-DescHeap *MemoryManager::CreateDescHeapForConstantBuffer(Buffer *buffer, u64 resource_index)
+Texture *MemoryManager::AllocateTexture(const D3D12_RESOURCE_DESC& desc, u64& index)
 {
-    buffer->desc_heap_index = m_DescHeapMemory.desc_heaps.Count();
+    index = m_TextureMemory.textures.Count();
+
+    Texture *texture = m_TextureMemory.textures.PushBack();
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+
+    D3D12_HEAP_PROPERTIES default_heap_properties;
+    default_heap_properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+    default_heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    default_heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    default_heap_properties.CreationNodeMask     = 0;
+    default_heap_properties.VisibleNodeMask      = 0;
+
+    HRESULT error = device->CreateCommittedResource(&default_heap_properties,
+                                                    D3D12_HEAP_FLAG_SHARED,
+                                                    &desc,
+                                                    D3D12_RESOURCE_STATE_COMMON,
+                                                    null,
+                                                    IID_PPV_ARGS(&texture->def_resource));
+    REV_CHECK(CheckResultAndPrintMessages(error));
+
+    return texture;
+}
+
+DescHeap *MemoryManager::CreateDescHeap(u64 resource_index, u64& desc_heap_index)
+{
+    desc_heap_index = m_DescHeapMemory.desc_heaps.Count();
 
     D3D12_DESCRIPTOR_HEAP_DESC desc_heap_desc;
     desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -291,7 +701,7 @@ DescHeap *MemoryManager::CreateDescHeapForConstantBuffer(Buffer *buffer, u64 res
     return desc_heap;
 }
 
-void MemoryManager::SetBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data)
+void MemoryManager::UploadBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data)
 {
     Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
 
@@ -319,6 +729,115 @@ void MemoryManager::SetBufferData(ID3D12GraphicsCommandList *command_list, const
     resource_barrier.Transition.StateAfter  = page.initial_state;
 
     command_list->ResourceBarrier(1, &resource_barrier);
+}
+
+REV_INTERNAL ID3D12Resource *AllocateUploadResourceForTexture(u64 bytes)
+{
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+
+    D3D12_HEAP_PROPERTIES heap_properties;
+    heap_properties.Type                  = D3D12_HEAP_TYPE_UPLOAD;
+    heap_properties.CPUPageProperty       = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heap_properties.MemoryPoolPreference  = D3D12_MEMORY_POOL_UNKNOWN;
+    heap_properties.CreationNodeMask      = 0;
+    heap_properties.VisibleNodeMask       = 0;
+
+    D3D12_RESOURCE_DESC resource_desc;
+    resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    resource_desc.Width              = bytes;
+    resource_desc.Height             = 1;
+    resource_desc.DepthOrArraySize   = 1;
+    resource_desc.MipLevels          = 1;
+    resource_desc.Format             = DXGI_FORMAT_UNKNOWN;
+    resource_desc.SampleDesc.Count   = 1;
+    resource_desc.SampleDesc.Quality = 0;
+    resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    resource_desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    ID3D12Resource *resource = null;
+    HRESULT         error    = device->CreateCommittedResource(&heap_properties,
+                                                               D3D12_HEAP_FLAG_NONE,
+                                                               &resource_desc,
+                                                               D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                               null,
+                                                               IID_PPV_ARGS(&resource));
+    REV_CHECK(CheckResultAndPrintMessages(error));
+
+    return resource;
+}
+
+void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, Texture *texture, u32 subres_count, D3D12_SUBRESOURCE_DATA *subresources)
+{
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+
+    ID3D12Device4 *device_4 = null;
+    HRESULT        error    = device->QueryInterface(&device_4);
+    REV_CHECK(CheckResultAndPrintMessages(error));
+
+    D3D12_RESOURCE_ALLOCATION_INFO1 info1{};
+    D3D12_RESOURCE_ALLOCATION_INFO  info = device_4->GetResourceAllocationInfo1(0, 1, &texture->desc, &info1);
+
+    SafeRelease(device_4);
+
+    byte *push_memory = Memory::Get()->PushToTA<byte>(subres_count * (sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(u32) + sizeof(u64) + sizeof(u64)));
+
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints  = cast<D3D12_PLACED_SUBRESOURCE_FOOTPRINT *>(push_memory);
+    u32                                *num_rows    = cast<u32 *>(footprints + subres_count);
+    u64                                *row_bytes   = cast<u64 *>(num_rows   + subres_count);
+    u64                                *total_bytes = cast<u64 *>(row_bytes  + subres_count);
+    device->GetCopyableFootprints(&texture->desc, 0, subres_count, info1.Offset, footprints, cast<UINT *>(num_rows), row_bytes, total_bytes);
+
+    if (!texture->upl_resource) texture->upl_resource = AllocateUploadResourceForTexture(*total_bytes);
+
+    D3D12_RANGE  read_range     = {0, 0};
+    byte        *upload_pointer = null;
+    error = texture->upl_resource->Map(0, &read_range, cast<void **>(&upload_pointer));
+    REV_CHECK(CheckResultAndPrintMessages(error));
+
+    for (u32 i = 0; i < subres_count; ++i)
+    {
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprint = footprints + i;
+
+        u32 rows_in_dest_subres      = num_rows[i];
+        u64 row_bytes_in_dest_subres = row_bytes[i];
+
+        byte *dest_subres_data        = upload_pointer + footprint->Offset;
+        u64   dest_subres_slice_pitch = footprint->Footprint.RowPitch * rows_in_dest_subres;
+
+        D3D12_SUBRESOURCE_DATA *subres_data = subresources + i;
+
+        for (u32 z = 0; z < footprint->Footprint.Depth; ++z)
+        {
+            byte *dest_slice =              dest_subres_data    + dest_subres_slice_pitch * z;
+            byte *src_slice  = cast<byte *>(subres_data->pData) + subres_data->SlicePitch * z;
+
+            for (u32 y = 0; y < rows_in_dest_subres; ++y)
+            {
+                CopyMemory(dest_slice + footprint->Footprint.RowPitch * y,
+                           src_slice  + subres_data->RowPitch         * y,
+                           row_bytes_in_dest_subres);
+            }
+        }
+    }
+
+    texture->upl_resource->Unmap(0, null);
+
+    D3D12_TEXTURE_COPY_LOCATION dest_location;
+    dest_location.pResource        = texture->def_resource;
+    dest_location.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+
+    D3D12_TEXTURE_COPY_LOCATION source_location;
+    source_location.pResource       = texture->upl_resource;
+    source_location.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+
+    for (u32 i = 0; i < subres_count; ++i)
+    {
+        dest_location.SubresourceIndex  = i;
+        source_location.PlacedFootprint = footprints[i];
+
+        command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, null);
+    }
 }
 
 };

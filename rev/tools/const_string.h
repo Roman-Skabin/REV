@@ -21,7 +21,7 @@ namespace REV
         ConstString(ConstString&& other) noexcept;
     
         ~ConstString();
-    
+
         REV_INLINE const char *begin()   const { return m_Data;            }
         REV_INLINE const char *cbegin()  const { return m_Data;            }
         REV_INLINE const char *rbegin()  const { return m_Data + m_Length; }

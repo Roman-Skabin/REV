@@ -19,6 +19,8 @@
 #include "tools/array.hpp"
 #include "tools/static_string.hpp"
 
+#include "asset_manager/asset_manager.h"
+
 int REV_CDECL main(int argc, char **argv);
 
 namespace REV
@@ -29,10 +31,7 @@ namespace REV
         static Application *Get();
 
     protected:
-        explicit Application(
-            const StaticString<128>& name = StaticString<128>("Application", REV_CSTRLEN("Application")),
-            GraphicsAPI::API         api  = GraphicsAPI::API::D3D12
-        );
+        explicit Application(const StaticString<128>& name, GraphicsAPI::API api, const char *REVAM_filename);
 
     public:
         virtual ~Application();
@@ -46,6 +45,7 @@ namespace REV
         const Input        *GetInput()        const { return m_Input;        }
         const Timer&        GetTimer()        const { return m_Timer;        }
         const SceneBase    *GetCurrentScene() const { return m_CurrentScene; }
+        const AssetManager *GetAssetManager() const { return m_AssetManager; }
 
         Memory       *GetMemory()       { return m_Memory;       }
         Allocator&    GetAllocator()    { return m_Allocator;    }
@@ -54,6 +54,7 @@ namespace REV
         Input        *GetInput()        { return m_Input;        }
         Timer&        GetTimer()        { return m_Timer;        }
         SceneBase    *GetCurrentScene() { return m_CurrentScene; }
+        AssetManager *GetAssetManager() { return m_AssetManager; }
 
     private:
         void Run();
@@ -75,6 +76,7 @@ namespace REV
         Input        *m_Input;
         Timer         m_Timer;
         SceneBase    *m_CurrentScene;
+        AssetManager *m_AssetManager;
 
     private:
         static Application *s_Application;

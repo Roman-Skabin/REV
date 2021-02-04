@@ -79,6 +79,8 @@ enum
 namespace Types
 {
 
+static_assert(sizeof(long) == 4);
+
 typedef signed char      s8;
 typedef signed short     s16;
 typedef signed long      s32;
@@ -107,6 +109,9 @@ typedef s32 b32;
 typedef s64 b64;
 
 typedef u8 byte;
+
+typedef u32 intptr32;
+typedef u64 intptr64;
 
 } // Types
 
@@ -210,7 +215,7 @@ namespace REV
 {
 #endif
 
-#define REV_ENUM_CLASS_OPERATORS(ENUM_CLASS)                                                                                                                                                                                                                                                \
+#define REV_ENUM_CLASS_OPERATORS(ENUM_CLASS)                                                                                                                                                                                                                                                        \
                                                                                constexpr REV_INLINE ENUM_CLASS  operator| (ENUM_CLASS  left, ENUM_CLASS right) { return cast<ENUM_CLASS >( cast<RTTI::underlying_type_t<ENUM_CLASS> >(left) |  cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); } \
                                                                                constexpr REV_INLINE ENUM_CLASS  operator& (ENUM_CLASS  left, ENUM_CLASS right) { return cast<ENUM_CLASS >( cast<RTTI::underlying_type_t<ENUM_CLASS> >(left) &  cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); } \
                                                                                constexpr REV_INLINE ENUM_CLASS  operator^ (ENUM_CLASS  left, ENUM_CLASS right) { return cast<ENUM_CLASS >( cast<RTTI::underlying_type_t<ENUM_CLASS> >(left) ^  cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); } \
@@ -229,7 +234,19 @@ namespace REV
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE ENUM_CLASS& operator&=(ENUM_CLASS& left, T          right) { return cast<ENUM_CLASS&>( cast<RTTI::underlying_type_t<ENUM_CLASS>&>(left) &= cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); } \
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE ENUM_CLASS& operator&=(T&          left, ENUM_CLASS right) { return cast<ENUM_CLASS&>( cast<RTTI::underlying_type_t<ENUM_CLASS>&>(left) &= cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); } \
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE ENUM_CLASS& operator^=(ENUM_CLASS& left, T          right) { return cast<ENUM_CLASS&>( cast<RTTI::underlying_type_t<ENUM_CLASS>&>(left) ^= cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE ENUM_CLASS& operator^=(T&          left, ENUM_CLASS right) { return cast<ENUM_CLASS&>( cast<RTTI::underlying_type_t<ENUM_CLASS>&>(left) ^= cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); }
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE ENUM_CLASS& operator^=(T&          left, ENUM_CLASS right) { return cast<ENUM_CLASS&>( cast<RTTI::underlying_type_t<ENUM_CLASS>&>(left) ^= cast<RTTI::underlying_type_t<ENUM_CLASS>>(right)); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator==(T           left, ENUM_CLASS right) { return         left  == cast<T>(right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator!=(T           left, ENUM_CLASS right) { return         left  != cast<T>(right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator<=(T           left, ENUM_CLASS right) { return         left  <= cast<T>(right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator>=(T           left, ENUM_CLASS right) { return         left  >= cast<T>(right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator< (T           left, ENUM_CLASS right) { return         left  <  cast<T>(right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator> (T           left, ENUM_CLASS right) { return         left  >  cast<T>(right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator==(ENUM_CLASS  left, T          right) { return cast<T>(left) ==         right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator!=(ENUM_CLASS  left, T          right) { return cast<T>(left) !=         right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator<=(ENUM_CLASS  left, T          right) { return cast<T>(left) <=         right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator>=(ENUM_CLASS  left, T          right) { return cast<T>(left) >=         right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator< (ENUM_CLASS  left, T          right) { return cast<T>(left) <          right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator> (ENUM_CLASS  left, T          right) { return cast<T>(left) >          right;  }
 
 #define REV_ENUM_OPERATORS(ENUM) REV_ENUM_CLASS_OPERATORS(ENUM)
 
@@ -295,8 +312,8 @@ REV_API void REV_CDECL PrintDebugMessage(const char *file, u64 line, const char 
     #define REV_FAILED_M(message, ...)      { ::REV::PrintDebugMessage(__FILE__, __LINE__, message, __VA_ARGS__); ExitProcess(1); }
     #define REV_FAILED()                    { ::REV::PrintDebugMessage(__FILE__, __LINE__, null                ); ExitProcess(1); }
 
-    #define REV_DEBUG_RESULT(expr)                 { expr }
-    #define REV_DEBUG_RESULT_M(expr, message, ...) { expr }
+    #define REV_DEBUG_RESULT(expr)                 { expr; }
+    #define REV_DEBUG_RESULT_M(expr, message, ...) { expr; }
 
 #endif
 

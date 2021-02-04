@@ -395,8 +395,8 @@ namespace REV::RTTI
     template<typename T, typename U> inline constexpr bool is_comparable_le_v = is_comparable_le<T, U>::value;
     template<typename T, typename U> inline constexpr bool is_comparable_ge_v = is_comparable_ge<T, U>::value;
 
-    template<typename T, typename = enable_if_t<is_comparable_gt_v<T, T>>> constexpr T max(T left, T right) { return left > right ? left : right; }
-    template<typename T, typename = enable_if_t<is_comparable_lt_v<T, T>>> constexpr T min(T left, T right) { return left < right ? left : right; }
+    template<typename T, typename U, typename = enable_if_t<is_comparable_gt_v<T, U>>> constexpr auto max(T left, U right) { return left > right ? left : right; }
+    template<typename T, typename U, typename = enable_if_t<is_comparable_lt_v<T, U>>> constexpr auto min(T left, U right) { return left < right ? left : right; }
 
     #pragma warning(suppress: 4146) // unsigned T warning
     template<typename T, typename = enable_if_t<is_comparable_lt_v<T, int>>> constexpr T abs(T val) { return val < 0 ? -val : val; }

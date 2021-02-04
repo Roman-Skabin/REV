@@ -170,13 +170,7 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
                     desc_heaps[desc_heap_index++] = desc_heap.handle;
                 } break;
 
-                case GPU::RESOURCE_KIND::SR_1D:
-                case GPU::RESOURCE_KIND::SR_1DA:
-                case GPU::RESOURCE_KIND::SR_2D:
-                case GPU::RESOURCE_KIND::SR_2DA:
-                case GPU::RESOURCE_KIND::SR_3D:
-                case GPU::RESOURCE_KIND::SR_C:
-                case GPU::RESOURCE_KIND::SR_CA:
+                case GPU::RESOURCE_KIND::SR:
                 {
                     Texture&  texture   = memory_manager->GetTexture(resource.index);
                     DescHeap& desc_heap = memory_manager->GetDescHeap(texture.desc_heap_index);
@@ -208,15 +202,8 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
                     graphics_list->SetGraphicsRootConstantBufferView(resource_index, memory_manager->GetBufferGPUVirtualAddress(resource.index));
                 } break;
 
-                case GPU::RESOURCE_KIND::SR_1D:
-                case GPU::RESOURCE_KIND::SR_1DA:
-                case GPU::RESOURCE_KIND::SR_2D:
-                case GPU::RESOURCE_KIND::SR_2DA:
-                case GPU::RESOURCE_KIND::SR_3D:
-                case GPU::RESOURCE_KIND::SR_C:
-                case GPU::RESOURCE_KIND::SR_CA:
+                case GPU::RESOURCE_KIND::SR:
                 {
-                    // @TODO(Roman): Rethink GPU::RESOURCE_KINDs.
                     REV_FAILED_M("Wrong API call. Textures are not supported, only buffers.");
                     graphics_list->SetGraphicsRootShaderResourceView(resource_index, memory_manager->GetTextureGPUVirtualAddress(resource.index));
                 } break;

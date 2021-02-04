@@ -16,7 +16,7 @@ Application *Application::Get()
     return s_Application;
 }
 
-Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
+Application::Application(const StaticString<128>& name, GraphicsAPI::API api, const char *REVAM_filename)
     : m_Logger("REV logger", "../log/rev.log", Logger::TARGET::FILE),
       m_Memory(Memory::Get()),
       m_Allocator(m_Memory->PushToPermanentArea(GB(1)), GB(1), false, "Default"),
@@ -26,7 +26,8 @@ Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
                Math::v4s(10, 10, 960, 540)),
       m_Input(Input::Create(m_Window, m_Logger)),
       m_Timer("REVMainTimer"),
-      m_CurrentScene(null)
+      m_CurrentScene(null),
+      m_AssetManager(null)
 {
     REV_CHECK_M(!s_Application,
                 "Only one application alowed. "
@@ -36,10 +37,14 @@ Application::Application(const StaticString<128>& name, GraphicsAPI::API api)
 
     GraphicsAPI::SetGraphicsAPI(api);
     GraphicsAPI::Init(&m_Window, &m_Allocator, m_Logger, Math::v2s(1920, 1080));
+
+    // @NOTE(Roman): AssetManager must be created after Graphics API initializeation.
+    m_AssetManager = AssetManager::Create(&m_Allocator, REVAM_filename);
 }
 
 Application::~Application()
 {
+    m_AssetManager->~AssetManager();
     GraphicsAPI::Destroy();
     s_Application = null;
 }

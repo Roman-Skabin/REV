@@ -51,7 +51,7 @@ void DemoScene::OnSetResourcesData()
 {
     REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
     {
-        gpu_memory_manager->SetResourceData(m_ConstantBuffer, &m_CBufferData); 
+        gpu_memory_manager->SetBufferData(m_ConstantBuffer, &m_CBufferData); 
     }
 }
 

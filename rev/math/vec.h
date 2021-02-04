@@ -173,6 +173,7 @@ union REV_INTRIN_TYPE v2u final
 {
     struct { u32 x, y; };
     struct { u32 w, h; };
+    struct { u32 r, c; }; // row, col
 
     REV_INLINE v2u(u32 val = 0 ) : x(val),  y(val)    {}
     REV_INLINE v2u(u32 x, u32 y) : x(x),    y(y)      {}

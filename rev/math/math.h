@@ -106,10 +106,30 @@ namespace REV::Math
         return ((value - start) / (end - start) - 0.5f) * 2.0f;
     }
 
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>>
-    REV_INLINE T REV_VECTORCALL clamp(T val, T min_val, T max_val)
+    template<typename T, typename U, typename Q,
+             typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>,
+             typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<U>>,
+             typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<Q>>>
+    REV_INLINE auto REV_VECTORCALL clamp(T val, U min_val, Q max_val)
     {
-        return RTTI::max(min_val, RTTI::min(max_val, val));
+        return RTTI::max(min_val, RTTI::min(val, max_val));
+    }
+
+    template<typename Ret, typename T, typename U, typename Q,
+             typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<Ret>>,
+             typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>,
+             typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<U>>,
+             typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<Q>>>
+    REV_INLINE Ret REV_VECTORCALL clamp(T val, U min_val, Q max_val)
+    {
+        if constexpr (RTTI::is_same_v<Ret, decltype(RTTI::max(min_val, RTTI::min(val, max_val)))>)
+        {
+            return RTTI::max(min_val, RTTI::min(max_val, val));
+        }
+        else
+        {
+            return cast<Ret>(RTTI::max(min_val, RTTI::min(val, max_val)));
+        }
     }
 
     // value <= 20

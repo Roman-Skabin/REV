@@ -1,12 +1,13 @@
 - Core
     - Complete core\platform.h
     - Move all STD includes from platform.h to pch.h?
-    - Get rid of the interface stuff and swith to function pointers?
-    - Rethink memory management
+    - Get rid of the interface stuff and swith to function pointers? // @Optimization
+    - Rethink memory management? // @Optimization
     - Scene serialization
     - Asset manager
-    - Custom memcpy and memcmp
+    - Custom memcpy and memcmp // @Optimization
     - Single namespace for everything? (get rid of Math and GPU namespaces)
+    - Minimize number of system calls // @Optimization
 
 - Tools
     - Several simultaneous read operations under the same file?
@@ -14,19 +15,21 @@
 
 - Build
     - [Pre?]build system. Build only edited files
-      (source file change time > .obj file change time)?
+      (source file change time > .obj file change time)? // @Optimization
+
+- Git
+    - Custom commit/push scripts with tags checks like jblow's nocheckin
 
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
 
 - Math
-    - Quaternions
+    - Quaternions // @Optimization
 
 - GPU
-    - Add textures to the batch render.
+    - Add textures to the batch render. // @Optimization
     - Save shaders bytecode in some files and compile only shaders that
-      source file change time > bytecode file change time?
-    - Custom compute shader's parser and ComputeProgram generation
+      source file change time > bytecode file change time? // @Optimization
     - Several adapters support? (NVidia has gotten rid of SLI so shall we?)
     - Cross platform shaders.
 
@@ -34,17 +37,19 @@
     - SRVs (textures), UAVs (rwbuffers, rwtextures), static samplers, (tables, constants?)
     - Multisampling
     - Add Root Signature v1.1 specific settings.
-    - Includes
+    - Shader includes
     - Stream output
     - Switch from 1 to 3 Render Targets for OIT
     - Weighted Blended OIT
     - Support triangle strips (define topology in shaders?). Probably needs for batch rendering.
     - Support stream output (define it in shaders too?)
     - Meshes
+    - PBR?
     - SubTextures
     - Entity (component?) system
     - Particle system
     - TextRenderer (DirectWrite + D2D)
+    - Maya animation
 
 - Sound
     - Mixer

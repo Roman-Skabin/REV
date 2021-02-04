@@ -155,10 +155,10 @@ void AsyncFile::Read(void *buffer, u32 buffer_bytes) const
     m_Overlapped.OffsetHigh   = 0;
 
     REV_DEBUG_RESULT(ReadFileEx(m_Handle,
-                           buffer,
-                           buffer_bytes,
-                           &m_Overlapped,
-                           OverlappedReadCompletionRoutine));
+                                buffer,
+                                buffer_bytes,
+                                &m_Overlapped,
+                                OverlappedReadCompletionRoutine));
 
     m_Flags &= ~FLAGS::_WWEC;
 }
@@ -177,10 +177,10 @@ void AsyncFile::Write(const void *buffer, u32 buffer_bytes)
     m_Overlapped.OffsetHigh   = 0;
 
     REV_DEBUG_RESULT(WriteFileEx(m_Handle,
-                            buffer,
-                            buffer_bytes,
-                            &m_Overlapped,
-                            OverlappedWriteCompletionRoutine));
+                                 buffer,
+                                 buffer_bytes,
+                                 &m_Overlapped,
+                                 OverlappedWriteCompletionRoutine));
     
     m_Flags &= ~FLAGS::_WWEC;
 }
@@ -201,10 +201,10 @@ void AsyncFile::Append(const void *buffer, u32 buffer_bytes)
     m_Overlapped.OffsetHigh   = 0;
 
     REV_DEBUG_RESULT(WriteFileEx(m_Handle,
-                            buffer,
-                            buffer_bytes,
-                            &m_Overlapped,
-                            OverlappedWriteCompletionRoutine));
+                                 buffer,
+                                 buffer_bytes,
+                                 &m_Overlapped,
+                                 OverlappedWriteCompletionRoutine));
 
     m_Flags &= ~FLAGS::_WWEC;
 }
@@ -247,12 +247,12 @@ AsyncFile& AsyncFile::operator=(const AsyncFile& other)
 
         HANDLE current_process = GetCurrentProcess();
         REV_DEBUG_RESULT(DuplicateHandle(current_process,
-                                    other.m_Handle,
-                                    current_process,
-                                    &m_Handle,
-                                    0,
-                                    false,
-                                    DUPLICATE_SAME_ACCESS));
+                                         other.m_Handle,
+                                         current_process,
+                                         &m_Handle,
+                                         0,
+                                         false,
+                                         DUPLICATE_SAME_ACCESS));
     }
     return *this;
 }

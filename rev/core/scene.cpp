@@ -5,6 +5,7 @@
 #include "core/pch.h"
 #include "core/scene.h"
 #include "graphics/graphics_api.h"
+#include "asset_manager/asset_manager.h"
 
 namespace REV
 {
@@ -64,13 +65,15 @@ void SceneBase::OnSetCurrentEx()
         m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(m_IndicesCapacity), ib_name);
     }
 
+    AssetManager::Get()->ParseREVAMFile(m_Name);
+
     OnSetCurrent();
 }
 
 void SceneBase::OnUnsetCurrentEx()
 {
+    AssetManager::Get()->FreeSceneAssets();
     OnUnsetCurrent();
-    GraphicsAPI::GetMemoryManager()->FreeMemory();
 }
 
 void SceneBase::SubmitEntity(Entity *entity)
@@ -109,8 +112,8 @@ void SceneBase::FlushBatch()
 
         if (renderer->FrameStarted())
         {
-            gpu_memory_manager->SetResourceData(m_VertexBuffer, m_Vertices);
-            gpu_memory_manager->SetResourceData(m_IndexBuffer, m_Indices);
+            gpu_memory_manager->SetBufferData(m_VertexBuffer, m_Vertices);
+            gpu_memory_manager->SetBufferData(m_IndexBuffer, m_Indices);
             OnSetResourcesData();
         }
         else

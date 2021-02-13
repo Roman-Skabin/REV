@@ -22,6 +22,15 @@ struct VSOutput
 };
 typedef VSOutput PSInput;
 
+Texture2D WoodTexture : register(t0, space0);
+
+SamplerState WoodTextureSampler
+{
+    Filter   = MIN_MAG_MIP_LINEAR;
+    AddressU = Clamp;
+    AddressV = Clamp;
+};
+
 VSOutput VSMain(VSInput input)
 {
     VSOutput output;
@@ -34,6 +43,8 @@ VSOutput VSMain(VSInput input)
 
 float4 PSMain(PSInput input) : SV_Target
 {
-    float  intensity = 1.0f / (8 * length(input.world_pos - cCenter));
-    return intensity * cSunColor;
+    // float  intensity = 1.0f / (8 * length(input.world_pos - cCenter));
+    // return intensity * cSunColor;
+
+    return WoodTexture.Sample(WoodTextureSampler, input.tex_coord);
 }

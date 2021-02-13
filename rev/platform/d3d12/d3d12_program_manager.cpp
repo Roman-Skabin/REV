@@ -108,17 +108,25 @@ u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_wit
 
     AttachGraphicsShaders(graphics_program, file_with_shaders);
 
-    // @Cleanup(Roman): Hardcoded.
+    // @Cleanup(Roman): #Hardcoded.
 
-    D3D12_ROOT_PARAMETER parameter;
-    parameter.ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    parameter.Descriptor.ShaderRegister = 0;
-    parameter.Descriptor.RegisterSpace  = 0;
-    parameter.ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
+    D3D12_ROOT_PARAMETER tex_parameter;
+    tex_parameter.ParameterType             = D3D12_ROOT_PARAMETER_TYPE_SRV;
+    tex_parameter.Descriptor.ShaderRegister = 0;
+    tex_parameter.Descriptor.RegisterSpace  = 0;
+    tex_parameter.ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_ROOT_PARAMETER cb_parameter;
+    cb_parameter.ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    cb_parameter.Descriptor.ShaderRegister = 0;
+    cb_parameter.Descriptor.RegisterSpace  = 0;
+    cb_parameter.ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_ROOT_PARAMETER parameters[] = { tex_parameter, cb_parameter };
 
     D3D12_ROOT_SIGNATURE_DESC root_signature_desc;
-    root_signature_desc.NumParameters     = 1;
-    root_signature_desc.pParameters       = &parameter;
+    root_signature_desc.NumParameters     = cast<u32>(ArrayCount(parameters));
+    root_signature_desc.pParameters       = parameters;
     root_signature_desc.NumStaticSamplers = 0;
     root_signature_desc.pStaticSamplers   = null;
     root_signature_desc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -204,8 +212,10 @@ void ProgramManager::SetCurrentGraphicsProgram(const GraphicsProgram& graphics_p
 
                 case GPU::RESOURCE_KIND::SR:
                 {
-                    REV_FAILED_M("Wrong API call. Textures are not supported, only buffers.");
-                    graphics_list->SetGraphicsRootShaderResourceView(resource_index, memory_manager->GetTextureGPUVirtualAddress(resource.index));
+                    Texture&  texture   = memory_manager->GetTexture(resource.index);
+                    DescHeap& desc_heap = memory_manager->GetDescHeap(texture.desc_heap_index);
+
+                    graphics_list->SetGraphicsRootDescriptorTable(resource_index, desc_heap.handle->GetGPUDescriptorHandleForHeapStart());
                 } break;
 
                 // case GPU::RESOURCE_KIND::UA:

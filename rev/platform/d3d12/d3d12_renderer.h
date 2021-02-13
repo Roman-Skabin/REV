@@ -23,6 +23,7 @@ namespace REV::D3D12
         SWAP_CHAIN_BUFFERS_COUNT = 2,
     };
 
+    // @TODO(Roman): Rename to DeviceContext
     class Renderer final
     {
     public:

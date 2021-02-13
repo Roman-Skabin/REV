@@ -38,23 +38,23 @@ namespace REV
 
         void SetCurrentScene(SceneBase *scene);
 
-        const Memory       *GetMemory()       const { return m_Memory;       }
-        const Allocator&    GetAllocator()    const { return m_Allocator;    }
-        const WorkQueue    *GetWorkQueue()    const { return m_WorkQueue;    }
-        const Window&       GetWindow()       const { return m_Window;       }
-        const Input        *GetInput()        const { return m_Input;        }
-        const Timer&        GetTimer()        const { return m_Timer;        }
-        const SceneBase    *GetCurrentScene() const { return m_CurrentScene; }
-        const AssetManager *GetAssetManager() const { return m_AssetManager; }
+        REV_INLINE const Memory       *GetMemory()       const { return m_Memory;       }
+        REV_INLINE const Allocator&    GetAllocator()    const { return m_Allocator;    }
+        REV_INLINE const WorkQueue    *GetWorkQueue()    const { return m_WorkQueue;    }
+        REV_INLINE const Window&       GetWindow()       const { return m_Window;       }
+        REV_INLINE const Input        *GetInput()        const { return m_Input;        }
+        REV_INLINE const Timer&        GetTimer()        const { return m_Timer;        }
+        REV_INLINE const SceneBase    *GetCurrentScene() const { return m_CurrentScene; }
+        REV_INLINE const AssetManager *GetAssetManager() const { return m_AssetManager; }
 
-        Memory       *GetMemory()       { return m_Memory;       }
-        Allocator&    GetAllocator()    { return m_Allocator;    }
-        WorkQueue    *GetWorkQueue()    { return m_WorkQueue;    }
-        Window&       GetWindow()       { return m_Window;       }
-        Input        *GetInput()        { return m_Input;        }
-        Timer&        GetTimer()        { return m_Timer;        }
-        SceneBase    *GetCurrentScene() { return m_CurrentScene; }
-        AssetManager *GetAssetManager() { return m_AssetManager; }
+        REV_INLINE Memory       *GetMemory()       { return m_Memory;       }
+        REV_INLINE Allocator&    GetAllocator()    { return m_Allocator;    }
+        REV_INLINE WorkQueue    *GetWorkQueue()    { return m_WorkQueue;    }
+        REV_INLINE Window&       GetWindow()       { return m_Window;       }
+        REV_INLINE Input        *GetInput()        { return m_Input;        }
+        REV_INLINE Timer&        GetTimer()        { return m_Timer;        }
+        REV_INLINE SceneBase    *GetCurrentScene() { return m_CurrentScene; }
+        REV_INLINE AssetManager *GetAssetManager() { return m_AssetManager; }
 
     private:
         void Run();

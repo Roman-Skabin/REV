@@ -18,6 +18,7 @@ MemoryManager::MemoryManager(Allocator *allocator)
       m_Fence(null),
       m_FenceEvent("D3D12::MemoryManager Event"),
       m_DescHeapMemory(allocator),
+      m_SamplerMemory(allocator),
       m_BufferMemory(allocator),
       m_TextureMemory(allocator)
 {
@@ -87,7 +88,7 @@ u64 MemoryManager::AllocateConstantBuffer(u32 bytes, const StaticString<64>& nam
     buffer->kind = BUFFER_KIND::CONSTANT_BUFFER;
     buffer->name = name;
 
-    DescHeap *desc_heap = CreateDescHeap(index, buffer->desc_heap_index);
+    DescHeap *desc_heap = CreateDescHeapForResource(index, buffer->desc_heap_index);
 
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc;
     cbv_desc.BufferLocation = m_BufferMemory.pages[buffer->page_index].def_mem->GetGPUVirtualAddress() + buffer->offset;
@@ -138,7 +139,7 @@ u64 MemoryManager::AllocateTexture1D(u16 width, DXGI_FORMAT texture_format, cons
     texture->cube  = false;
     texture->array = false;
 
-    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+    DescHeap *desc_heap = CreateDescHeapForResource(index, texture->desc_heap_index);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
     srv_desc.Format                        = texture_format;
@@ -187,7 +188,7 @@ u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI
     texture->cube  = false;
     texture->array = false;
 
-    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+    DescHeap *desc_heap = CreateDescHeapForResource(index, texture->desc_heap_index);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
     srv_desc.Format                        = texture_format;
@@ -195,7 +196,7 @@ u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI
     srv_desc.Shader4ComponentMapping       = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     srv_desc.Texture2D.MostDetailedMip     = 0;          // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
     srv_desc.Texture2D.MipLevels           = mip_levels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
-    srv_desc.Texture2D.PlaneSlice          = 0;          // plane index (z index in 2D)
+    srv_desc.Texture2D.PlaneSlice          = 0;          // The index (plane slice number) of the plane to use in the texture.
     srv_desc.Texture2D.ResourceMinLODClamp = 0.5f;       // scale bound
 
     ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
@@ -207,8 +208,8 @@ u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI
 u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name)
 {
     REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
-    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION , "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
-    REV_CHECK_M(1 <= depth  && depth  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION , "Depth gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
+    REV_CHECK_M(1 <= depth  && depth  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Depth gotta be = [1, %hu].",  D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
 
     u16 max_mip_levels = GetMaxMipLevels(width, height, depth);
     if (mip_levels > max_mip_levels)
@@ -238,7 +239,7 @@ u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_l
     texture->cube  = false;
     texture->array = false;
 
-    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+    DescHeap *desc_heap = CreateDescHeapForResource(index, texture->desc_heap_index);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
     srv_desc.Format                        = texture_format;
@@ -287,7 +288,7 @@ u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, DX
     texture->cube  = true;
     texture->array = false;
 
-    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+    DescHeap *desc_heap = CreateDescHeapForResource(index, texture->desc_heap_index);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
     srv_desc.Format                          = texture_format;
@@ -329,7 +330,7 @@ u64 MemoryManager::AllocateTexture1DArray(u16 width, u16 count, DXGI_FORMAT text
     texture->cube  = false;
     texture->array = true;
 
-    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+    DescHeap *desc_heap = CreateDescHeapForResource(index, texture->desc_heap_index);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
     srv_desc.Format                             = texture_format;
@@ -381,7 +382,7 @@ u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 
     texture->cube  = false;
     texture->array = true;
 
-    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+    DescHeap *desc_heap = CreateDescHeapForResource(index, texture->desc_heap_index);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
     srv_desc.Format                             = texture_format;
@@ -391,7 +392,7 @@ u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 
     srv_desc.Texture2DArray.MipLevels           = mip_levels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
     srv_desc.Texture2DArray.FirstArraySlice     = 0;          // First texture in an array to access [0, desc.DepthOrArraySize)
     srv_desc.Texture2DArray.ArraySize           = count;      // Numbre of textrues in array. [1, desc.DepthOrArraySize]
-    srv_desc.Texture2DArray.PlaneSlice          = 0;          // plane index (z index in 2D)
+    srv_desc.Texture2DArray.PlaneSlice          = 0;          // The index (plane slice number) of the plane to use in the texture.
     srv_desc.Texture2DArray.ResourceMinLODClamp = 0.5f;       // scale bound
 
     ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
@@ -434,7 +435,7 @@ u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u1
     texture->cube  = true;
     texture->array = true;
 
-    DescHeap *desc_heap = CreateDescHeap(index, texture->desc_heap_index);
+    DescHeap *desc_heap = CreateDescHeapForResource(index, texture->desc_heap_index);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
     srv_desc.Format                               = texture_format;
@@ -450,6 +451,35 @@ u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u1
     device->CreateShaderResourceView(texture->def_resource, &srv_desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
 
     return index;
+}
+
+u64 MemoryManager::AllocateSampler(const D3D12_SAMPLER_DESC& sampler_desc)
+{
+    u64      sampler_index = m_SamplerMemory.samplers.Count();
+    Sampler *sampler       = m_SamplerMemory.samplers.PushBack();
+
+    sampler->desc = sampler_desc;
+
+    DescHeap *desc_heap = CreateDescHeapForSampler(sampler_index, sampler->desc_heap_index);
+
+    // @Cleanup(Roman): Just an example. Also they must be read out from Settings.
+    //
+    // D3D12_SAMPLER_DESC sampler_desc{};
+    // sampler_desc.Filter         = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    // sampler_desc.AddressU       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+    // sampler_desc.AddressV       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+    // sampler_desc.AddressW       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+    // sampler_desc.MipLODBias     = 0.0f;
+    // sampler_desc.MaxAnisotropy  = 1;
+    // sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+    // sampler_desc.BorderColor    = {0, 0, 0, 0};
+    // sampler_desc.MinLOD         = 0.0f;
+    // sampler_desc.MaxLOD         = 100.0f;
+
+    ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
+    device->CreateSampler(&sampler->desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
+
+    return sampler_index;
 }
 
 void MemoryManager::SetBufferData(const Buffer& buffer, const void *data)
@@ -678,7 +708,7 @@ Texture *MemoryManager::AllocateTexture(const D3D12_RESOURCE_DESC& desc, u64& in
     return texture;
 }
 
-DescHeap *MemoryManager::CreateDescHeap(u64 resource_index, u64& desc_heap_index)
+DescHeap *MemoryManager::CreateDescHeapForResource(u64 resource_index, u64& desc_heap_index)
 {
     desc_heap_index = m_DescHeapMemory.desc_heaps.Count();
 
@@ -695,6 +725,29 @@ DescHeap *MemoryManager::CreateDescHeap(u64 resource_index, u64& desc_heap_index
 
     Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
     
+    HRESULT error = renderer->Device()->CreateDescriptorHeap(&desc_heap->desc, IID_PPV_ARGS(&desc_heap->handle));
+    REV_CHECK(CheckResultAndPrintMessages(error));
+
+    return desc_heap;
+}
+
+DescHeap *MemoryManager::CreateDescHeapForSampler(u64 sampler_index, u64& desc_heap_index)
+{
+    desc_heap_index = m_DescHeapMemory.desc_heaps.Count();
+
+    D3D12_DESCRIPTOR_HEAP_DESC desc_heap_desc;
+    desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+    desc_heap_desc.NumDescriptors = 1;
+    desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    desc_heap_desc.NodeMask       = 0;
+
+    DescHeap *desc_heap      = m_DescHeapMemory.desc_heaps.PushBack();
+    desc_heap->handle        = null;
+    desc_heap->sampler_index = sampler_index;
+    desc_heap->desc          = desc_heap_desc;
+
+    Renderer *renderer = cast<Renderer *>(GraphicsAPI::GetRenderer());
+
     HRESULT error = renderer->Device()->CreateDescriptorHeap(&desc_heap->desc, IID_PPV_ARGS(&desc_heap->handle));
     REV_CHECK(CheckResultAndPrintMessages(error));
 

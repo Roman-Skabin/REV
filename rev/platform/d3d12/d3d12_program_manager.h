@@ -12,6 +12,8 @@
 
 #include <d3d12.h>
 
+// @TODO(Roman): Redesign GraphicsProgram: must know about Assets.
+
 namespace REV::D3D12
 {
     struct GraphicsProgram final

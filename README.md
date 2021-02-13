@@ -1,5 +1,10 @@
 # REV
 
+## Important:
+* This is **NOT** an open source software. Yes, it's public, but it's just for a resume purposes.
+
+---
+
 ## Am working on right now:
 * Asset manager
 * Textures

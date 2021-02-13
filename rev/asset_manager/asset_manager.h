@@ -29,8 +29,9 @@ namespace REV
     struct Asset
     {
         // @NOTE(Roman): names need to be freed.
-        AssetNames *names;
-        GPU::ResourceHandle resource;
+        AssetNames          *names;
+        GPU::ResourceHandle  resource;
+        u64                  sampler = REV_U64_MAX; // for textures only
     };
 
     class REV_API AssetManager final
@@ -43,6 +44,8 @@ namespace REV
 
         void ParseREVAMFile(const ConstString& scene_name);
         void FreeSceneAssets();
+
+        Array<Asset>& GetSceneAssets() { return m_SceneArea; }
 
     private:
         AssetManager(Allocator *allocator, const char *RAF);

@@ -1,3 +1,7 @@
+Problems:
+    - We have to define everything at least 2 times. In the code and in the shaders. (Samplers for instsance)
+        - Solution #1: Custom Shaders? Argh, honestly, do not wanna write it.
+
 - Core
     - Complete core\platform.h
     - Move all STD includes from platform.h to pch.h?
@@ -8,6 +12,13 @@
     - Custom memcpy and memcmp // @Optimization
     - Single namespace for everything? (get rid of Math and GPU namespaces)
     - Minimize number of system calls // @Optimization
+    - Vertex buffer/index files
+    - Settings
+        - Texture Filtering (Point, Linear, Anisotropic)
+        - Graphics API to use (D3D12, Vulkan, ...) + ability to switch it at run-time
+        - RT dimension
+        - Max view distance (max LOD & far)
+        - Anisotropy level (1, 2, 4, 8, 16)
 
 - Tools
     - Several simultaneous read operations under the same file?

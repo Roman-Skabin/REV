@@ -98,7 +98,11 @@ namespace REV::D3D12
     struct DescHeap final
     {
         ID3D12DescriptorHeap       *handle;
-        u64                         resoucre_index;
+        union
+        {
+            u64                     resoucre_index;
+            u64                     sampler_index;
+        };
         D3D12_DESCRIPTOR_HEAP_DESC  desc;
     };
 
@@ -110,6 +114,22 @@ namespace REV::D3D12
         ~DescHeapMemory() {}
 
         DescHeapMemory& operator=(DescHeapMemory&& other) noexcept { desc_heaps = RTTI::move(other.desc_heaps); return *this; }
+    };
+
+    struct Sampler final
+    {
+        u64                desc_heap_index;
+        D3D12_SAMPLER_DESC desc;
+    };
+
+    struct SamplerMemory final
+    {
+        Array<Sampler> samplers;
+
+        SamplerMemory(Allocator *allocator) : samplers(allocator) {}
+        ~SamplerMemory() {}
+
+        SamplerMemory& operator=(SamplerMemory&& other) noexcept { samplers = RTTI::move(other.samplers); return *this; }
     };
 
     class MemoryManager final
@@ -130,6 +150,10 @@ namespace REV::D3D12
         u64 AllocateTexture1DArray(  u16 width,             u16 count,                 DXGI_FORMAT texture_format, const StaticString<64>& name = null);
         u64 AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name = null);
         u64 AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const StaticString<64>& name = null);
+
+        // @TOOD(Roman): #Settings: Read most of the stuff from Settings.
+        // @TODO(Roman): Pass only address method
+        u64 AllocateSampler(const D3D12_SAMPLER_DESC& sampler_desc);
 
         void SetBufferData(const Buffer& buffer, const void *data);
         void SetBufferDataImmediately(const Buffer& buffer, const void *data);
@@ -168,7 +192,8 @@ namespace REV::D3D12
         Buffer *AllocateBuffer(u64 size, D3D12_RESOURCE_STATES initial_state, u64& index);
         Texture *AllocateTexture(const D3D12_RESOURCE_DESC& desc, u64& index);
 
-        DescHeap *CreateDescHeap(u64 resource_index, u64& desc_heap_index);
+        DescHeap *CreateDescHeapForResource(u64 resource_index, u64& desc_heap_index);
+        DescHeap *CreateDescHeapForSampler(u64 sampler_index, u64& desc_heap_index);
 
         void UploadBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data);
         void UploadTextureData(ID3D12GraphicsCommandList *command_list, Texture *texture, u32 subres_count, D3D12_SUBRESOURCE_DATA *subresources);
@@ -185,6 +210,7 @@ namespace REV::D3D12
         ID3D12Fence               *m_Fence;
         Event                      m_FenceEvent;
         DescHeapMemory             m_DescHeapMemory;
+        SamplerMemory              m_SamplerMemory;
         BufferMemory               m_BufferMemory;
         TextureMemory              m_TextureMemory;
     };

@@ -8,7 +8,7 @@
 #include "tools/static_string.hpp"
 
 // @Cleanup(Roman): We do not need GPU memory manager on user side.
-//                  Asset manager allocates and sets all the data we need "automatically".
+//                  Asset manager allocates and sets all the data we need for us.
 //                  So we are fine having only platform version of it.
 
 namespace REV { class GraphicsAPI; }
@@ -45,14 +45,14 @@ namespace REV::GPU
     };
     REV_ENUM_CLASS_OPERATORS(TEXTURE_FORMAT);
 
-    struct SubTextureDesc
+    struct SubTextureDesc final
     {
         byte *data;
         u64   bytes_per_row;
         u64   bytes_per_tex2d;
     };
 
-    struct TextureDesc
+    struct TextureDesc final
     {
         SubTextureDesc *subtexture_desc;
         u64             subtextures_count;

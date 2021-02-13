@@ -14,6 +14,7 @@ namespace REV
 
 namespace REV::GPU
 {
+    // @TODO(Roman): Rename to DeviceContext
     class REV_API Renderer final
     {
     public:

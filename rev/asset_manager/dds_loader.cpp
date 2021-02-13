@@ -7,6 +7,7 @@
 #include "graphics/graphics_api.h"
 
 // @TODO(Roman): #CrossPlatform
+#include "platform/d3d12/d3d12_memory_manager.h"
 #include <dxgiformat.h>
 #include <d3d12.h>
 
@@ -714,6 +715,23 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
     }
 
     memory_manager->SetTextureData(asset->resource, &texture_desc);
+
+    // @TODO(Roman): #CrossPlatform, #Hardcoded.
+    {
+        D3D12::MemoryManager *d3d12_memory_manager = cast<D3D12::MemoryManager *>(memory_manager);
+    
+        D3D12_SAMPLER_DESC d3d12_sampler_desc{};
+        d3d12_sampler_desc.Filter         = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+        d3d12_sampler_desc.AddressU       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        d3d12_sampler_desc.AddressV       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        d3d12_sampler_desc.AddressW       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        d3d12_sampler_desc.MipLODBias     = 0.0f;
+        d3d12_sampler_desc.MaxAnisotropy  = 1;
+        d3d12_sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+        d3d12_sampler_desc.MinLOD         = 0.0f;
+        d3d12_sampler_desc.MaxLOD         = 100.0f;
+        asset->sampler = d3d12_memory_manager->AllocateSampler(d3d12_sampler_desc);
+    }
 }
 
 }

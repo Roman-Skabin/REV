@@ -53,19 +53,24 @@ SceneBase::SceneBase(Allocator *allocator, const ConstString& name, const Static
 
 void SceneBase::OnSetCurrentEx()
 {
+    GPU::MemoryManager  *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
+    GPU::ProgramManager *program_manager    = GraphicsAPI::GetProgramManager();
+
     StaticString<64> vb_name("VB_", REV_CSTRLEN("VB_"));
     StaticString<64> ib_name("IB_", REV_CSTRLEN("IB_"));
 
     vb_name += m_Name;
     ib_name += m_Name;
 
-    GPU::MemoryManager *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
-    {
-        m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast<u32>(m_VerticesCapacity), vb_name);
-        m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(m_IndicesCapacity), ib_name);
-    }
+    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast<u32>(m_VerticesCapacity), vb_name);
+    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(m_IndicesCapacity), ib_name);
 
     AssetManager::Get()->ParseREVAMFile(m_Name);
+
+    for (Asset& asset : AssetManager::Get()->GetSceneAssets())
+    {
+        program_manager->AttachResource(m_GraphicsProgram, asset.resource);
+    }
 
     OnSetCurrent();
 }

@@ -34,7 +34,7 @@ namespace REV
         static GPU::ProgramManager *GetProgramManager();
 
     private:
-        static void Init(Window *window, Allocator *allocator, const Logger& logger, Math::v2s rt_size);
+        static void Init(Window *window, Allocator *allocator, const Logger& logger);
         static void Destroy();
 
     private:

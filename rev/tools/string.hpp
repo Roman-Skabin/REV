@@ -899,7 +899,10 @@ public:
 
     String& operator=(char symbol)
     {
-        memset_char(m_Header->data + 1, '\0', m_Header->length - 1);
+        if (m_Header->length > 1)
+        {
+            memset_char(m_Header->data + 1, '\0', m_Header->length - 1);
+        }
 
         m_Header->length = 1;
         Fit();
@@ -912,7 +915,10 @@ public:
     {
         u64 cstring_length = strlen(cstring);
 
-        memset_char(m_Header->data + cstring_length, '\0', m_Header->length - cstring_length);
+        if (m_Header->length > cstring_length)
+        {
+            memset_char(m_Header->data + cstring_length, '\0', m_Header->length - cstring_length);
+        }
 
         m_Header->length = cstring_length;
         Fit();
@@ -923,7 +929,10 @@ public:
 
     String& operator=(const ConstString& const_string)
     {
-        memset_char(m_Header->data + const_string.Length(), '\0', m_Header->length - const_string.Length());
+        if (m_Header->length > const_string.Length())
+        {
+            memset_char(m_Header->data + const_string.Length(), '\0', m_Header->length - const_string.Length());
+        }
 
         m_Header->length = const_string.Length();
         Fit();
@@ -935,7 +944,10 @@ public:
     template<u64 ss_capacity, u64 ss_aligned_capacity>
     String& operator=(const StaticString<ss_capacity, ss_aligned_capacity>& static_string)
     {
-        memset_char(m_Header->data + static_string.Length(), '\0', m_Header->length - static_string.Length());
+        if (m_Header->length > static_string.Length())
+        {
+            memset_char(m_Header->data + static_string.Length(), '\0', m_Header->length - static_string.Length());
+        }
 
         m_Header->length = static_string.Length();
         Fit();
@@ -948,7 +960,10 @@ public:
     {
         if (this != &other)
         {
-            memset_char(m_Header->data + other.m_Header->length, '\0', m_Header->length - other.m_Header->length);
+            if (m_Header->length > other.m_Header->length)
+            {
+                memset_char(m_Header->data + other.m_Header->length, '\0', m_Header->length - other.m_Header->length);
+            }
 
             m_Header->length = other.m_Header->length;
             Fit();

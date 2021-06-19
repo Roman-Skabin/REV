@@ -462,20 +462,6 @@ u64 MemoryManager::AllocateSampler(const D3D12_SAMPLER_DESC& sampler_desc)
 
     DescHeap *desc_heap = CreateDescHeapForSampler(sampler_index, sampler->desc_heap_index);
 
-    // @Cleanup(Roman): Just an example. Also they must be read out from Settings.
-    //
-    // D3D12_SAMPLER_DESC sampler_desc{};
-    // sampler_desc.Filter         = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-    // sampler_desc.AddressU       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-    // sampler_desc.AddressV       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-    // sampler_desc.AddressW       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-    // sampler_desc.MipLODBias     = 0.0f;
-    // sampler_desc.MaxAnisotropy  = 1;
-    // sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-    // sampler_desc.BorderColor    = {0, 0, 0, 0};
-    // sampler_desc.MinLOD         = 0.0f;
-    // sampler_desc.MaxLOD         = 100.0f;
-
     ID3D12Device *device = cast<Renderer *>(GraphicsAPI::GetRenderer())->Device();
     device->CreateSampler(&sampler->desc, desc_heap->handle->GetCPUDescriptorHandleForHeapStart());
 

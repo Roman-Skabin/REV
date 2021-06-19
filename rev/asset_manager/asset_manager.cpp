@@ -27,7 +27,7 @@ REV_INTERNAL const char *ReadEntireFile(const char *filename, Allocator *allocat
     char *buffer = allocator->Alloc<char>(size + 1);
     for (u64 bytes_read = 0; size; )
     {
-        u32 bytes_to_read = Math::clamp<u32>(size, 0, REV_U32_MAX);
+        u32 bytes_to_read = Math::clamp<u32, u64>(size, 0, REV_U32_MAX);
         REV_DEBUG_RESULT(ReadFile(file, buffer + bytes_read, bytes_to_read, null, null));
 
         bytes_read += bytes_to_read;
@@ -39,7 +39,7 @@ REV_INTERNAL const char *ReadEntireFile(const char *filename, Allocator *allocat
     return buffer;
 }
 
-AssetManager *AssetManager::Create(Allocator *allocator, const char *REVAM_filename)
+AssetManager *AssetManager::Create(Allocator *allocator, const StaticString<REV_PATH_CAPACITY>& REVAM_filename)
 {
     REV_CHECK_M(!g_AssetManager, "Asset manager is already created. Use AssetManager::Get() function instead");
     g_AssetManager = new (Memory::Get()->PushToPA<AssetManager>()) AssetManager(allocator, REVAM_filename);
@@ -52,7 +52,7 @@ AssetManager *AssetManager::Get()
     return g_AssetManager;
 }
 
-AssetManager::AssetManager(Allocator *allocator, const char *REVAM_filename)
+AssetManager::AssetManager(Allocator *allocator, const StaticString<REV_PATH_CAPACITY>& REVAM_filename)
     : m_Allocator(allocator),
       m_UserREVAMFileName(REVAM_filename),
       m_UserREVAMStream(null),
@@ -60,7 +60,7 @@ AssetManager::AssetManager(Allocator *allocator, const char *REVAM_filename)
       m_SceneArea(allocator)
 {
     u64 length = 0;
-    m_UserREVAMStream = ReadEntireFile(m_UserREVAMFileName, m_Allocator, &length);
+    m_UserREVAMStream = ReadEntireFile(m_UserREVAMFileName.Data(), m_Allocator, &length);
     ParseREVAMFile();
 }
 
@@ -94,7 +94,7 @@ void AssetManager::ParseTexture(Asset *asset, const char *_filename, u64 filenam
         byte *data = memory->PushToTA<byte>(data_size);
         for (u64 bytes_read = 0, size = data_size; size; )
         {
-            u32 bytes_to_read = Math::clamp<u32>(size, 0, REV_U32_MAX);
+            u32 bytes_to_read = Math::clamp<u32, u64>(size, 0, REV_U32_MAX);
             REV_DEBUG_RESULT(ReadFile(file, data + bytes_read, bytes_to_read, null, null));
 
             bytes_read += bytes_to_read;

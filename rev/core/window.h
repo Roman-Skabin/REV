@@ -15,8 +15,7 @@ namespace REV
     class REV_API Window final
     {
     public:
-        Window(const Logger& logger, const StaticString<128>& title, Math::v4s xywh = REV_S32_MIN);
-
+        Window(const Logger& logger, const StaticString<128>& title);
         ~Window();
 
         void RequstFullscreen(bool set);

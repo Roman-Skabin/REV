@@ -210,7 +210,7 @@ private:
     {
         if (val < 0)
         {
-            val = RTTI::abs(val);
+            val = Math::abs(val);
             *buffer++ = '-';
         }
         else if (ForceSign)
@@ -309,7 +309,7 @@ private:
     {
         if (val < 0)
         {
-            val       = RTTI::abs(val);
+            val       = Math::abs(val);
             *buffer++ = '-';
         }
         else if (ForceSign)

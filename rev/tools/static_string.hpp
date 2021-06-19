@@ -646,9 +646,14 @@ public:
 
     REV_INLINE StaticString& operator=(char symbol)
     {
-        memset_char(m_Data + 1, '\0', m_Length - 1);
+        if (m_Length > 1)
+        {
+            memset_char(m_Data + 1, '\0', m_Length - 1);
+        }
+
         m_Length = 1;
         *m_Data  = symbol;
+
         return *this;
     }
 
@@ -657,7 +662,10 @@ public:
         u64 length = strlen(cstring);
         REV_CHECK_M(length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
 
-        memset_char(m_Data + length, '\0', m_Length - length);
+        if (m_Length > length)
+        {
+            memset_char(m_Data + length, '\0', m_Length - length);
+        }
 
         m_Length = length;
         CopyMemory(m_Data, cstring, m_Length);
@@ -669,7 +677,10 @@ public:
     {
         REV_CHECK_M(const_string.Length() < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
 
-        memset_char(m_Data + const_string.Length(), '\0', m_Length - const_string.Length());
+        if (m_Length > const_string.Length())
+        {
+            memset_char(m_Data + const_string.Length(), '\0', m_Length - const_string.Length());
+        }
 
         m_Length = const_string.Length();
         CopyMemory(m_Data, const_string.Data(), m_Length);
@@ -684,7 +695,10 @@ public:
         {
             REV_CHECK_M(other.m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
 
-            memset_char(m_Data + other.m_Length, '\0', m_Length - other.m_Length);
+            if (m_Length > other.Length())
+            {
+                memset_char(m_Data + other.m_Length, '\0', m_Length - other.m_Length);
+            }
 
             m_Length = other.m_Length;
             CopyMemory(m_Data, other.m_Data, m_Length);
@@ -699,7 +713,10 @@ public:
         {
             REV_CHECK_M(other.m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
 
-            memset_char(m_Data + other.m_Length, '\0', m_Length - other.m_Length);
+            if (m_Length > other.m_Length)
+            {
+                memset_char(m_Data + other.m_Length, '\0', m_Length - other.m_Length);
+            }
 
             m_Length = other.m_Length;
             CopyMemory(m_Data, other.m_Data, m_Length);

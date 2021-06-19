@@ -9,6 +9,7 @@
 #include "core/key_codes.h"
 #include "math/vec.h"
 #include "tools/logger.h"
+#include "math/math.h"
 
 namespace REV
 {
@@ -151,8 +152,8 @@ namespace REV
 
         REV_INLINE void Update(f32 x, f32 y, bool down)
         {
-            m_Offset.x = fabs(x) <= m_Deadzone ? 0 : x;
-            m_Offset.y = fabs(y) <= m_Deadzone ? 0 : y;
+            m_Offset.x = Math::abs(x) <= m_Deadzone ? 0 : x;
+            m_Offset.y = Math::abs(y) <= m_Deadzone ? 0 : y;
             m_Button.Update(down);
         }
 

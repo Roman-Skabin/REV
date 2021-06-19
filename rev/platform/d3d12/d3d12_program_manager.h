@@ -57,7 +57,7 @@ namespace REV::D3D12
         ProgramManager(Allocator *allocator, const Logger& logger);
         ~ProgramManager();
 
-        u64 CreateGraphicsProgram(const StaticString<MAX_PATH>& file_with_shaders);
+        u64 CreateGraphicsProgram(const StaticString<REV_PATH_CAPACITY>& file_with_shaders);
 
         void SetCurrentGraphicsProgram(const GraphicsProgram& graphics_program);
 
@@ -75,7 +75,7 @@ namespace REV::D3D12
         ComputeProgram&  GetComputeProgram(u64 index)  { return m_ComputePrograms[index];  }
 
     private:
-        void AttachGraphicsShaders(GraphicsProgram *graphics_program, const StaticString<MAX_PATH>& file_with_shaders);
+        void AttachGraphicsShaders(GraphicsProgram *graphics_program, const StaticString<REV_PATH_CAPACITY>& file_with_shaders);
         void CreateRootSignature(GraphicsProgram *graphics_program, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc);
         void CreatePipelineState(GraphicsProgram *graphics_program, const D3D12_INPUT_LAYOUT_DESC& input_layout, bool blending_enabled, D3D12_CULL_MODE cull_mode, bool depth_test_enabled);
 

@@ -28,6 +28,8 @@ enum class TOKEN_KIND : u32
     KEYWORD,
     NAME,
     STRING,
+
+    MAX
 };
 
 struct Token
@@ -120,7 +122,7 @@ tokenize_again:
 
     token.start = stream;
 
-    if (isalpha(*stream))
+    if (isalpha(*stream) || *stream == '_')
     {
         while (isalnum(*stream) || *stream == '_') ++stream;
         token.name = GetKeywordName(token.start, stream - token.start);
@@ -135,7 +137,7 @@ tokenize_again:
         ++stream;
         while (*stream && *stream != '"')
         {
-            if (*stream == '\\' && stream[1] == '"') ++stream;
+            if (*stream == '\n') SyntaxError("unexpected end of line, expected '\"'");
             ++stream;
         }
         if (*stream)
@@ -195,6 +197,7 @@ void REV_CDECL Lexer::SyntaxError(const char *format, ...)
     token.pos.c = cast<u32>(stream - line_start);
 
     DebugFC(DEBUG_COLOR::ERROR, "%s(%I32u:%I32u): RAF syntax error: %s.", filename, token.pos.r, token.pos.c, buffer);
+    // @TODO(Roman): #CrossPlatform
     ExitProcess(1);
 }
 
@@ -251,25 +254,14 @@ void Lexer::CheckToken(TOKEN_KIND token_kind)
 {
     if (token.kind != token_kind)
     {
-        #if 0 // Argh C++...
-            const char *token_kind_names[256] =
-            {
-                [TOKEN_KIND::EOS]       = "EOS",
-                [TOKEN_KIND::COMMA]     = ",",
-                [TOKEN_KIND::COLON]     = ":",
-                [TOKEN_KIND::SEMICOLON] = ";",
-                [TOKEN_KIND::KEYWORD]   = "<keyword>",
-                [TOKEN_KIND::STRING]    = "<string>",
-            };
-        #else
-            const char *token_kind_names[256] = {'\0'};
-            token_kind_names[cast<u64>(TOKEN_KIND::EOS)]       = "EOS";
-            token_kind_names[cast<u64>(TOKEN_KIND::COMMA)]     = ",";
-            token_kind_names[cast<u64>(TOKEN_KIND::COLON)]     = ":";
-            token_kind_names[cast<u64>(TOKEN_KIND::SEMICOLON)] = ";";
-            token_kind_names[cast<u64>(TOKEN_KIND::KEYWORD)]   = "<keyword>";
-            token_kind_names[cast<u64>(TOKEN_KIND::STRING)]    = "<string>";
-        #endif
+        const char *token_kind_names[cast<u64>(TOKEN_KIND::MAX)] = {'\0'};
+        token_kind_names[cast<u64>(TOKEN_KIND::EOS)]       = "<EOS>";
+        token_kind_names[cast<u64>(TOKEN_KIND::COMMA)]     = ",";
+        token_kind_names[cast<u64>(TOKEN_KIND::COLON)]     = ":";
+        token_kind_names[cast<u64>(TOKEN_KIND::SEMICOLON)] = ";";
+        token_kind_names[cast<u64>(TOKEN_KIND::KEYWORD)]   = "<keyword>";
+        token_kind_names[cast<u64>(TOKEN_KIND::NAME)]      = "<name>";
+        token_kind_names[cast<u64>(TOKEN_KIND::STRING)]    = "<string>";
 
         auto& TokenKindName = [&token_kind_names](TOKEN_KIND token_kind)
         {
@@ -399,7 +391,7 @@ void AssetManager::ParseExternalBlock(void *_lexer, Array<Asset> *area)
 
 void AssetManager::ParseREVAMFile()
 {
-    Lexer lexer(m_UserREVAMFileName, m_UserREVAMStream);
+    Lexer lexer(m_UserREVAMFileName.Data(), m_UserREVAMStream);
 
     while (lexer.token.kind != TOKEN_KIND::EOS)
     {
@@ -416,7 +408,7 @@ void AssetManager::ParseREVAMFile()
 
 void AssetManager::ParseREVAMFile(const ConstString& scene_name)
 {
-    Lexer lexer(m_UserREVAMFileName, m_UserREVAMStream);
+    Lexer lexer(m_UserREVAMFileName.Data(), m_UserREVAMStream);
 
     while (lexer.token.kind != TOKEN_KIND::EOS)
     {

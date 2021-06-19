@@ -52,13 +52,13 @@ union REV_INTRIN_TYPE m2 final
     {
         __m128 vdet = _mm_set_ps1(e00 * e11 - e01 * e10);
         __m128 mult = _mm_setr_ps(1.0f, -1.0f, -1.0f, 1.0f);
-        __m128 cof  = _mm_shuffle_ps(mm, mm, cast<s32>(MM_SHUFFLE::WYZX));
+        __m128 cof  = _mm_shuffle_ps(mm, mm, MM_SHUFFLE_WYZX);
         return m2(_mm_div_ps(_mm_mul_ps(cof, mult), vdet));
     }
 
     REV_INLINE m2 REV_VECTORCALL transpose() const
     {
-        return m2(_mm_shuffle_ps(mm, mm, cast<s32>(MM_SHUFFLE::XZYW)));
+        return m2(_mm_shuffle_ps(mm, mm, MM_SHUFFLE_XZYW));
     }
 
     static REV_INLINE m2 REV_VECTORCALL identity()
@@ -75,10 +75,11 @@ union REV_INTRIN_TYPE m2 final
 
     static REV_INLINE m2 REV_VECTORCALL rotation_z(rad angle)
     {
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
-        return m2(c, -s,
-                  s, c);
+        __m128 mm_cos;
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
+        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS)));
+        return m2(mm_res);
     }
 
     static REV_INLINE m2 REV_VECTORCALL reflection_x()
@@ -137,10 +138,10 @@ union REV_INTRIN_TYPE m2 final
         // e10 = l.e10 * r.e00 + l.e11 * r.e10;
         // e11 = l.e10 * r.e01 + l.e11 * r.e11;
 
-        __m128 col_1 = _mm_shuffle_ps(  mm,   mm, cast<s32>(MM_SHUFFLE::XXZZ));
-        __m128 col_2 = _mm_shuffle_ps(r.mm, r.mm, cast<s32>(MM_SHUFFLE::XYXY));
-        __m128 col_3 = _mm_shuffle_ps(  mm,   mm, cast<s32>(MM_SHUFFLE::YYWW));
-        __m128 col_4 = _mm_shuffle_ps(r.mm, r.mm, cast<s32>(MM_SHUFFLE::ZWZW));
+        __m128 col_1 = _mm_shuffle_ps(  mm,   mm, MM_SHUFFLE_XXZZ);
+        __m128 col_2 = _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_XYXY);
+        __m128 col_3 = _mm_shuffle_ps(  mm,   mm, MM_SHUFFLE_YYWW);
+        __m128 col_4 = _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_ZWZW);
 
         __m128 left  = _mm_mul_ps(col_1, col_2);
         __m128 right = _mm_mul_ps(col_3, col_4);
@@ -168,10 +169,10 @@ REV_INLINE m2 REV_VECTORCALL operator*(m2 l, m2 r)
     // e10 = l.e10 * r.e00 + l.e11 * r.e10;
     // e11 = l.e10 * r.e01 + l.e11 * r.e11;
 
-    __m128 col_1 = _mm_shuffle_ps(l.mm, l.mm, cast<s32>(MM_SHUFFLE::XXZZ));
-    __m128 col_2 = _mm_shuffle_ps(r.mm, r.mm, cast<s32>(MM_SHUFFLE::XYXY));
-    __m128 col_3 = _mm_shuffle_ps(l.mm, l.mm, cast<s32>(MM_SHUFFLE::YYWW));
-    __m128 col_4 = _mm_shuffle_ps(r.mm, r.mm, cast<s32>(MM_SHUFFLE::ZWZW));
+    __m128 col_1 = _mm_shuffle_ps(l.mm, l.mm, MM_SHUFFLE_XXZZ);
+    __m128 col_2 = _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_XYXY);
+    __m128 col_3 = _mm_shuffle_ps(l.mm, l.mm, MM_SHUFFLE_YYWW);
+    __m128 col_4 = _mm_shuffle_ps(r.mm, r.mm, MM_SHUFFLE_ZWZW);
 
     __m128 left  = _mm_mul_ps(col_1, col_2);
     __m128 right = _mm_mul_ps(col_3, col_4);
@@ -519,92 +520,98 @@ public:
 
     static REV_INLINE m3 REV_VECTORCALL rotation_x(rad angle)
     {
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
+        __m128 mm_cos;
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
+        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS)));
 
-        return m3(1.0f, 0.0f, 0.0f,
-                  0.0f,    c,   -s,
-                  0.0f,    s,    c);
+        return m3(1.0f,                      0.0f,                      0.0f,
+                  0.0f, mm_extract_f32<0>(mm_res), mm_extract_f32<1>(mm_res),
+                  0.0f, mm_extract_f32<2>(mm_res), mm_extract_f32<3>(mm_res));
     }
 
     static REV_INLINE m3 REV_VECTORCALL rotation_y(rad angle)
     {
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
+        __m128 mm_cos;
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
+        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS)));
 
-        return m3(   c, 0.0f,    s,
-                  0.0f, 1.0f, 0.0f,
-                    -s, 0.0f,    c);
+        return m3(mm_extract_f32<0>(mm_res), 0.0f, mm_extract_f32<1>(mm_res),
+                                       0.0f, 1.0f,                      0.0f,
+                  mm_extract_f32<2>(mm_res), 0.0f, mm_extract_f32<3>(mm_res));
     }
 
     static REV_INLINE m3 REV_VECTORCALL rotation_z(rad angle)
     {
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
+        __m128 mm_cos;
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
+        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS))); 
 
-        return m3(   c,   -s, 0.0f,
-                     s,    c, 0.0f,
-                  0.0f, 0.0f, 1.0f);
+        return m3(mm_extract_f32<0>(mm_res), mm_extract_f32<1>(mm_res), 0.0f,
+                  mm_extract_f32<2>(mm_res), mm_extract_f32<3>(mm_res), 0.0f,
+                                       0.0f,                      0.0f, 1.0f);
     }
 
     static REV_INLINE m3 REV_VECTORCALL rotation(v3 v, rad angle)
     {
-        // x*x*(1.0f-c)+  c     x*y*(1.0f-c)-z*s     x*z*(1.0-c)+y*s
-        // y*x*(1.0f-c)+z*s     y*y*(1.0f-c)+  c     y*z*(1.0-c)-x*s
-        // z*x*(1.0f-c)-y*s     z*y*(1.0f-c)+x*s     z*z*(1.0-c)+  c
+        // x*x*(1.0f-c)+1*c     x*y*(1.0f-c)-z*s     x*z*(1.0-c)+y*s
+        // y*x*(1.0f-c)+z*s     y*y*(1.0f-c)+1*c     y*z*(1.0-c)-x*s
+        // z*x*(1.0f-c)-y*s     z*y*(1.0f-c)+x*s     z*z*(1.0-c)+1*c
 
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
+        __m128 mm_cos;
+        __m128 mm_sin  = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
+        __m128 mm_zero = _mm_setzero_ps();
+        __m128 mm_one  = _mm_set_ps1(1.0f);
+        __m128 mm_invc = _mm_sub_ps(mm_one, mm_sin);
+        __m128 mm_vec  = v.load();
 
-        f32 invc = 1.0f - c;
+        __m128 second_1 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_XXXW);
+        __m128 second_2 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_YYYW);
+        __m128 second_3 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_ZZZW);
 
-    #if REV_ISA >= REV_ISA_AVX512
-        __m512 first  = _mm512_setr_ps( v.x,  v.y,  v.z,  v.x,  v.y,  v.z,  v.x,  v.y,  v.z, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-        __m512 second = _mm512_setr_ps( v.x,  v.x,  v.x,  v.y,  v.y,  v.y,  v.z,  v.z,  v.z, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-        __m512 third  = _mm512_setr_ps(invc, invc, invc, invc, invc, invc, invc, invc, invc, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-        __m512 forth  = _mm512_setr_ps(1.0f,  v.z, -v.y, -v.z, 1.0f,  v.x,  v.y, -v.x, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-        __m512 fifth  = _mm512_setr_ps(   c,    s,    s,    s,    c,    s,    s,    s,    c, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        __m128 third = _mm_blend_ps(mm_invc, mm_zero, MM_BLEND_AAAB);
 
-        __m512 res = _mm512_add_ps(_mm512_mul_ps(_mm512_mul_ps(first, second), third), _mm512_mul_ps(forth, fifth));
+        __m128 _0zy0 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_WZYW);
+        __m128 _z0x0 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_ZWXW);
+        __m128 _yx00 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_YXWW);
 
-        return m3(mm_extract_f32<0>(res), mm_extract_f32<3>(res), mm_extract_f32<6>(res),
-                  mm_extract_f32<1>(res), mm_extract_f32<4>(res), mm_extract_f32<7>(res),
-                  mm_extract_f32<2>(res), mm_extract_f32<5>(res), mm_extract_f32<8>(res));
-    #elif REV_ISA >= REV_ISA_AVX
-        __m256 first  = _mm256_setr_ps(v.x, v.y, v.z, v.x, v.y, v.z, v.x, v.y);
-        __m256 second = _mm256_setr_ps(v.x, v.x, v.x, v.y, v.y, v.y, v.z, v.z);
-        __m256 third  = _mm256_setr_ps(invc, invc, invc, invc, invc, invc, invc, invc);
-        __m256 forth  = _mm256_setr_ps(1.0f, v.z, -v.y, -v.z, 1.0f, v.x, v.y, -v.x);
-        __m256 fifth  = _mm256_setr_ps(c, s, s, s, c, s, s, s);
+        __m128 _1zy0 = _mm_blend_ps(_0zy0, mm_one, MM_BLEND_BAAB);
+        __m128 _z1x0 = _mm_blend_ps(_z0x0, mm_one, MM_BLEND_ABAB);
+        __m128 _yx10 = _mm_blend_ps(_yx00, mm_one, MM_BLEND_AABB);
 
-        __m256 res = _mm256_add_ps(_mm256_mul_ps(_mm256_mul_ps(first, second), third), _mm256_mul_ps(forth, fifth));
+        __m128 fourth_1 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_1zy0), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_ZERO)));
+        __m128 fourth_2 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_z1x0), _mm_setr_epi32(MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_ZERO)));
+        __m128 fourth_3 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_yx10), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_ZERO)));
 
-        return m3(mm_extract_f32<0>(res), mm_extract_f32<3>(res), mm_extract_f32<6>(res),
-                  mm_extract_f32<1>(res), mm_extract_f32<4>(res), mm_extract_f32<7>(res),
-                  mm_extract_f32<2>(res), mm_extract_f32<5>(res),  v.z * v.z * invc + c);
-    #else
-        __m128 first_1 = _mm_setr_ps(v.x, v.y, v.z, v.x);
-        __m128 first_2 = _mm_setr_ps(v.y, v.z, v.x, v.y);
+        __m128 cssc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_ABBA);
+        __m128 scsc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_BABA);
+        __m128 sscc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_BBAA);
 
-        __m128 second_1 = _mm_set_ps(v.x, v.x, v.x, v.y);
-        __m128 second_2 = _mm_set_ps(v.y, v.y, v.z, v.z);
+        __m128 fifth_1 = _mm_blend_ps(cssc, mm_zero, MM_BLEND_AAAB);
+        __m128 fifth_2 = _mm_blend_ps(scsc, mm_zero, MM_BLEND_AAAB);
+        __m128 fifth_3 = _mm_blend_ps(sscc, mm_zero, MM_BLEND_AAAB);
 
-        __m128 third_1 = _mm_set1_ps(invc);
-        __m128 third_2 = third_1;
+        __m128 _12_1 = _mm_mul_ps(mm_vec, second_1);
+        __m128 _12_2 = _mm_mul_ps(mm_vec, second_2);
+        __m128 _12_3 = _mm_mul_ps(mm_vec, second_3);
 
-        __m128 forth_1 = _mm_setr_ps(1.0f, v.z, -v.y, -v.z);
-        __m128 forth_2 = _mm_setr_ps(1.0f, v.x,  v.y, -v.x);
+        __m128 _45_1 = _mm_mul_ps(fourth_1, fifth_1);
+        __m128 _45_2 = _mm_mul_ps(fourth_2, fifth_2);
+        __m128 _45_3 = _mm_mul_ps(fourth_3, fifth_3);
 
-        __m128 fifth_1 = _mm_setr_ps(c, s, s, s);
-        __m128 fifth_2 = _mm_setr_ps(c, s, s, s);
+        __m128 _123_1 = _mm_mul_ps(_12_1, third);
+        __m128 _123_2 = _mm_mul_ps(_12_2, third);
+        __m128 _123_3 = _mm_mul_ps(_12_3, third);
 
-        __m128 res_1 = _mm_add_ps(_mm_mul_ps(_mm_mul_ps(first_1, second_1), third_1), _mm_mul_ps(forth_1, fifth_1));
-        __m128 res_2 = _mm_add_ps(_mm_mul_ps(_mm_mul_ps(first_2, second_2), third_2), _mm_mul_ps(forth_2, fifth_2));
+        __m128 res_1 = _mm_add_ps(_123_1, _45_1);
+        __m128 res_2 = _mm_add_ps(_123_2, _45_2);
+        __m128 res_3 = _mm_add_ps(_123_3, _45_3);
 
-        return m3(mm_extract_f32<0>(res_1), mm_extract_f32<3>(res_1), mm_extract_f32<2>(res_2),
-                  mm_extract_f32<1>(res_1), mm_extract_f32<0>(res_2), mm_extract_f32<3>(res_2),
-                  mm_extract_f32<2>(res_1), mm_extract_f32<1>(res_2),    v.z * v.z * invc + c);
-    #endif
+        return m3(mm_extract_f32<0>(res_1), mm_extract_f32<0>(res_2), mm_extract_f32<0>(res_3),
+                  mm_extract_f32<1>(res_1), mm_extract_f32<1>(res_2), mm_extract_f32<1>(res_3),
+                  mm_extract_f32<2>(res_1), mm_extract_f32<2>(res_2), mm_extract_f32<2>(res_3));
     }
 
     static REV_INLINE m3 REV_VECTORCALL reflection_x()
@@ -750,11 +757,11 @@ public:
     {
     #if REV_ISA >= REV_ISA_AVX
         return m3(_mm256_max_ps(min.ymm0, _mm256_min_ps(max.ymm0, val.ymm0)),
-                  RTTI::max(min.e22, RTTI::min(max.e22, val.e22)));
+                  Math::max(min.e22, Math::min(max.e22, val.e22)));
     #else
         return m3(_mm_max_ps(min.xmm0, _mm_min_ps(max.xmm0, val.xmm0)),
                   _mm_max_ps(min.xmm1, _mm_min_ps(max.xmm1, val.xmm1)),
-                  RTTI::max(min.e22, RTTI::min(max.e22, val.e22)));
+                  Math::max(min.e22, Math::min(max.e22, val.e22)));
     #endif
     }
 
@@ -1109,20 +1116,15 @@ union REV_INTRIN_TYPE m4 final
                   f32 e20, f32 e21, f32 e22, f32 e23,
                   f32 e30, f32 e31, f32 e32, f32 e33)
     #if REV_ISA >= REV_ISA_AVX512
-        : zmm(_mm512_setr_ps(e00, e01, e02, e03,
-                             e10, e11, e12, e13,
-                             e20, e21, e22, e23,
-                             e30, e31, e32, e33))
+        : zmm(_mm512_loadu_ps(&e00))
     #elif REV_ISA >= REV_ISA_AVX
-        : ymm0(_mm256_setr_ps(e00, e01, e02, e03,
-                              e10, e11, e12, e13)),
-          ymm1(_mm256_setr_ps(e20, e21, e22, e23,
-                              e30, e31, e32, e33))
+        : ymm0(_mm256_loadu_ps(&e00)),
+          ymm1(_mm256_loadu_ps(&e20))
     #else
-        : xmm0(_mm_setr_ps(e00, e01, e02, e03)),
-          xmm1(_mm_setr_ps(e10, e11, e12, e13)),
-          xmm2(_mm_setr_ps(e20, e21, e22, e23)),
-          xmm3(_mm_setr_ps(e30, e31, e32, e33))
+        : xmm0(_mm_loadu_ps(&e00)),
+          xmm1(_mm_loadu_ps(&e10)),
+          xmm2(_mm_loadu_ps(&e20)),
+          xmm3(_mm_loadu_ps(&e30))
     #endif
     {
     }
@@ -1149,15 +1151,15 @@ union REV_INTRIN_TYPE m4 final
 
     REV_INLINE m4(f32 arr[16])
     #if REV_ISA >= REV_ISA_AVX512
-        : zmm(_mm512_load_ps(arr))
+        : zmm(_mm512_loadu_ps(arr))
     #elif REV_ISA >= REV_ISA_AVX
-        : ymm0(_mm256_load_ps(arr)),
-          ymm1(_mm256_load_ps(arr + 8))
+        : ymm0(_mm256_loadu_ps(arr)),
+          ymm1(_mm256_loadu_ps(arr + 8))
     #else
-        : xmm0(_mm_load_ps(arr)),
-          xmm1(_mm_load_ps(arr + 4)),
-          xmm2(_mm_load_ps(arr + 8)),
-          xmm3(_mm_load_ps(arr + 12))
+        : xmm0(_mm_loadu_ps(arr)),
+          xmm1(_mm_loadu_ps(arr + 4)),
+          xmm2(_mm_loadu_ps(arr + 8)),
+          xmm3(_mm_loadu_ps(arr + 12))
     #endif
     {
     }
@@ -1450,115 +1452,103 @@ union REV_INTRIN_TYPE m4 final
 
     static REV_INLINE m4 REV_VECTORCALL rotation_x(rad angle)
     {
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
+        __m128 mm_cos;
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
+        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS)));
 
-        return m4(1.0f, 0.0f, 0.0f, 0.0f,
-                  0.0f,    c,   -s, 0.0f,
-                  0.0f,    s,    c, 0.0f,
-                  0.0f, 0.0f, 0.0f, 1.0f);
+        return m4(1.0f,                      0.0f,                      0.0f, 0.0f,
+                  0.0f, mm_extract_f32<0>(mm_res), mm_extract_f32<1>(mm_res), 0.0f,
+                  0.0f, mm_extract_f32<2>(mm_res), mm_extract_f32<3>(mm_res), 0.0f,
+                  0.0f,                      0.0f,                      0.0f, 1.0f);
     }
 
     static REV_INLINE m4 REV_VECTORCALL rotation_y(rad angle)
     {
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
+        __m128 mm_cos;
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
+        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS)));
 
-        return m4(   c, 0.0f,    s, 0.0f,
-                  0.0f, 1.0f, 0.0f, 0.0f,
-                    -s, 0.0f,    c, 0.0f,
-                  0.0f, 0.0f, 0.0f, 1.0f);
+        return m4(mm_extract_f32<0>(mm_res), 0.0f, mm_extract_f32<1>(mm_res), 0.0f,
+                                       0.0f, 1.0f,                      0.0f, 0.0f,
+                  mm_extract_f32<2>(mm_res), 0.0f, mm_extract_f32<3>(mm_res), 0.0f,
+                                       0.0f, 0.0f,                      0.0f, 1.0f);
     }
 
     static REV_INLINE m4 REV_VECTORCALL rotation_z(rad angle)
     {
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
+        __m128 mm_cos;
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
+        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS))); 
 
-        return m4(   c,   -s, 0.0f, 0.0f,
-                     s,    c, 0.0f, 0.0f,
-                  0.0f, 0.0f, 1.0f, 0.0f,
-                  0.0f, 0.0f, 0.0f, 1.0f);
+        return m4(mm_extract_f32<0>(mm_res), mm_extract_f32<1>(mm_res), 0.0f, 0.0f,
+                  mm_extract_f32<2>(mm_res), mm_extract_f32<3>(mm_res), 0.0f, 0.0f,
+                                       0.0f,                      0.0f, 1.0f, 0.0f,
+                                       0.0f,                      0.0f, 0.0f, 1.0f);
     }
 
     static REV_INLINE m4 REV_VECTORCALL rotation(v4 v, rad angle)
     {
-        // x*x*(1.0f-c)+  c     x*y*(1.0f-c)-z*s     x*z*(1.0-c)+y*s     0.0f
-        // y*x*(1.0f-c)+z*s     y*y*(1.0f-c)+  c     y*z*(1.0-c)-x*s     0.0f
-        // z*x*(1.0f-c)-y*s     z*y*(1.0f-c)+x*s     z*z*(1.0-c)+  c     0.0f
+        // x*x*(1.0f-c)+1*c     x*y*(1.0f-c)-z*s     x*z*(1.0-c)+y*s     0.0f
+        // y*x*(1.0f-c)+z*s     y*y*(1.0f-c)+1*c     y*z*(1.0-c)-x*s     0.0f
+        // z*x*(1.0f-c)-y*s     z*y*(1.0f-c)+x*s     z*z*(1.0-c)+1*c     0.0f
         //             0.0f                 0.0f                0.0f     1.0f
 
-        f32 s = sinf(angle);
-        f32 c = cosf(angle);
+        __m128 mm_cos;
+        __m128 mm_sin  = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
+        __m128 mm_zero = _mm_setzero_ps();
+        __m128 mm_one  = _mm_set_ps1(1.0f);
+        __m128 mm_invc = _mm_sub_ps(mm_one, mm_sin);
+        __m128 mm_vec  = v.mm;
 
-        f32 invc = 1.0f - c;
+        __m128 second_1 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_XXXW);
+        __m128 second_2 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_YYYW);
+        __m128 second_3 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_ZZZW);
 
-    #if REV_ISA >= REV_ISA_AVX512
-        __m512 first  = _mm512_setr_ps( v.x,  v.y,  v.z, 0.0f,  v.x,  v.y,  v.z, 0.0f,  v.x,  v.y,  v.z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-        __m512 second = _mm512_setr_ps( v.x,  v.x,  v.x, 0.0f,  v.y,  v.y,  v.y, 0.0f,  v.z,  v.z,  v.z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-        __m512 third  = _mm512_setr_ps(invc, invc, invc, 0.0f, invc, invc, invc, 0.0f, invc, invc, invc, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-        __m512 forth  = _mm512_setr_ps(1.0f,  v.z, -v.y, 0.0f, -v.z, 1.0f,  v.x, 0.0f,  v.y, -v.x, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-        __m512 fifth  = _mm512_setr_ps(   c,    s,    s, 0.0f,    s,    c,    s, 0.0f,    s,    s,    c, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        __m128 third = _mm_blend_ps(mm_invc, mm_zero, MM_BLEND_AAAB);
 
-        __m512 res = _mm512_add_ps(_mm512_mul_ps(_mm512_mul_ps(first, second), third), _mm512_mul_ps(forth, fifth));
+        __m128 _0zy0 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_WZYW);
+        __m128 _z0x0 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_ZWXW);
+        __m128 _yx00 = _mm_shuffle_ps(mm_vec, mm_vec, MM_SHUFFLE_YXWW);
 
-        return m4(mm_extract_f32<0>(res), mm_extract_f32<4>(res), mm_extract_f32< 8>(res), 0.0f,
-                  mm_extract_f32<1>(res), mm_extract_f32<5>(res), mm_extract_f32< 9>(res), 0.0f,
-                  mm_extract_f32<2>(res), mm_extract_f32<6>(res), mm_extract_f32<10>(res), 0.0f,
-                                    0.0f,                   0.0f,                    0.0f, 1.0f);
-    #elif REV_ISA >= REV_ISA_AVX
-        __m256 first_1 = _mm256_setr_ps(v.x, v.y, v.z, 0.0f,  v.x,  v.y,  v.z, 0.0f);
-        __m256 first_2 = _mm256_setr_ps(v.x, v.y, v.z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        __m128 _1zy0 = _mm_blend_ps(_0zy0, mm_one, MM_BLEND_BAAB);
+        __m128 _z1x0 = _mm_blend_ps(_z0x0, mm_one, MM_BLEND_ABAB);
+        __m128 _yx10 = _mm_blend_ps(_yx00, mm_one, MM_BLEND_AABB);
 
-        __m256 second_1 = _mm256_setr_ps(v.x, v.x, v.x, 0.0f,  v.y,  v.y,  v.y, 0.0f);
-        __m256 second_2 = _mm256_setr_ps(v.z, v.z, v.z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        __m128 fourth_1 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_1zy0), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_ZERO)));
+        __m128 fourth_2 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_z1x0), _mm_setr_epi32(MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_ZERO)));
+        __m128 fourth_3 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_yx10), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_ZERO)));
 
-        __m256 third_1 = _mm256_setr_ps(invc, invc, invc, 0.0f, invc, invc, invc, 0.0f);
-        __m256 third_2 = _mm256_setr_ps(invc, invc, invc, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        __m128 cssc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_ABBA);
+        __m128 scsc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_BABA);
+        __m128 sscc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_BBAA);
 
-        __m256 forth_1 = _mm256_setr_ps(1.0f,  v.z, -v.y, 0.0f, -v.z, 1.0f,  v.x, 0.0f);
-        __m256 forth_2 = _mm256_setr_ps( v.y, -v.x, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        __m128 fifth_1 = _mm_blend_ps(cssc, mm_zero, MM_BLEND_AAAB);
+        __m128 fifth_2 = _mm_blend_ps(scsc, mm_zero, MM_BLEND_AAAB);
+        __m128 fifth_3 = _mm_blend_ps(sscc, mm_zero, MM_BLEND_AAAB);
 
-        __m256 fifth_1 = _mm256_setr_ps(   c,    s,    s, 0.0f,    s,    c,    s, 0.0f);
-        __m256 fifth_2 = _mm256_setr_ps(   s,    s,    c, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+        __m128 _12_1 = _mm_mul_ps(mm_vec, second_1);
+        __m128 _12_2 = _mm_mul_ps(mm_vec, second_2);
+        __m128 _12_3 = _mm_mul_ps(mm_vec, second_3);
 
-        __m256 res_1 = _mm256_add_ps(_mm256_mul_ps(_mm256_mul_ps(first_1, second_1), third_1), _mm256_mul_ps(forth_1, fifth_1));
-        __m256 res_2 = _mm256_add_ps(_mm256_mul_ps(_mm256_mul_ps(first_2, second_2), third_2), _mm256_mul_ps(forth_2, fifth_2));
+        __m128 _45_1 = _mm_mul_ps(fourth_1, fifth_1);
+        __m128 _45_2 = _mm_mul_ps(fourth_2, fifth_2);
+        __m128 _45_3 = _mm_mul_ps(fourth_3, fifth_3);
 
-        return m4(mm_extract_f32<0>(res_1), mm_extract_f32<4>(res_1), mm_extract_f32<0>(res_2), 0.0f,
-                  mm_extract_f32<1>(res_1), mm_extract_f32<5>(res_1), mm_extract_f32<1>(res_2), 0.0f,
-                  mm_extract_f32<2>(res_1), mm_extract_f32<6>(res_1), mm_extract_f32<2>(res_2), 0.0f,
-                                      0.0f,                     0.0f,                     0.0f, 1.0f);
-    #else
-        __m128 first_1 = _mm_setr_ps(v.x, v.y, v.z, 0.0f);
-        __m128 first_2 = first_1;
-        __m128 first_3 = first_1;
+        __m128 _123_1 = _mm_mul_ps(_12_1, third);
+        __m128 _123_2 = _mm_mul_ps(_12_2, third);
+        __m128 _123_3 = _mm_mul_ps(_12_3, third);
 
-        __m128 second_1 = _mm_set_ps(v.x, v.x, v.x, 0.0f);
-        __m128 second_2 = _mm_set_ps(v.y, v.y, v.y, 0.0f);
-        __m128 second_3 = _mm_set_ps(v.z, v.z, v.z, 0.0f);
-
-        __m128 third_1 = _mm_setr_ps(invc, invc, invc, 0.0f);
-        __m128 third_2 = third_1;
-        __m128 third_3 = third_1;
-
-        __m128 forth_1 = _mm_setr_ps(1.0f,  v.z, -v.y, 0.0f);
-        __m128 forth_2 = _mm_setr_ps(-v.z, 1.0f,  v.x, 0.0f);
-        __m128 forth_3 = _mm_setr_ps( v.y, -v.x, 1.0f, 0.0f);
-
-        __m128 fifth_1 = _mm_setr_ps(c, s, s, 0.0f);
-        __m128 fifth_2 = _mm_setr_ps(s, c, s, 0.0f);
-        __m128 fifth_3 = _mm_setr_ps(s, s, c, 0.0f);
-
-        __m128 res_1 = _mm_add_ps(_mm_mul_ps(_mm_mul_ps(first_1, second_1), third_1), _mm_mul_ps(forth_1, fifth_1));
-        __m128 res_2 = _mm_add_ps(_mm_mul_ps(_mm_mul_ps(first_2, second_2), third_2), _mm_mul_ps(forth_2, fifth_2));
-        __m128 res_3 = _mm_add_ps(_mm_mul_ps(_mm_mul_ps(first_3, second_3), third_3), _mm_mul_ps(forth_3, fifth_3));
+        __m128 res_1 = _mm_add_ps(_123_1, _45_1);
+        __m128 res_2 = _mm_add_ps(_123_2, _45_2);
+        __m128 res_3 = _mm_add_ps(_123_3, _45_3);
 
         return m4(mm_extract_f32<0>(res_1), mm_extract_f32<0>(res_2), mm_extract_f32<0>(res_3), 0.0f,
                   mm_extract_f32<1>(res_1), mm_extract_f32<1>(res_2), mm_extract_f32<1>(res_3), 0.0f,
                   mm_extract_f32<2>(res_1), mm_extract_f32<2>(res_2), mm_extract_f32<2>(res_3), 0.0f,
                                       0.0f,                     0.0f,                     0.0f, 1.0f);
-    #endif
     }
 
     static REV_INLINE m4 REV_VECTORCALL reflection_x()
@@ -2083,26 +2073,27 @@ REV_INLINE m4 REV_VECTORCALL LookAtLH(v4 camera, v4 target, v4 up)
     __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x7F));
            z_axis     = _mm_div_ps(z_axis, z_axis_len);
 
-    __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, cast<s32>(MM_SHUFFLE::YZXW)),
-                                              _mm_shuffle_ps(z_axis, z_axis, cast<s32>(MM_SHUFFLE::ZXYW))),
-                                   _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, cast<s32>(MM_SHUFFLE::ZXYW)),
-                                              _mm_shuffle_ps(z_axis, z_axis, cast<s32>(MM_SHUFFLE::YZXW))));
+    __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_YZXW),
+                                              _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW)),
+                                   _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_ZXYW),
+                                              _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW)));
     __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x7F));
            x_axis     = _mm_div_ps(x_axis, x_axis_len);
 
-    __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, cast<s32>(MM_SHUFFLE::YZXW)),
-                                              _mm_shuffle_ps(x_axis, x_axis, cast<s32>(MM_SHUFFLE::ZXYW))),
-                                   _mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, cast<s32>(MM_SHUFFLE::ZXYW)),
-                                              _mm_shuffle_ps(x_axis, x_axis, cast<s32>(MM_SHUFFLE::YZXW))));
+    __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW),
+                                              _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_ZXYW)),
+                                   _mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW),
+                                              _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_YZXW)));
 
-    __m128 translate  = _mm_setr_ps(-_mm_cvtss_f32(_mm_dp_ps(x_axis, camera.mm, 0x71)),
-                                    -_mm_cvtss_f32(_mm_dp_ps(y_axis, camera.mm, 0x71)),
-                                    -_mm_cvtss_f32(_mm_dp_ps(z_axis, camera.mm, 0x71)),
-                                     0.0f);
-
-    return m4(mm_extract_f32<0>(x_axis), mm_extract_f32<1>(x_axis), mm_extract_f32<2>(x_axis), mm_extract_f32<0>(translate),
-              mm_extract_f32<0>(y_axis), mm_extract_f32<1>(y_axis), mm_extract_f32<2>(y_axis), mm_extract_f32<1>(translate),
-              mm_extract_f32<0>(z_axis), mm_extract_f32<1>(z_axis), mm_extract_f32<2>(z_axis), mm_extract_f32<2>(translate),
+    __m128 translate = _mm_blend_ps(_mm_blend_ps(_mm_dp_ps(x_axis, camera.mm, 0x71),
+                                                 _mm_dp_ps(y_axis, camera.mm, 0x72),
+                                                 0b0010),
+                                    _mm_dp_ps(z_axis, camera.mm, 0x74),
+                                    0b0100);
+    
+    return m4(mm_extract_f32<0>(x_axis), mm_extract_f32<1>(x_axis), mm_extract_f32<2>(x_axis), -mm_extract_f32<0>(translate),
+              mm_extract_f32<0>(y_axis), mm_extract_f32<1>(y_axis), mm_extract_f32<2>(y_axis), -mm_extract_f32<1>(translate),
+              mm_extract_f32<0>(z_axis), mm_extract_f32<1>(z_axis), mm_extract_f32<2>(z_axis), -mm_extract_f32<2>(translate),
                                    0.0f,                      0.0f,                      0.0f,                         1.0f);
 }
 
@@ -2112,26 +2103,27 @@ REV_INLINE m4 REV_VECTORCALL LookAtRH(v4 camera, v4 target, v4 up)
     __m128 z_axis_len = _mm_sqrt_ps(_mm_dp_ps(z_axis, z_axis, 0x7F));
            z_axis     = _mm_div_ps(z_axis, z_axis_len);
 
-    __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, cast<s32>(MM_SHUFFLE::YZXW)),
-                                              _mm_shuffle_ps(z_axis, z_axis, cast<s32>(MM_SHUFFLE::ZXYW))),
-                                   _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, cast<s32>(MM_SHUFFLE::ZXYW)),
-                                              _mm_shuffle_ps(z_axis, z_axis, cast<s32>(MM_SHUFFLE::YZXW))));
+    __m128 x_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_YZXW),
+                                              _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW)),
+                                   _mm_mul_ps(_mm_shuffle_ps( up.mm,  up.mm, MM_SHUFFLE_ZXYW),
+                                              _mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW)));
     __m128 x_axis_len = _mm_sqrt_ps(_mm_dp_ps(x_axis, x_axis, 0x7F));
            x_axis     = _mm_div_ps(x_axis, x_axis_len);
 
-    __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, cast<s32>(MM_SHUFFLE::YZXW)),
-                                              _mm_shuffle_ps(x_axis, x_axis, cast<s32>(MM_SHUFFLE::ZXYW))),
-                                   _mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, cast<s32>(MM_SHUFFLE::ZXYW)),
-                                              _mm_shuffle_ps(x_axis, x_axis, cast<s32>(MM_SHUFFLE::YZXW))));
+    __m128 y_axis     = _mm_sub_ps(_mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_YZXW),
+                                              _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_ZXYW)),
+                                   _mm_mul_ps(_mm_shuffle_ps(z_axis, z_axis, MM_SHUFFLE_ZXYW),
+                                              _mm_shuffle_ps(x_axis, x_axis, MM_SHUFFLE_YZXW)));
 
-    __m128 translate  = _mm_setr_ps(-_mm_cvtss_f32(_mm_dp_ps(x_axis, camera.mm, 0x71)),
-                                    -_mm_cvtss_f32(_mm_dp_ps(y_axis, camera.mm, 0x71)),
-                                    -_mm_cvtss_f32(_mm_dp_ps(z_axis, camera.mm, 0x71)),
-                                     0.0f);
+    __m128 translate = _mm_blend_ps(_mm_blend_ps(_mm_dp_ps(x_axis, camera.mm, 0x71),
+                                                 _mm_dp_ps(y_axis, camera.mm, 0x72),
+                                                 0b0010),
+                                    _mm_dp_ps(z_axis, camera.mm, 0x74),
+                                    0b0100);
 
-    return m4(mm_extract_f32<0>(x_axis), mm_extract_f32<1>(x_axis), mm_extract_f32<2>(x_axis), mm_extract_f32<0>(translate),
-              mm_extract_f32<0>(y_axis), mm_extract_f32<1>(y_axis), mm_extract_f32<2>(y_axis), mm_extract_f32<1>(translate),
-              mm_extract_f32<0>(z_axis), mm_extract_f32<1>(z_axis), mm_extract_f32<2>(z_axis), mm_extract_f32<2>(translate),
+    return m4(mm_extract_f32<0>(x_axis), mm_extract_f32<1>(x_axis), mm_extract_f32<2>(x_axis), -mm_extract_f32<0>(translate),
+              mm_extract_f32<0>(y_axis), mm_extract_f32<1>(y_axis), mm_extract_f32<2>(y_axis), -mm_extract_f32<1>(translate),
+              mm_extract_f32<0>(z_axis), mm_extract_f32<1>(z_axis), mm_extract_f32<2>(z_axis), -mm_extract_f32<2>(translate),
                                    0.0f,                      0.0f,                      0.0f,                         1.0f);
 }
 

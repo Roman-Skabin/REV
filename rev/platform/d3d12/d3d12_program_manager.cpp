@@ -93,7 +93,7 @@ ProgramManager::~ProgramManager()
     }
 }
 
-u64 ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_with_shaders)
+u64 ProgramManager::CreateGraphicsProgram(const StaticString<REV_PATH_CAPACITY>& file_with_shaders)
 {
     GraphicsProgram *graphics_program = m_GraphicsPrograms.PushBack();
     *graphics_program                 = GraphicsProgram(m_Allocator);
@@ -280,9 +280,9 @@ void ProgramManager::Draw(const GraphicsProgram& graphics_program)
     cast<Renderer *>(GraphicsAPI::GetRenderer())->CurrentGraphicsList()->DrawIndexedInstanced(buffer.icount, 1, 0, 0, 0);
 }
 
-void ProgramManager::AttachGraphicsShaders(GraphicsProgram *graphics_program, const StaticString<MAX_PATH>& file_with_shaders)
+void ProgramManager::AttachGraphicsShaders(GraphicsProgram *graphics_program, const StaticString<REV_PATH_CAPACITY>& file_with_shaders)
 {
-    AsyncFile file(file_with_shaders, AsyncFile::FLAGS::READ);
+    AsyncFile file(file_with_shaders, AsyncFile::FLAG_READ);
 
     u32   hlsl_code_length = file.Size();
     char *hlsl_code        = Memory::Get()->PushToTA<char>(hlsl_code_length);
@@ -296,10 +296,10 @@ void ProgramManager::AttachGraphicsShaders(GraphicsProgram *graphics_program, co
     u64 last_dot_index   = file_with_shaders.RFind('.');
     u64 last_slash_index = file_with_shaders.RFind('/');
 
-    last_dot_index   = last_dot_index   == StaticString<MAX_PATH>::npos ? file_with_shaders.Length() : last_dot_index;
-    last_slash_index = last_slash_index == StaticString<MAX_PATH>::npos ? 0                          : last_slash_index + 1;
+    last_dot_index   = last_dot_index   == StaticString<REV_PATH_CAPACITY>::npos ? file_with_shaders.Length() : last_dot_index;
+    last_slash_index = last_slash_index == StaticString<REV_PATH_CAPACITY>::npos ? 0                          : last_slash_index + 1;
 
-    const StaticString<MAX_PATH>& shaders_name = file_with_shaders.SubString(last_slash_index, last_dot_index);
+    const StaticString<REV_PATH_CAPACITY>& shaders_name = file_with_shaders.SubString(last_slash_index, last_dot_index);
     m_Logger.LogInfo("\"%s\" shaders are being compiled...", shaders_name.Data());
 
     {

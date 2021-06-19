@@ -5,15 +5,16 @@
 #pragma once
 
 #include "core/pch.h"
+#include "core/settings.h"
 #include "platform/d3d12/d3d12_renderer.h"
 #include "platform/d3d12/d3d12_common.h"
 
 namespace REV::D3D12 {
 
-Renderer::Renderer(Window *window, const Logger& logger, Math::v2s rt_size)
+Renderer::Renderer(Window *window, const Logger& logger)
     : m_Logger(logger, "Renderer logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_Window(window),
-      m_RTSize(rt_size),
+      m_RTSize(Settings::Get()->render_target_wh),
       m_ActualRTSize(m_RTSize),
 #if REV_DEBUG
       m_Debug(null),

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "core/common.h"
+#include "tools/const_string.h"
 
 namespace REV
 {
@@ -33,7 +34,6 @@ namespace REV
             const char *filename, // @NOTE(Roman): Required if you are logging to the file
             TARGET      target
         );
-
         Logger(const Logger& other, const char *name = null, TARGET target = TARGET::NONE);
         Logger(Logger&& other) noexcept;
 

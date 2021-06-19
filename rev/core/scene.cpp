@@ -32,7 +32,7 @@ void Entity::Destroy()
 //
 //
 
-SceneBase::SceneBase(Allocator *allocator, const ConstString& name, const StaticString<MAX_PATH>& file_with_shaders, u64 max_vertices, u64 max_indices)
+SceneBase::SceneBase(Allocator *allocator, const ConstString& name, const StaticString<REV_PATH_CAPACITY>& file_with_shaders, u64 max_vertices, u64 max_indices)
     : m_Name(name),
       m_Allocator(allocator),
       m_GraphicsProgram(GraphicsAPI::GetProgramManager()->CreateGraphicsProgram(file_with_shaders)),

@@ -6,6 +6,7 @@
 
 #include "tools/array.hpp"
 #include "tools/const_string.h"
+#include "tools/static_string.hpp"
 #include "graphics/memory_manager.h"
 
 namespace REV
@@ -37,7 +38,7 @@ namespace REV
     class REV_API AssetManager final
     {
     public:
-        static AssetManager *Create(Allocator *allocator, const char *REVAM_filename);
+        static AssetManager *Create(Allocator *allocator, const StaticString<REV_PATH_CAPACITY>& REVAM_filename);
         static AssetManager *Get();
 
         ~AssetManager();
@@ -48,7 +49,7 @@ namespace REV
         Array<Asset>& GetSceneAssets() { return m_SceneArea; }
 
     private:
-        AssetManager(Allocator *allocator, const char *RAF);
+        AssetManager(Allocator *allocator, const StaticString<REV_PATH_CAPACITY>& filename);
 
         void ParseREVAMFile();
         void ParseExternalBlock(void *, Array<Asset> *area);
@@ -59,10 +60,11 @@ namespace REV
         REV_DELETE_CONSTRS_AND_OPS(AssetManager);
 
     private:
-        Allocator    *m_Allocator;
-        const char   *m_UserREVAMFileName;
-        const char   *m_UserREVAMStream;
-        Array<Asset>  m_StaticArea;
-        Array<Asset>  m_SceneArea;
+        Allocator                       *m_Allocator;
+        const char                      *m_UserREVAMStream;
+        Array<Asset>                     m_StaticArea;
+        Array<Asset>                     m_SceneArea;
+        StaticString<REV_PATH_CAPACITY>  m_UserREVAMFileName;
     };
 }
+    

@@ -1,7 +1,7 @@
 #include "sandbox.h"
 
 Sandbox::Sandbox()
-    : Application(REV::StaticString<128>("Sandbox", REV_CSTRLEN("Sandbox")), REV::GraphicsAPI::API::D3D12, "../sandbox/sandbox.revam"),
+    : Application(REV::StaticString<128>("Sandbox", REV_CSTRLEN("Sandbox")), REV::StaticString<128>("../sandbox/assets/sandbox.revam", REV_CSTRLEN("../sandbox/assets/sandbox.revam"))),
       m_Logger("Sandbox logger", "../log/sandbox.log", REV::Logger::TARGET::FILE | REV::Logger::TARGET::CONSOLE),
       m_DemoScene(&m_Allocator)
 {

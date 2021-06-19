@@ -40,7 +40,7 @@ namespace REV
     class REV_API SceneBase
     {
     protected:
-        SceneBase(Allocator *allocator, const ConstString& name, const StaticString<MAX_PATH>& file_with_shaders, u64 max_vertices, u64 max_indices);
+        SceneBase(Allocator *allocator, const ConstString& name, const StaticString<REV_PATH_CAPACITY>& file_with_shaders, u64 max_vertices, u64 max_indices);
 
     public:
         virtual ~SceneBase() {}

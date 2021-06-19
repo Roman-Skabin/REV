@@ -5,26 +5,30 @@
 #pragma once
 
 #include "core/common.h"
+#include "tools/const_string.h"
 #include "tools/static_string.hpp"
 
 namespace REV
 {
     // @Issue(Roman): Several simultaneous read operations under the same file?
+    // @TODO(Roman): #CrossPlatform
     class REV_API AsyncFile final
     {
     public:
-        enum class FLAGS
+        enum FLAGS
         {
-            NONE  = 0,
-            READ  = BIT(0),
-            WRITE = BIT(1),
+            FLAG_NONE   = 0,
+            FLAG_READ   = BIT(0),
+            FLAG_WRITE  = BIT(1),
+            FLAG_DELETE = BIT(2),
 
             // @NOTE(Roman): Internal
-            _WWEC = BIT(31),
+            _FLAG_WWEC  = BIT(31),
         };
 
     public:
-        AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags);
+        AsyncFile(const ConstString& filename, FLAGS flags);
+        AsyncFile(const StaticString<REV_PATH_CAPACITY>& filename, FLAGS flags);
         AsyncFile(const AsyncFile& other);
         AsyncFile(AsyncFile&& other) noexcept;
 
@@ -32,9 +36,11 @@ namespace REV
 
         void Clear();
 
-        void Move(const StaticString<MAX_PATH>& to_filename);
-        void Copy(const StaticString<MAX_PATH>& to_filename) const;
-        void Copy(const StaticString<MAX_PATH>& to_filename, AsyncFile& to_file, FLAGS to_flags = FLAGS::NONE) const;
+        void Move(const StaticString<REV_PATH_CAPACITY>& to_filename);
+        void Copy(const StaticString<REV_PATH_CAPACITY>& to_filename) const;
+        void Copy(const StaticString<REV_PATH_CAPACITY>& to_filename, AsyncFile& to_file, FLAGS to_flags = FLAG_NONE) const;
+        void Rename(const StaticString<REV_PATH_CAPACITY>& to_filename);
+        void Delete();
 
         void Read(void *buffer, u32 buffer_bytes) const;
         void Write(const void *buffer, u32 buffer_bytes);
@@ -48,7 +54,7 @@ namespace REV
             HANDLE m_Events[sizeof...(async_files)] = {null};
 
             u32 events_count = 0;
-            (..., ((async_files.m_Flags & AsyncFile::FLAGS::_WWEC) == AsyncFile::FLAGS::NONE ? m_Events[events_count++] = async_files.m_Overlapped.hEvent : 0));
+            (..., ((async_files.m_Flags & _FLAG_WWEC) ? m_Events[events_count++] = async_files.m_Overlapped.hEvent : 0));
 
             u32 res = WAIT_FAILED;
             do
@@ -56,14 +62,14 @@ namespace REV
                 res = WaitForMultipleObjectsEx(events_count, m_Events, true, INFINITE, true);
             } while (res != WAIT_OBJECT_0 && res != WAIT_IO_COMPLETION);
 
-            (..., (async_files.m_Flags |= FLAGS::_WWEC));
+            (..., (async_files.m_Flags |= _FLAG_WWEC));
         }
 
-        void SetOffset(u32 offset);
+        REV_INLINE void SetOffset(u32 offset) { m_Offset = offset < m_Size ? offset : m_Size; }
 
-        REV_INLINE       u32                     Offset() const { return m_Offset; }
-        REV_INLINE       u32                     Size()   const { return m_Size;   }
-        REV_INLINE const StaticString<MAX_PATH>& Name()   const { return m_Name;   }
+        REV_INLINE       u32                              Offset() const { return m_Offset; }
+        REV_INLINE       u32                              Size()   const { return m_Size;   }
+        REV_INLINE const StaticString<REV_PATH_CAPACITY>& Name()   const { return m_Name;   }
 
         AsyncFile& operator=(const AsyncFile& other);
         AsyncFile& operator=(AsyncFile&& other) noexcept;
@@ -82,12 +88,12 @@ namespace REV
         );
 
     private:
-        HANDLE                 m_Handle;
-        FLAGS                  m_Flags;
-        u32                    m_Offset;
-        u32                    m_Size;
-        mutable OVERLAPPED     m_Overlapped;
-        StaticString<MAX_PATH> m_Name;
+        HANDLE                          m_Handle;
+        FLAGS                           m_Flags;
+        u32                             m_Offset;
+        u32                             m_Size;
+        mutable OVERLAPPED              m_Overlapped;
+        StaticString<REV_PATH_CAPACITY> m_Name;
     };
 
     REV_ENUM_CLASS_OPERATORS(AsyncFile::FLAGS);

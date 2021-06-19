@@ -86,6 +86,12 @@ namespace REV
         template<typename T> REV_INLINE T *PushToPA(u64 count = 1)                     { return cast<T *>(PushToPermanentArea(count * sizeof(T)));                   }
         template<typename T> REV_INLINE T *PushToPAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToPermanentAreaAligned(count * sizeof(T), alignment)); }
 
+        template<> REV_INLINE void *PushToTA(u64 bytes)                 { return PushToTransientArea(bytes);                   }
+        template<> REV_INLINE void *PushToTAA(u64 bytes, u64 alignment) { return PushToTransientAreaAligned(bytes, alignment); }
+
+        template<> REV_INLINE void *PushToPA(u64 bytes)                 { return PushToPermanentArea(bytes);                   }
+        template<> REV_INLINE void *PushToPAA(u64 bytes, u64 alignment) { return PushToPermanentAreaAligned(bytes, alignment); }
+
     private:
         Memory(const Memory&) = delete;
         Memory(Memory&&)      = delete;

@@ -395,12 +395,6 @@ namespace REV::RTTI
     template<typename T, typename U> inline constexpr bool is_comparable_le_v = is_comparable_le<T, U>::value;
     template<typename T, typename U> inline constexpr bool is_comparable_ge_v = is_comparable_ge<T, U>::value;
 
-    template<typename T, typename U, typename = enable_if_t<is_comparable_gt_v<T, U>>> constexpr auto max(T left, U right) { return left > right ? left : right; }
-    template<typename T, typename U, typename = enable_if_t<is_comparable_lt_v<T, U>>> constexpr auto min(T left, U right) { return left < right ? left : right; }
-
-    #pragma warning(suppress: 4146) // unsigned T warning
-    template<typename T, typename = enable_if_t<is_comparable_lt_v<T, int>>> constexpr T abs(T val) { return val < 0 ? -val : val; }
-
     template<typename Void, typename T> struct _has_to_string                                               : false_type {};
     template<               typename T> struct _has_to_string<void_t<decltype(declval<T>().ToString())>, T> : true_type  {};
 
@@ -413,4 +407,26 @@ namespace REV::RTTI
                                                            || is_pointer_v<T>;
 
     template<typename T> using is_scalar = bool_type<is_scalar_v<T>>;
+
+    template<typename T, bool = is_integral_v<T>>
+    struct sign_info
+    {
+        using type = remove_cv_t<T>;
+        static constexpr bool _signed   = static_cast<type>(-1) < static_cast<type>(0);
+        static constexpr bool _unsigned = !_signed;
+    };
+
+    template<typename T>
+    struct sign_info<T, false>
+    {
+        using type = remove_cv_t<T>;
+        static constexpr bool _signed   = is_floating_point_v<T>;
+        static constexpr bool _unsigned = !_signed; // or false?
+    };
+
+    template<typename T, bool = is_integral_v<T>>
+    inline constexpr bool is_signed_v = sign_info<T>::_signed;
+
+    template<typename T, bool = is_integral_v<T>>
+    inline constexpr bool is_unsigned_v = sign_info<T>::_unsigned;
 }

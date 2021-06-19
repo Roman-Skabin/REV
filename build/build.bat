@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-rem use: build [rev|sandbox] [release|nsight]
+rem use: build [engine|sandbox] [release|nsight]
 
 cls
 

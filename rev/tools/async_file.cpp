@@ -8,7 +8,7 @@
 namespace REV
 {
 
-AsyncFile::AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags)
+AsyncFile::AsyncFile(const ConstString& filename, FLAGS flags)
     : m_Handle(null),
       m_Flags(flags),
       m_Offset(0),
@@ -16,7 +16,7 @@ AsyncFile::AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags)
       m_Overlapped{0},
       m_Name(filename)
 {
-    REV_CHECK(flags != FLAGS::NONE);
+    REV_CHECK(flags);
 
     m_Overlapped.hEvent = CreateEventExA(null, null, CREATE_EVENT_INITIAL_SET, EVENT_ALL_ACCESS);
 
@@ -25,14 +25,14 @@ AsyncFile::AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags)
     u32 creation_disposition = 0;
     u32 flags_and_attributes = 0;
 
-    if ((m_Flags & FLAGS::READ) != FLAGS::NONE)
+    if (m_Flags & FLAG_READ)
     {
         desired_access       = GENERIC_READ;
         shared_mode          = FILE_SHARE_READ;
         creation_disposition = OPEN_EXISTING;
         flags_and_attributes = FILE_ATTRIBUTE_READONLY;
     }
-    if ((m_Flags & FLAGS::WRITE) != FLAGS::NONE)
+    if (m_Flags & FLAG_WRITE)
     {
         desired_access       |= GENERIC_WRITE;
         shared_mode          |= FILE_SHARE_WRITE;
@@ -43,7 +43,7 @@ AsyncFile::AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags)
     flags_and_attributes |= FILE_FLAG_OVERLAPPED
                          |  FILE_FLAG_RANDOM_ACCESS;
 
-    m_Handle = CreateFileA(filename.Data(),
+    m_Handle = CreateFileA(m_Name.Data(),
                            desired_access,
                            shared_mode,
                            null,
@@ -52,11 +52,67 @@ AsyncFile::AsyncFile(const StaticString<MAX_PATH>& filename, FLAGS flags)
                            null);
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE,
-           "AsyncFile doesn't exists or some unknown error has been occurred.\n"
-           "Function args:\n"
-           "    filename: \"%s\"\n"
-           "    flags:    0x%I32X\n",
-           filename, flags);
+                "AsyncFile doesn't exists or some unknown error has been occurred.\n"
+                "    absolute filename: \"%s\"\n"
+                "    flags:             0x%I32X\n",
+                m_Name.Data(), flags);
+
+    m_Size = GetFileSize(m_Handle, null);
+}
+
+AsyncFile::AsyncFile(const StaticString<REV_PATH_CAPACITY>& filename, FLAGS flags)
+    : m_Handle(null),
+      m_Flags(flags),
+      m_Offset(0),
+      m_Size(0),
+      m_Overlapped{0},
+      m_Name(filename)
+{
+    REV_CHECK(flags);
+
+    m_Overlapped.hEvent = CreateEventExA(null, null, CREATE_EVENT_INITIAL_SET, EVENT_ALL_ACCESS);
+
+    u32 desired_access       = 0;
+    u32 shared_mode          = 0;
+    u32 creation_disposition = 0;
+    u32 flags_and_attributes = 0;
+
+    if (m_Flags & FLAG_READ)
+    {
+        desired_access       = GENERIC_READ;
+        shared_mode          = FILE_SHARE_READ;
+        creation_disposition = OPEN_EXISTING;
+        flags_and_attributes = FILE_ATTRIBUTE_READONLY;
+    }
+    if (m_Flags & FLAG_WRITE)
+    {
+        desired_access       |= GENERIC_WRITE;
+        shared_mode          |= FILE_SHARE_WRITE;
+        creation_disposition  = CREATE_ALWAYS;
+        flags_and_attributes  = FILE_ATTRIBUTE_NORMAL;
+    }
+    if (m_Flags & FLAG_DELETE)
+    {
+        shared_mode          |= FILE_SHARE_DELETE;
+        flags_and_attributes  = FILE_ATTRIBUTE_NORMAL;
+    }
+
+    flags_and_attributes |= FILE_FLAG_OVERLAPPED
+                         |  FILE_FLAG_RANDOM_ACCESS;
+
+    m_Handle = CreateFileA(m_Name.Data(),
+                           desired_access,
+                           shared_mode,
+                           null,
+                           creation_disposition,
+                           flags_and_attributes,
+                           null);
+
+    REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE,
+                "AsyncFile doesn't exists or some unknown error has been occurred.\n"
+                "    absolute filename: \"%s\"\n"
+                "    flags:             0x%I32X\n",
+                m_Name.Data(), flags);
 
     m_Size = GetFileSize(m_Handle, null);
 }
@@ -118,7 +174,7 @@ void AsyncFile::Clear()
     m_Size = 0;
 }
 
-void AsyncFile::Move(const StaticString<MAX_PATH>& to_filename)
+void AsyncFile::Move(const StaticString<REV_PATH_CAPACITY>& to_filename)
 {
     Wait();
 
@@ -128,22 +184,56 @@ void AsyncFile::Move(const StaticString<MAX_PATH>& to_filename)
     }
 }
 
-void AsyncFile::Copy(const StaticString<MAX_PATH>& to_filename) const
+void AsyncFile::Copy(const StaticString<REV_PATH_CAPACITY>& to_filename) const
 {
+    Wait();
+
     CopyFileExA(m_Name.Data(), to_filename.Data(), null, null, null, 0);
 }
 
-void AsyncFile::Copy(const StaticString<MAX_PATH>& to_filename, AsyncFile& to_file, FLAGS to_flags) const
+void AsyncFile::Copy(const StaticString<REV_PATH_CAPACITY>& to_filename, AsyncFile& to_file, FLAGS to_flags) const
 {
+    Wait();
+
     if (CopyFileExA(m_Name.Data(), to_filename.Data(), null, null, null, 0))
     {
-        to_file = AsyncFile(to_filename, to_flags == FLAGS::NONE ? m_Flags : to_flags);
+        to_file = AsyncFile(to_filename, to_flags ? m_Flags : to_flags);
+    }
+}
+
+void AsyncFile::Rename(const StaticString<REV_PATH_CAPACITY>& to_filename)
+{
+    Wait();
+
+    if (MoveFileExA(m_Name.Data(), to_filename.Data(), MOVEFILE_REPLACE_EXISTING))
+    {
+        m_Name = to_filename;
+    }
+}
+
+void AsyncFile::Delete()
+{
+    Wait();
+
+    m_Offset = 0;
+    m_Size   = 0;
+
+    REV_DEBUG_RESULT(DeleteFileA(m_Name.Data()));
+
+    if (m_Overlapped.hEvent)
+    {
+        REV_DEBUG_RESULT(CloseHandle(m_Overlapped.hEvent));
+    }
+
+    if (m_Handle)
+    {
+        REV_DEBUG_RESULT(CloseHandle(m_Handle));
     }
 }
 
 void AsyncFile::Read(void *buffer, u32 buffer_bytes) const
 {
-    REV_CHECK_M((m_Flags & FLAGS::READ) != FLAGS::NONE, "You have no rights to read this file");
+    REV_CHECK_M(m_Flags & FLAG_READ, "You have no rights to read this file");
     REV_CHECK(buffer);
     REV_CHECK_M(buffer_bytes, "Buffer size must be more than 0");
 
@@ -160,12 +250,12 @@ void AsyncFile::Read(void *buffer, u32 buffer_bytes) const
                                 &m_Overlapped,
                                 OverlappedReadCompletionRoutine));
 
-    m_Flags &= ~FLAGS::_WWEC;
+    m_Flags &= ~FLAGS::_FLAG_WWEC;
 }
 
 void AsyncFile::Write(const void *buffer, u32 buffer_bytes)
 {
-    REV_CHECK_M((m_Flags & FLAGS::WRITE) != FLAGS::NONE, "You have no rights to write to this file");
+    REV_CHECK_M(m_Flags & FLAG_WRITE, "You have no rights to write to this file");
     REV_CHECK(buffer);
     REV_CHECK_M(buffer_bytes, "Buffer size must be more than 0");
 
@@ -182,12 +272,12 @@ void AsyncFile::Write(const void *buffer, u32 buffer_bytes)
                                  &m_Overlapped,
                                  OverlappedWriteCompletionRoutine));
     
-    m_Flags &= ~FLAGS::_WWEC;
+    m_Flags &= ~FLAGS::_FLAG_WWEC;
 }
 
 void AsyncFile::Append(const void *buffer, u32 buffer_bytes)
 {
-    REV_CHECK_M((m_Flags & FLAGS::WRITE) != FLAGS::NONE, "You have no rights to write to this file");
+    REV_CHECK_M(m_Flags & FLAG_WRITE, "You have no rights to write to this file");
     REV_CHECK(buffer);
     REV_CHECK_M(buffer_bytes, "Buffer size must be more than 0");
 
@@ -206,12 +296,12 @@ void AsyncFile::Append(const void *buffer, u32 buffer_bytes)
                                  &m_Overlapped,
                                  OverlappedWriteCompletionRoutine));
 
-    m_Flags &= ~FLAGS::_WWEC;
+    m_Flags &= ~FLAGS::_FLAG_WWEC;
 }
 
 void AsyncFile::Wait() const
 {
-    if ((m_Flags & FLAGS::_WWEC) == FLAGS::NONE)
+    if (m_Flags & _FLAG_WWEC)
     {
         u32 res = WAIT_FAILED;
         do
@@ -219,13 +309,8 @@ void AsyncFile::Wait() const
             res = WaitForSingleObjectEx(m_Overlapped.hEvent, INFINITE, true);
         } while (res != WAIT_OBJECT_0 && res != WAIT_IO_COMPLETION);
 
-        m_Flags |= FLAGS::_WWEC;
+        m_Flags |= FLAGS::_FLAG_WWEC;
     }
-}
-
-void AsyncFile::SetOffset(u32 offset)
-{
-    m_Offset = offset > m_Size ? m_Size : offset;
 }
 
 AsyncFile& AsyncFile::operator=(const AsyncFile& other)

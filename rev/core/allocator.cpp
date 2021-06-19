@@ -5,6 +5,7 @@
 #include "core/pch.h"
 #include "core/allocator.h"
 #include "core/memory.h"
+#include "math/math.h"
 
 #if REV_PLATFORM_WIN64
     #include <Windows.h>
@@ -576,7 +577,7 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
                            m_Capacity - m_Used,
                            m_Capacity - m_Used - sizeof(BlockHeader));
 
-        CopyMemory(new_header->data, header->data, RTTI::min(new_header->data_bytes, header->data_bytes));
+        CopyMemory(new_header->data, header->data, Math::min(new_header->data_bytes, header->data_bytes));
 
         header->block_state = BLOCK_STATE::IN_FREE_LIST;
         ZeroMemory(header->data, header->data_bytes);

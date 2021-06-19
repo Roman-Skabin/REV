@@ -27,7 +27,7 @@ namespace REV::D3D12
     class Renderer final
     {
     public:
-        Renderer(Window *window, const Logger& logger, Math::v2s rt_size);
+        Renderer(Window *window, const Logger& logger);
         ~Renderer();
 
         void StartFrame();

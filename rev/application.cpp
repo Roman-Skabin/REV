@@ -16,14 +16,13 @@ Application *Application::Get()
     return s_Application;
 }
 
-Application::Application(const StaticString<128>& name, GraphicsAPI::API api, const char *REVAM_filename)
+Application::Application(const StaticString<128>& name, const StaticString<REV_PATH_CAPACITY>& revam_file)
     : m_Logger("REV logger", "../log/rev.log", Logger::TARGET::FILE),
       m_Memory(Memory::Get()),
       m_Allocator(m_Memory->PushToPermanentArea(GB(1)), GB(1), false, "Default"),
       m_WorkQueue(WorkQueue::Create(m_Logger)),
-      m_Window(m_Logger,
-               name,
-               Math::v4s(10, 10, 960, 540)),
+      m_Settings(Settings::Init("../bin/settings.ini")),
+      m_Window(m_Logger, name),
       m_Input(Input::Create(m_Window, m_Logger)),
       m_Timer("REVMainTimer"),
       m_CurrentScene(null),
@@ -35,11 +34,11 @@ Application::Application(const StaticString<128>& name, GraphicsAPI::API api, co
                 s_Application->m_Window.m_Title);
     s_Application = this;
 
-    GraphicsAPI::SetGraphicsAPI(api);
-    GraphicsAPI::Init(&m_Window, &m_Allocator, m_Logger, Math::v2s(1920, 1080));
+    GraphicsAPI::SetGraphicsAPI(m_Settings->graphics_api);
+    GraphicsAPI::Init(&m_Window, &m_Allocator, m_Logger);
 
     // @NOTE(Roman): AssetManager must be created after Graphics API initializeation.
-    m_AssetManager = AssetManager::Create(&m_Allocator, REVAM_filename);
+    m_AssetManager = AssetManager::Create(&m_Allocator, revam_file);
 }
 
 Application::~Application()

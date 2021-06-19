@@ -19,8 +19,10 @@ Logger::Logger(const char *name, const char *filename, TARGET target)
       m_Target(target),
       m_Attribs()
 {
-    if ((m_Target & TARGET::FILE) != TARGET::NONE && filename)
+    if ((m_Target & TARGET::FILE) != TARGET::NONE)
     {
+        REV_CHECK_M(filename, "filename is null. It is illegal if you want to log to a file.");
+
         // @Optimize(Roman): FILE_FLAG_NO_BUFFERING
         m_File = CreateFileA(filename, GENERIC_WRITE, FILE_SHARE_WRITE, null, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, null);
 

@@ -14,15 +14,14 @@ Problems:
     - Minimize number of system calls // @Optimization
     - Vertex buffer/index files
     - Settings
-        - Texture Filtering (Point, Linear, Anisotropic)
-        - Graphics API to use (D3D12, Vulkan, ...) + ability to switch it at run-time
-        - RT dimension
         - Max view distance (max LOD & far)
-        - Anisotropy level (1, 2, 4, 8, 16)
+        - Files search directories
 
 - Tools
-    - Several simultaneous read operations under the same file?
+    - Several simultaneous read operations under the same async file?
     - Hash table
+    - UTF-8 strings?
+    - File
 
 - Build
     - [Pre?]build system. Build only edited files
@@ -35,7 +34,6 @@ Problems:
     - Switch to DPI stuff for monitor and window adjustment?
 
 - Math
-    - Quaternions // @Optimization
 
 - GPU
     - Add textures to the batch render. // @Optimization
@@ -46,6 +44,7 @@ Problems:
 
 - Graphics
     - SRVs (textures), UAVs (rwbuffers, rwtextures), static samplers, (tables, constants?)
+    - Forward Rendering
     - Multisampling
     - Add Root Signature v1.1 specific settings.
     - Shader includes
@@ -61,6 +60,7 @@ Problems:
     - Particle system
     - TextRenderer (DirectWrite + D2D)
     - Maya animation
+    - Parse Blender's output files to custom format
 
 - Sound
     - Mixer

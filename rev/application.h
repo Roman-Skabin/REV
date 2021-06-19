@@ -4,19 +4,18 @@
 
 #pragma once
 
-#include "core/common.h"
 #include "core/memory.h"
 #include "core/allocator.h"
 #include "core/work_queue.h"
 #include "core/window.h"
 #include "core/input.h"
 #include "core/scene.h"
+#include "core/settings.h"
 
 #include "graphics/graphics_api.h"
 
 #include "tools/logger.h"
 #include "tools/timer.h"
-#include "tools/array.hpp"
 #include "tools/static_string.hpp"
 
 #include "asset_manager/asset_manager.h"
@@ -31,7 +30,7 @@ namespace REV
         static Application *Get();
 
     protected:
-        explicit Application(const StaticString<128>& name, GraphicsAPI::API api, const char *REVAM_filename);
+        explicit Application(const StaticString<128>& name, const StaticString<REV_PATH_CAPACITY>& revam_file);
 
     public:
         virtual ~Application();
@@ -46,6 +45,7 @@ namespace REV
         REV_INLINE const Timer&        GetTimer()        const { return m_Timer;        }
         REV_INLINE const SceneBase    *GetCurrentScene() const { return m_CurrentScene; }
         REV_INLINE const AssetManager *GetAssetManager() const { return m_AssetManager; }
+        REV_INLINE const Settings     *GetSettings()     const { return m_Settings;     }
 
         REV_INLINE Memory       *GetMemory()       { return m_Memory;       }
         REV_INLINE Allocator&    GetAllocator()    { return m_Allocator;    }
@@ -55,6 +55,7 @@ namespace REV
         REV_INLINE Timer&        GetTimer()        { return m_Timer;        }
         REV_INLINE SceneBase    *GetCurrentScene() { return m_CurrentScene; }
         REV_INLINE AssetManager *GetAssetManager() { return m_AssetManager; }
+        REV_INLINE Settings     *GetSettings()     { return m_Settings;     }
 
     private:
         void Run();
@@ -72,6 +73,7 @@ namespace REV
         Memory       *m_Memory;
         Allocator     m_Allocator;
         WorkQueue    *m_WorkQueue;
+        Settings     *m_Settings;
         Window        m_Window;
         Input        *m_Input;
         Timer         m_Timer;

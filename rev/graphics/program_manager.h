@@ -19,7 +19,7 @@ namespace REV::GPU
     {
     public:
         // @TODO(Roman) @Optimize(Roman): Pass an asset handle. Asset manager.
-        GraphicsProgramHandle CreateGraphicsProgram(const StaticString<MAX_PATH>& file_with_shaders);
+        GraphicsProgramHandle CreateGraphicsProgram(const StaticString<REV_PATH_CAPACITY>& file_with_shaders);
 
         void SetCurrentGraphicsProgram(GraphicsProgramHandle graphics_program);
 

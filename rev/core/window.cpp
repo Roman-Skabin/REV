@@ -5,23 +5,22 @@
 #include "core/pch.h"
 #include "core/window.h"
 #include "core/input.h"
+#include "core/settings.h"
 #include "graphics/graphics_api.h"
 
 namespace REV
 {
 
-Window::Window(const Logger&            logger,
-               const StaticString<128>& title,
-               Math::v4s                xywh)
+Window::Window(const Logger& logger, const StaticString<128>& title)
     : m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
       m_Handle(null),
-      m_XYWH(xywh),
+      m_XYWH(Settings::Get()->window_xywh),
       m_Closed(true),
       m_Moved(false),
       m_Resized(false),
       m_Fullscreened(false),
       m_Minimized(false),
-      m_FullscreenSetRequested(false),
+      m_FullscreenSetRequested(Settings::Get()->fullscreen),
       m_FullscreenUnsetRequested(false),
       m_Logger(logger),
       m_Title(title),
@@ -60,7 +59,7 @@ Window::~Window()
 {
     if (m_Instance)
     {
-//      REV_DEBUG_RESULT(UnregisterClassA(m_ClassName.Data(), m_Instance));
+        REV_DEBUG_RESULT(UnregisterClassA(m_ClassName.Data(), m_Instance));
         m_Instance = null;
         m_Logger.LogInfo("Window \"%s\" has been destroyed", m_Title.Data());
     }

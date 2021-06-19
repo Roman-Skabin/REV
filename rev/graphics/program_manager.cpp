@@ -10,7 +10,7 @@
 namespace REV::GPU
 {
 
-GraphicsProgramHandle ProgramManager::CreateGraphicsProgram(const StaticString<MAX_PATH>& file_with_shaders)
+GraphicsProgramHandle ProgramManager::CreateGraphicsProgram(const StaticString<REV_PATH_CAPACITY>& file_with_shaders)
 {
     switch (GraphicsAPI::GetAPI())
     {

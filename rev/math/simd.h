@@ -8,82 +8,6 @@
 
 namespace REV::Math
 {
-    union REV_INTRIN_TYPE xmm
-    {
-        __m128  f;
-        __m128i i;
-        __m128d d;
-
-        REV_INLINE xmm(            ) : f(_mm_setzero_ps()) {}
-        REV_INLINE xmm(__m128     v) : f(v)                {}
-        REV_INLINE xmm(__m128i    v) : i(v)                {}
-        REV_INLINE xmm(__m128d    v) : d(v)                {}
-        REV_INLINE xmm(const xmm& v) : f(v.f)              {}
-        REV_INLINE xmm(xmm&&      v) : f(v.f)              {}
-
-        REV_INLINE REV_VECTORCALL operator __m128()  const { return f; }
-        REV_INLINE REV_VECTORCALL operator __m128i() const { return i; }
-        REV_INLINE REV_VECTORCALL operator __m128d() const { return d; }
-
-        REV_INLINE xmm& REV_VECTORCALL operator=(__m128     v) { f = v;   return *this; }
-        REV_INLINE xmm& REV_VECTORCALL operator=(__m128i    v) { i = v;   return *this; }
-        REV_INLINE xmm& REV_VECTORCALL operator=(__m128d    v) { d = v;   return *this; }
-        REV_INLINE xmm& REV_VECTORCALL operator=(const xmm& v) { f = v.f; return *this; }
-        REV_INLINE xmm& REV_VECTORCALL operator=(xmm&&      v) { f = v.f; return *this; }
-    };
-
-    #if REV_ISA >= REV_ISA_AVX
-    union REV_INTRIN_TYPE ymm
-    {
-        __m256  f;
-        __m256i i;
-        __m256d d;
-
-        REV_INLINE ymm(            ) : f(_mm256_setzero_ps()) {}
-        REV_INLINE ymm(__m256     v) : f(v)                   {}
-        REV_INLINE ymm(__m256i    v) : i(v)                   {}
-        REV_INLINE ymm(__m256d    v) : d(v)                   {}
-        REV_INLINE ymm(const ymm& v) : f(v.f)                 {}
-        REV_INLINE ymm(ymm&&      v) : f(v.f)                 {}
-
-        REV_INLINE REV_VECTORCALL operator __m256()  const { return f; }
-        REV_INLINE REV_VECTORCALL operator __m256i() const { return i; }
-        REV_INLINE REV_VECTORCALL operator __m256d() const { return d; }
-
-        REV_INLINE ymm& REV_VECTORCALL operator=(__m256     v) { f = v;   return *this; }
-        REV_INLINE ymm& REV_VECTORCALL operator=(__m256i    v) { i = v;   return *this; }
-        REV_INLINE ymm& REV_VECTORCALL operator=(__m256d    v) { d = v;   return *this; }
-        REV_INLINE ymm& REV_VECTORCALL operator=(const ymm& v) { f = v.f; return *this; }
-        REV_INLINE ymm& REV_VECTORCALL operator=(ymm&&      v) { f = v.f; return *this; }
-    };
-    #endif
-
-    #if REV_ISA >= REV_ISA_AVX512
-    union REV_INTRIN_TYPE zmm
-    {
-        __m512  f;
-        __m512i i;
-        __m512d d;
-
-        REV_INLINE zmm(            ) : f(_mm512_setzero_ps()) {}
-        REV_INLINE zmm(__m512     v) : f(v)                   {}
-        REV_INLINE zmm(__m512i    v) : i(v)                   {}
-        REV_INLINE zmm(__m512d    v) : d(v)                   {}
-        REV_INLINE zmm(const zmm& v) : f(v.f)                 {}
-        REV_INLINE zmm(zmm&&      v) : f(v.f)                 {}
-
-        REV_INLINE REV_VECTORCALL operator __m512()  const { return f; }
-        REV_INLINE REV_VECTORCALL operator __m512i() const { return i; }
-        REV_INLINE REV_VECTORCALL operator __m512d() const { return d; }
-
-        REV_INLINE zmm& REV_VECTORCALL operator=(__m512     v) { f = v;   return *this; }
-        REV_INLINE zmm& REV_VECTORCALL operator=(__m512i    v) { i = v;   return *this; }
-        REV_INLINE zmm& REV_VECTORCALL operator=(__m512d    v) { d = v;   return *this; }
-        REV_INLINE zmm& REV_VECTORCALL operator=(const zmm& v) { f = v.f; return *this; }
-        REV_INLINE zmm& REV_VECTORCALL operator=(zmm&&      v) { f = v.f; return *this; }
-    };
-    #endif
-
     // @NOTE(Roman): We are not able to align v4 to 1 byte because __m128 aligned to 16 bytes, so let's say this is our register.
     // @Important(Roman): This may cause some mem corruptions, so let's see how it will go.
     union REV_INTRIN_TYPE xmm_u
@@ -187,75 +111,97 @@ namespace REV::Math
     #endif
 
     #undef _MM_SHUFFLE
-    enum class MM_SHUFFLE // for _mm_shuffle_*
+    // @NOTE(Roman): In reversed order: enum[X, Y, Z, W] = register[W, Z, Y, X]
+    enum MM_SHUFFLE : int // for _mm_shuffle_*
     {
-        XXXX, YXXX, ZXXX, WXXX,
-        XYXX, YYXX, ZYXX, WYXX,
-        XZXX, YZXX, ZZXX, WZXX,
-        XWXX, YWXX, ZWXX, WWXX,
-        XXYX, YXYX, ZXYX, WXYX,
-        XYYX, YYYX, ZYYX, WYYX,
-        XZYX, YZYX, ZZYX, WZYX,
-        XWYX, YWYX, ZWYX, WWYX,
-        XXZX, YXZX, ZXZX, WXZX,
-        XYZX, YYZX, ZYZX, WYZX,
-        XZZX, YZZX, ZZZX, WZZX,
-        XWZX, YWZX, ZWZX, WWZX,
-        XXWX, YXWX, ZXWX, WXWX,
-        XYWX, YYWX, ZYWX, WYWX,
-        XZWX, YZWX, ZZWX, WZWX,
-        XWWX, YWWX, ZWWX, WWWX,
+        MM_SHUFFLE_XXXX, MM_SHUFFLE_YXXX, MM_SHUFFLE_ZXXX, MM_SHUFFLE_WXXX,
+        MM_SHUFFLE_XYXX, MM_SHUFFLE_YYXX, MM_SHUFFLE_ZYXX, MM_SHUFFLE_WYXX,
+        MM_SHUFFLE_XZXX, MM_SHUFFLE_YZXX, MM_SHUFFLE_ZZXX, MM_SHUFFLE_WZXX,
+        MM_SHUFFLE_XWXX, MM_SHUFFLE_YWXX, MM_SHUFFLE_ZWXX, MM_SHUFFLE_WWXX,
+        MM_SHUFFLE_XXYX, MM_SHUFFLE_YXYX, MM_SHUFFLE_ZXYX, MM_SHUFFLE_WXYX,
+        MM_SHUFFLE_XYYX, MM_SHUFFLE_YYYX, MM_SHUFFLE_ZYYX, MM_SHUFFLE_WYYX,
+        MM_SHUFFLE_XZYX, MM_SHUFFLE_YZYX, MM_SHUFFLE_ZZYX, MM_SHUFFLE_WZYX,
+        MM_SHUFFLE_XWYX, MM_SHUFFLE_YWYX, MM_SHUFFLE_ZWYX, MM_SHUFFLE_WWYX,
+        MM_SHUFFLE_XXZX, MM_SHUFFLE_YXZX, MM_SHUFFLE_ZXZX, MM_SHUFFLE_WXZX,
+        MM_SHUFFLE_XYZX, MM_SHUFFLE_YYZX, MM_SHUFFLE_ZYZX, MM_SHUFFLE_WYZX,
+        MM_SHUFFLE_XZZX, MM_SHUFFLE_YZZX, MM_SHUFFLE_ZZZX, MM_SHUFFLE_WZZX,
+        MM_SHUFFLE_XWZX, MM_SHUFFLE_YWZX, MM_SHUFFLE_ZWZX, MM_SHUFFLE_WWZX,
+        MM_SHUFFLE_XXWX, MM_SHUFFLE_YXWX, MM_SHUFFLE_ZXWX, MM_SHUFFLE_WXWX,
+        MM_SHUFFLE_XYWX, MM_SHUFFLE_YYWX, MM_SHUFFLE_ZYWX, MM_SHUFFLE_WYWX,
+        MM_SHUFFLE_XZWX, MM_SHUFFLE_YZWX, MM_SHUFFLE_ZZWX, MM_SHUFFLE_WZWX,
+        MM_SHUFFLE_XWWX, MM_SHUFFLE_YWWX, MM_SHUFFLE_ZWWX, MM_SHUFFLE_WWWX,
 
-        XXXY, YXXY, ZXXY, WXXY,
-        XYXY, YYXY, ZYXY, WYXY,
-        XZXY, YZXY, ZZXY, WZXY,
-        XWXY, YWXY, ZWXY, WWXY,
-        XXYY, YXYY, ZXYY, WXYY,
-        XYYY, YYYY, ZYYY, WYYY,
-        XZYY, YZYY, ZZYY, WZYY,
-        XWYY, YWYY, ZWYY, WWYY,
-        XXZY, YXZY, ZXZY, WXZY,
-        XYZY, YYZY, ZYZY, WYZY,
-        XZZY, YZZY, ZZZY, WZZY,
-        XWZY, YWZY, ZWZY, WWZY,
-        XXWY, YXWY, ZXWY, WXWY,
-        XYWY, YYWY, ZYWY, WYWY,
-        XZWY, YZWY, ZZWY, WZWY,
-        XWWY, YWWY, ZWWY, WWWY,
+        MM_SHUFFLE_XXXY, MM_SHUFFLE_YXXY, MM_SHUFFLE_ZXXY, MM_SHUFFLE_WXXY,
+        MM_SHUFFLE_XYXY, MM_SHUFFLE_YYXY, MM_SHUFFLE_ZYXY, MM_SHUFFLE_WYXY,
+        MM_SHUFFLE_XZXY, MM_SHUFFLE_YZXY, MM_SHUFFLE_ZZXY, MM_SHUFFLE_WZXY,
+        MM_SHUFFLE_XWXY, MM_SHUFFLE_YWXY, MM_SHUFFLE_ZWXY, MM_SHUFFLE_WWXY,
+        MM_SHUFFLE_XXYY, MM_SHUFFLE_YXYY, MM_SHUFFLE_ZXYY, MM_SHUFFLE_WXYY,
+        MM_SHUFFLE_XYYY, MM_SHUFFLE_YYYY, MM_SHUFFLE_ZYYY, MM_SHUFFLE_WYYY,
+        MM_SHUFFLE_XZYY, MM_SHUFFLE_YZYY, MM_SHUFFLE_ZZYY, MM_SHUFFLE_WZYY,
+        MM_SHUFFLE_XWYY, MM_SHUFFLE_YWYY, MM_SHUFFLE_ZWYY, MM_SHUFFLE_WWYY,
+        MM_SHUFFLE_XXZY, MM_SHUFFLE_YXZY, MM_SHUFFLE_ZXZY, MM_SHUFFLE_WXZY,
+        MM_SHUFFLE_XYZY, MM_SHUFFLE_YYZY, MM_SHUFFLE_ZYZY, MM_SHUFFLE_WYZY,
+        MM_SHUFFLE_XZZY, MM_SHUFFLE_YZZY, MM_SHUFFLE_ZZZY, MM_SHUFFLE_WZZY,
+        MM_SHUFFLE_XWZY, MM_SHUFFLE_YWZY, MM_SHUFFLE_ZWZY, MM_SHUFFLE_WWZY,
+        MM_SHUFFLE_XXWY, MM_SHUFFLE_YXWY, MM_SHUFFLE_ZXWY, MM_SHUFFLE_WXWY,
+        MM_SHUFFLE_XYWY, MM_SHUFFLE_YYWY, MM_SHUFFLE_ZYWY, MM_SHUFFLE_WYWY,
+        MM_SHUFFLE_XZWY, MM_SHUFFLE_YZWY, MM_SHUFFLE_ZZWY, MM_SHUFFLE_WZWY,
+        MM_SHUFFLE_XWWY, MM_SHUFFLE_YWWY, MM_SHUFFLE_ZWWY, MM_SHUFFLE_WWWY,
 
-        XXXZ, YXXZ, ZXXZ, WXXZ,
-        XYXZ, YYXZ, ZYXZ, WYXZ,
-        XZXZ, YZXZ, ZZXZ, WZXZ,
-        XWXZ, YWXZ, ZWXZ, WWXZ,
-        XXYZ, YXYZ, ZXYZ, WXYZ,
-        XYYZ, YYYZ, ZYYZ, WYYZ,
-        XZYZ, YZYZ, ZZYZ, WZYZ,
-        XWYZ, YWYZ, ZWYZ, WWYZ,
-        XXZZ, YXZZ, ZXZZ, WXZZ,
-        XYZZ, YYZZ, ZYZZ, WYZZ,
-        XZZZ, YZZZ, ZZZZ, WZZZ,
-        XWZZ, YWZZ, ZWZZ, WWZZ,
-        XXWZ, YXWZ, ZXWZ, WXWZ,
-        XYWZ, YYWZ, ZYWZ, WYWZ,
-        XZWZ, YZWZ, ZZWZ, WZWZ,
-        XWWZ, YWWZ, ZWWZ, WWWZ,
+        MM_SHUFFLE_XXXZ, MM_SHUFFLE_YXXZ, MM_SHUFFLE_ZXXZ, MM_SHUFFLE_WXXZ,
+        MM_SHUFFLE_XYXZ, MM_SHUFFLE_YYXZ, MM_SHUFFLE_ZYXZ, MM_SHUFFLE_WYXZ,
+        MM_SHUFFLE_XZXZ, MM_SHUFFLE_YZXZ, MM_SHUFFLE_ZZXZ, MM_SHUFFLE_WZXZ,
+        MM_SHUFFLE_XWXZ, MM_SHUFFLE_YWXZ, MM_SHUFFLE_ZWXZ, MM_SHUFFLE_WWXZ,
+        MM_SHUFFLE_XXYZ, MM_SHUFFLE_YXYZ, MM_SHUFFLE_ZXYZ, MM_SHUFFLE_WXYZ,
+        MM_SHUFFLE_XYYZ, MM_SHUFFLE_YYYZ, MM_SHUFFLE_ZYYZ, MM_SHUFFLE_WYYZ,
+        MM_SHUFFLE_XZYZ, MM_SHUFFLE_YZYZ, MM_SHUFFLE_ZZYZ, MM_SHUFFLE_WZYZ,
+        MM_SHUFFLE_XWYZ, MM_SHUFFLE_YWYZ, MM_SHUFFLE_ZWYZ, MM_SHUFFLE_WWYZ,
+        MM_SHUFFLE_XXZZ, MM_SHUFFLE_YXZZ, MM_SHUFFLE_ZXZZ, MM_SHUFFLE_WXZZ,
+        MM_SHUFFLE_XYZZ, MM_SHUFFLE_YYZZ, MM_SHUFFLE_ZYZZ, MM_SHUFFLE_WYZZ,
+        MM_SHUFFLE_XZZZ, MM_SHUFFLE_YZZZ, MM_SHUFFLE_ZZZZ, MM_SHUFFLE_WZZZ,
+        MM_SHUFFLE_XWZZ, MM_SHUFFLE_YWZZ, MM_SHUFFLE_ZWZZ, MM_SHUFFLE_WWZZ,
+        MM_SHUFFLE_XXWZ, MM_SHUFFLE_YXWZ, MM_SHUFFLE_ZXWZ, MM_SHUFFLE_WXWZ,
+        MM_SHUFFLE_XYWZ, MM_SHUFFLE_YYWZ, MM_SHUFFLE_ZYWZ, MM_SHUFFLE_WYWZ,
+        MM_SHUFFLE_XZWZ, MM_SHUFFLE_YZWZ, MM_SHUFFLE_ZZWZ, MM_SHUFFLE_WZWZ,
+        MM_SHUFFLE_XWWZ, MM_SHUFFLE_YWWZ, MM_SHUFFLE_ZWWZ, MM_SHUFFLE_WWWZ,
 
-        XXXW, YXXW, ZXXW, WXXW,
-        XYXW, YYXW, ZYXW, WYXW,
-        XZXW, YZXW, ZZXW, WZXW,
-        XWXW, YWXW, ZWXW, WWXW,
-        XXYW, YXYW, ZXYW, WXYW,
-        XYYW, YYYW, ZYYW, WYYW,
-        XZYW, YZYW, ZZYW, WZYW,
-        XWYW, YWYW, ZWYW, WWYW,
-        XXZW, YXZW, ZXZW, WXZW,
-        XYZW, YYZW, ZYZW, WYZW,
-        XZZW, YZZW, ZZZW, WZZW,
-        XWZW, YWZW, ZWZW, WWZW,
-        XXWW, YXWW, ZXWW, WXWW,
-        XYWW, YYWW, ZYWW, WYWW,
-        XZWW, YZWW, ZZWW, WZWW,
-        XWWW, YWWW, ZWWW, WWWW
+        MM_SHUFFLE_XXXW, MM_SHUFFLE_YXXW, MM_SHUFFLE_ZXXW, MM_SHUFFLE_WXXW,
+        MM_SHUFFLE_XYXW, MM_SHUFFLE_YYXW, MM_SHUFFLE_ZYXW, MM_SHUFFLE_WYXW,
+        MM_SHUFFLE_XZXW, MM_SHUFFLE_YZXW, MM_SHUFFLE_ZZXW, MM_SHUFFLE_WZXW,
+        MM_SHUFFLE_XWXW, MM_SHUFFLE_YWXW, MM_SHUFFLE_ZWXW, MM_SHUFFLE_WWXW,
+        MM_SHUFFLE_XXYW, MM_SHUFFLE_YXYW, MM_SHUFFLE_ZXYW, MM_SHUFFLE_WXYW,
+        MM_SHUFFLE_XYYW, MM_SHUFFLE_YYYW, MM_SHUFFLE_ZYYW, MM_SHUFFLE_WYYW,
+        MM_SHUFFLE_XZYW, MM_SHUFFLE_YZYW, MM_SHUFFLE_ZZYW, MM_SHUFFLE_WZYW,
+        MM_SHUFFLE_XWYW, MM_SHUFFLE_YWYW, MM_SHUFFLE_ZWYW, MM_SHUFFLE_WWYW,
+        MM_SHUFFLE_XXZW, MM_SHUFFLE_YXZW, MM_SHUFFLE_ZXZW, MM_SHUFFLE_WXZW,
+        MM_SHUFFLE_XYZW, MM_SHUFFLE_YYZW, MM_SHUFFLE_ZYZW, MM_SHUFFLE_WYZW,
+        MM_SHUFFLE_XZZW, MM_SHUFFLE_YZZW, MM_SHUFFLE_ZZZW, MM_SHUFFLE_WZZW,
+        MM_SHUFFLE_XWZW, MM_SHUFFLE_YWZW, MM_SHUFFLE_ZWZW, MM_SHUFFLE_WWZW,
+        MM_SHUFFLE_XXWW, MM_SHUFFLE_YXWW, MM_SHUFFLE_ZXWW, MM_SHUFFLE_WXWW,
+        MM_SHUFFLE_XYWW, MM_SHUFFLE_YYWW, MM_SHUFFLE_ZYWW, MM_SHUFFLE_WYWW,
+        MM_SHUFFLE_XZWW, MM_SHUFFLE_YZWW, MM_SHUFFLE_ZZWW, MM_SHUFFLE_WZWW,
+        MM_SHUFFLE_XWWW, MM_SHUFFLE_YWWW, MM_SHUFFLE_ZWWW, MM_SHUFFLE_WWWW
+    };
+
+    enum MM_SIGN : int // for _mm*_sign_*
+    {
+        MM_SIGN_NEG  = -1,
+        MM_SIGN_ZERO =  0,
+        MM_SIGN_POS  =  1
+    };
+
+    // @NOTE(Roman): In reversed order: enum[X, Y, Z, W] = register[W, Z, Y, X]
+    enum MM_BLEND : int // for _mm_blend_[ps, epi32]
+    {
+        MM_BLEND_AAAA, MM_BLEND_BAAA,
+        MM_BLEND_ABAA, MM_BLEND_BBAA,
+        MM_BLEND_AABA, MM_BLEND_BABA,
+        MM_BLEND_ABBA, MM_BLEND_BBBA,
+
+        MM_BLEND_AAAB, MM_BLEND_BAAB,
+        MM_BLEND_ABAB, MM_BLEND_BBAB,
+        MM_BLEND_AABB, MM_BLEND_BABB,
+        MM_BLEND_ABBB, MM_BLEND_BBBB
     };
 
     REV_INLINE bool REV_VECTORCALL mm_equals(const void *a, const void *b)
@@ -407,7 +353,7 @@ namespace REV::Math
     }
 
     #undef _MM_EXTRACT_FLOAT
-    template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m128  mm) { return reg32(_mm_extract_ps(mm, index)).f; }
+    template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m128  mm) { int i = _mm_extract_ps(mm, index); return *cast<f32 *>(&i); }
     template<u8 index> REV_INLINE s32 REV_VECTORCALL mm_extract_s32(__m128i mm) { return _mm_extract_epi32(mm, index); }
     template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m128i mm) { return cast<u32>(_mm_extract_epi32(mm, index)); }
 
@@ -416,7 +362,7 @@ namespace REV::Math
     template<> REV_INLINE u32 REV_VECTORCALL mm_extract_u32<0>(__m128i mm) { return cast<u32>(_mm_cvtsi128_si32(mm)); }
 
     #if REV_ISA >= REV_ISA_AVX
-        template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m256  mm) { return reg32(_mm256_extract_epi32(ymm(mm).i, index)).f; }
+        template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m256  mm) { int i = _mm256_extract_epi32(_mm256_castps_si256(mm), index); return *cast<f32 *>(&i); }
         template<u8 index> REV_INLINE s32 REV_VECTORCALL mm_extract_s32(__m256i mm) { return _mm256_extract_epi32(mm, index); }
         template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m256i mm) { return cast<u32>(_mm256_extract_epi32(mm, index)); }
 
@@ -426,7 +372,7 @@ namespace REV::Math
     #endif
 
     #if REV_ISA >= REV_ISA_AVX512
-        template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m512  mm) { return reg32(_mm_extract_ps(_mm512_extractf32x4_ps(mm, index / 4), index % 4)).f; }
+        template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m512  mm) { int i = _mm_extract_ps(_mm512_extractf32x4_ps(mm, index / 4), index % 4); return *cast<f32 *>(&i); }
         template<u8 index> REV_INLINE s32 REV_VECTORCALL mm_extract_s32(__m512i mm) { return _mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4); }
         template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m512i mm) { return cast<u32>(_mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4)); }
 
@@ -435,39 +381,57 @@ namespace REV::Math
         template<> REV_INLINE u32 REV_VECTORCALL mm_extract_u32<0>(__m512i mm) { return cast<u32>(_mm512_cvtsi512_si32(mm)); }
     #endif
 
-    template<u8 index> REV_INLINE __m128  REV_VECTORCALL mm_insert_f32(__m128  mm, f32 val) { return xmm(_mm_insert_epi32(xmm(mm).i, reg32(val).i, index)).f; }
+    template<u8 index> REV_INLINE __m128  REV_VECTORCALL mm_insert_f32(__m128  mm, f32 val) { return _mm_insert_ps(mm, _mm_set_ss(val), index); }
     template<u8 index> REV_INLINE __m128i REV_VECTORCALL mm_insert_s32(__m128i mm, s32 val) { return _mm_insert_epi32(mm, val, index); }
     template<u8 index> REV_INLINE __m128i REV_VECTORCALL mm_insert_u32(__m128i mm, u32 val) { return _mm_insert_epi32(mm, val, index); }
 
     #if REV_ISA >= REV_ISA_AVX
-        template<u8 index> REV_INLINE __m256  REV_VECTORCALL mm_insert_f32(__m256  mm, f32 val) { return ymm(_mm256_insert_epi32(ymm(mm).i, reg32(val).i, index)).f; }
+        template<u8 index> REV_INLINE __m256  REV_VECTORCALL mm_insert_f32(__m256  mm, f32 val) { return _mm256_insertf128_ps(mm, _mm_insert_ps(_mm256_extractf128_ps(mm, index / 4), _mm_set_ss(val), index % 4), index / 4); }
         template<u8 index> REV_INLINE __m256i REV_VECTORCALL mm_insert_s32(__m256i mm, s32 val) { return _mm256_insert_epi32(mm, val, index); }
         template<u8 index> REV_INLINE __m256i REV_VECTORCALL mm_insert_u32(__m256i mm, u32 val) { return _mm256_insert_epi32(mm, val, index); }
     #endif
 
     #if REV_ISA >= REV_ISA_AVX512
-        template<u8 index>
-        REV_INLINE __m512 REV_VECTORCALL mm_insert_f32(__m512 mm, f32 val)
-        {
-            __m128 paste = _mm512_extractf32x4_ps(mm, index / 4);
-            paste = xmm(_mm_insert_epi32(xmm(paste).i, reg32(val).i, index % 4)).f;
-            return _mm512_insertf32x4(mm, paste, index / 4);
-        }
-
-        template<u8 index>
-        REV_INLINE __m512i REV_VECTORCALL mm_insert_s32(__m512i mm, s32 val)
-        {
-            __m128i paste = _mm512_extracti32x4_epi32(mm, index / 4);
-            paste = _mm_insert_epi32(paste, val, index % 4);
-            return _mm512_inserti32x4(mm, paste, index / 4);
-        }
-
-        template<u8 index>
-        REV_INLINE __m512i REV_VECTORCALL mm_insert_u32(__m512i mm, u32 val)
-        {
-            __m128i paste = _mm512_extracti32x4_epi32(mm, index / 4);
-            paste = _mm_insert_epi32(paste, val, index % 4);
-            return _mm512_inserti32x4(mm, paste, index / 4);
-        }
+        template<u8 index> REV_INLINE __m512  REV_VECTORCALL mm_insert_f32(__m512  mm, f32 val) { return _mm512_insertf32x4(mm, _mm_insert_ps(_mm512_extractf32x4_ps(mm, index / 4), _mm_set_ss(val), index % 4), index / 4); }
+        template<u8 index> REV_INLINE __m512i REV_VECTORCALL mm_insert_s32(__m512i mm, s32 val) { return _mm512_inserti32x4(mm, _mm_insert_epi32(_mm512_extracti32x4_epi32(mm, index / 4), val, index % 4), index / 4); }
+        template<u8 index> REV_INLINE __m512i REV_VECTORCALL mm_insert_u32(__m512i mm, u32 val) { return _mm512_inserti32x4(mm, _mm_insert_epi32(_mm512_extracti32x4_epi32(mm, index / 4), val, index % 4), index / 4); }
     #endif
+
+    REV_INLINE __m128 REV_VECTORCALL mm_cvtepu32_ps(__m128i mm)
+    {
+        __m128i half_mmi = _mm_srli_epi32(mm, 1);
+        __m128i saved_1  = _mm_and_si128(mm, _mm_set1_epi32(1));
+        __m128  half_mmf = _mm_cvtepi32_ps(half_mmi);
+        __m128  saved_1f = _mm_cvtepi32_ps(saved_1);
+        return _mm_add_ps(_mm_add_ps(half_mmf, half_mmf), saved_1f);
+    }
+
+    REV_INLINE __m128d REV_VECTORCALL mm_cvtepu64_pd(__m128i mm)
+    {
+        __m128i half_mmi = _mm_srli_epi64(mm, 1);
+        __m128i saved_1  = _mm_and_si128(mm, _mm_set1_epi64x(1));
+        __m128d zero     = _mm_setzero_pd();
+
+        __m128d hmd_0    = _mm_cvtsi64_sd(zero, _mm_cvtsi128_si64x(half_mmi));
+        __m128d hmd_1    = _mm_cvtsi64_sd(zero, _mm_extract_epi64(half_mmi, 1));
+        __m128d half_mmd = _mm_shuffle_pd(hmd_0, hmd_1, 0);
+
+        __m128d s1d_0    = _mm_cvtsi64_sd(zero, _mm_cvtsi128_si64x(saved_1));
+        __m128d s1d_1    = _mm_cvtsi64_sd(zero, _mm_extract_epi64(saved_1, 1));
+        __m128d saved_1d = _mm_shuffle_pd(s1d_0, s1d_1, 0);
+
+        return _mm_add_pd(_mm_add_pd(half_mmd, half_mmd), saved_1d);
+    }
+
+    REV_INLINE __m128d REV_VECTORCALL mm_cvtu64_sd(__m128i mm)
+    {
+        __m128i half_mmi = _mm_srli_epi64(mm, 1);
+        __m128i saved_1  = _mm_and_si128(mm, _mm_cvtsi64_si128(1));
+        __m128d zero     = _mm_setzero_pd();
+
+        __m128d half_mmd = _mm_cvtsi64_sd(zero, _mm_cvtsi128_si64x(half_mmi));
+        __m128d saved_1d = _mm_cvtsi64_sd(zero, _mm_cvtsi128_si64x(saved_1));
+
+        return _mm_add_pd(_mm_add_pd(half_mmd, half_mmd), saved_1d);
+    }
 }

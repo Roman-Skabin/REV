@@ -42,7 +42,7 @@ GPU::ProgramManager *GraphicsAPI::GetProgramManager()
     return s_ProgramManager;
 }
 
-void GraphicsAPI::Init(Window *window, Allocator *allocator, const Logger& logger, Math::v2s rt_size)
+void GraphicsAPI::Init(Window *window, Allocator *allocator, const Logger& logger)
 {
     switch (s_API)
     {
@@ -59,7 +59,7 @@ void GraphicsAPI::Init(Window *window, Allocator *allocator, const Logger& logge
             byte *memory_manager_area  = renderer_area       + sizeof(D3D12::Renderer);
             byte *program_manager_area = memory_manager_area + sizeof(D3D12::MemoryManager);
 
-            s_Renderer       = cast<GPU::Renderer       *>(new (renderer_area)        D3D12::Renderer(window, logger, rt_size));
+            s_Renderer       = cast<GPU::Renderer       *>(new (renderer_area)        D3D12::Renderer(window, logger));
             s_MemoryManager  = cast<GPU::MemoryManager  *>(new (memory_manager_area)  D3D12::MemoryManager(allocator));
             s_ProgramManager = cast<GPU::ProgramManager *>(new (program_manager_area) D3D12::ProgramManager(allocator, logger));
 

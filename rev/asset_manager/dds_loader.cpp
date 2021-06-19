@@ -5,6 +5,8 @@
 #include "core/pch.h"
 #include "asset_manager/asset_manager.h"
 #include "graphics/graphics_api.h"
+#include "core/settings.h"
+#include "math/math.h"
 
 // @TODO(Roman): #CrossPlatform
 #include "platform/d3d12/d3d12_memory_manager.h"
@@ -680,8 +682,8 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
 
             if (block_compression)
             {
-                row_bytes   = RTTI::max(1, (width  + 3) / 4) * compression_ratio;
-                slice_bytes = RTTI::max(1, (height + 3) / 4) * row_bytes;
+                row_bytes   = Math::max(1ui64, (width  + 3) / 4) * compression_ratio;
+                slice_bytes = Math::max(1ui64, (height + 3) / 4) * row_bytes;
             }
             else if (packed)
             {
@@ -717,20 +719,36 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
     memory_manager->SetTextureData(asset->resource, &texture_desc);
 
     // @TODO(Roman): #CrossPlatform, #Hardcoded.
+    if (GraphicsAPI::GetAPI() == GraphicsAPI::API::D3D12)
     {
         D3D12::MemoryManager *d3d12_memory_manager = cast<D3D12::MemoryManager *>(memory_manager);
-    
+        Settings             *settings             = Settings::Get();
+
+        D3D12_FILTER d3d12_filter;
+        switch (settings->filtering)
+        {
+            case FILTERING::POINT:       d3d12_filter = D3D12_FILTER_MIN_MAG_MIP_POINT;        break;
+            case FILTERING::BILINEAR:    d3d12_filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT; break;
+            case FILTERING::TRILINEAR:   d3d12_filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;       break;
+            case FILTERING::ANISOTROPIC: d3d12_filter = D3D12_FILTER_ANISOTROPIC;              break;
+        }
+
         D3D12_SAMPLER_DESC d3d12_sampler_desc{};
-        d3d12_sampler_desc.Filter         = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+        d3d12_sampler_desc.Filter         = d3d12_filter;
         d3d12_sampler_desc.AddressU       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         d3d12_sampler_desc.AddressV       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         d3d12_sampler_desc.AddressW       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         d3d12_sampler_desc.MipLODBias     = 0.0f;
-        d3d12_sampler_desc.MaxAnisotropy  = 1;
+        d3d12_sampler_desc.MaxAnisotropy  = settings->anisotropy;
         d3d12_sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
         d3d12_sampler_desc.MinLOD         = 0.0f;
         d3d12_sampler_desc.MaxLOD         = 100.0f;
+
         asset->sampler = d3d12_memory_manager->AllocateSampler(d3d12_sampler_desc);
+    }
+    else
+    {
+        REV_FAILED_M("Not implemented yet");
     }
 }
 

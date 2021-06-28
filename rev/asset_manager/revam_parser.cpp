@@ -11,6 +11,31 @@ namespace REV
 {
 
 //
+// Keyword
+//
+
+enum KEYWORD_ID : u32
+{
+    KEYWORD_ID_STATIC,
+    KEYWORD_ID_SCENE,
+    KEYWORD_ID_SHADERS,
+    KEYWORD_ID_MESHES,
+    KEYWORD_ID_CBUFFERS,
+    KEYWORD_ID_TEXTURES,
+    KEYWORD_ID_NAME,
+    KEYWORD_ID_NAMES,
+
+    KEYWORD_ID_COUNT,
+    KEYWORD_ID_UNKNOWN  = REV_U32_MAX
+};
+
+struct Keyword
+{
+    const char *name;
+    u64         name_len;
+};
+
+//
 // Token
 //
 
@@ -22,6 +47,8 @@ enum class TOKEN_KIND : u32
     COMMA        = ',', // 44
     COLON        = ':', // 58
     SEMICOLON    = ';', // 59
+    LBRACE       = '{', // 123
+    RBRACE       = '}', // 125
 
     LAST_LITERAL = 0xFF,
 
@@ -34,39 +61,26 @@ enum class TOKEN_KIND : u32
 
 struct Token
 {
-    TOKEN_KIND  kind  = TOKEN_KIND::UNKNOWN;
-    Math::v2u   pos   = Math::v2u(1, 0);
-    const char *start = null;
-    const char *end   = null;
-    const char *name  = null;
+    TOKEN_KIND  kind       = TOKEN_KIND::UNKNOWN;
+    KEYWORD_ID  keyword_id = KEYWORD_ID_UNKNOWN;
+    Math::v2u   pos        = Math::v2u(1, 0);
+    const char *start      = null;
+    const char *end        = null;
+    const char *name       = null;
     // @TODO(Roman): Interns or hash table or mix or nothing?
     // const char *str_val = null;
 };
 
 //
-// Keyword
-//
-
-enum KEYWORD_ID : u32
-{
-    KEYWORD_ID_STATIC   = 0,
-    KEYWORD_ID_SCENE    = 1,
-    KEYWORD_ID_TEXTURES = 2,
-    KEYWORD_ID_SFX      = 3,
-    KEYWORD_ID_MUSIC    = 4,
-
-    KEYWORD_ID_UNKNOWN  = REV_U32_MAX
-};
-
-struct Keyword
-{
-    const char *name;
-    u64         name_len;
-};
-
-//
 // Lexer
 //
+
+struct LexerState
+{
+    const char *stream     = null;
+    const char *line_start = null;
+    Token       token;
+};
 
 struct Lexer
 {
@@ -74,7 +88,7 @@ struct Lexer
     const char *stream;
     const char *line_start;
     Token       token;
-    Keyword     keywords[5];
+    Keyword     keywords[KEYWORD_ID_COUNT];
 
     Lexer(const char *filename, const char *stream);
 
@@ -84,12 +98,14 @@ struct Lexer
     bool IsKeyword(const char *str, u64 length);
 
     const char *GetKeywordName(const char *str, u64 length);
-    KEYWORD_ID GetKeywordID();
 
     bool TokenEquals(const char *str, u64 length);
     bool TokenEqualsKeyword(KEYWORD_ID id);
     
     void CheckToken(TOKEN_KIND token_kind);
+
+    void SaveState(LexerState *state);
+    void LoadState(LexerState *state);
 };
 
 Lexer::Lexer(const char *filename, const char *stream)
@@ -99,9 +115,12 @@ Lexer::Lexer(const char *filename, const char *stream)
       token(),
       keywords{{ "static",   REV_CSTRLEN("static")   },
                { "scene",    REV_CSTRLEN("scene")    },
+               { "shaders",  REV_CSTRLEN("shaders")  },
+               { "meshes",   REV_CSTRLEN("meshes")   },
+               { "cbuffers", REV_CSTRLEN("cbuffers") },
                { "textures", REV_CSTRLEN("textures") },
-               { "sfx",      REV_CSTRLEN("sfx")      },
-               { "music",    REV_CSTRLEN("music")    }}
+               { "name",     REV_CSTRLEN("name")     },
+               { "names",    REV_CSTRLEN("names")    }}
 {
     NextToken();
 }
@@ -120,7 +139,8 @@ tokenize_again:
         }
     }
 
-    token.start = stream;
+    token.keyword_id = KEYWORD_ID_UNKNOWN;
+    token.start      = stream;
 
     if (isalpha(*stream) || *stream == '_')
     {
@@ -132,6 +152,8 @@ tokenize_again:
     ELSE_IF_CHAR(',', TOKEN_KIND::COMMA)
     ELSE_IF_CHAR(':', TOKEN_KIND::COLON)
     ELSE_IF_CHAR(';', TOKEN_KIND::SEMICOLON)
+    ELSE_IF_CHAR('{', TOKEN_KIND::LBRACE)
+    ELSE_IF_CHAR('}', TOKEN_KIND::RBRACE)
     else if (*stream == '"')
     {
         ++stream;
@@ -196,20 +218,18 @@ void REV_CDECL Lexer::SyntaxError(const char *format, ...)
 
     token.pos.c = cast<u32>(stream - line_start);
 
-    DebugFC(DEBUG_COLOR::ERROR, "%s(%I32u:%I32u): RAF syntax error: %s.", filename, token.pos.r, token.pos.c, buffer);
+    DebugFC(DEBUG_COLOR::ERROR, "%s(%I32u:%I32u): REVAM syntax error: %s.", filename, token.pos.r, token.pos.c, buffer);
     // @TODO(Roman): #CrossPlatform
     ExitProcess(1);
 }
 
 bool Lexer::IsKeyword(const char *str, u64 length)
 {
-    Keyword *last = keywords + ArrayCount(keywords) - 1;
-    for (Keyword *it = keywords; it <= last; ++it)
+    if (token.keyword_id < KEYWORD_ID_COUNT)
     {
-        if (it->name_len == length && !memcmp(it->name, str, length))
-        {
-            return true;
-        }
+        Keyword *keyword = keywords + token.keyword_id;
+        return keyword->name_len == length
+            && !memcmp(keyword->name, str, length);
     }
     return false;
 }
@@ -221,6 +241,7 @@ const char *Lexer::GetKeywordName(const char *str, u64 length)
     {
         if (it->name_len == length && !memcmp(it->name, str, length))
         {
+            token.keyword_id = cast<KEYWORD_ID>(it - keywords);
             return it->name;
         }
     }
@@ -238,18 +259,6 @@ bool Lexer::TokenEqualsKeyword(KEYWORD_ID id)
     return token.name == keywords[id].name;
 }
 
-KEYWORD_ID Lexer::GetKeywordID()
-{
-    for (u32 i = 0; i < ArrayCount(keywords); ++i)
-    {
-        if (token.name == keywords[i].name)
-        {
-            return cast<KEYWORD_ID>(i);
-        }
-    }
-    return KEYWORD_ID_UNKNOWN;
-}
-
 void Lexer::CheckToken(TOKEN_KIND token_kind)
 {
     if (token.kind != token_kind)
@@ -259,6 +268,8 @@ void Lexer::CheckToken(TOKEN_KIND token_kind)
         token_kind_names[cast<u64>(TOKEN_KIND::COMMA)]     = ",";
         token_kind_names[cast<u64>(TOKEN_KIND::COLON)]     = ":";
         token_kind_names[cast<u64>(TOKEN_KIND::SEMICOLON)] = ";";
+        token_kind_names[cast<u64>(TOKEN_KIND::LBRACE)]    = "{";
+        token_kind_names[cast<u64>(TOKEN_KIND::RBRACE)]    = "}";
         token_kind_names[cast<u64>(TOKEN_KIND::KEYWORD)]   = "<keyword>";
         token_kind_names[cast<u64>(TOKEN_KIND::NAME)]      = "<name>";
         token_kind_names[cast<u64>(TOKEN_KIND::STRING)]    = "<string>";
@@ -284,20 +295,45 @@ void Lexer::CheckToken(TOKEN_KIND token_kind)
     }
 }
 
+void Lexer::SaveState(LexerState *state)
+{
+    state->stream     = stream;
+    state->line_start = line_start;
+    state->token      = token;
+}
+
+void Lexer::LoadState(LexerState *state)
+{
+    stream     = state->stream;
+    line_start = state->line_start;
+    token      = state->token;
+}
+
 void AssetManager::ParseExternalBlock(void *_lexer, Array<Asset> *area)
 {
     Lexer *lexer = cast<Lexer *>(_lexer);
-    lexer->CheckToken(TOKEN_KIND::COLON);
 
     lexer->NextToken();
     lexer->CheckToken(TOKEN_KIND::KEYWORD);
 
     while (true)
     {
-        if (lexer->TokenEqualsKeyword(KEYWORD_ID_TEXTURES))
+        if (lexer->TokenEqualsKeyword(KEYWORD_ID_SHADERS))
+        {
+            REV_FAILED_M("SFX blocks are not supported yet.");
+        }
+        else if (lexer->TokenEqualsKeyword(KEYWORD_ID_MESHES))
+        {
+            REV_FAILED_M("SFX blocks are not supported yet.");
+        }
+        else if (lexer->TokenEqualsKeyword(KEYWORD_ID_CBUFFERS))
+        {
+            REV_FAILED_M("SFX blocks are not supported yet.");
+        }
+        else if (lexer->TokenEqualsKeyword(KEYWORD_ID_TEXTURES))
         {
             lexer->NextToken();
-            lexer->CheckToken(TOKEN_KIND::COLON);
+            lexer->CheckToken(TOKEN_KIND::LBRACE);
 
             lexer->NextToken();
             lexer->CheckToken(TOKEN_KIND::STRING);
@@ -306,12 +342,23 @@ void AssetManager::ParseExternalBlock(void *_lexer, Array<Asset> *area)
             {
                 Asset *asset = area->PushBack();
 
-                // @NOTE(Roman): filename
+                // @NOTE(Roman): filename without quotes
                 {
                     const char *filename     = lexer->token.start + 1;
                     u64         filename_len = lexer->token.end - lexer->token.start - 2;
 
                     ParseTexture(asset, filename, filename_len);
+                }
+
+                lexer->NextToken();
+                lexer->CheckToken(TOKEN_KIND::LBRACE);
+
+                lexer->NextToken();
+                lexer->CheckToken(TOKEN_KIND::KEYWORD);
+
+                if (!lexer->TokenEqualsKeyword(KEYWORD_ID_NAMES))
+                {
+                    lexer->SyntaxError("The only allowed keyword here is 'names', got %s", lexer->token.name);
                 }
 
                 lexer->NextToken();
@@ -322,14 +369,12 @@ void AssetManager::ParseExternalBlock(void *_lexer, Array<Asset> *area)
 
                 // @NOTE(Roman): names
                 {
-                    u64 names_count            = 0;
-                    u64 names_data_bytes_total = 0;
+                    u64 names_count            = 1;
+                    u64 names_data_bytes_total = lexer->token.end - lexer->token.start;
 
-                    Lexer lexer_save = *lexer;
+                    LexerState lexer_save;
+                    lexer->SaveState(&lexer_save);
                     {
-                        names_count            = 1;
-                        names_data_bytes_total = lexer->token.end - lexer->token.start;
-
                         lexer->NextToken();
                         while (lexer->token.kind == TOKEN_KIND::COMMA)
                         {
@@ -347,7 +392,7 @@ void AssetManager::ParseExternalBlock(void *_lexer, Array<Asset> *area)
                     asset->names        = cast<AssetNames *>(m_Allocator->Allocate(sizeof(u64) + sizeof(u64) * names_count + names_data_bytes_total));
                     asset->names->count = names_count;
 
-                    *lexer = lexer_save;
+                    lexer->LoadState(&lexer_save);
                     {
                         AssetName *name = cast<AssetName *>(asset->names->names);
 
@@ -355,7 +400,7 @@ void AssetManager::ParseExternalBlock(void *_lexer, Array<Asset> *area)
                         memcpy(name->data, lexer->token.start, name->length);
 
                         lexer->NextToken();
-                        for (u64 i = 0; lexer->token.kind == TOKEN_KIND::COMMA; ++i)
+                        while (lexer->token.kind == TOKEN_KIND::COMMA)
                         {
                             lexer->NextToken();
                             lexer->CheckToken(TOKEN_KIND::NAME);
@@ -372,15 +417,12 @@ void AssetManager::ParseExternalBlock(void *_lexer, Array<Asset> *area)
                 }
 
                 lexer->NextToken();
+                lexer->CheckToken(TOKEN_KIND::RBRACE);
+
+                lexer->NextToken();
             } while (lexer->token.kind == TOKEN_KIND::STRING);
-        }
-        else if (lexer->TokenEqualsKeyword(KEYWORD_ID_SFX))
-        {
-            REV_FAILED_M("SFX blocks are not supported yet.");
-        }
-        else if (lexer->TokenEqualsKeyword(KEYWORD_ID_MUSIC))
-        {
-            REV_FAILED_M("Music blocks are not supported yet.");
+
+            lexer->CheckToken(TOKEN_KIND::RBRACE);
         }
         else
         {
@@ -399,7 +441,13 @@ void AssetManager::ParseREVAMFile()
         &&  lexer.TokenEquals("static", REV_CSTRLEN("static")))
         {
             lexer.NextToken();
+            lexer.CheckToken(TOKEN_KIND::LBRACE);
+
             ParseExternalBlock(&lexer, &m_StaticArea);
+
+            lexer.NextToken();
+            lexer.CheckToken(TOKEN_KIND::RBRACE);
+
             break;
         }
         lexer.NextToken();
@@ -421,7 +469,13 @@ void AssetManager::ParseREVAMFile(const ConstString& scene_name)
             if (lexer.TokenEquals(scene_name.Data(), scene_name.Length()))
             {
                 lexer.NextToken();
+                lexer.CheckToken(TOKEN_KIND::LBRACE);
+
                 ParseExternalBlock(&lexer, &m_SceneArea);
+
+                lexer.NextToken();
+                lexer.CheckToken(TOKEN_KIND::RBRACE);
+
                 break;
             }
         }

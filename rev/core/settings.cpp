@@ -320,7 +320,7 @@ Settings *Settings::Init(const char *ini_filename)
 
                     g_Settings->render_target_wh.h = lexer.token.s32_val;
                 }
-                else if (TokenEquals(&lexer, "API", REV_CSTRLEN("API")))
+                else if (TokenEquals(&lexer, "graphics_api", REV_CSTRLEN("graphics_api")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);

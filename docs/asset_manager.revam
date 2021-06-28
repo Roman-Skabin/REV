@@ -10,10 +10,10 @@ static
 {
     shaders
     {
-        "filename"
+        "filename1"
         {
-            names: ShaderName1, ShaderName2;
-        }
+            names: ShaderName1;
+        };
     }
 
     meshes

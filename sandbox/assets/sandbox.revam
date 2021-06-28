@@ -1,3 +1,18 @@
-scene DemoScene:
-    textures:
-        "../sandbox/assets/textures/runtime/wood.dds": WoodWall;
+scene DemoScene
+{
+    // shaders
+    // {
+    //     "../sandbox/assets/shaders/demo_shaders.hlsl"
+    //     {
+    //         names: WoodWall;
+    //     }
+    // }
+
+    textures
+    {
+        "../sandbox/assets/textures/runtime/wood.dds"
+        {
+            names: WoodWall;
+        }
+    }
+}

@@ -67,4 +67,3 @@ namespace REV
         StaticString<REV_PATH_CAPACITY>  m_UserREVAMFileName;
     };
 }
-    

@@ -358,7 +358,7 @@ void AssetManager::ParseExternalBlock(void *_lexer, Array<Asset> *area)
 
                 if (!lexer->TokenEqualsKeyword(KEYWORD_ID_NAMES))
                 {
-                    lexer->SyntaxError("The only allowed keyword here is 'names', got %s", lexer->token.name);
+                    lexer->SyntaxError("expected keyword: 'names', got '%s'", lexer->token.name);
                 }
 
                 lexer->NextToken();

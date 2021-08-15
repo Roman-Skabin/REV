@@ -329,7 +329,7 @@ void DeviceContext::CreateAdapterAndDevice()
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: ", (const wchar_t *)adapter_desc.Description, ", Feature Level: D3D_FEATURE_LEVEL_12_1");
+        m_Logger.LogInfo("GPU Adapter: ", cast<const wchar_t *>(adapter_desc.Description), ", Feature Level: D3D_FEATURE_LEVEL_12_1");
     }
     else
     {
@@ -359,7 +359,7 @@ void DeviceContext::CreateAdapterAndDevice()
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: ", (const wchar_t *)adapter_desc.Description, ", Feature Level: D3D_FEATURE_LEVEL_12_0");
+        m_Logger.LogInfo("GPU Adapter: ", cast<const wchar_t *>(adapter_desc.Description), ", Feature Level: D3D_FEATURE_LEVEL_12_0");
     }
 }
 

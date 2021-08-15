@@ -11,7 +11,7 @@
 namespace REV
 {
 
-Window::Window(const Logger& logger, const StaticString<128>& title)
+Window::Window(const Logger& logger, const ConstString& title)
     : m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
       m_Handle(null),
       m_XYWH(Settings::Get()->window_xywh),
@@ -50,7 +50,7 @@ Window::Window(const Logger& logger, const StaticString<128>& title)
 
     REV_DEBUG_RESULT(m_Handle = CreateWindowExA(0, wcexa.lpszClassName, m_Title.Data(), WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wcexa.hInstance, 0));
 
-    m_Logger.LogSuccess("Window \"%s\" has been created", m_Title.Data());
+    m_Logger.LogSuccess("Window \"", m_Title, "\" has been created");
 
     SetWindowLongPtrA(m_Handle, GWLP_USERDATA, cast<LONG_PTR>(this));
 }
@@ -61,7 +61,7 @@ Window::~Window()
     {
         REV_DEBUG_RESULT(UnregisterClassA(m_ClassName.Data(), m_Instance));
         m_Instance = null;
-        m_Logger.LogInfo("Window \"%s\" has been destroyed", m_Title.Data());
+        m_Logger.LogInfo("Window \"", m_Title, "\" has been destroyed");
     }
 }
 
@@ -110,14 +110,14 @@ void Window::ApplyFullscreenRequest()
         m_FullscreenSetRequested = false;
         m_Fullscreened           = true;
 
-        GraphicsAPI::GetRenderer()->SetFullscreenMode(true);
+        GraphicsAPI::GetDeviceContext()->SetFullscreenMode(true);
     }
     else if (m_FullscreenUnsetRequested)
     {
         m_FullscreenUnsetRequested = false;
         m_Fullscreened             = false;
 
-        GraphicsAPI::GetRenderer()->SetFullscreenMode(false);
+        GraphicsAPI::GetDeviceContext()->SetFullscreenMode(false);
     }
 }
 
@@ -143,7 +143,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
                 window->m_Minimized = false;
                 window->m_Resized   = true;
 
-                window->m_Logger.LogInfo("Window \"%s\" has been resized: [%I32u, %I32u]", window->m_Title.Data(), window->m_XYWH.wh.w, window->m_XYWH.wh.h);
+                window->m_Logger.LogInfo("Window \"", window->m_Title, "\" has been resized: ", window->m_XYWH.wh);
             }
             else if (wparam == SIZE_MINIMIZED)
             {

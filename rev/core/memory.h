@@ -13,51 +13,65 @@ namespace REV
     {
         CACHE_LINE_SIZE   = 64,
         PAGE_SIZE         = KB(4),
-        STACK_SIZE        = KB(4),
-        HEAP_SIZE         = GB(1),
         NTFS_CLUSTER_SIZE = KB(4),
         NTFS_SECTOR_SIZE  = 512,
     };
 
-    REV_API void memset_f32 (f32  *mem, f32  val, u64 count);
-    REV_API void memset_f64 (f64  *mem, f64  val, u64 count);
-    REV_API void memset_char(char *mem, char val, u64 count);
-    REV_API void memset_s8  (s8   *mem, s8   val, u64 count);
-    REV_API void memset_s16 (s16  *mem, s16  val, u64 count);
-    REV_API void memset_s32 (s32  *mem, s32  val, u64 count);
-    REV_API void memset_s64 (s64  *mem, s64  val, u64 count);
+    #undef FillMemory
+    #undef CopyMemory
+    #undef MoveMemory
+    #undef ZeroMemory
+
+    REV_API void REV_VECTORCALL FillMemoryF32 (f32  *mem, f32  val, u64 count);
+    REV_API void REV_VECTORCALL FillMemoryF64 (f64  *mem, f64  val, u64 count);
+    REV_API void REV_VECTORCALL FillMemoryChar(char *mem, char val, u64 count);
+    REV_API void REV_VECTORCALL FillMemoryU8  (u8   *mem, u8   val, u64 count);
+    REV_API void REV_VECTORCALL FillMemoryU16 (u16  *mem, u16  val, u64 count);
+    REV_API void REV_VECTORCALL FillMemoryU32 (u32  *mem, u32  val, u64 count);
+    REV_API void REV_VECTORCALL FillMemoryU64 (u64  *mem, u64  val, u64 count);
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::cmple(sizeof(T), 8)>>
-    void memset_any(T *mem, T val, u64 count)
+    REV_INLINE void REV_VECTORCALL FillMemory(T *mem, T val, u64 count)
     {
-        /**/ if constexpr (RTTI::is_same_v<RTTI::remove_cv<T>, f32>) memset_f32(mem, val, count);
-        else if constexpr (RTTI::is_same_v<RTTI::remove_cv<T>, f64>) memset_f64(mem, val, count);
-        else if constexpr (sizeof(T) == 1)                           memset_s8 (cast<s8  *>(mem), cast<s8 >(val), count);
-        else if constexpr (sizeof(T) == 2)                           memset_s16(cast<s16 *>(mem), cast<s16>(val), count);
-        else if constexpr (sizeof(T) == 4)                           memset_s32(cast<s32 *>(mem), cast<s32>(val), count);
-        else if constexpr (sizeof(T) == 8)                           memset_s64(cast<s64 *>(mem), cast<s64>(val), count);
-        else                                                         static_assert(false, "memset_any failed");
+        /**/ if constexpr (RTTI::is_same_v<RTTI::remove_cv<T>, f32>) FillMemoryF32(mem, val, count);
+        else if constexpr (RTTI::is_same_v<RTTI::remove_cv<T>, f64>) FillMemoryF64(mem, val, count);
+        else if constexpr (sizeof(T) == 1)                           FillMemoryU8 (cast<u8  *>(mem), *cast<u8  *>(&val), count);
+        else if constexpr (sizeof(T) == 2)                           FillMemoryU16(cast<u16 *>(mem), *cast<u16 *>(&val), count);
+        else if constexpr (sizeof(T) == 4)                           FillMemoryU32(cast<u32 *>(mem), *cast<u32 *>(&val), count);
+        else if constexpr (sizeof(T) == 8)                           FillMemoryU64(cast<u64 *>(mem), *cast<u64 *>(&val), count);
+        else                                                         while (count--) *mem++ = val;
     }
 
-    template<typename T, u64 count, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8)>>
-    void memset_any(T (&arr)[count], const T& val)
+    template<typename T, u64 count, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8) && RTTI::is_copy_assignable_v<T>>>
+    REV_INLINE void FillMemory(T (&arr)[count], const T& val)
     {
         T *ptr = arr;
         while (count--) *ptr++ = val;
     }
 
-    template<typename T, u64 count, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8)>>
-    void memset_any(T (&arr)[count], T&& val)
+    template<typename T, u64 count, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8) && RTTI::is_move_assignable_v<T>>>
+    REV_INLINE void FillMemory(T (&arr)[count], T&& val)
     {
         T *ptr = arr;
         while (count--) *ptr++ = RTTI::move(val);
     }
 
-    template<typename T, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8)>>
-    void memset_any(T *mem, const T& val, u64 count)
+    template<typename T, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8) && RTTI::is_copy_assignable_v<T>>>
+    REV_INLINE void FillMemory(T *mem, u64 count, const T& val)
     {
         while (count--) *mem++ = val;
     }
+
+    template<typename T, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8) && RTTI::is_move_assignable_v<T>>>
+    REV_INLINE void FillMemory(T *mem, u64 count, T&& val)
+    {
+        while (count--) *mem++ = RTTI::move(val);
+    }
+
+    // @TODO(Roman): ISA wide CopyMemory, MoveMemory, ZeroMemory, CompareMemory
+    REV_INLINE void CopyMemory(void *dest, const void *src, u64 bytes) { memcpy(dest, src, bytes);                 }
+    REV_INLINE void MoveMemory(void *dest, const void *src, u64 bytes) { memmove(dest, src, bytes);                }
+    REV_INLINE void ZeroMemory(void *dest, u64 bytes)                  { FillMemoryU8(cast<u8 *>(dest), 0, bytes); }
 
     class REV_API Memory final
     {

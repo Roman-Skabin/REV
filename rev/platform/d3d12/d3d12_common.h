@@ -8,7 +8,7 @@
 
 namespace REV::D3D12
 {
-    class Renderer;
+    class DeviceContext;
 
     REV_INLINE bool Succeeded(HRESULT hr) { return hr >= S_OK; }
     REV_INLINE bool Failed(HRESULT hr)    { return hr <  S_OK; }
@@ -23,6 +23,8 @@ namespace REV::D3D12
         }
     }
 
-    bool CheckResultAndPrintMessages(HRESULT hr, Renderer *renderer);
+    #define REV_FORCE_PRINT_MESSAGES _HRESULT_TYPEDEF_(0x8000'0000)
+
+    bool CheckResultAndPrintMessages(HRESULT hr, DeviceContext *device_context);
     bool CheckResultAndPrintMessages(HRESULT hr);
 }

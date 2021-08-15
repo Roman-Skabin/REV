@@ -5,19 +5,18 @@ Problems:
 - Core
     - Complete core\platform.h
     - Move all STD includes from platform.h to pch.h?
-    - Get rid of the interface stuff and swith to function pointers? // @Optimization
-    - Rethink memory management? // @Optimization
+    - Redesign memory management. 3 areas: per-frame, per-scene and static. // @Optimization
     - Scene serialization
-    - Asset manager
-    - Custom memcpy and memcmp // @Optimization
+    - ISA wide CopyMemory, MoveMemory, ZeroMemory, CompareMemory // @Optimization
     - Single namespace for everything? (get rid of Math and GPU namespaces)
     - Minimize number of system calls // @Optimization
-    - Vertex buffer/index files
-    - Settings
-        - Max view distance (max LOD & far)
-        - Files search directories
+    - Vertex buffer/index files (some custom formats for various types of meshes)?
+
+- Settings
+    - Max view distance (max LOD & far)
 
 - Tools
+    - Change a bit String & StringBuidler (example: StaticString & StaticStringBuilder)
     - Several simultaneous read operations under the same async file?
     - Hash table
     - UTF-8 strings?
@@ -28,7 +27,7 @@ Problems:
       (source file change time > .obj file change time)? // @Optimization
 
 - Git
-    - Custom commit/push scripts with tags checks like jblow's nocheckin
+    - Custom commit/push scripts with tags checks like Jon's nocheckin
 
 - Window
     - Switch to DPI stuff for monitor and window adjustment?
@@ -37,17 +36,14 @@ Problems:
 
 - GPU
     - Add textures to the batch render. // @Optimization
-    - Save shaders bytecode in some files and compile only shaders that
-      source file change time > bytecode file change time? // @Optimization
     - Several adapters support? (NVidia has gotten rid of SLI so shall we?)
     - Cross platform shaders.
 
 - Graphics
-    - SRVs (textures), UAVs (rwbuffers, rwtextures), static samplers, (tables, constants?)
+    - SRVs (textures), UAVs (rwbuffers, rwtextures), static samplers, (constants?)
     - Forward Rendering
     - Multisampling
     - Add Root Signature v1.1 specific settings.
-    - Shader includes
     - Stream output
     - Switch from 1 to 3 Render Targets for OIT
     - Weighted Blended OIT

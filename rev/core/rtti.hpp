@@ -212,6 +212,32 @@ namespace REV::RTTI
 
     template<typename T> using is_cstring = bool_type<is_cstring_v<T>>;
 
+    template<typename>                 inline constexpr bool is_cstring_array_v                    = false;
+    template<unsigned long long count> inline constexpr bool is_cstring_array_v<const char[count]> = true;
+    template<unsigned long long count> inline constexpr bool is_cstring_array_v<char[count]>       = true;
+
+    template<typename T> using is_cstring_array = bool_type<is_cstring_array_v<T>>;
+
+    template<typename>                 inline constexpr bool is_wcstring_v                                = false;
+    template<>                         inline constexpr bool is_wcstring_v<const wchar_t *>               = true;
+    template<>                         inline constexpr bool is_wcstring_v<const wchar_t *const>          = true;
+    template<>                         inline constexpr bool is_wcstring_v<const wchar_t *volatile>       = true;
+    template<>                         inline constexpr bool is_wcstring_v<const wchar_t *const volatile> = true;
+    template<unsigned long long count> inline constexpr bool is_wcstring_v<const wchar_t[count]>          = true;
+    template<>                         inline constexpr bool is_wcstring_v<wchar_t *>                     = true;
+    template<>                         inline constexpr bool is_wcstring_v<wchar_t *const>                = true;
+    template<>                         inline constexpr bool is_wcstring_v<wchar_t *volatile>             = true;
+    template<>                         inline constexpr bool is_wcstring_v<wchar_t *const volatile>       = true;
+    template<unsigned long long count> inline constexpr bool is_wcstring_v<wchar_t[count]>                = true;
+
+    template<typename T> using is_wcstring = bool_type<is_wcstring_v<T>>;
+
+    template<typename>                 inline constexpr bool is_wcstring_array_v                       = false;
+    template<unsigned long long count> inline constexpr bool is_wcstring_array_v<const wchar_t[count]> = true;
+    template<unsigned long long count> inline constexpr bool is_wcstring_array_v<wchar_t[count]>       = true;
+
+    template<typename T> using is_wcstring_array = bool_type<is_wcstring_array_v<T>>;
+
     template<typename ...Conditions>          struct all_true                : true_type                                                 {};
     template<typename Cond, typename ...Rest> struct all_true<Cond, Rest...> : conditional_t<Cond::value, all_true<Rest...>, false_type> {};
 

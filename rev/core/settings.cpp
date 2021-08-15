@@ -24,6 +24,7 @@ enum TOKEN_KIND : u32
 
     TOKEN_KIND_NAME,
     TOKEN_KIND_INT,
+    TOKEN_KIND_STRING,
 
     TOKEN_KIND_MAX
 };
@@ -101,6 +102,24 @@ tokenize_again:
         }
         lexer->token.kind = TOKEN_KIND_INT;
     }
+    else if (*lexer->stream == '"')
+    {
+        ++lexer->stream;
+        while (*lexer->stream && *lexer->stream != '"')
+        {
+            ++lexer->stream;
+        }
+        if (*lexer->stream)
+        {
+            if (*lexer->stream != '"') SyntaxError(lexer, "expected '\"', got '%c'", *lexer->stream);
+            ++lexer->stream;
+        }
+        else
+        {
+            SyntaxError(lexer, "unexpected end of file");
+        }
+        lexer->token.kind = TOKEN_KIND_STRING;
+    }
     else if (*lexer->stream == '-' && isdigit(lexer->stream[1]))
     {
         ++lexer->stream;
@@ -168,25 +187,25 @@ REV_INTERNAL REV_INLINE bool IsToken(Lexer *lexer, TOKEN_KIND token_kind)
 }
 
 // @TODO(Roman): #Tools, #MakePublic.
-REV_INTERNAL byte *TryReadEntireFileToTA(const char *filename, u64& data_size)
+REV_INTERNAL char *ReadEntireFileToTA(const char *filename)
 {
     // @TODO(Roman): #CrossPlatform
-    HANDLE file = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, null, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY | FILE_FLAG_SEQUENTIAL_SCAN, null);
+    HANDLE file = CreateFileA(filename, GENERIC_READ, 0, null, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY | FILE_FLAG_SEQUENTIAL_SCAN, null);
     if (file != INVALID_HANDLE_VALUE)
     {
-        data_size = 0;
+        u64 data_size = 0;
         REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&data_size)));
 
-        byte *data = Memory::Get()->PushToTA<byte>(data_size + 1);
-        for (u64 bytes_read = 0, size = data_size; size; )
-        {
-            u32 bytes_to_read = Math::clamp<u32, u64>(size, 0, REV_U32_MAX);
-            REV_DEBUG_RESULT(ReadFile(file, data + bytes_read, bytes_to_read, null, null));
+        char *data = Memory::Get()->PushToTA<char>(data_size + 1);
 
-            bytes_read += bytes_to_read;
-            size       -= bytes_to_read;
+        u32 bytes_read = 0;
+        for (u64 offset = 0; offset < data_size; offset += bytes_read)
+        {
+            u64 bytes_rest    = data_size - offset;
+            u32 bytes_to_read = Math::clamp<u32, u64>(bytes_rest, 0, REV_U32_MAX);
+
+            REV_DEBUG_RESULT(ReadFile(file, data + offset, bytes_to_read, &bytes_read, null));
         }
-        data[data_size] = '\0';
 
         REV_DEBUG_RESULT(CloseHandle(file));
         return data;
@@ -211,9 +230,10 @@ REV_INTERNAL void WriteDefaultSettingsToFile(const char *filename)
     "graphics_api         = D3D12\n"
     "filtering            = TRILINEAR\n"
     "anisotropy           = 1\n"
-    "vsync                = false\n";
+    "vsync                = false\n"
+    "assets_folder        = \"assets\"\n";
 
-    REV_DEBUG_RESULT(WriteFile(file, default_settings, REV_CSTRLEN(default_settings), null, null));
+    REV_DEBUG_RESULT(WriteFile(file, REV_CSTR_ARGS(default_settings), null, null));
     REV_DEBUG_RESULT(CloseHandle(file));
 }
 
@@ -222,7 +242,7 @@ REV_GLOBAL Settings *g_Settings = null;
 Settings *Settings::Init(const char *ini_filename)
 {
     REV_CHECK_M(!g_Settings, "Settings is already created. Use Settings::Get() function instead");
-    g_Settings = Memory::Get()->PushToPA<Settings>();
+    g_Settings                   = Memory::Get()->PushToPA<Settings>();
     g_Settings->window_xywh      = Math::v4s(10, 10, 960, 540);
     g_Settings->render_target_wh = Math::v2s(1920, 1080);
     g_Settings->graphics_api     = GraphicsAPI::API::D3D12;
@@ -230,10 +250,9 @@ Settings *Settings::Init(const char *ini_filename)
     g_Settings->anisotropy       = 1;
     g_Settings->fullscreen       = false;
     g_Settings->vsync            = false;
+    g_Settings->assets_folder    = ConstString(REV_CSTR_ARGS("assets"));
 
-    u64         stream_length = 0;
-    const char *stream        = cast<const char *>(TryReadEntireFileToTA(ini_filename, stream_length));
-
+    const char *stream = ReadEntireFileToTA(ini_filename);
     if (stream)
     {
         Lexer lexer;
@@ -246,7 +265,7 @@ Settings *Settings::Init(const char *ini_filename)
         {
             if (IsToken(&lexer, TOKEN_KIND_NAME))
             {
-                if (TokenEquals(&lexer, "window_x", REV_CSTRLEN("window_x")))
+                if (TokenEquals(&lexer, REV_CSTR_ARGS("window_x")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -256,7 +275,7 @@ Settings *Settings::Init(const char *ini_filename)
 
                     g_Settings->window_xywh.x = lexer.token.s32_val;
                 }
-                else if (TokenEquals(&lexer, "window_y", REV_CSTRLEN("window_y")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("window_y")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -266,7 +285,7 @@ Settings *Settings::Init(const char *ini_filename)
 
                     g_Settings->window_xywh.y = lexer.token.s32_val;
                 }
-                else if (TokenEquals(&lexer, "window_width", REV_CSTRLEN("window_width")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("window_width")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -276,7 +295,7 @@ Settings *Settings::Init(const char *ini_filename)
 
                     g_Settings->window_xywh.wh.w = lexer.token.s32_val;
                 }
-                else if (TokenEquals(&lexer, "window_height", REV_CSTRLEN("window_height")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("window_height")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -286,21 +305,7 @@ Settings *Settings::Init(const char *ini_filename)
 
                     g_Settings->window_xywh.wh.h = lexer.token.s32_val;
                 }
-                else if (TokenEquals(&lexer, "fullscreen", REV_CSTRLEN("fullscreen")))
-                {
-                    NextToken(&lexer);
-                    CheckToken(&lexer, TOKEN_KIND_ASSIGN);
-
-                    NextToken(&lexer);
-                    CheckToken(&lexer, TOKEN_KIND_NAME);
-
-                    if (TokenEquals(&lexer, "true",  REV_CSTRLEN("true")))
-                    {
-                        g_Settings->fullscreen = true;
-                    }
-                    // NOTE(Roman): false is default
-                }
-                else if (TokenEquals(&lexer, "render_target_width", REV_CSTRLEN("render_target_width")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("render_target_width")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -310,7 +315,7 @@ Settings *Settings::Init(const char *ini_filename)
 
                     g_Settings->render_target_wh.w = lexer.token.s32_val;
                 }
-                else if (TokenEquals(&lexer, "render_target_height", REV_CSTRLEN("render_target_height")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("render_target_height")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -320,7 +325,7 @@ Settings *Settings::Init(const char *ini_filename)
 
                     g_Settings->render_target_wh.h = lexer.token.s32_val;
                 }
-                else if (TokenEquals(&lexer, "graphics_api", REV_CSTRLEN("graphics_api")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("graphics_api")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -329,13 +334,13 @@ Settings *Settings::Init(const char *ini_filename)
                     CheckToken(&lexer, TOKEN_KIND_NAME);
 
                     // NOTE(Roman): D3D12 is default
-                    if (TokenEquals(&lexer, "Vulkan", REV_CSTRLEN("Vulkan")))
+                    if (TokenEquals(&lexer, REV_CSTR_ARGS("Vulkan")))
                     {
                         g_Settings->graphics_api = GraphicsAPI::API::VULKAN;
                     }
                     // @TODO(Roman): More Graphics APIs.
                 }
-                else if (TokenEquals(&lexer, "filtering", REV_CSTRLEN("filtering")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("filtering")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -343,21 +348,21 @@ Settings *Settings::Init(const char *ini_filename)
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_NAME);
 
-                    if (TokenEquals(&lexer, "POINT", REV_CSTRLEN("POINT")))
+                    if (TokenEquals(&lexer, REV_CSTR_ARGS("POINT")))
                     {
                         g_Settings->filtering = FILTERING::POINT;
                     }
-                    else if (TokenEquals(&lexer, "BILINEAR", REV_CSTRLEN("BILINEAR")))
+                    else if (TokenEquals(&lexer, REV_CSTR_ARGS("BILINEAR")))
                     {
                         g_Settings->filtering = FILTERING::BILINEAR;
                     }
                     // @NOTE(Roman): TRILINEAR is default
-                    else if (TokenEquals(&lexer, "ANISOTROPIC", REV_CSTRLEN("ANISOTROPIC")))
+                    else if (TokenEquals(&lexer, REV_CSTR_ARGS("ANISOTROPIC")))
                     {
                         g_Settings->filtering = FILTERING::ANISOTROPIC;
                     }
                 }
-                else if (TokenEquals(&lexer, "anisotropy", REV_CSTRLEN("anisotropy")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("anisotropy")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -367,7 +372,7 @@ Settings *Settings::Init(const char *ini_filename)
 
                     g_Settings->anisotropy = cast<u8>(lexer.token.u32_val);
                 }
-                else if (TokenEquals(&lexer, "vsync", REV_CSTRLEN("vsync")))
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("fullscreen")))
                 {
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_ASSIGN);
@@ -375,11 +380,35 @@ Settings *Settings::Init(const char *ini_filename)
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_NAME);
 
-                    if (TokenEquals(&lexer, "true",  REV_CSTRLEN("true")))
+                    if (TokenEquals(&lexer, REV_CSTR_ARGS("true")))
+                    {
+                        g_Settings->fullscreen = true;
+                    }
+                    // NOTE(Roman): false is default
+                }
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("vsync")))
+                {
+                    NextToken(&lexer);
+                    CheckToken(&lexer, TOKEN_KIND_ASSIGN);
+
+                    NextToken(&lexer);
+                    CheckToken(&lexer, TOKEN_KIND_NAME);
+
+                    if (TokenEquals(&lexer, REV_CSTR_ARGS("true")))
                     {
                         g_Settings->vsync = true;
                     }
                     // NOTE(Roman): false is default
+                }
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("assets_folder")))
+                {
+                    NextToken(&lexer);
+                    CheckToken(&lexer, TOKEN_KIND_ASSIGN);
+
+                    NextToken(&lexer);
+                    CheckToken(&lexer, TOKEN_KIND_STRING);
+
+                    g_Settings->assets_folder = ConstString(lexer.token.start + 1, lexer.token.end - lexer.token.start - 2);
                 }
                 else
                 {

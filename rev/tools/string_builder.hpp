@@ -26,6 +26,9 @@ namespace RTTI
                                                    || is_vec_v<T>
                                                    || is_mat_v<T>
                                                    || is_pointer_v<T>
+                                                   || is_wcstring_array_v<T>
+                                                   || is_wcstring_v<T>
+                                                   || is_cstring_array_v<T>
                                                    || is_cstring_v<T>
                                                    || is_nullptr_t_v<T>;
 
@@ -45,6 +48,37 @@ enum class BASE
     OCT = 8,
     DEC = 10,
     HEX = 16
+};
+
+struct IntFormat final
+{
+    BASE Base          = BASE::DEC;
+    u32  Width         = 0;
+    SBTA TextAlignment = SBTA::RIGHT;
+    char Fill          = ' ';
+    bool DecorateBase  = true;
+    bool ForceSign     = false;
+};
+
+struct FloatFormat final
+{
+    u32  Width         = 0;
+    u32  Precision     = 0;
+    SBTA TextAlignment = SBTA::RIGHT;
+    char Fill          = ' ';
+    bool ForceSign     = false;
+};
+
+struct TextFormat final
+{
+    u32  Width         = 0;
+    SBTA TextAlignment = SBTA::RIGHT;
+    char Fill          = ' ';
+};
+
+struct PointerFormat final
+{
+    bool Decorate = true;
 };
 #endif
 
@@ -371,7 +405,7 @@ private:
 
         if (fraction == 0.0)
         {
-            if (Precision) memset_char(buffer, '0', Precision);
+            if (Precision) FillMemoryChar(buffer, '0', Precision);
             else           *buffer = '0';
         }
         else
@@ -706,6 +740,10 @@ private:
         else if constexpr (RTTI::is_char_v<T>)
         {
             m_String.PushBack(val);
+        }
+        else if constexpr (RTTI::is_cstring_array_v<T>)
+        {
+            m_StaticString.PushBack(REV_CSTR_ARGS(val));
         }
         else if constexpr (RTTI::is_cstring_v<T>)
         {

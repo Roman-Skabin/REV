@@ -1,10 +1,11 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #pragma once
 
 #include "core/allocator.h"
+#include "tools/const_array.hpp"
 
 namespace REV
 {
@@ -26,6 +27,23 @@ namespace REV
             m_Header->count              = 0;
             m_Header->capacity           = initial_capacity;
             m_Header->alignment_in_bytes = alignment_in_bytes;
+        }
+
+        Array(const ConstArray<T>& const_array, Allocator_t *allocator, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT)
+            : m_Header(null)
+        {
+            REV_CHECK(allocator);
+            if (alignment_in_bytes < REV::DEFAULT_ALIGNMENT) alignment_in_bytes = REV::DEFAULT_ALIGNMENT;
+
+            u64 capacity = 2 * const_array.Count();
+
+            m_Header = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + capacity * sizeof(T), alignment_in_bytes));
+            m_Header->allocator          = allocator;
+            m_Header->count              = const_array.Count();
+            m_Header->capacity           = capacity;
+            m_Header->alignment_in_bytes = alignment_in_bytes;
+
+            CopyMemory(m_Header->data, const_array.Data(), m_Header->count * sizeof(T));
         }
     
         Array(const Array& other)
@@ -75,7 +93,7 @@ namespace REV
         {
             if (to == npos) to = from + 1;
             REV_CHECK_M(from < m_Header->count && from < to && to <= m_Header->count, "Bad arguments: from = %I64u, to = %I64u, count = %I64u", from, to, m_Header->count);
-    
+
             // @NOTE(Roman): Ugh, we gotta do that because of destructors.
             if constexpr (RTTI::is_destructible_v<T>)
             {
@@ -84,28 +102,31 @@ namespace REV
                     it->~T();
                 }
             }
-    
+
             if (from < m_Header->count - 1)
             {
-                MoveMemory(m_Header->data + from,
-                           m_Header->data + to,
-                           (to - from) * sizeof(T));
+                MoveMemory(m_Header->data   + from,
+                           m_Header->data   + to,
+                           (m_Header->count - to) * sizeof(T));
             }
-    
-            ZeroMemory(m_Header->data + m_Header->count - to + from, (to - from) * sizeof(T));
-    
-            m_Header->count -= to - from;
+
+            u64 delta = to - from;
+            ZeroMemory(m_Header->data + m_Header->count - delta, delta * sizeof(T));
+
+            m_Header->count -= delta;
             Fit();
         }
-    
+
+        REV_INLINE void EraseFront() { Erase(0); }
+        REV_INLINE void EraseBack()  { Erase(m_Header->count - 1); }
+
         void Clear()
         {
             DestroyAll();
             ZeroMemory(m_Header->data, m_Header->count * sizeof(T));
-    
             m_Header->count = 0;
         }
-    
+
         void Reserve(u64 capacity)
         {
             if (m_Header->count <= capacity && m_Header->capacity != capacity)
@@ -120,7 +141,7 @@ namespace REV
         void Reverse()
         {
             T *_first = m_Header->data;
-            T *_last  = m_Header->data + m_Header->count - 1;
+            T *_last  = pLast();
     
             while (_first < _last)
             {
@@ -149,7 +170,7 @@ namespace REV
         u64 RFind(const T& what) const
         {
             T *first = m_Header->data;
-            T *last  = m_Header->data + m_Header->count - 1;
+            T *last  = pLast();
     
             for (T *it = last; it > first; --it)
             {
@@ -201,14 +222,36 @@ namespace REV
     
         REV_INLINE const T *GetPointer(u64 index) const
         {
+            REV_CHECK_M(m_Header->count, "Array is empty");
             REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
             return m_Header->data + index;
         }
     
         REV_INLINE T *GetPointer(u64 index)
         {
+            REV_CHECK_M(m_Header->count, "Array is empty");
             REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
             return m_Header->data + index;
+        }
+
+        Array& operator=(const ConstArray<T>& const_array)
+        {
+            u64 new_count = const_array.Count();
+
+            Clear();
+            if (new_count > m_Header->capacity)
+            {
+                m_Header->capacity = 2 * new_count;
+
+                m_Header = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                                                                                 sizeof(Header) + m_Header->capacity * sizeof(T),
+                                                                                 m_Header->alignment_in_bytes));
+            }
+
+            CopyMemory(m_Header->data, const_array.Data(), new_count * sizeof(T));
+
+            m_Header->count = new_count;
+            return *this;
         }
     
         Array& operator=(const Array& other)
@@ -238,14 +281,30 @@ namespace REV
     
         REV_INLINE const T& operator[](u64 index) const
         {
+            REV_CHECK_M(m_Header->count, "Array is empty");
             REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
             return m_Header->data[index];
         }
     
         REV_INLINE T& operator[](u64 index)
         {
+            REV_CHECK_M(m_Header->count, "Array is empty");
             REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
             return m_Header->data[index];
+        }
+
+        REV_INLINE const T *operator+(u64 index) const
+        {
+            REV_CHECK_M(m_Header->count, "Array is empty");
+            REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
+            return m_Header->data + index;
+        }
+
+        REV_INLINE T *operator+(u64 index)
+        {
+            REV_CHECK_M(m_Header->count, "Array is empty");
+            REV_CHECK_M(index < m_Header->count, "Expected max index: %I64u, got: %I64u", m_Header->count - 1, index);
+            return m_Header->data + index;
         }
     
     private:

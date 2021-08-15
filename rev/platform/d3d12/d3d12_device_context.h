@@ -13,7 +13,7 @@
 #include <dxgi1_6.h>
 #include <dxgidebug.h>
 
-namespace REV::GPU { class Renderer; }
+namespace REV::GPU { class DeviceContext; }
 
 namespace REV::D3D12
 {
@@ -24,11 +24,11 @@ namespace REV::D3D12
     };
 
     // @TODO(Roman): Rename to DeviceContext
-    class Renderer final
+    class DeviceContext final
     {
     public:
-        Renderer(Window *window, const Logger& logger);
-        ~Renderer();
+        DeviceContext(Window *window, const Logger& logger);
+        ~DeviceContext();
 
         void StartFrame();
         void EndFrame();
@@ -79,11 +79,11 @@ namespace REV::D3D12
 
         void SetFullscreenMode(bool set);
 
-        Renderer(const Renderer&) = delete;
-        Renderer(Renderer&&)      = delete;
+        DeviceContext(const DeviceContext&) = delete;
+        DeviceContext(DeviceContext&&)      = delete;
 
-        Renderer& operator=(const Renderer&) = delete;
-        Renderer& operator=(Renderer&&)      = delete;
+        DeviceContext& operator=(const DeviceContext&) = delete;
+        DeviceContext& operator=(DeviceContext&&)      = delete;
 
     private:
         Logger                       m_Logger;
@@ -144,6 +144,6 @@ namespace REV::D3D12
             D3D12_FEATURE_DATA_GPU_VIRTUAL_ADDRESS_SUPPORT virtual_address;
         } m_Features;
 
-        friend class ::REV::GPU::Renderer;
+        friend class ::REV::GPU::DeviceContext;
     };
 }

@@ -136,8 +136,11 @@
 //  #include <mfreadwrite.h>
 #elif REV_PLATFORM_MACOS
     // @TODO(Roman): Platform-specific includes
+    #include <sys/syslimits.h>
 #elif REV_PLATFORM_LINUX
     // @TODO(Roman): Platform-specific includes
+    #include <sys/mman.h>
+    #include <linux/limits.h>
 #endif
 
 #if REV_COMPILER_MSVC
@@ -203,6 +206,18 @@
     #define REV_VECTORCALL    // Only x86 builds
     #define REV_THISCALL      // Only x86 builds
     #define REV_STDCALL       // Only x86 builds
+#endif
+
+//
+// Platform-specific defines
+//
+
+#if REV_PLATFORM_WIN64
+    #define REV_PATH_CAPACITY MAX_PATH
+#elif REV_PLATFORM_MACOS
+    #define REV_PATH_CAPACITY PATH_MAX
+#elif REV_PLATFORM_LINUX
+    #define REV_PATH_CAPACITY PATH_MAX
 #endif
 
 #pragma warning(pop)

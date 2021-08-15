@@ -8,92 +8,49 @@
 namespace REV
 {
 
-ConstString::ConstString()
-    : m_Length(0),
-      m_Data(null)
+ConstString ConstString::SubString(u64 from) const
 {
+    REV_CHECK_M(from <= m_Length, "Bad arguments: from = %I64u, length = %I64u", from, m_Length);
+    if (from == 0)
+    {
+        return *this;
+    }
+    else if (from == m_Length)
+    {
+        return ConstString();
+    }
+    else
+    {
+        return ConstString(m_Data + from, m_Length - from);
+    }
 }
 
-ConstString::ConstString(nullptr_t)
-    : m_Length(0),
-      m_Data(null)
+ConstString ConstString::SubString(u64 from, u64 to) const
 {
-}
-
-ConstString::ConstString(const char *cstring)
-    : m_Length(strlen(cstring)),
-      m_Data(cstring)
-{
-}
-
-ConstString::ConstString(const char *cstring, u64 length)
-    : m_Length(length),
-      m_Data(cstring)
-{
-}
-
-ConstString::ConstString(const ConstString& other)
-    : m_Length(other.m_Length),
-      m_Data(other.m_Data)
-{
-}
-
-ConstString::ConstString(ConstString&& other) noexcept
-    : m_Length(other.m_Length),
-      m_Data(other.m_Data)
-{
-    other.m_Length = 0;
-    other.m_Data   = null;
-}
-
-ConstString::~ConstString()
-{
-    m_Length = 0;
-    m_Data   = null;
+    REV_CHECK_M(from <= to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
+    if (from == 0 && to == m_Length)
+    {
+        return *this;
+    }
+    else if (from == to)
+    {
+        return ConstString();
+    }
+    else
+    {
+        return ConstString(m_Data + from, to - from);
+    }
 }
 
 u64 ConstString::Find(char symbol, u64 offset) const
 {
     REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
 
-    const char *_end = m_Data + m_Length;
+    char *_end = m_Data + m_Length;
 
-    for (const char *it = m_Data + offset; it < _end; ++it)
+    for (char *it = m_Data + offset; it < _end; ++it)
     {
         if (*it == symbol)
-        {
-            return it - m_Data;
-        }
-    }
-
-    return npos;
-}
-
-u64 ConstString::Find(const char *cstring, u64 offset) const
-{
-    REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
-
-    u64 cstring_length = strlen(cstring);
-
-    const char *_end = m_Data + m_Length;
-
-    for (const char *it = m_Data + offset; it; ++it)
-    {
-        const char *sub_end = it + cstring_length;
-
-        if (sub_end > _end)
-        {
-            return npos;
-        }
-
-        const char *sub  = it;
-        const char *cstr = cstring;
-
-        while (*sub++ == *cstr++)
-        {
-        }
-
-        if (sub == sub_end)
         {
             return it - m_Data;
         }
@@ -108,7 +65,7 @@ u64 ConstString::Find(const char *cstring, u64 cstring_length, u64 offset) const
 
     const char *_end = m_Data + m_Length;
 
-    for (const char *it = m_Data + offset; it; ++it)
+    for (const char *it = m_Data + offset; it < _end; ++it)
     {
         const char *sub_end = it + cstring_length;
 
@@ -117,10 +74,11 @@ u64 ConstString::Find(const char *cstring, u64 cstring_length, u64 offset) const
             return npos;
         }
 
-        const char *sub  = it;
-        const char *cstr = cstring;
+        const char *sub         = it;
+        const char *cstr        = cstring;
+        u64         cstr_length = cstring_length;
 
-        while (*sub++ == *cstr++)
+        while (cstr_length-- && *sub++ == *cstr++)
         {
         }
 
@@ -139,19 +97,20 @@ u64 ConstString::Find(const ConstString& const_string, u64 offset) const
 
     const char *_end = m_Data + m_Length;
 
-    for (const char *it = m_Data + offset; it; ++it)
+    for (const char *it = m_Data + offset; it < _end; ++it)
     {
-        const char *sub_end = it + const_string.Length();
+        const char *sub_end = it + const_string.m_Length;
 
         if (sub_end > _end)
         {
             return npos;
         }
 
-        const char *sub  = it;
-        const char *cstr = const_string.Data();
+        const char *sub         = it;
+        const char *cstr        = const_string.m_Data;
+        u64         cstr_length = const_string.m_Length;
 
-        while (*sub++ == *cstr++)
+        while (cstr_length-- && *sub++ == *cstr++)
         {
         }
 
@@ -166,9 +125,11 @@ u64 ConstString::Find(const ConstString& const_string, u64 offset) const
 
 u64 ConstString::RFind(char symbol, u64 offset) const
 {
+    REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
+
     const char *last = m_Data + m_Length - 1;
 
-    for (const char *it = last - offset; it > m_Data; --it)
+    for (const char *it = last - offset; it >= m_Data; --it)
     {
         if (*it == symbol)
         {
@@ -176,110 +137,43 @@ u64 ConstString::RFind(char symbol, u64 offset) const
         }
     }
 
-    return *m_Data == symbol ? 0 : npos;
+    return npos;
+}
+
+s8 ConstString::Compare(const char *cstring, u64 cstring_length) const
+{
+    if (m_Length < cstring_length) return -1;
+    if (m_Length > cstring_length) return  1;
+
+    const char *left  = m_Data;
+    const char *right = cstring;
+
+    while (cstring_length-- && *left++ == *right++)
+    {
+    }
+
+    if (*left < *right) return -1;
+    if (*left > *right) return  1;
+    return 0;
 }
 
 s8 ConstString::Compare(const ConstString& other) const
 {
-    const char *left  = m_Data;
-    const char *right = other.m_Data;
+    if (m_Length < other.m_Length) return -1;
+    if (m_Length > other.m_Length) return  1;
 
-    while (*left++ == *right++)
+    const char *left   = m_Data;
+    const char *right  = other.m_Data;
+    u64         length = m_Length;
+
+    while (length-- && *left++ == *right++)
     {
     }
 
     if (*left < *right) return -1;
     if (*left > *right) return  1;
+
     return 0;
-}
-
-s8 ConstString::Compare(const char *cstring) const
-{
-    const char *left  = m_Data;
-    const char *right = cstring;
-
-    while (*left++ == *right++)
-    {
-    }
-
-    if (*left < *right) return -1;
-    if (*left > *right) return  1;
-    return 0;
-}
-
-ConstString& ConstString::operator=(nullptr_t)
-{
-    m_Length = 0;
-    m_Data   = null;
-    return *this;
-}
-
-ConstString& ConstString::operator=(const char *cstring)
-{
-    if (m_Data != cstring)
-    {
-        m_Length = strlen(cstring);
-        m_Data   = cstring;
-    }
-    return *this;
-}
-
-ConstString& ConstString::operator=(const ConstString& other)
-{
-    m_Length = other.m_Length;
-    m_Data   = other.m_Data;
-    return *this;
-}
-
-ConstString& ConstString::operator=(ConstString&& other) noexcept
-{
-    m_Length       = other.m_Length;
-    m_Data         = other.m_Data;
-    other.m_Length = 0;
-    other.m_Data   = null;
-    return *this;
-}
-
-char ConstString::operator[](u64 index) const
-{
-    REV_CHECK_M(index < m_Length, "Index of bound, max allowed is %I64u", m_Length - 1);
-    return m_Data[index];
-}
-
-bool operator==(const ConstString& left, const ConstString& right)
-{
-    return left.m_Length == right.m_Length
-        && !left.Compare(right);
-}
-
-bool operator!=(const ConstString& left, const ConstString& right)
-{
-    return left.m_Length != right.m_Length
-        || left.Compare(right);
-}
-
-bool operator<=(const ConstString& left, const ConstString& right)
-{
-    return left.m_Length <= right.m_Length
-        && left.Compare(right) <= 0;
-}
-
-bool operator>=(const ConstString& left, const ConstString& right)
-{
-    return left.m_Length >= right.m_Length
-        && left.Compare(right) >= 0;
-}
-
-bool operator<(const ConstString& left, const ConstString& right)
-{
-    return left.m_Length <= right.m_Length
-        && left.Compare(right) < 0;
-}
-
-bool operator>(const ConstString& left, const ConstString& right)
-{
-    return left.m_Length >= right.m_Length
-        && left.Compare(right) > 0;
 }
 
 }

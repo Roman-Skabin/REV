@@ -4,7 +4,6 @@
 
 #include "core/pch.h"
 #include "core/input.h"
-#include <vcruntime_new.h>
 
 namespace REV
 {
@@ -195,8 +194,8 @@ void Gamepad::Update(const Logger& logger)
     bool was_connected = m_Connected;
     m_Connected = g_XInputGetState(0, &xinput_state) == ERROR_SUCCESS;
 
-    /**/ if (!was_connected &&  m_Connected) logger.LogInfo("gamepad has been connected");
-    else if ( was_connected && !m_Connected) logger.LogInfo("gamepad has been disconnected");
+    /**/ if (!was_connected &&  m_Connected) logger.LogInfo("Gamepad has been connected");
+    else if ( was_connected && !m_Connected) logger.LogInfo("Gamepad has been disconnected");
 
     if (m_Connected)
     {

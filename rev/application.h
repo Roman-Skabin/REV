@@ -30,7 +30,7 @@ namespace REV
         static Application *Get();
 
     protected:
-        explicit Application(const StaticString<128>& name, const StaticString<REV_PATH_CAPACITY>& revam_file);
+        explicit Application(const ConstString& name, const ConstString& ini_filename);
 
     public:
         virtual ~Application();
@@ -39,7 +39,7 @@ namespace REV
 
         REV_INLINE const Memory       *GetMemory()       const { return m_Memory;       }
         REV_INLINE const Allocator&    GetAllocator()    const { return m_Allocator;    }
-        REV_INLINE const WorkQueue    *GetWorkQueue()    const { return m_WorkQueue;    }
+        REV_INLINE const WorkQueue&    GetWorkQueue()    const { return m_WorkQueue;    }
         REV_INLINE const Window&       GetWindow()       const { return m_Window;       }
         REV_INLINE const Input        *GetInput()        const { return m_Input;        }
         REV_INLINE const Timer&        GetTimer()        const { return m_Timer;        }
@@ -49,7 +49,7 @@ namespace REV
 
         REV_INLINE Memory       *GetMemory()       { return m_Memory;       }
         REV_INLINE Allocator&    GetAllocator()    { return m_Allocator;    }
-        REV_INLINE WorkQueue    *GetWorkQueue()    { return m_WorkQueue;    }
+        REV_INLINE WorkQueue&    GetWorkQueue()    { return m_WorkQueue;    }
         REV_INLINE Window&       GetWindow()       { return m_Window;       }
         REV_INLINE Input        *GetInput()        { return m_Input;        }
         REV_INLINE Timer&        GetTimer()        { return m_Timer;        }
@@ -72,7 +72,7 @@ namespace REV
     protected:
         Memory       *m_Memory;
         Allocator     m_Allocator;
-        WorkQueue    *m_WorkQueue;
+        WorkQueue     m_WorkQueue;
         Settings     *m_Settings;
         Window        m_Window;
         Input        *m_Input;

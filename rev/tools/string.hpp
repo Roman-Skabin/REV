@@ -43,7 +43,7 @@ public:
         m_Header->capacity           = 2 * count;
         m_Header->alignment_in_bytes = alignment_in_bytes;
 
-        memset_char(m_Header->data, symbol, count);
+        FillMemoryChar(m_Header->data, symbol, count);
     }
 
     String(Allocator_t *allocator, const char *cstring, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT)
@@ -129,45 +129,45 @@ public:
         }
     }
 
-    constexpr u64 Length()    const { return m_Header->length;             }
-    constexpr u64 Capacity()  const { return m_Header->capacity;           }
-    constexpr u64 Alignment() const { return m_Header->alignment_in_bytes; }
+    REV_INLINE u64 Length()    const { return m_Header->length;             }
+    REV_INLINE u64 Capacity()  const { return m_Header->capacity;           }
+    REV_INLINE u64 Alignment() const { return m_Header->alignment_in_bytes; }
 
-    constexpr const char *Data() const { return m_Header->data; }
-    constexpr       char *Data()       { return m_Header->data; }
+    REV_INLINE const char *Data() const { return m_Header->data; }
+    REV_INLINE       char *Data()       { return m_Header->data; }
 
-    constexpr const String& ToString() const { return *this; }
-    constexpr       String& ToString()       { return *this; }
+    REV_INLINE const String& ToString() const { return *this; }
+    REV_INLINE       String& ToString()       { return *this; }
 
-    constexpr bool Empty() const { return !m_Header->length; }
+    REV_INLINE bool Empty() const { return !m_Header->length; }
 
-    constexpr const Allocator_t *GetAllocator() const { return m_Header->allocator; }
+    REV_INLINE const Allocator_t *GetAllocator() const { return m_Header->allocator; }
 
-    constexpr const char *begin()   const { return m_Header->data;                    }
-    constexpr const char *cbegin()  const { return m_Header->data;                    }
-    constexpr const char *rbegin()  const { return m_Header->data + m_Header->length; }
-    constexpr const char *crbegin() const { return m_Header->data + m_Header->length; }
+    REV_INLINE const char *begin()   const { return m_Header->data;                    }
+    REV_INLINE const char *cbegin()  const { return m_Header->data;                    }
+    REV_INLINE const char *rbegin()  const { return m_Header->data + m_Header->length; }
+    REV_INLINE const char *crbegin() const { return m_Header->data + m_Header->length; }
 
-    constexpr const char *end()   const { return m_Header->data + m_Header->length; }
-    constexpr const char *cend()  const { return m_Header->data + m_Header->length; }
-    constexpr const char *rend()  const { return m_Header->data;                    }
-    constexpr const char *crend() const { return m_Header->data;                    }
+    REV_INLINE const char *end()   const { return m_Header->data + m_Header->length; }
+    REV_INLINE const char *cend()  const { return m_Header->data + m_Header->length; }
+    REV_INLINE const char *rend()  const { return m_Header->data;                    }
+    REV_INLINE const char *crend() const { return m_Header->data;                    }
 
-    constexpr char *begin()  { return m_Header->data;                    }
-    constexpr char *rbegin() { return m_Header->data + m_Header->length; }
+    REV_INLINE char *begin()  { return m_Header->data;                    }
+    REV_INLINE char *rbegin() { return m_Header->data + m_Header->length; }
 
-    constexpr char *end()  { return m_Header->data + m_Header->length; }
-    constexpr char *rend() { return m_Header->data;                    }
+    REV_INLINE char *end()  { return m_Header->data + m_Header->length; }
+    REV_INLINE char *rend() { return m_Header->data;                    }
 
-    constexpr char First() const { return *m_Header->data;                      }
-    constexpr char Last()  const { return m_Header->data[m_Header->length - 1]; }
+    REV_INLINE char First() const { return *m_Header->data;                      }
+    REV_INLINE char Last()  const { return m_Header->data[m_Header->length - 1]; }
 
-    constexpr char& First() { return *m_Header->data;                      }
-    constexpr char& Last()  { return m_Header->data[m_Header->length - 1]; }
+    REV_INLINE char& First() { return *m_Header->data;                      }
+    REV_INLINE char& Last()  { return m_Header->data[m_Header->length - 1]; }
 
     void Clear()
     {
-        memset_char(m_Header->data, '\0', m_Header->length);
+        FillMemoryChar(m_Header->data, '\0', m_Header->length);
         m_Header->length = 0;
     }
 
@@ -295,7 +295,7 @@ public:
                        old_length - where);
         }
 
-        memset_char(m_Header->data + where, symbol, count);
+        FillMemoryChar(m_Header->data + where, symbol, count);
         return *this;
     }
 
@@ -415,7 +415,7 @@ public:
                        m_Header->length - to);
         }
 
-        memset_char(m_Header->data + m_Header->length - delta, '\0', delta);
+        FillMemoryChar(m_Header->data + m_Header->length - delta, '\0', delta);
         m_Header->length -= delta;
         return *this;
     }
@@ -433,7 +433,7 @@ public:
                        m_Header->length - to);
         }
 
-        memset_char(m_Header->data + m_Header->length - delta, '\0', delta);
+        FillMemoryChar(m_Header->data + m_Header->length - delta, '\0', delta);
         m_Header->length -= delta;
         return *this;
     }
@@ -889,7 +889,7 @@ public:
 
     String& operator=(nullptr_t)
     {
-        memset_char(m_Header->data, '\0', m_Header->length);
+        FillMemoryChar(m_Header->data, '\0', m_Header->length);
 
         m_Header->length = 0;
         Fit();
@@ -901,7 +901,7 @@ public:
     {
         if (m_Header->length > 1)
         {
-            memset_char(m_Header->data + 1, '\0', m_Header->length - 1);
+            FillMemoryChar(m_Header->data + 1, '\0', m_Header->length - 1);
         }
 
         m_Header->length = 1;
@@ -917,7 +917,7 @@ public:
 
         if (m_Header->length > cstring_length)
         {
-            memset_char(m_Header->data + cstring_length, '\0', m_Header->length - cstring_length);
+            FillMemoryChar(m_Header->data + cstring_length, '\0', m_Header->length - cstring_length);
         }
 
         m_Header->length = cstring_length;
@@ -931,7 +931,7 @@ public:
     {
         if (m_Header->length > const_string.Length())
         {
-            memset_char(m_Header->data + const_string.Length(), '\0', m_Header->length - const_string.Length());
+            FillMemoryChar(m_Header->data + const_string.Length(), '\0', m_Header->length - const_string.Length());
         }
 
         m_Header->length = const_string.Length();
@@ -946,7 +946,7 @@ public:
     {
         if (m_Header->length > static_string.Length())
         {
-            memset_char(m_Header->data + static_string.Length(), '\0', m_Header->length - static_string.Length());
+            FillMemoryChar(m_Header->data + static_string.Length(), '\0', m_Header->length - static_string.Length());
         }
 
         m_Header->length = static_string.Length();
@@ -962,7 +962,7 @@ public:
         {
             if (m_Header->length > other.m_Header->length)
             {
-                memset_char(m_Header->data + other.m_Header->length, '\0', m_Header->length - other.m_Header->length);
+                FillMemoryChar(m_Header->data + other.m_Header->length, '\0', m_Header->length - other.m_Header->length);
             }
 
             m_Header->length = other.m_Header->length;

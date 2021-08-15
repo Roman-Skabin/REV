@@ -6,13 +6,13 @@
 
 #include "core/pch.h"
 #include "core/settings.h"
-#include "platform/d3d12/d3d12_renderer.h"
+#include "platform/d3d12/d3d12_device_context.h"
 #include "platform/d3d12/d3d12_common.h"
 
 namespace REV::D3D12 {
 
-Renderer::Renderer(Window *window, const Logger& logger)
-    : m_Logger(logger, "Renderer logger", Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
+DeviceContext::DeviceContext(Window *window, const Logger& logger)
+    : m_Logger(logger, ConstString(REV_CSTR_ARGS("DeviceContext logger")), Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_Window(window),
       m_RTSize(Settings::Get()->render_target_wh),
       m_ActualRTSize(m_RTSize),
@@ -55,10 +55,10 @@ Renderer::Renderer(Window *window, const Logger& logger)
     GetSwapChainRenderTargets();
     CreateDepthBuffer();
     CreateFences();
-    m_Logger.LogSuccess("Renderer has been created");
+    m_Logger.LogSuccess("DeviceContext has been created");
 }
 
-Renderer::~Renderer()
+DeviceContext::~DeviceContext()
 {
     if (m_Device)
     {
@@ -96,6 +96,7 @@ Renderer::~Renderer()
         {
             error = m_DXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, cast<DXGI_DEBUG_RLO_FLAGS>(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
             REV_CHECK(CheckResultAndPrintMessages(error, this));
+            REV_CHECK(CheckResultAndPrintMessages(REV_FORCE_PRINT_MESSAGES, this));
 
             m_DXGIDebug->DisableLeakTrackingForThread();
         }
@@ -105,11 +106,11 @@ Renderer::~Renderer()
         SafeRelease(m_Debug);
     #endif
 
-        m_Logger.LogInfo("Renderer has been destroyed");
+        m_Logger.LogInfo("DeviceContext has been destroyed");
     }
 }
 
-void Renderer::StartFrame()
+void DeviceContext::StartFrame()
 {
     ID3D12CommandAllocator    *graphics_allocator = m_GraphicsAllocators[m_CurrentBuffer];
     ID3D12GraphicsCommandList *graphics_list      = m_GraphicsLists[m_CurrentBuffer];
@@ -184,7 +185,7 @@ void Renderer::StartFrame()
     m_FrameStarted = true;
 }
 
-void Renderer::EndFrame()
+void DeviceContext::EndFrame()
 {
     m_FrameStarted = false;
 
@@ -247,7 +248,7 @@ void Renderer::EndFrame()
     m_RTVCPUDescHandle.ptr += m_CurrentBuffer * m_RTVDescSize;
 }
 
-void Renderer::WaitForGPU()
+void DeviceContext::WaitForGPU()
 {
     u64 current_fence_value = m_Fence->GetCompletedValue() + 1;
 
@@ -265,7 +266,7 @@ void Renderer::WaitForGPU()
     }
 }
 
-void Renderer::CreateDebugLayer()
+void DeviceContext::CreateDebugLayer()
 {
 #if REV_DEBUG
     HRESULT error = D3D12GetDebugInterface(IID_PPV_ARGS(&m_Debug));
@@ -285,7 +286,7 @@ void Renderer::CreateDebugLayer()
 #endif
 }
 
-void Renderer::CreateFactory()
+void DeviceContext::CreateFactory()
 {
 #if REV_DEBUG
     HRESULT error = CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&m_Factory));
@@ -295,7 +296,7 @@ void Renderer::CreateFactory()
     REV_CHECK(CheckResultAndPrintMessages(error, this));
 }
 
-void Renderer::CreateAdapterAndDevice()
+void DeviceContext::CreateAdapterAndDevice()
 {
     SIZE_T             max_vram      = 0;
     UINT               adapter_index = 0;
@@ -328,7 +329,7 @@ void Renderer::CreateAdapterAndDevice()
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: %S, Feature Level: D3D_FEATURE_LEVEL_12_1", adapter_desc.Description);
+        m_Logger.LogInfo("GPU Adapter: ", (const wchar_t *)adapter_desc.Description, ", Feature Level: D3D_FEATURE_LEVEL_12_1");
     }
     else
     {
@@ -358,11 +359,11 @@ void Renderer::CreateAdapterAndDevice()
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: %S, Feature Level: D3D_FEATURE_LEVEL_12_0", adapter_desc.Description);
+        m_Logger.LogInfo("GPU Adapter: ", (const wchar_t *)adapter_desc.Description, ", Feature Level: D3D_FEATURE_LEVEL_12_0");
     }
 }
 
-void Renderer::GetInfoAboutFeatures()
+void DeviceContext::GetInfoAboutFeatures()
 {
     HRESULT error = m_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &m_Features.options, sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS));
     REV_CHECK(CheckResultAndPrintMessages(error, this));
@@ -401,7 +402,7 @@ void Renderer::GetInfoAboutFeatures()
     REV_CHECK(CheckResultAndPrintMessages(error, this));
 }
 
-void Renderer::CreateGraphicsQueueAllocatorsAndLists()
+void DeviceContext::CreateGraphicsQueueAllocatorsAndLists()
 {
     D3D12_COMMAND_QUEUE_DESC graphics_queue_desc;
     graphics_queue_desc.Type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -446,7 +447,7 @@ void Renderer::CreateGraphicsQueueAllocatorsAndLists()
     }
 }
 
-void Renderer::CreateSwapChain()
+void DeviceContext::CreateSwapChain()
 {
     IDXGIFactory5 *factory5 = null;
     HRESULT        error    = m_Factory->QueryInterface(&factory5);
@@ -508,7 +509,7 @@ void Renderer::CreateSwapChain()
     REV_DEBUG_RESULT(m_WaitableObject = m_SwapChain->GetFrameLatencyWaitableObject());
 }
 
-void Renderer::GetSwapChainRenderTargets()
+void DeviceContext::GetSwapChainRenderTargets()
 {
     D3D12_DESCRIPTOR_HEAP_DESC rtv_desc_heap_desc;
     rtv_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -537,7 +538,7 @@ void Renderer::GetSwapChainRenderTargets()
     m_CurrentBuffer         = m_SwapChain->GetCurrentBackBufferIndex();
 }
 
-void Renderer::CreateDepthBuffer()
+void DeviceContext::CreateDepthBuffer()
 {
     D3D12_DESCRIPTOR_HEAP_DESC dsv_desc_heap_desc;
     dsv_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
@@ -576,11 +577,11 @@ void Renderer::CreateDepthBuffer()
     ds_clear_value.DepthStencil.Stencil = 0;
 
     error = m_Device->CreateCommittedResource(&ds_heap_properties,
-                                                D3D12_HEAP_FLAG_SHARED,
-                                                &ds_resource_desc,
-                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                                                &ds_clear_value,
-                                                IID_PPV_ARGS(&m_DSBuffer));
+                                              D3D12_HEAP_FLAG_SHARED,
+                                              &ds_resource_desc,
+                                              D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                                              &ds_clear_value,
+                                              IID_PPV_ARGS(&m_DSBuffer));
     REV_CHECK(CheckResultAndPrintMessages(error, this));
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
@@ -592,7 +593,7 @@ void Renderer::CreateDepthBuffer()
     m_Device->CreateDepthStencilView(m_DSBuffer, &dsv_desc, m_DSVCPUDescHandle);
 }
 
-void Renderer::CreateFences()
+void DeviceContext::CreateFences()
 {
     HRESULT error = m_Device->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_Fence));
     REV_CHECK(CheckResultAndPrintMessages(error, this));
@@ -600,7 +601,7 @@ void Renderer::CreateFences()
     REV_DEBUG_RESULT(m_FenceEvent = CreateEventExA(null, "Fence Event", 0, EVENT_ALL_ACCESS));
 }
 
-void Renderer::ResizeBuffers()
+void DeviceContext::ResizeBuffers()
 {
     // Wait for the GPU, release swap chain buffers and DS buffer
     WaitForGPU();
@@ -672,11 +673,11 @@ void Renderer::ResizeBuffers()
     ds_clear_value.DepthStencil.Stencil = 0;
 
     error = m_Device->CreateCommittedResource(&ds_heap_properties,
-                                                D3D12_HEAP_FLAG_SHARED,
-                                                &ds_resource_desc,
-                                                D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-                                                &ds_clear_value,
-                                                IID_PPV_ARGS(&m_DSBuffer));
+                                              D3D12_HEAP_FLAG_SHARED,
+                                              &ds_resource_desc,
+                                              D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                                              &ds_clear_value,
+                                              IID_PPV_ARGS(&m_DSBuffer));
     REV_CHECK(CheckResultAndPrintMessages(error, this));
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
@@ -690,7 +691,7 @@ void Renderer::ResizeBuffers()
     m_FirstFrame = true;
 }
 
-void Renderer::SetFullscreenMode(bool set)
+void DeviceContext::SetFullscreenMode(bool set)
 {
     if (set != m_Fullscreen)
     {

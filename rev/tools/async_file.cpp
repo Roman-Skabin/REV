@@ -110,8 +110,8 @@ AsyncFile::AsyncFile(const StaticString<REV_PATH_CAPACITY>& filename, FLAGS flag
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE,
                 "AsyncFile doesn't exists or some unknown error has been occurred.\n"
-                "    absolute filename: \"%s\"\n"
-                "    flags:             0x%I32X\n",
+                "    filename: \"%s\"\n"
+                "    flags:    0x%I32X\n",
                 m_Name.Data(), flags);
 
     m_Size = GetFileSize(m_Handle, null);

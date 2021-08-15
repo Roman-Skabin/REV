@@ -13,7 +13,7 @@ namespace REV::Math
     inline constexpr const f64 g_f64_LOG10E   = 0.434294481903251827651; // log10(e)
     inline constexpr const f64 g_f64_LN2      = 0.693147180559945309417; // ln(2)
     inline constexpr const f64 g_f64_LN10     = 2.30258509299404568402;  // ln(10)
-    inline constexpr const f64 g_f64_PI       = 3.14159265358979323846;  // pi
+    inline constexpr const f64 g_f64_PI       = 3.141592653589793238463; // pi
     inline constexpr const f64 g_f64_PI_2     = 1.57079632679489661923;  // pi/2
     inline constexpr const f64 g_f64_PI_4     = 0.785398163397448309616; // pi/4
     inline constexpr const f64 g_f64_1_PI     = 0.318309886183790671538; // 1/pi
@@ -21,13 +21,14 @@ namespace REV::Math
     inline constexpr const f64 g_f64_2_SQRTPI = 1.12837916709551257390;  // 2/sqrt(pi)
     inline constexpr const f64 g_f64_SQRT2    = 1.41421356237309504880;  // sqrt(2)
     inline constexpr const f64 g_f64_1_SQRT_2 = 0.707106781186547524401; // 1/sqrt(2)
+    inline constexpr const f64 g_f64_TAU      = 6.283185307179586476925; // TAU = 2pi
 
     inline constexpr const f32 g_f32_E        = 2.71828182845904523536f;  // e
     inline constexpr const f32 g_f32_LOG2E    = 1.44269504088896340736f;  // log2(e)
     inline constexpr const f32 g_f32_LOG10E   = 0.434294481903251827651f; // log10(e)
     inline constexpr const f32 g_f32_LN2      = 0.693147180559945309417f; // ln(2)
     inline constexpr const f32 g_f32_LN10     = 2.30258509299404568402f;  // ln(10)
-    inline constexpr const f32 g_f32_PI       = 3.14159265358979323846f;  // pi
+    inline constexpr const f32 g_f32_PI       = 3.141592653589793238463f; // pi
     inline constexpr const f32 g_f32_PI_2     = 1.57079632679489661923f;  // pi/2
     inline constexpr const f32 g_f32_PI_4     = 0.785398163397448309616f; // pi/4
     inline constexpr const f32 g_f32_1_PI     = 0.318309886183790671538f; // 1/pi
@@ -35,6 +36,7 @@ namespace REV::Math
     inline constexpr const f32 g_f32_2_SQRTPI = 1.12837916709551257390f;  // 2/sqrt(pi)
     inline constexpr const f32 g_f32_SQRT2    = 1.41421356237309504880f;  // sqrt(2)
     inline constexpr const f32 g_f32_1_SQRT_2 = 0.707106781186547524401f; // 1/sqrt(2)
+    inline constexpr const f32 g_f32_TAU      = 6.283185307179586476925f; // TAU = 2pi
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_floating_point_v<T>>>
     REV_INLINE T REV_VECTORCALL lerp(T start, T end, T percent)

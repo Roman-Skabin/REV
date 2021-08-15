@@ -11,31 +11,38 @@ namespace REV
 {
 
 //
-//
+// Entity
 //
 
 void Entity::Create(u64 vcount, u64 icount)
 {
-    this->vcount = vcount;
-    this->icount = icount;
+    Vertex *vertex_memory = cast<Vertex *>(allocator->Allocate(vcount * sizeof(Vertex) + icount * sizeof(Index)));
+    Index  *index_memory  = cast<Index *>(vertex_memory + vcount);
 
-    vertices = cast<Vertex *>(allocator->Allocate(vcount * sizeof(Vertex) + icount * sizeof(Index)));
-    indices  = cast<Index *>(cast<byte *>(vertices) + vcount * sizeof(Vertex));
+    vertices = ConstArray(vertex_memory, vcount);
+    indices  = ConstArray(index_memory,  icount);
 }
 
 void Entity::Destroy()
 {
-    allocator->DeAlloc(vertices);
+    Vertex *ptr = vertices.Data();
+    allocator->DeAlloc(ptr);
+}
+
+void Entity::SetData(const ConstArray<Vertex>& vertices, const ConstArray<Index>& indices)
+{
+    CopyMemory(this->vertices.Data(), vertices.Data(), vertices.Count() * sizeof(Vertex));
+    CopyMemory(this->indices.Data(),  indices.Data(),  indices.Count()  * sizeof(Index));
 }
 
 //
-//
+// SceneBase
 //
 
-SceneBase::SceneBase(Allocator *allocator, const ConstString& name, const StaticString<REV_PATH_CAPACITY>& file_with_shaders, u64 max_vertices, u64 max_indices)
+SceneBase::SceneBase(Allocator *allocator, const ConstString& name, u64 max_vertices, u64 max_indices)
     : m_Name(name),
       m_Allocator(allocator),
-      m_GraphicsProgram(GraphicsAPI::GetProgramManager()->CreateGraphicsProgram(file_with_shaders)),
+      m_CurrentGraphicsShader(),
       m_VertexBuffer(),
       m_IndexBuffer(),
       m_Vertices(null),
@@ -46,55 +53,57 @@ SceneBase::SceneBase(Allocator *allocator, const ConstString& name, const Static
       m_IndicesCapacity(max_indices),
       m_MaxIndex(0)
 {
-    // @Optimize(Roman): use upload pointers?
-    m_Vertices = cast<Vertex *>(Memory::Get()->PushToPermanentArea(m_VerticesCapacity * sizeof(Vertex) + m_IndicesCapacity * sizeof(Index))),
-    m_Indices  = cast<Index *>(m_Vertices + m_VerticesCapacity * sizeof(Vertex));
 }
 
 void SceneBase::OnSetCurrentEx()
 {
-    GPU::MemoryManager  *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
-    GPU::ProgramManager *program_manager    = GraphicsAPI::GetProgramManager();
+    // @Optimize(Roman): use upload pointers?
+    m_Vertices = cast<Vertex *>(m_Allocator->Allocate(m_VerticesCapacity * sizeof(Vertex) + m_IndicesCapacity * sizeof(Index))),
+    m_Indices  = cast<Index *>(m_Vertices + m_VerticesCapacity);
 
-    StaticString<64> vb_name("VB_", REV_CSTRLEN("VB_"));
-    StaticString<64> ib_name("IB_", REV_CSTRLEN("IB_"));
+    StaticString<64> vb_name(REV_CSTR_ARGS("VB_"));
+    StaticString<64> ib_name(REV_CSTR_ARGS("IB_"));
 
     vb_name += m_Name;
     ib_name += m_Name;
 
-    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast<u32>(m_VerticesCapacity), vb_name);
-    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(m_IndicesCapacity), ib_name);
+    GPU::MemoryManager *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
 
-    AssetManager::Get()->ParseREVAMFile(m_Name);
-
-    for (Asset& asset : AssetManager::Get()->GetSceneAssets())
-    {
-        program_manager->AttachResource(m_GraphicsProgram, asset.resource);
-    }
+    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast<u32>(m_VerticesCapacity), false, vb_name);
+    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(m_IndicesCapacity), false, ib_name);
 
     OnSetCurrent();
 }
 
 void SceneBase::OnUnsetCurrentEx()
 {
-    AssetManager::Get()->FreeSceneAssets();
     OnUnsetCurrent();
+
+    AssetManager::Get()->FreeSceneAssets();
+    GraphicsAPI::GetMemoryManager()->FreeSceneMemory();
+    m_Allocator->DeAlloc(m_Vertices);
+}
+
+void SceneBase::SetCurrentGraphicsShader(AssetHandle shader_asset)
+{
+    REV_CHECK_M(AssetManager::Get()->GetAsset(shader_asset)->kind == ASSET_KIND_SHADER, "Asset handle passed to the SetCurrentGraphicsShader is not a handle to a shader asset");
+    m_CurrentGraphicsShader = shader_asset;
 }
 
 void SceneBase::SubmitEntity(Entity *entity)
 {
-    if ((m_VerticesCapacity - m_VerticesCount < entity->vcount)
-    ||  (m_IndicesCapacity  - m_IndicesCount  < entity->icount))
+    if ((m_VerticesCapacity - m_VerticesCount < entity->vertices.Count())
+    ||  (m_IndicesCapacity  - m_IndicesCount  < entity->indices.Count()))
     {
         FlushBatch();
     }
 
-    CopyMemory(m_Vertices + m_VerticesCount, entity->vertices, entity->vcount * sizeof(Vertex));
-    m_VerticesCount += entity->vcount;
+    CopyMemory(m_Vertices + m_VerticesCount, entity->vertices.Data(), entity->vertices.Count() * sizeof(Vertex));
+    m_VerticesCount += entity->vertices.Count();
 
     Index index_offset = m_MaxIndex ? m_MaxIndex + 1 : 0;
 
-    for (u64 i = 0; i < entity->icount; ++i)
+    for (u64 i = 0; i < entity->indices.Count(); ++i)
     {
         m_Indices[m_IndicesCount + i] = index_offset + entity->indices[i];
 
@@ -104,18 +113,21 @@ void SceneBase::SubmitEntity(Entity *entity)
         }
     }
 
-    m_IndicesCount += entity->icount;
+    m_IndicesCount += entity->indices.Count();
 }
 
 void SceneBase::FlushBatch()
 {
     if (m_VerticesCount || m_IndicesCount)
     {
-        GPU::MemoryManager  *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
-        GPU::ProgramManager *program_manager    = GraphicsAPI::GetProgramManager();
-        GPU::Renderer       *renderer           = GraphicsAPI::GetRenderer();
+        REV_CHECK_M(m_CurrentGraphicsShader.index != REV_U64_MAX, "There is no current graphics shader. Use SceneBase::SetCurrentGraphicsShader to set it.")
 
-        if (renderer->FrameStarted())
+        GPU::MemoryManager *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
+        GPU::ShaderManager *shader_manager     = GraphicsAPI::GetShaderManager();
+        GPU::DeviceContext *device_context     = GraphicsAPI::GetDeviceContext();
+        AssetManager       *asset_manager      = AssetManager::Get();
+
+        if (device_context->FrameStarted())
         {
             gpu_memory_manager->SetBufferData(m_VertexBuffer, m_Vertices);
             gpu_memory_manager->SetBufferData(m_IndexBuffer, m_Indices);
@@ -126,12 +138,14 @@ void SceneBase::FlushBatch()
             REV_FAILED_M("FlushBatch gotta be called during the frame ONLY!!!");
         }
 
-        program_manager->SetCurrentGraphicsProgram(m_GraphicsProgram);
+        Asset *graphics_shader_asset = asset_manager->GetAsset(m_CurrentGraphicsShader);
 
-        program_manager->BindVertexBuffer(m_GraphicsProgram, m_VertexBuffer);
-        program_manager->BindIndexBuffer(m_GraphicsProgram, m_IndexBuffer);
+        shader_manager->SetCurrentGraphicsShader(graphics_shader_asset->shader_handle);
 
-        program_manager->Draw(m_GraphicsProgram);
+        shader_manager->BindVertexBuffer(graphics_shader_asset->shader_handle, m_VertexBuffer);
+        shader_manager->BindIndexBuffer(graphics_shader_asset->shader_handle, m_IndexBuffer);
+
+        shader_manager->Draw(graphics_shader_asset->shader_handle);
 
         ZeroMemory(m_Vertices, m_VerticesCount * sizeof(Vertex));
         ZeroMemory(m_Indices,  m_IndicesCount  * sizeof(Index));

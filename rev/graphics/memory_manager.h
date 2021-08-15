@@ -6,28 +6,42 @@
 
 #include "core/common.h"
 #include "tools/static_string.hpp"
+#include "math/vec.h"
 
 // @Cleanup(Roman): We do not need GPU memory manager on user side.
 //                  Asset manager allocates and sets all the data we need for us.
-//                  So we are fine having only platform version of it.
+//                  So we are fine having only platform version of it?
 
 namespace REV { class GraphicsAPI; }
 
 namespace REV::GPU
 {
-    enum class RESOURCE_KIND : u64
+    enum RESOURCE_KIND : u64
     {
-        UNKNOWN,
-        VB,
-        IB,
-        CB,
-        SR,
+        RESOURCE_KIND_UNKNOWN = 0,
+
+        RESOURCE_KIND_VB      = BIT(0),
+        RESOURCE_KIND_IB      = BIT(1),
+        RESOURCE_KIND_CB      = BIT(2),
+        RESOURCE_KIND_SR      = BIT(3),
+        RESOURCE_KIND_SAMPLER = BIT(4),
+
+        RESOURCE_KIND_STATIC = BIT<u64>(63),
+
+        RESOURCE_KIND_BUFFER = RESOURCE_KIND_VB | RESOURCE_KIND_IB | RESOURCE_KIND_CB,
+
+        RESOURCE_KIND_STATIC_VB      = RESOURCE_KIND_STATIC | RESOURCE_KIND_VB,
+        RESOURCE_KIND_STATIC_IB      = RESOURCE_KIND_STATIC | RESOURCE_KIND_IB,
+        RESOURCE_KIND_STATIC_CB      = RESOURCE_KIND_STATIC | RESOURCE_KIND_CB,
+        RESOURCE_KIND_STATIC_SR      = RESOURCE_KIND_STATIC | RESOURCE_KIND_SR,
+        RESOURCE_KIND_STATIC_SAMPLER = RESOURCE_KIND_STATIC | RESOURCE_KIND_SAMPLER,
     };
+    REV_ENUM_OPERATORS(RESOURCE_KIND);
 
     struct ResourceHandle final
     {
         u64           index = REV_U64_MAX;
-        RESOURCE_KIND kind  = RESOURCE_KIND::UNKNOWN;
+        RESOURCE_KIND kind  = RESOURCE_KIND_UNKNOWN;
     };
 
     enum class TEXTURE_FORMAT : u32
@@ -41,7 +55,7 @@ namespace REV::GPU
         DXT4,
         DXT5,
 
-        _DDS_DX10 = 0x80000000, // @NOTE(Roman): Internal
+        _DDS_DX10 = BIT<u32>(31), // @NOTE(Roman): Internal
     };
     REV_ENUM_CLASS_OPERATORS(TEXTURE_FORMAT);
 
@@ -54,47 +68,53 @@ namespace REV::GPU
 
     struct TextureDesc final
     {
-        SubTextureDesc *subtexture_desc;
-        u64             subtextures_count;
+        u64            subtextures_count;
+        #pragma warning(suppress: 4200)
+        SubTextureDesc subtexture_desc[0];
+    };
+
+    enum TEXTURE_ADDRESS_MODE : u32
+    {
+        TEXTURE_ADDRESS_MODE_WRAP = 1,
+        TEXTURE_ADDRESS_MODE_MIRROR,
+        TEXTURE_ADDRESS_MODE_CLAMP,
+        TEXTURE_ADDRESS_MODE_BORDER,
+        TEXTURE_ADDRESS_MODE_MIRROR_ONCE,
     };
 
     class REV_API MemoryManager final
     {
     public:
         // @Optimize(Roman): Use (upload pointer + offset) as a CPU data storage for buffers?
-        ResourceHandle AllocateVertexBuffer(u32 vertex_count, const StaticString<64>& name = null); // stride = sizeof(REV::Vertex)
-        ResourceHandle AllocateIndexBuffer(u32 index_count, const StaticString<64>& name = null); // stride = sizeof(REV::Index)
-        ResourceHandle AllocateConstantBuffer(u32 bytes, const StaticString<64>& name = null);
+        ResourceHandle AllocateVertexBuffer(u32 vertex_count, bool _static, const StaticString<64>& name = null); // stride = sizeof(REV::Vertex)
+        ResourceHandle AllocateIndexBuffer(u32 index_count, bool _static, const StaticString<64>& name = null); // stride = sizeof(REV::Index)
+        ResourceHandle AllocateConstantBuffer(u32 bytes, bool _static, const StaticString<64>& name = null);
 
-        ResourceHandle AllocateTexture1D(  u16 width,                                        TEXTURE_FORMAT texture_format, const StaticString<64>& name = null);
-        ResourceHandle AllocateTexture2D(  u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT texture_format, const StaticString<64>& name = null);
-        ResourceHandle AllocateTexture3D(  u16 width, u16 height, u16 depth, u16 mip_levels, TEXTURE_FORMAT texture_format, const StaticString<64>& name = null);
-        ResourceHandle AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT texture_format, const StaticString<64>& name = null);
+        ResourceHandle AllocateTexture1D(  u16 width,                                        TEXTURE_FORMAT texture_format, bool _static);
+        ResourceHandle AllocateTexture2D(  u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
+        ResourceHandle AllocateTexture3D(  u16 width, u16 height, u16 depth, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
+        ResourceHandle AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
 
-        ResourceHandle AllocateTexture1DArray(  u16 width,             u16 count,                 TEXTURE_FORMAT texture_format, const StaticString<64>& name = null);
-        ResourceHandle AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, const StaticString<64>& name = null);
-        ResourceHandle AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, const StaticString<64>& name = null);
+        ResourceHandle AllocateTexture1DArray(  u16 width,             u16 count,                 TEXTURE_FORMAT texture_format, bool _static);
+        ResourceHandle AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
+        ResourceHandle AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
 
-        void SetBufferData(ResourceHandle resource, const void *data);
-        void SetTextureData(ResourceHandle resource, TextureDesc *texture_desc);
+        ResourceHandle AllocateSampler(TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static);
 
-        void SetBufferDataImmediately(ResourceHandle resource, const void *data);
-        void SetTextureDataImmediately(ResourceHandle resource, TextureDesc *texture_desc);
+        void SetBufferData(const ResourceHandle& resource, const void *data);
+        void SetTextureData(const ResourceHandle& resource, TextureDesc *texture_desc);
+
+        void SetBufferDataImmediately(const ResourceHandle& resource, const void *data);
+        void SetTextureDataImmediately(const ResourceHandle& resource, TextureDesc *texture_desc);
 
         void StartImmediateExecution();
         void EndImmediateExecution();
 
-        void FreeMemory();
+        void FreeSceneMemory();
+        void FreeStaticMemory();
 
     private:
-        MemoryManager()                     = delete;
-        MemoryManager(const MemoryManager&) = delete;
-        MemoryManager(MemoryManager&&)      = delete;
-
-        ~MemoryManager() = delete;
-
-        MemoryManager& operator=(const MemoryManager&) = delete;
-        MemoryManager& operator=(MemoryManager&&)      = delete;
+        REV_REMOVE_OOP_STUFF(MemoryManager);
 
     private:
         #pragma warning(suppress: 4200)

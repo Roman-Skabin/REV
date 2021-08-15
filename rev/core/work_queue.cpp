@@ -8,21 +8,6 @@
 namespace REV
 {
 
-WorkQueue *WorkQueue::s_WorkQueue = null;
-
-WorkQueue *WorkQueue::Create(const Logger& logger)
-{
-    REV_CHECK_M(!s_WorkQueue, "Work queue is already created. Use WorkQueue::Get() function instead");
-    s_WorkQueue = new WorkQueue(logger);
-    return s_WorkQueue;
-}
-
-WorkQueue *WorkQueue::Get()
-{
-    REV_CHECK_M(s_WorkQueue, "Work queue is not created yet");
-    return s_WorkQueue;
-}
-
 WorkQueue::WorkQueue(const Logger& logger)
     : m_Semaphore(null),
       m_CompletionGoal(0),
@@ -47,7 +32,7 @@ WorkQueue::WorkQueue(const Logger& logger)
     }
 
     logger.LogSuccess("Work queue has been created");
-    logger.LogInfo("Additional threads count = %I32u", cpu_virtual_threads_count);
+    logger.LogInfo("Additional threads count = ", cpu_virtual_threads_count);
 }
 
 WorkQueue::~WorkQueue()
@@ -55,7 +40,7 @@ WorkQueue::~WorkQueue()
     ZeroMemory(this, sizeof(WorkQueue));
 }
 
-void WorkQueue::AddWork(const WorkType& work)
+void WorkQueue::AddWork(const Work& work)
 {
     while (true)
     {

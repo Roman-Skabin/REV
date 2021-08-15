@@ -112,8 +112,7 @@ void ProfilingTimer::StopProfiling(const Logger& logger)
 {
     m_Timer.Tick();
     m_Timer.Stop();
-    logger.LogInfo("%s: time elapsed: %f seconds (%I64d ticks)",
-                   m_Timer.m_Name, m_Timer.m_DeltaSeconds, m_Timer.m_DeltaTicks);
+    logger.LogInfo(m_Timer.m_Name, ": time elapsed: ", m_Timer.m_DeltaSeconds, " seconds (", m_Timer.m_DeltaTicks, " ticks)");
 }
 
 }

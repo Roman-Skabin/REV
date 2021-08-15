@@ -15,14 +15,14 @@ namespace REV
     class CriticalSection<true>
     {
     public:
-        CriticalSection()
+        REV_INLINE CriticalSection()
             : m_Semaphore(CreateSemaphoreExA(null, 1, 1, "CriticalSection Semaphore", 0, SEMAPHORE_ALL_ACCESS)),
               m_Owner(null),
               m_RecursionCount(0)
         {
         }
     
-        CriticalSection(CriticalSection&& other)
+        REV_INLINE CriticalSection(CriticalSection&& other)
             : m_Semaphore(other.m_Semaphore),
               m_Owner(other.m_Owner),
               m_RecursionCount(other.m_RecursionCount)
@@ -30,7 +30,7 @@ namespace REV
             other.m_Semaphore = null;
         }
     
-        ~CriticalSection()
+        REV_INLINE ~CriticalSection()
         {
             if (m_Semaphore) CloseHandle(m_Semaphore);
         }
@@ -53,7 +53,7 @@ namespace REV
             _InterlockedIncrement64(&m_RecursionCount);
         }
     
-        void Leave()
+        REV_INLINE void Leave()
         {
             if (_InterlockedDecrement64(&m_RecursionCount) == 0)
             {
@@ -64,7 +64,7 @@ namespace REV
     
         REV_INLINE bool Waitable() const { return true; }
     
-        CriticalSection& operator=(CriticalSection&& other)
+        REV_INLINE CriticalSection& operator=(CriticalSection&& other)
         {
             if (this != &other)
             {
@@ -91,7 +91,7 @@ namespace REV
     class CriticalSection<false>
     {
     public:
-        CriticalSection()
+        REV_INLINE CriticalSection()
             : m_CurrentThreadID(0),
               m_NextThreadID(0),
               m_Owner(null),
@@ -99,7 +99,7 @@ namespace REV
         {
         }
     
-        CriticalSection(CriticalSection&& other)
+        REV_INLINE CriticalSection(CriticalSection&& other)
             : m_CurrentThreadID(other.m_CurrentThreadID),
               m_NextThreadID(other.m_NextThreadID),
               m_Owner(other.m_Owner),
@@ -111,7 +111,7 @@ namespace REV
             other.m_RecursionCount  = 0;
         }
     
-        ~CriticalSection()
+        REV_INLINE ~CriticalSection()
         {
         }
     
@@ -131,7 +131,7 @@ namespace REV
             _InterlockedIncrement64(&m_RecursionCount);
         }
     
-        void Leave()
+        REV_INLINE void Leave()
         {
             if (_InterlockedDecrement64(&m_RecursionCount) == 0)
             {
@@ -142,7 +142,7 @@ namespace REV
     
         REV_INLINE bool Waitable() const { return false; }
     
-        CriticalSection& operator=(CriticalSection&& other)
+        REV_INLINE CriticalSection& operator=(CriticalSection&& other)
         {
             if (this != &other)
             {

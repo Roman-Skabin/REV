@@ -3,10 +3,11 @@
 #include "tools/static_string_builder.hpp"
 
 DemoScene::DemoScene(REV::Allocator *allocator)
-    : SceneBase(allocator, "DemoScene", "../sandbox/assets/shaders/demo_shaders.hlsl", 1024, 36*1024),
-      m_ConstantBuffer(),
+    : SceneBase(allocator, REV::ConstString(REV_CSTR_ARGS("DemoScene")), 1024, 36*1024),
+      m_CBuffer(),
       m_CBufferData{ REV::Math::m4::identity(), REV::Math::v4(252.0f, 212.0f, 64.0f, 255.0f) / REV::Math::v4(255.0f), REV::Math::v3() },
       m_Translation(REV::Math::m4::identity()),
+      m_Rect(m_Allocator),
       m_OriginalWindowTitle(REV::Application::Get()->GetWindow().Title())
 {
 }
@@ -17,12 +18,6 @@ DemoScene::~DemoScene()
 
 void DemoScene::OnSetCurrent()
 {
-    REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
-    {
-        m_ConstantBuffer = gpu_memory_manager->AllocateConstantBuffer(sizeof(m_CBufferData), REV::StaticString<64>("CB_DemoScene", REV_CSTRLEN("CB_DemoScene")));
-    }
-    REV::GraphicsAPI::GetProgramManager()->AttachResource(m_GraphicsProgram, m_ConstantBuffer);
-
     REV::Vertex vertices[] =
     {
         { REV::Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
@@ -36,10 +31,32 @@ void DemoScene::OnSetCurrent()
         0, 2, 3
     };
 
-    m_Rect.allocator = m_Allocator;
     m_Rect.Create(REV::ArrayCount(vertices), REV::ArrayCount(indices));
-    CopyMemory(m_Rect.vertices, vertices, sizeof(vertices));
-    CopyMemory(m_Rect.indices, indices, sizeof(indices));
+    m_Rect.SetData(REV::ConstArray(REV_ARRAY_ARGS(vertices)), REV::ConstArray(REV_ARRAY_ARGS(indices)));
+
+    REV::AssetManager       *asset_manager      = REV::AssetManager::Get();
+    REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
+
+    REV::AssetHandle demo_shader_resources[] =
+    {
+        asset_manager->LoadTexture(REV::LoadTextureDesc(REV::ConstString(REV_CSTR_ARGS("wood")), 0, 0), false)
+    };
+
+    REV::GPU::CBufferDesc demo_shader_cbuffers[] =
+    {
+        { m_CBuffer = gpu_memory_manager->AllocateConstantBuffer(sizeof(CBufferData), false, REV::ConstString(REV_CSTR_ARGS("CB_DemoScene"))), 0, 0 }
+    };
+
+    REV::GPU::SamplerDesc demo_shader_samplers[] =
+    {
+        { gpu_memory_manager->AllocateSampler(REV::GPU::TEXTURE_ADDRESS_MODE_CLAMP, REV::Math::v4(), REV::Math::v2(0.0f, 100.0f), false), 0, 0 }
+    };
+
+    asset_manager->LoadShader(REV::LoadShaderDesc(REV::ConstString(REV_CSTR_ARGS("demo_shader")),
+                                                  REV::ConstArray(REV_ARRAY_ARGS(demo_shader_resources)),
+                                                  REV::ConstArray(REV_ARRAY_ARGS(demo_shader_cbuffers)),
+                                                  REV::ConstArray(REV_ARRAY_ARGS(demo_shader_samplers))),
+                              false);
 }
 
 void DemoScene::OnUnsetCurrent()
@@ -50,9 +67,7 @@ void DemoScene::OnUnsetCurrent()
 void DemoScene::OnSetResourcesData()
 {
     REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
-    {
-        gpu_memory_manager->SetBufferData(m_ConstantBuffer, &m_CBufferData); 
-    }
+    gpu_memory_manager->SetBufferData(m_CBuffer, &m_CBufferData);
 }
 
 void DemoScene::OnUpdate()
@@ -68,7 +83,7 @@ void DemoScene::OnUpdate()
         f32 FPS = timer.TicksPerSecond() / cast<f32>(timer.DeltaTicks());
 
         REV::StaticStringBuilder<128> ssb;
-        ssb.Precision = 2;
+        ssb.m_FloatFormat.Precision = 2;
         ssb.Build(m_OriginalWindowTitle, " - FPS: ", FPS, " - MSPF: ", 1000.0f / FPS);
 
         window.SetTitle(ssb.ToString());
@@ -82,8 +97,8 @@ void DemoScene::OnUpdate()
     }
     else if (keyboard[REV::KEY::V].Pressed())
     {
-        REV::GPU::Renderer *renderer = REV::GraphicsAPI::GetRenderer();
-        renderer->SetVSync(!renderer->VSyncEnabled());
+        REV::GPU::DeviceContext *device_context = REV::GraphicsAPI::GetDeviceContext();
+        device_context->SetVSync(!device_context->VSyncEnabled());
     }
 
     REV::Math::v4 translation;
@@ -110,5 +125,6 @@ void DemoScene::OnUpdate()
     m_CBufferData.mvp    = m_Translation * REV::Math::m4::rotation_z(timer.Seconds());
     m_CBufferData.center = (m_CBufferData.mvp * ((m_Rect.vertices[0].position + m_Rect.vertices[2].position) / 2.0f)).xyz;
 
+    SetCurrentGraphicsShader(REV::AssetManager::Get()->FindAsset(REV::ConstString(REV_CSTR_ARGS("demo_shader")), false));
     SubmitEntity(&m_Rect);
 }

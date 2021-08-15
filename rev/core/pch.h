@@ -20,6 +20,8 @@
 #include <stdarg.h>
 #include <corecrt_math.h>
 #include <vcruntime_typeinfo.h>
+#include <vcruntime_new.h>
+#include <time.h>
 
 //
 // Platform independent intrinsics activation

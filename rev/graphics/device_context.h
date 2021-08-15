@@ -14,8 +14,7 @@ namespace REV
 
 namespace REV::GPU
 {
-    // @TODO(Roman): Rename to DeviceContext
-    class REV_API Renderer final
+    class REV_API DeviceContext final
     {
     public:
         void StartFrame();
@@ -31,14 +30,14 @@ namespace REV::GPU
     private:
         void SetFullscreenMode(bool set);
 
-        Renderer()                = delete;
-        Renderer(const Renderer&) = delete;
-        Renderer(Renderer&&)      = delete;
+        DeviceContext()                     = delete;
+        DeviceContext(const DeviceContext&) = delete;
+        DeviceContext(DeviceContext&&)      = delete;
 
-        ~Renderer() = delete;
+        ~DeviceContext() = delete;
 
-        Renderer& operator=(const Renderer&) = delete;
-        Renderer& operator=(Renderer&&)      = delete;
+        DeviceContext& operator=(const DeviceContext&) = delete;
+        DeviceContext& operator=(DeviceContext&&)      = delete;
 
     private:
         #pragma warning(suppress: 4200)

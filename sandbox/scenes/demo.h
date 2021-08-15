@@ -26,12 +26,9 @@ private:
     };
     #pragma pack(pop)
 
-    REV::GPU::ResourceHandle m_ConstantBuffer;
+    REV::GPU::ResourceHandle m_CBuffer;
     CBufferData              m_CBufferData;
-
     REV::Math::m4            m_Translation;
-
     REV::Entity              m_Rect;
-
     REV::StaticString<128>   m_OriginalWindowTitle;
 };

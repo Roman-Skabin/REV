@@ -480,14 +480,14 @@ REV_INTERNAL u64 BitsPerPixel(GPU::TEXTURE_FORMAT format)
     }
 }
 
-void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
+void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bool _static)
 {
     GPU::MemoryManager *memory_manager = GraphicsAPI::GetMemoryManager();
 
-    u32 magic = *cast<u32 *>(data);
+    u32 magic = *cast<u32 *>(data.Data());
     REV_CHECK_M(magic == DDS_MAGIC, "This is not a DDS file");
 
-    DDSHeader *dds_header = cast<DDSHeader *>(data + sizeof(u32));
+    DDSHeader *dds_header = cast<DDSHeader *>(data.Data() + sizeof(u32));
     REV_CHECK_M(dds_header->self_size == sizeof(DDSHeader) && dds_header->pixel_format.self_size == sizeof(PixelFormat), "Invalid DDS file layout");
 
     DX10Header          *dx10_header    = null;
@@ -540,7 +540,7 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
 
             case FOURCC_DX10:
             {
-                dx10_header     = cast<DX10Header *>(data + sizeof(u32) + sizeof(DDSHeader));
+                dx10_header     = cast<DX10Header *>(data.Data() + sizeof(u32) + sizeof(DDSHeader));
                 data_offset    += sizeof(DX10Header);
                 texture_format  = cast<GPU::TEXTURE_FORMAT>(dx10_header->format) | GPU::TEXTURE_FORMAT::_DDS_DX10;
             } break;
@@ -564,12 +564,12 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
         {
             REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
             REV_CHECK(dx10_header->array_size == 1);
-            asset->resource = memory_manager->AllocateTexture3D(cast<u16>(dds_header->width),
-                                                                cast<u16>(dds_header->height),
-                                                                cast<u16>(dds_header->depth),
-                                                                cast<u16>(dds_header->mipmap_count),
-                                                                texture_format,
-                                                                "DDSTexutre3D");
+            asset->texture.resource = memory_manager->AllocateTexture3D(cast<u16>(dds_header->width),
+                                                                        cast<u16>(dds_header->height),
+                                                                        cast<u16>(dds_header->depth),
+                                                                        cast<u16>(dds_header->mipmap_count),
+                                                                        texture_format,
+                                                                        _static);
         }
         else if (dx10_header->dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
         {
@@ -579,21 +579,21 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
                 {
                     REV_CHECK(dx10_header->misc_flags & MISC_FLAG_TEXTURECUBE);
                     REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-                    asset->resource = memory_manager->AllocateTextureCubeArray(cast<u16>(dds_header->width),
-                                                                               cast<u16>(dds_header->height),
-                                                                               cast<u16>(dx10_header->array_size),
-                                                                               cast<u16>(dds_header->mipmap_count),
-                                                                               texture_format,
-                                                                               "DDSTexutreCubeArray");
+                    asset->texture.resource = memory_manager->AllocateTextureCubeArray(cast<u16>(dds_header->width),
+                                                                                       cast<u16>(dds_header->height),
+                                                                                       cast<u16>(dx10_header->array_size),
+                                                                                       cast<u16>(dds_header->mipmap_count),
+                                                                                       texture_format,
+                                                                                       _static);
                 }
                 else
                 {
-                    asset->resource = memory_manager->AllocateTexture2DArray(cast<u16>(dds_header->width),
-                                                                             cast<u16>(dds_header->height),
-                                                                             cast<u16>(dx10_header->array_size),
-                                                                             cast<u16>(dds_header->mipmap_count),
-                                                                             texture_format,
-                                                                             "DDSTexutre2DArray");
+                    asset->texture.resource = memory_manager->AllocateTexture2DArray(cast<u16>(dds_header->width),
+                                                                                     cast<u16>(dds_header->height),
+                                                                                     cast<u16>(dx10_header->array_size),
+                                                                                     cast<u16>(dds_header->mipmap_count),
+                                                                                     texture_format,
+                                                                                     _static);
                 }
             }
             else
@@ -602,27 +602,27 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
                 {
                     REV_CHECK(dx10_header->misc_flags & MISC_FLAG_TEXTURECUBE);
                     REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-                    asset->resource = memory_manager->AllocateTextureCube(cast<u16>(dds_header->width),
-                                                                          cast<u16>(dds_header->height),
-                                                                          cast<u16>(dds_header->mipmap_count),
-                                                                          texture_format,
-                                                                          "DDSTexutreCube");
+                    asset->texture.resource = memory_manager->AllocateTextureCube(cast<u16>(dds_header->width),
+                                                                                  cast<u16>(dds_header->height),
+                                                                                  cast<u16>(dds_header->mipmap_count),
+                                                                                  texture_format,
+                                                                                  _static);
                 }
                 else
                 {
-                    asset->resource = memory_manager->AllocateTexture2D(cast<u16>(dds_header->width),
-                                                                        cast<u16>(dds_header->height),
-                                                                        cast<u16>(dds_header->mipmap_count),
-                                                                        texture_format,
-                                                                        "DDSTexutre2D");
+                    asset->texture.resource = memory_manager->AllocateTexture2D(cast<u16>(dds_header->width),
+                                                                                cast<u16>(dds_header->height),
+                                                                                cast<u16>(dds_header->mipmap_count),
+                                                                                texture_format,
+                                                                                _static);
                 }
             }
         }
         else if (dx10_header->dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D)
         {
-            asset->resource = memory_manager->AllocateTexture1D(cast<u16>(dds_header->width),
-                                                                texture_format,
-                                                                "DDSTexutre1D");
+            asset->texture.resource = memory_manager->AllocateTexture1D(cast<u16>(dds_header->width),
+                                                                        texture_format,
+                                                                        _static);
         }
         else
         {
@@ -634,43 +634,45 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
         if (dds_header->flags & DDS_FLAG_DEPTH)
         {
             REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
-            asset->resource = memory_manager->AllocateTexture3D(cast<u16>(dds_header->width),
-                                                                cast<u16>(dds_header->height),
-                                                                cast<u16>(dds_header->depth),
-                                                                cast<u16>(dds_header->mipmap_count),
-                                                                texture_format,
-                                                                "DDSTexutre3D");
+            asset->texture.resource = memory_manager->AllocateTexture3D(cast<u16>(dds_header->width),
+                                                                        cast<u16>(dds_header->height),
+                                                                        cast<u16>(dds_header->depth),
+                                                                        cast<u16>(dds_header->mipmap_count),
+                                                                        texture_format,
+                                                                        _static);
         }
         else if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
         {
             REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-            asset->resource = memory_manager->AllocateTextureCube(cast<u16>(dds_header->width),
-                                                                  cast<u16>(dds_header->height),
-                                                                  cast<u16>(dds_header->mipmap_count),
-                                                                  texture_format,
-                                                                  "DDSTexutreCube");
+            asset->texture.resource = memory_manager->AllocateTextureCube(cast<u16>(dds_header->width),
+                                                                          cast<u16>(dds_header->height),
+                                                                          cast<u16>(dds_header->mipmap_count),
+                                                                          texture_format,
+                                                                          _static);
         }
         else
         {
             REV_CHECK(dds_header->width && dds_header->height);
-            asset->resource = memory_manager->AllocateTexture2D(cast<u16>(dds_header->width),
-                                                                cast<u16>(dds_header->height),
-                                                                cast<u16>(dds_header->mipmap_count),
-                                                                texture_format,
-                                                                "DDSTexutre2D");
+            asset->texture.resource = memory_manager->AllocateTexture2D(cast<u16>(dds_header->width),
+                                                                        cast<u16>(dds_header->height),
+                                                                        cast<u16>(dds_header->mipmap_count),
+                                                                        texture_format,
+                                                                        _static);
         }
     }
 
-    GPU::TextureDesc texture_desc;
+    GPU::TextureDesc *texture_desc = null;
 
     // @NOTE(Roman): compressed:   DDS_FLAG_LINEARSIZE, linear_size = number of bytes for the main image.
     //               uncompressed: DDS_FLAG_PITCH,      pitch       = number of bytes per row.
     if (dds_header->flags & DDS_FLAG_LINEARSIZE)
     {
-        texture_desc.subtexture_desc   = Memory::Get()->PushToTA<GPU::SubTextureDesc>(dds_header->mipmap_count);
-        texture_desc.subtextures_count = dds_header->mipmap_count;
+        u64 alloc_size = sizeof(GPU::TextureDesc) + sizeof(GPU::SubTextureDesc) * dds_header->mipmap_count;
+        texture_desc   = cast<GPU::TextureDesc *>(Memory::Get()->PushToTransientArea(alloc_size));
 
-        byte *mipmap_level_data = data + data_offset;
+        texture_desc->subtextures_count = dds_header->mipmap_count;
+
+        const byte *mipmap_level_data = data.Data() + data_offset;
 
         u64 width  = dds_header->width;
         u64 height = dds_header->height;
@@ -701,9 +703,11 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
                 slice_bytes = row_bytes * height;
             }
 
-            texture_desc.subtexture_desc[i].data            = mipmap_level_data;
-            texture_desc.subtexture_desc[i].bytes_per_row   = row_bytes;
-            texture_desc.subtexture_desc[i].bytes_per_tex2d = slice_bytes;
+            GPU::SubTextureDesc *sub_texture = texture_desc->subtexture_desc + i;
+
+            sub_texture->data            = cast<byte *>(mipmap_level_data);
+            sub_texture->bytes_per_row   = row_bytes;
+            sub_texture->bytes_per_tex2d = slice_bytes;
 
             mipmap_level_data += slice_bytes;
 
@@ -716,40 +720,7 @@ void AssetManager::CreateDDSTexture(Asset *asset, byte *data, u64 data_size)
         REV_FAILED_M("Only BC1-BC5 foramts are supported. Any format supported only with DDS_HEADER_DXT10.");
     }
 
-    memory_manager->SetTextureData(asset->resource, &texture_desc);
-
-    // @TODO(Roman): #CrossPlatform, #Hardcoded.
-    if (GraphicsAPI::GetAPI() == GraphicsAPI::API::D3D12)
-    {
-        D3D12::MemoryManager *d3d12_memory_manager = cast<D3D12::MemoryManager *>(memory_manager);
-        Settings             *settings             = Settings::Get();
-
-        D3D12_FILTER d3d12_filter;
-        switch (settings->filtering)
-        {
-            case FILTERING::POINT:       d3d12_filter = D3D12_FILTER_MIN_MAG_MIP_POINT;        break;
-            case FILTERING::BILINEAR:    d3d12_filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT; break;
-            case FILTERING::TRILINEAR:   d3d12_filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;       break;
-            case FILTERING::ANISOTROPIC: d3d12_filter = D3D12_FILTER_ANISOTROPIC;              break;
-        }
-
-        D3D12_SAMPLER_DESC d3d12_sampler_desc{};
-        d3d12_sampler_desc.Filter         = d3d12_filter;
-        d3d12_sampler_desc.AddressU       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        d3d12_sampler_desc.AddressV       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        d3d12_sampler_desc.AddressW       = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-        d3d12_sampler_desc.MipLODBias     = 0.0f;
-        d3d12_sampler_desc.MaxAnisotropy  = settings->anisotropy;
-        d3d12_sampler_desc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-        d3d12_sampler_desc.MinLOD         = 0.0f;
-        d3d12_sampler_desc.MaxLOD         = 100.0f;
-
-        asset->sampler = d3d12_memory_manager->AllocateSampler(d3d12_sampler_desc);
-    }
-    else
-    {
-        REV_FAILED_M("Not implemented yet");
-    }
+    memory_manager->SetTextureData(asset->texture.resource, texture_desc);
 }
 
 }

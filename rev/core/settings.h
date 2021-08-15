@@ -20,13 +20,14 @@ namespace REV
 
     struct REV_API Settings final
     {
-        Math::v4s        window_xywh; // x, y, width, height
-        Math::v2s        render_target_wh;
-        GraphicsAPI::API graphics_api;
-        FILTERING        filtering;
-        u8               anisotropy;
-        u8               fullscreen : 1;
-        u8               vsync      : 1;
+        Math::v4s                       window_xywh; // x, y, width, height
+        Math::v2s                       render_target_wh;
+        GraphicsAPI::API                graphics_api;
+        FILTERING                       filtering;
+        u8                              anisotropy : 6;
+        u8                              fullscreen : 1;
+        u8                              vsync      : 1;
+        StaticString<REV_PATH_CAPACITY> assets_folder;
 
         static Settings *Get();
 

@@ -1,8 +1,8 @@
 #include "sandbox.h"
 
 Sandbox::Sandbox()
-    : Application(REV::StaticString<128>("Sandbox", REV_CSTRLEN("Sandbox")), REV::StaticString<128>("../sandbox/assets/sandbox.revam", REV_CSTRLEN("../sandbox/assets/sandbox.revam"))),
-      m_Logger("Sandbox logger", "../log/sandbox.log", REV::Logger::TARGET::FILE | REV::Logger::TARGET::CONSOLE),
+    : Application(REV::ConstString(REV_CSTR_ARGS("Sandbox")), REV::ConstString(REV_CSTR_ARGS("../sandbox/sandbox.ini"))),
+      m_Logger(REV::ConstString(REV_CSTR_ARGS("Sandbox logger")), "../log/sandbox.log", REV::Logger::TARGET::FILE | REV::Logger::TARGET::CONSOLE),
       m_DemoScene(&m_Allocator)
 {
     SetCurrentScene(&m_DemoScene);

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "graphics/program_manager.h"
+#include "graphics/shader_manager.h"
 #include "math/vec.h"
 #include "tools/const_string.h"
 #include "tools/static_string.hpp"
@@ -12,35 +12,34 @@
 
 namespace REV
 {
-    // @TODO(Roman): Better place for Vertex?
-    #pragma pack(push, 1)
-    struct REV_ALIGN(1) Vertex
-    {
-        Math::v4 position;
-        Math::v4 normal;
-        Math::v2 tex_coord;
-    };
-    #pragma pack(pop)
-
     typedef u32 Index;
 
     // @Cleanup(Roman): Temporary
     struct REV_API Entity
     {
-        Vertex    *vertices;
-        u64        vcount;
-        Index     *indices;
-        u64        icount;
-        Allocator *allocator;
+        ConstArray<Vertex>  vertices;
+        ConstArray<Index>   indices;
+        Allocator          *allocator;
+
+        REV_INLINE Entity(Allocator *allocator)
+            : vertices(null),
+              indices(null),
+              allocator(allocator)
+        {
+        }
+
+        REV_INLINE ~Entity() {}
 
         void Create(u64 vcount, u64 icount);
         void Destroy();
-    };
 
+        void SetData(const ConstArray<Vertex>& vertices, const ConstArray<Index>& indices);
+    };
+    
     class REV_API SceneBase
     {
     protected:
-        SceneBase(Allocator *allocator, const ConstString& name, const StaticString<REV_PATH_CAPACITY>& file_with_shaders, u64 max_vertices, u64 max_indices);
+        SceneBase(Allocator *allocator, const ConstString& name, u64 max_vertices, u64 max_indices);
 
     public:
         virtual ~SceneBase() {}
@@ -55,6 +54,8 @@ namespace REV
         void OnSetCurrentEx();
         void OnUnsetCurrentEx();
 
+        void SetCurrentGraphicsShader(AssetHandle shader_asset);
+
         void SubmitEntity(Entity *entity);
 
         void FlushBatch();
@@ -67,7 +68,8 @@ namespace REV
         ConstString                m_Name;
         Allocator                 *m_Allocator;
 
-        GPU::GraphicsProgramHandle m_GraphicsProgram;
+        AssetHandle               m_CurrentGraphicsShader;
+
         GPU::ResourceHandle        m_VertexBuffer;
         GPU::ResourceHandle        m_IndexBuffer;
 

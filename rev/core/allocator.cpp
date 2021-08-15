@@ -7,12 +7,6 @@
 #include "core/memory.h"
 #include "math/math.h"
 
-#if REV_PLATFORM_WIN64
-    #include <Windows.h>
-#else
-    #include <sys/mman.h>
-#endif
-
 namespace REV
 {
 
@@ -55,7 +49,7 @@ Allocator::Allocator(void *base_address, u64 capacity, bool clear_memory, const 
     #if REV_PLATFORM_WIN64
         REV_DEBUG_RESULT_M(base_address = VirtualAlloc(null, m_Capacity, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE), "Allocator \"%s\": Internal error", m_Name.Data());
     #else
-        base_address = mmap(null, m_Capacity, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)
+        base_address = mmap(null, m_Capacity, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         REV_CHECK_M(base_address != MAP_FAILED, "Allocator \"%s\": Internal error", m_Name.Data());
     #endif
         m_VallocUsed = true;

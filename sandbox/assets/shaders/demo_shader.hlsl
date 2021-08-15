@@ -1,4 +1,3 @@
-
 cbuffer CB_DemoScene : register(b0, space0)
 {
     float4x4 cMVP;
@@ -22,14 +21,8 @@ struct VSOutput
 };
 typedef VSOutput PSInput;
 
-Texture2D WoodTexture : register(t0, space0);
-
-SamplerState WoodTextureSampler
-{
-    Filter   = MIN_MAG_MIP_LINEAR;
-    AddressU = Clamp;
-    AddressV = Clamp;
-};
+Texture2D    WoodTexture        : register(t0, space0);
+SamplerState WoodTextureSampler : register(s0, space0);
 
 VSOutput VSMain(VSInput input)
 {

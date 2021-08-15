@@ -13,39 +13,26 @@ namespace REV
     class REV_API WorkQueue final
     {
     public:
-        using WorkType = Function<void()>;
+        using Work = Function<void()>;
 
-        static WorkQueue *Create(const Logger& logger);
-        static WorkQueue *Get();
-
-    private:
         WorkQueue(const Logger& logger);
-
-    public:
         ~WorkQueue();
 
-        void AddWork(const WorkType& work);
+        void AddWork(const Work& work);
         void Wait();
 
     private:
         friend u32 WINAPI ThreadProc(void *arg);
 
-        void *operator new(size_t)    { return Memory::Get()->PushToPA<WorkQueue>(); }
-        void  operator delete(void *) {}
-
-        WorkQueue(const WorkQueue&) = delete;
-        WorkQueue(WorkQueue&&)      = delete;
-
-        WorkQueue& operator=(const WorkQueue&) = delete;
-        WorkQueue& operator=(WorkQueue&&)      = delete;
+        REV_DELETE_CONSTRS_AND_OPS(WorkQueue);
 
     private:
         enum
         {
             MAX_THREADS = 64 - 1,
 
-            MAX_WORKS_BYTES = AlignUp(MAX_THREADS * sizeof(WorkType), CACHE_LINE_SIZE),
-            MAX_WORKS       = MAX_WORKS_BYTES / sizeof(WorkType),
+            MAX_WORKS_BYTES = AlignUp(MAX_THREADS * sizeof(Work), CACHE_LINE_SIZE),
+            MAX_WORKS       = MAX_WORKS_BYTES / sizeof(Work),
         };
 
         HANDLE       m_Semaphore;
@@ -53,8 +40,6 @@ namespace REV
         volatile s32 m_EntriesCompleted;
         volatile s32 m_NextEntryToRead;
         volatile s32 m_NextEntryToWrite;
-        WorkType     m_Works[MAX_WORKS];
-
-        static WorkQueue *s_WorkQueue;
+        Work         m_Works[MAX_WORKS];
     };
 }

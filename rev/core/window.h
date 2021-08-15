@@ -15,7 +15,7 @@ namespace REV
     class REV_API Window final
     {
     public:
-        Window(const Logger& logger, const StaticString<128>& title);
+        Window(const Logger& logger, const ConstString& title);
         ~Window();
 
         void RequstFullscreen(bool set);

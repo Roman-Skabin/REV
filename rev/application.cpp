@@ -55,10 +55,8 @@ void Application::SetCurrentScene(SceneBase *scene)
     m_CurrentScene->OnSetCurrentEx();
 }
 
-void Application::Run()
+void Application::Run(SceneBase *scene)
 {
-    REV_CHECK_M(m_CurrentScene, "There is no current scene selected. Use Application::SetCurrentScene method before Application::Run.");
-
     GPU::DeviceContext *device_context = GraphicsAPI::GetDeviceContext();
 
     m_Timer.Start();
@@ -80,8 +78,13 @@ void Application::Run()
             m_Window.ApplyFullscreenRequest();
 
             device_context->StartFrame();
+            if (!m_CurrentScene)
+            {
+                SetCurrentScene(scene);
+            }
             m_CurrentScene->OnUpdate();
             m_CurrentScene->FlushBatch();
+            
             device_context->EndFrame();
         }
     }

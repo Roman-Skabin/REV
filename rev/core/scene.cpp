@@ -61,16 +61,16 @@ void SceneBase::OnSetCurrentEx()
     m_Vertices = cast<Vertex *>(m_Allocator->Allocate(m_VerticesCapacity * sizeof(Vertex) + m_IndicesCapacity * sizeof(Index))),
     m_Indices  = cast<Index *>(m_Vertices + m_VerticesCapacity);
 
-    StaticString<64> vb_name(REV_CSTR_ARGS("VB_"));
-    StaticString<64> ib_name(REV_CSTR_ARGS("IB_"));
+    StaticString<CACHE_LINE_SIZE> vb_name(m_Name);
+    StaticString<CACHE_LINE_SIZE> ib_name(m_Name);
 
-    vb_name += m_Name;
-    ib_name += m_Name;
+    vb_name.PushBack(REV_CSTR_ARGS("VB"));
+    ib_name.PushBack(REV_CSTR_ARGS("IB"));
 
     GPU::MemoryManager *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
 
-    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast<u32>(m_VerticesCapacity), false, vb_name);
-    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(m_IndicesCapacity), false, ib_name);
+    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast<u32>(m_VerticesCapacity), false, ConstString(vb_name.Data(), vb_name.Length()));
+    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(m_IndicesCapacity), false, ConstString(ib_name.Data(), ib_name.Length()));
 
     OnSetCurrent();
 }

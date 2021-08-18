@@ -66,7 +66,7 @@ enum
 #define REV__CSTRCAT(a, b) a ## b
 #define REV_CSTRCAT(a, b)  REV__CSTRCAT(a, b)
 
-#define REV_CSTRLEN(cstr) (sizeof(cstr) - 1)
+#define REV_CSTRLEN(cstr) (sizeof(cstr) - sizeof(*cstr))
 
 #define REV_CSTR_ARGS(cstr)   cstr,  REV_CSTRLEN(cstr)
 #define REV_ARRAY_ARGS(array) array, ::REV::Helpers::ArrayCount(array)

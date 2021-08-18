@@ -138,7 +138,7 @@ public:
         BuildOne('\n');
     }
 
-    void REV_CDECL BuildF(const char *format, ...)
+    REV_INLINE void REV_CDECL BuildF(const char *format, ...)
     {
         va_list args;
         va_start(args, format);
@@ -151,7 +151,7 @@ public:
         va_end(args);
     }
 
-    void REV_CDECL BuildVA(const char *format, va_list args)
+    REV_INLINE void REV_CDECL BuildVA(const char *format, va_list args)
     {
         m_StaticString.m_Length += vsnprintf(m_StaticString.m_Data + m_StaticString.m_Length,
                                              m_StaticString.Capacity(),
@@ -731,7 +731,7 @@ private:
             fill           = m_TextFormat.Fill;
             text_alignment = m_TextFormat.TextAlignment;
 
-            char buffer[sizeof(val) / 2] = {'\0'};
+            char buffer[sizeof(val) / sizeof(wchar_t)] = {'\0'};
 
             // @TODO(Roman): #CrossPlatform
             WideCharToMultiByte(CP_ACP, 0, val, sizeof(val) - sizeof(wchar_t), REV_CSTR_ARGS(buffer), null, null);

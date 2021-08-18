@@ -12,33 +12,33 @@ namespace REV
     class REV_API Timer final
     {
     public:
-        Timer(const StaticString<256>& name);
+        Timer(const ConstString& name);
         Timer(const Timer& other);
 
-        ~Timer();
+        REV_INLINE ~Timer() {}
 
         void Tick();
 
         void Start();
         void Stop();
 
-        constexpr s64 TicksPerSecond() const { return m_TicksPerSecond; }
-        constexpr s64 InitialTicks()   const { return m_InitialTicks;   }
+        REV_INLINE s64 TicksPerSecond() const { return m_TicksPerSecond; }
+        REV_INLINE s64 InitialTicks()   const { return m_InitialTicks;   }
 
-        constexpr s64 Ticks()      const { return m_Ticks;      }
-        constexpr s64 DeltaTicks() const { return m_DeltaTicks; }
+        REV_INLINE s64 Ticks()      const { return m_Ticks;      }
+        REV_INLINE s64 DeltaTicks() const { return m_DeltaTicks; }
 
-        constexpr s64 StopBegin()        const { return m_StopBegin;        }
-        constexpr s64 StopDuration()     const { return m_StopDuration;     }
-        constexpr s64 StopLastDuration() const { return m_StopLastDuration; }
+        REV_INLINE s64 StopBegin()        const { return m_StopBegin;        }
+        REV_INLINE s64 StopDuration()     const { return m_StopDuration;     }
+        REV_INLINE s64 StopLastDuration() const { return m_StopLastDuration; }
 
-        constexpr f32 Seconds()      const { return m_Seconds;      }
-        constexpr f32 DeltaSeconds() const { return m_DeltaSeconds; }
-        constexpr f32 TotalSeconds() const { return m_TotalSeconds; }
+        REV_INLINE f32 Seconds()      const { return m_Seconds;      }
+        REV_INLINE f32 DeltaSeconds() const { return m_DeltaSeconds; }
+        REV_INLINE f32 TotalSeconds() const { return m_TotalSeconds; }
 
-        constexpr bool Stopped() const { return m_Stopped; }
+        REV_INLINE bool Stopped() const { return m_Stopped; }
 
-        constexpr const StaticString<256>& Name() const { return m_Name; }
+        REV_INLINE const StaticString<256>& Name() const { return m_Name; }
 
         Timer& operator=(const Timer& other);
 
@@ -72,34 +72,32 @@ namespace REV
     class REV_API ProfilingTimer final
     {
     public:
-        ProfilingTimer(const StaticString<256>& name);
-        ~ProfilingTimer();
+        ProfilingTimer(const ConstString& name);
+
+        REV_INLINE ~ProfilingTimer() {}
 
         void StopProfiling(const Logger& logger);
 
-        constexpr s64 TicksPerSecond() const { return m_Timer.m_TicksPerSecond; }
-        constexpr s64 InitialTicks()   const { return m_Timer.m_InitialTicks;   }
+        REV_INLINE s64 TicksPerSecond() const { return m_Timer.m_TicksPerSecond; }
+        REV_INLINE s64 InitialTicks()   const { return m_Timer.m_InitialTicks;   }
 
-        constexpr s64 Ticks()      const { return m_Timer.m_Ticks;      }
-        constexpr s64 DeltaTicks() const { return m_Timer.m_DeltaTicks; }
+        REV_INLINE s64 Ticks()      const { return m_Timer.m_Ticks;      }
+        REV_INLINE s64 DeltaTicks() const { return m_Timer.m_DeltaTicks; }
 
-        constexpr s64 StopBegin()        const { return m_Timer.m_StopBegin;        }
-        constexpr s64 StopDuration()     const { return m_Timer.m_StopDuration;     }
-        constexpr s64 StopLastDuration() const { return m_Timer.m_StopLastDuration; }
+        REV_INLINE s64 StopBegin()        const { return m_Timer.m_StopBegin;        }
+        REV_INLINE s64 StopDuration()     const { return m_Timer.m_StopDuration;     }
+        REV_INLINE s64 StopLastDuration() const { return m_Timer.m_StopLastDuration; }
 
-        constexpr f32 Seconds()      const { return m_Timer.m_Seconds;      }
-        constexpr f32 DeltaSeconds() const { return m_Timer.m_DeltaSeconds; }
-        constexpr f32 TotalSeconds() const { return m_Timer.m_TotalSeconds; }
+        REV_INLINE f32 Seconds()      const { return m_Timer.m_Seconds;      }
+        REV_INLINE f32 DeltaSeconds() const { return m_Timer.m_DeltaSeconds; }
+        REV_INLINE f32 TotalSeconds() const { return m_Timer.m_TotalSeconds; }
 
-        constexpr bool Stopped() const { return m_Timer.m_Stopped; }
+        REV_INLINE bool Stopped() const { return m_Timer.m_Stopped; }
 
-        constexpr const StaticString<256>& Name() const { return m_Timer.m_Name; }
+        REV_INLINE const StaticString<256>& Name() const { return m_Timer.m_Name; }
 
     private:
-        ProfilingTimer(const ProfilingTimer&)            = delete;
-        ProfilingTimer(ProfilingTimer&&)                 = delete;
-        ProfilingTimer& operator=(const ProfilingTimer&) = delete;
-        ProfilingTimer& operator=(ProfilingTimer&&)      = delete;
+        REV_DELETE_CONSTRS_AND_OPS(ProfilingTimer);
 
     private:
         Timer m_Timer;

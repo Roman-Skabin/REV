@@ -47,7 +47,7 @@ MemoryManager::~MemoryManager()
     }
 }
 
-u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, bool _static, const StaticString<64>& name)
+u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, bool _static, const ConstString& name)
 {
     REV_CHECK(vertex_count);
 
@@ -65,7 +65,7 @@ u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, bool _static, const St
     }
 
     u64     index  = REV_U64_MAX;
-    Buffer *buffer = AllocateBuffer(buffer_memory, vertex_count * sizeof(Vertex), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
+    Buffer *buffer = AllocateBuffer(buffer_memory, vertex_count * sizeof(Vertex), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index, name);
 
     buffer->kind    = kind;
     buffer->vcount  = vertex_count;
@@ -75,7 +75,7 @@ u64 MemoryManager::AllocateVertexBuffer(u32 vertex_count, bool _static, const St
     return index;
 }
 
-u64 MemoryManager::AllocateIndexBuffer(u32 index_count, bool _static, const StaticString<64>& name)
+u64 MemoryManager::AllocateIndexBuffer(u32 index_count, bool _static, const ConstString& name)
 {
     REV_CHECK(index_count);
 
@@ -93,7 +93,7 @@ u64 MemoryManager::AllocateIndexBuffer(u32 index_count, bool _static, const Stat
     }
 
     u64     index  = REV_U64_MAX;
-    Buffer *buffer = AllocateBuffer(buffer_memory, index_count * sizeof(Index), D3D12_RESOURCE_STATE_INDEX_BUFFER, index);
+    Buffer *buffer = AllocateBuffer(buffer_memory, index_count * sizeof(Index), D3D12_RESOURCE_STATE_INDEX_BUFFER, index, name);
 
     buffer->kind    = kind;
     buffer->icount  = index_count;
@@ -103,7 +103,7 @@ u64 MemoryManager::AllocateIndexBuffer(u32 index_count, bool _static, const Stat
     return index;
 }
 
-u64 MemoryManager::AllocateConstantBuffer(u32 bytes, bool _static, const StaticString<64>& name)
+u64 MemoryManager::AllocateConstantBuffer(u32 bytes, bool _static, const ConstString& name)
 {
     REV_CHECK(bytes);
 
@@ -121,7 +121,7 @@ u64 MemoryManager::AllocateConstantBuffer(u32 bytes, bool _static, const StaticS
     }
 
     u64     index  = REV_U64_MAX;
-    Buffer *buffer = AllocateBuffer(buffer_memory, bytes, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index);
+    Buffer *buffer = AllocateBuffer(buffer_memory, bytes, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, index, name);
 
     buffer->kind = kind;
     buffer->name = name;
@@ -143,7 +143,7 @@ REV_INTERNAL REV_INLINE u16 GetMaxMipLevels(u16 width, u16 height, u16 depth)
     return cast<u16>(count + 1);
 }
 
-u64 MemoryManager::AllocateTexture1D(u16 width, DXGI_FORMAT texture_format, bool _static)
+u64 MemoryManager::AllocateTexture1D(u16 width, DXGI_FORMAT texture_format, const ConstString& name, bool _static)
 {
     REV_CHECK_M(1 <= width && width <= D3D12_REQ_TEXTURE1D_U_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_U_DIMENSION);
 
@@ -161,7 +161,7 @@ u64 MemoryManager::AllocateTexture1D(u16 width, DXGI_FORMAT texture_format, bool
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     u64      index   = REV_U64_MAX;
-    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index);
+    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index, name);
 
     texture->kind    = TEXTURE_KIND_1D;
     texture->desc    = desc;
@@ -172,7 +172,7 @@ u64 MemoryManager::AllocateTexture1D(u16 width, DXGI_FORMAT texture_format, bool
     return index;
 }
 
-u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI_FORMAT texture_format, bool _static)
+u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static)
 {
     REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
     REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
@@ -198,7 +198,7 @@ u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     u64      index   = REV_U64_MAX;
-    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index);
+    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index, name);
 
     texture->kind    = TEXTURE_KIND_2D;
     texture->desc    = desc;
@@ -209,7 +209,7 @@ u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI
     return index;
 }
 
-u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_levels, DXGI_FORMAT texture_format, bool _static)
+u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static)
 {
     REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
     REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
@@ -236,7 +236,7 @@ u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_l
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     u64      index   = REV_U64_MAX;
-    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index);
+    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index, name);
 
     texture->kind    = TEXTURE_KIND_3D;
     texture->desc    = desc;
@@ -247,7 +247,7 @@ u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_l
     return index;
 }
 
-u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, DXGI_FORMAT texture_format, bool _static)
+u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static)
 {
     REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURECUBE_DIMENSION, "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
     REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURECUBE_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
@@ -273,7 +273,7 @@ u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, DX
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     u64      index   = REV_U64_MAX;
-    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index);
+    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index, name);
 
     texture->kind    = TEXTURE_KIND_CUBE;
     texture->desc    = desc;
@@ -284,7 +284,7 @@ u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, DX
     return index;
 }
 
-u64 MemoryManager::AllocateTexture1DArray(u16 width, u16 count, DXGI_FORMAT texture_format, bool _static)
+u64 MemoryManager::AllocateTexture1DArray(u16 width, u16 count, DXGI_FORMAT texture_format, const ConstString& name, bool _static)
 {
     REV_CHECK_M(1 <= width && width <= D3D12_REQ_TEXTURE1D_U_DIMENSION,          "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_U_DIMENSION);
     REV_CHECK_M(1 <= count && count <= D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION, "Count gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION);
@@ -303,7 +303,7 @@ u64 MemoryManager::AllocateTexture1DArray(u16 width, u16 count, DXGI_FORMAT text
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     u64      index   = REV_U64_MAX;
-    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index);
+    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index, name);
 
     texture->kind    = TEXTURE_KIND_1D_ARRAY;
     texture->desc    = desc;
@@ -314,7 +314,7 @@ u64 MemoryManager::AllocateTexture1DArray(u16 width, u16 count, DXGI_FORMAT text
     return index;
 }
 
-u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, bool _static)
+u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static)
 {
     REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION,     "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
     REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION,     "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
@@ -341,7 +341,7 @@ u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     u64      index   = REV_U64_MAX;
-    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index);
+    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index, name);
 
     texture->kind    = TEXTURE_KIND_2D_ARRAY;
     texture->desc    = desc;
@@ -352,7 +352,7 @@ u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 
     return index;
 }
 
-u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, bool _static)
+u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static)
 {
     REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURECUBE_DIMENSION,            "Width  gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
     REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURECUBE_DIMENSION,            "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
@@ -379,7 +379,7 @@ u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u1
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
     u64      index   = REV_U64_MAX;
-    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index);
+    Texture *texture = AllocateTexture(_static ? &m_StaticMemory.texture_memory : &m_SceneMemory.texture_memory, desc, index, name);
 
     texture->kind    = TEXTURE_KIND_CUBE_ARRAY;
     texture->desc    = desc;
@@ -410,7 +410,7 @@ u64 MemoryManager::AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math:
     sampler->desc.AddressW       = cast<D3D12_TEXTURE_ADDRESS_MODE>(address_mode);
     sampler->desc.MipLODBias     = 0.0f;
     sampler->desc.MaxAnisotropy  = settings->anisotropy;
-    sampler->desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    sampler->desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER; // D3D12_COMPARISON_FUNC_ALWAYS
     sampler->desc.BorderColor[0] = border_color.r;
     sampler->desc.BorderColor[1] = border_color.g;
     sampler->desc.BorderColor[2] = border_color.b;
@@ -607,7 +607,7 @@ void MemoryManager::CreateNewPage(BufferMemory *buffer_memory, D3D12_RESOURCE_ST
     }
 }
 
-Buffer *MemoryManager::AllocateBuffer(BufferMemory *buffer_memory, u64 size, D3D12_RESOURCE_STATES initial_state, u64& index)
+Buffer *MemoryManager::AllocateBuffer(BufferMemory *buffer_memory, u64 size, D3D12_RESOURCE_STATES initial_state, u64& index, const ConstString& name)
 {
     index = buffer_memory->buffers.Count();
 
@@ -644,10 +644,12 @@ Buffer *MemoryManager::AllocateBuffer(BufferMemory *buffer_memory, u64 size, D3D
         buffer_memory->pages.Last().occupied_bytes = buffer->aligned_size;
     }
 
+    SetBufferName(buffer_memory, buffer, name);
+
     return buffer;
 }
 
-Texture *MemoryManager::AllocateTexture(TextureMemory *texture_memory, const D3D12_RESOURCE_DESC& desc, u64& index)
+Texture *MemoryManager::AllocateTexture(TextureMemory *texture_memory, const D3D12_RESOURCE_DESC& desc, u64& index, const ConstString& name)
 {
     index = texture_memory->textures.Count();
 
@@ -666,6 +668,14 @@ Texture *MemoryManager::AllocateTexture(TextureMemory *texture_memory, const D3D
                                                                        D3D12_RESOURCE_STATE_COMMON,
                                                                        null,
                                                                        IID_PPV_ARGS(&texture->def_resource));
+    REV_CHECK(CheckResultAndPrintMessages(error));
+
+    u32      wname_length = cast<u32>(4 + name.Length());
+    wchar_t *wname        = Memory::Get()->PushToTA<wchar_t>(wname_length + 1);
+    CopyMemory(wname, REV_CSTR_ARGS(L"DEF "));
+    MultiByteToWideChar(CP_ACP, 0, name.Data(), cast<u32>(name.Length()), wname + 4, wname_length - 4);
+
+    error = texture->def_resource->SetName(wname);
     REV_CHECK(CheckResultAndPrintMessages(error));
 
     return texture;
@@ -755,6 +765,28 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
                                                         IID_PPV_ARGS(upload_resource));
         REV_CHECK(CheckResultAndPrintMessages(error));
 
+        // @NOTE(Roman): SetName stuff.
+        {
+            UINT def_length = 0;
+            error = texture->def_resource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &def_length, null);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+
+            def_length = def_length / sizeof(wchar_t) - 1;
+
+            u32      wname_length = cast<u32>(7 + def_length);
+            wchar_t *wname        = Memory::Get()->PushToTA<wchar_t>(wname_length + 1);
+
+            UINT data_size = (def_length + 1) * sizeof(wchar_t);
+            error = texture->def_resource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &data_size, wname + 3);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+            REV_CHECK(def_length == data_size / sizeof(wchar_t) - 1);
+
+            _snwprintf(wname, 7, L"UPL #%I32u ", m_DeviceContext->CurrentBuffer());
+
+            error = (*upload_resource)->SetName(wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+        }
+
         D3D12_RANGE read_range = {0, 0};
 
         error = (*upload_resource)->Map(0, &read_range, cast<void **>(upload_pointer));
@@ -801,6 +833,82 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
         source_location.PlacedFootprint = footprints[i];
 
         command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, null);
+    }
+}
+
+void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, const ConstString& name)
+{
+    HRESULT           error = S_OK;
+    BufferMemoryPage *page  = buffer_memory->pages.GetPointer(buffer->page_index);
+
+    wchar_t *wname = Memory::Get()->PushToTA<wchar_t>(name.Length() + 1);
+    MultiByteToWideChar(CP_ACP, 0, name.Data(), cast<u32>(name.Length()), wname, cast<u32>(name.Length()));
+
+    UINT gotten_default_wname_length = 0;
+    error = page->def_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &gotten_default_wname_length, null);
+
+    if (gotten_default_wname_length)
+    {
+        gotten_default_wname_length = gotten_default_wname_length / sizeof(wchar_t) - 1;
+
+        u32      new_default_wname_length = cast<u32>(gotten_default_wname_length + 1 + name.Length());
+        wchar_t *new_default_wname        = Memory::Get()->PushToTA<wchar_t>(new_default_wname_length + 1);
+
+        UINT default_data_size = (new_default_wname_length + 1) * sizeof(wchar_t);
+        error = page->def_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &default_data_size, new_default_wname);
+        REV_CHECK(CheckResultAndPrintMessages(error));
+        REV_CHECK(gotten_default_wname_length == default_data_size / sizeof(wchar_t) - 1);
+
+        _snwprintf(new_default_wname + gotten_default_wname_length, new_default_wname_length - gotten_default_wname_length, L" %.*s", cast<u32>(name.Length()), wname);
+
+        error = page->def_mem->SetName(new_default_wname);
+        REV_CHECK(CheckResultAndPrintMessages(error));
+    }
+    else
+    {
+        u32      new_default_wname_length = cast<u32>(REV_CSTRLEN("DEF ") + name.Length());
+        wchar_t *new_default_wname        = Memory::Get()->PushToTA<wchar_t>(new_default_wname_length + 1);
+
+        _snwprintf(new_default_wname, new_default_wname_length, L"DEF %.*s", cast<u32>(name.Length()), wname);
+
+        error = page->def_mem->SetName(new_default_wname);
+        REV_CHECK(CheckResultAndPrintMessages(error));
+    }
+
+    for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+    {
+        ID3D12Resource *upl_mem = page->upl_mem[i];
+
+        UINT gotten_upload_wname_length = 0;
+        error = upl_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &gotten_upload_wname_length, null);
+
+        if (gotten_upload_wname_length)
+        {
+            gotten_upload_wname_length = gotten_upload_wname_length / sizeof(wchar_t) - 1;
+
+            u32      new_upload_wname_length = cast<u32>(gotten_upload_wname_length + 1 + name.Length());
+            wchar_t *new_upload_wname        = Memory::Get()->PushToTA<wchar_t>(new_upload_wname_length + 1);
+
+            UINT upload_data_size = (new_upload_wname_length + 1) * sizeof(wchar_t);
+            error = upl_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &upload_data_size, new_upload_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+            REV_CHECK(gotten_upload_wname_length == upload_data_size / sizeof(wchar_t) - 1);
+
+            _snwprintf(new_upload_wname + gotten_upload_wname_length, new_upload_wname_length - gotten_upload_wname_length, L" %.*s", cast<u32>(name.Length()), wname);
+
+            error = upl_mem->SetName(new_upload_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+        }
+        else
+        {
+            u32      new_upload_wname_length = cast<u32>(7 + name.Length());
+            wchar_t *new_upload_wname        = Memory::Get()->PushToTA<wchar_t>(new_upload_wname_length + 1);
+
+            _snwprintf(new_upload_wname, new_upload_wname_length, L"UPL #%I32u %.*s", i, cast<u32>(name.Length()), wname);
+
+            error = upl_mem->SetName(new_upload_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-cbuffer CB_DemoScene : register(b0, space0)
+cbuffer DemoSceneCB : register(b0, space0)
 {
     float4x4 cMVP;
     float4   cSunColor;
@@ -21,8 +21,8 @@ struct VSOutput
 };
 typedef VSOutput PSInput;
 
-Texture2D    WoodTexture        : register(t0, space0);
-SamplerState WoodTextureSampler : register(s0, space0);
+Texture2D    WoodTexture    : register(t0, space0);
+SamplerState TextureSampler : register(s0, space0);
 
 VSOutput VSMain(VSInput input)
 {
@@ -38,6 +38,5 @@ float4 PSMain(PSInput input) : SV_Target
 {
     // float  intensity = 1.0f / (8 * length(input.world_pos - cCenter));
     // return intensity * cSunColor;
-
-    return WoodTexture.Sample(WoodTextureSampler, input.tex_coord);
+    return WoodTexture.Sample(TextureSampler, input.tex_coord);
 }

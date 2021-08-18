@@ -76,9 +76,9 @@ union REV_INTRIN_TYPE m2 final
     static REV_INLINE m2 REV_VECTORCALL rotation_z(rad angle)
     {
         __m128 mm_cos;
-        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
         __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
-        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS)));
+        __m128 mm_res = _mm_mul_ps(_mm_setr_ps(1.0f, -1.0f, 1.0f, 1.0f), mm_pos);
         return m2(mm_res);
     }
 
@@ -521,9 +521,9 @@ public:
     static REV_INLINE m3 REV_VECTORCALL rotation_x(rad angle)
     {
         __m128 mm_cos;
-        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
         __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
-        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS)));
+        __m128 mm_res = _mm_mul_ps(_mm_setr_ps(1.0f, -1.0f, 1.0f, 1.0f), mm_pos); 
 
         return m3(1.0f,                      0.0f,                      0.0f,
                   0.0f, mm_extract_f32<0>(mm_res), mm_extract_f32<1>(mm_res),
@@ -533,9 +533,9 @@ public:
     static REV_INLINE m3 REV_VECTORCALL rotation_y(rad angle)
     {
         __m128 mm_cos;
-        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
         __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
-        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS)));
+        __m128 mm_res = _mm_mul_ps(_mm_setr_ps(1.0f, 1.0f, -1.0f, 1.0f), mm_pos); 
 
         return m3(mm_extract_f32<0>(mm_res), 0.0f, mm_extract_f32<1>(mm_res),
                                        0.0f, 1.0f,                      0.0f,
@@ -545,9 +545,9 @@ public:
     static REV_INLINE m3 REV_VECTORCALL rotation_z(rad angle)
     {
         __m128 mm_cos;
-        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
         __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
-        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS))); 
+        __m128 mm_res = _mm_mul_ps(_mm_setr_ps(1.0f, -1.0f, 1.0f, 1.0f), mm_pos);
 
         return m3(mm_extract_f32<0>(mm_res), mm_extract_f32<1>(mm_res), 0.0f,
                   mm_extract_f32<2>(mm_res), mm_extract_f32<3>(mm_res), 0.0f,
@@ -581,9 +581,9 @@ public:
         __m128 _z1x0 = _mm_blend_ps(_z0x0, mm_one, MM_BLEND_ABAB);
         __m128 _yx10 = _mm_blend_ps(_yx00, mm_one, MM_BLEND_AABB);
 
-        __m128 fourth_1 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_1zy0), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_ZERO)));
-        __m128 fourth_2 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_z1x0), _mm_setr_epi32(MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_ZERO)));
-        __m128 fourth_3 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_yx10), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_ZERO)));
+        __m128 fourth_1 = _mm_mul_ps(_mm_setr_ps( 1.0f,  1.0f, -1.0f, 0.0f), _1zy0);
+        __m128 fourth_2 = _mm_mul_ps(_mm_setr_ps(-1.0f,  1.0f,  1.0f, 0.0f), _z1x0);
+        __m128 fourth_3 = _mm_mul_ps(_mm_setr_ps( 1.0f, -1.0f,  1.0f, 0.0f), _yx10);
 
         __m128 cssc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_ABBA);
         __m128 scsc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_BABA);
@@ -1116,15 +1116,20 @@ union REV_INTRIN_TYPE m4 final
                   f32 e20, f32 e21, f32 e22, f32 e23,
                   f32 e30, f32 e31, f32 e32, f32 e33)
     #if REV_ISA >= REV_ISA_AVX512
-        : zmm(_mm512_loadu_ps(&e00))
+        : zmm(_mm512_setr_ps(e00, e01, e02, e03,
+                             e10, e11, e12, e13,
+                             e20, e21, e22, e23,
+                             e30, e31, e32, e33))
     #elif REV_ISA >= REV_ISA_AVX
-        : ymm0(_mm256_loadu_ps(&e00)),
-          ymm1(_mm256_loadu_ps(&e20))
+        : ymm0(_mm256_setr_ps(e00, e01, e02, e03,
+                              e10, e11, e12, e13)),
+          ymm1(_mm256_setr_ps(e20, e21, e22, e23,
+                              e30, e31, e32, e33))
     #else
-        : xmm0(_mm_loadu_ps(&e00)),
-          xmm1(_mm_loadu_ps(&e10)),
-          xmm2(_mm_loadu_ps(&e20)),
-          xmm3(_mm_loadu_ps(&e30))
+        : xmm0(_mm_setr_ps(e00, e01, e02, e03)),
+          xmm1(_mm_setr_ps(e10, e11, e12, e13)),
+          xmm2(_mm_setr_ps(e20, e21, e22, e23)),
+          xmm3(_mm_setr_ps(e30, e31, e32, e33))
     #endif
     {
     }
@@ -1453,9 +1458,9 @@ union REV_INTRIN_TYPE m4 final
     static REV_INLINE m4 REV_VECTORCALL rotation_x(rad angle)
     {
         __m128 mm_cos;
-        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
         __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
-        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS)));
+        __m128 mm_res = _mm_mul_ps(_mm_setr_ps(1.0f, -1.0f, 1.0f, 1.0f), mm_pos); 
 
         return m4(1.0f,                      0.0f,                      0.0f, 0.0f,
                   0.0f, mm_extract_f32<0>(mm_res), mm_extract_f32<1>(mm_res), 0.0f,
@@ -1466,9 +1471,9 @@ union REV_INTRIN_TYPE m4 final
     static REV_INLINE m4 REV_VECTORCALL rotation_y(rad angle)
     {
         __m128 mm_cos;
-        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
         __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
-        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS)));
+        __m128 mm_res = _mm_mul_ps(_mm_setr_ps(1.0f, 1.0f, -1.0f, 1.0f), mm_pos); 
 
         return m4(mm_extract_f32<0>(mm_res), 0.0f, mm_extract_f32<1>(mm_res), 0.0f,
                                        0.0f, 1.0f,                      0.0f, 0.0f,
@@ -1479,9 +1484,9 @@ union REV_INTRIN_TYPE m4 final
     static REV_INLINE m4 REV_VECTORCALL rotation_z(rad angle)
     {
         __m128 mm_cos;
-        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_load_ss(&angle));
+        __m128 mm_sin = _mm_sincos_ps(&mm_cos, _mm_set_ps1(angle));
         __m128 mm_pos = _mm_blend_ps(mm_sin, mm_cos, MM_BLEND_BAAB);
-        __m128 mm_res = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(mm_pos), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS))); 
+        __m128 mm_res = _mm_mul_ps(_mm_setr_ps(1.0f, -1.0f, 1.0f, 1.0f), mm_pos);
 
         return m4(mm_extract_f32<0>(mm_res), mm_extract_f32<1>(mm_res), 0.0f, 0.0f,
                   mm_extract_f32<2>(mm_res), mm_extract_f32<3>(mm_res), 0.0f, 0.0f,
@@ -1517,9 +1522,9 @@ union REV_INTRIN_TYPE m4 final
         __m128 _z1x0 = _mm_blend_ps(_z0x0, mm_one, MM_BLEND_ABAB);
         __m128 _yx10 = _mm_blend_ps(_yx00, mm_one, MM_BLEND_AABB);
 
-        __m128 fourth_1 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_1zy0), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_ZERO)));
-        __m128 fourth_2 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_z1x0), _mm_setr_epi32(MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_POS, MM_SIGN_ZERO)));
-        __m128 fourth_3 = _mm_castsi128_ps(_mm_sign_epi32(_mm_castps_si128(_yx10), _mm_setr_epi32(MM_SIGN_POS, MM_SIGN_NEG, MM_SIGN_POS, MM_SIGN_ZERO)));
+        __m128 fourth_1 = _mm_mul_ps(_mm_setr_ps( 1.0f,  1.0f, -1.0f, 0.0f), _1zy0);
+        __m128 fourth_2 = _mm_mul_ps(_mm_setr_ps(-1.0f,  1.0f,  1.0f, 0.0f), _z1x0);
+        __m128 fourth_3 = _mm_mul_ps(_mm_setr_ps( 1.0f, -1.0f,  1.0f, 0.0f), _yx10);
 
         __m128 cssc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_ABBA);
         __m128 scsc = _mm_blend_ps(mm_cos, mm_sin, MM_BLEND_BABA);

@@ -80,11 +80,58 @@ namespace REV::Math
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>>
     REV_INLINE T REV_VECTORCALL abs(T val)
     {
-        /**/ if constexpr (sizeof(T) == 1) { u8  intermediate_result = *cast<u8  *>(&val) & 0x7F;                  return *cast<T *>(&intermediate_result); }
-        else if constexpr (sizeof(T) == 2) { u16 intermediate_result = *cast<u16 *>(&val) & 0x7FFF;                return *cast<T *>(&intermediate_result); }
-        else if constexpr (sizeof(T) == 4) { u32 intermediate_result = *cast<u32 *>(&val) & 0x7FFF'FFFF;           return *cast<T *>(&intermediate_result); }
-        else if constexpr (sizeof(T) == 8) { u64 intermediate_result = *cast<u64 *>(&val) & 0x7FFF'FFFF'FFFF'FFFF; return *cast<T *>(&intermediate_result); }
-        else return val < 0 ? -val : val;
+        if constexpr (sizeof(T) == 1)
+        {
+            if (RTTI::is_signed_v<T>)
+            {
+                __m128i mm_abs = _mm_abs_epi8(_mm_set1_epi8(*cast<char *>(&val)));
+                return *cast<T *>(mm_abs.m128i_i8);
+            }
+            return val;
+        }
+        else if constexpr (sizeof(T) == 2)
+        {
+            if (RTTI::is_signed_v<T>)
+            {
+                __m128i mm_abs = _mm_abs_epi16(_mm_set1_epi16(*cast<short *>(&val)));
+                return *cast<T *>(mm_abs.m128i_i16);
+            }
+            return val;
+        }
+        else if constexpr (sizeof(T) == 4)
+        {
+            if constexpr (RTTI::is_floating_point_v<T>)
+            {
+                return fabsf(val);
+            }
+            else if constexpr (RTTI::is_signed_v<T>)
+            {
+                __m128i mm_abs = _mm_abs_epi32(_mm_set1_epi32(*cast<int *>(&val)));
+                return *cast<T *>(mm_abs.m128i_i32);
+            }
+            return val;
+        }
+        else if constexpr (sizeof(T) == 8)
+        {
+            if constexpr (RTTI::is_floating_point_v<T>)
+            {
+                return fabs(val);
+            }
+            else if constexpr (RTTI::is_signed_v<T>)
+            {
+                #if REV_ISA >= REV_ISA_AVX512
+                    __m128i mm_abs = _mm_abs_epi64(_mm_set1_epi64(cast<int *>(&val)));
+                    return *cast<T *>(mm_abs.m128i_i32);
+                #else
+                    return val < 0 ? -val : val;
+                #endif
+            }
+            return val;
+        }
+        else
+        {
+            return val < 0 ? -val : val;
+        }
     }
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_arithmetic_v<T>>>

@@ -108,7 +108,7 @@ AssetHandle AssetManager::LoadTexture(const LoadTextureDesc& desc, bool _static)
 
     if (extension == ConstString(REV_CSTR_ARGS(".dds")))
     {
-        LoadDDSTexture(asset, data, _static);
+        LoadDDSTexture(asset, data, desc.name, _static);
     }
     // @TODO(Roman): Other texture file formats
     else
@@ -297,13 +297,12 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
     return handle;
 }
 
-Array<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureDesc>& descs, bool _static)
+ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureDesc>& descs, bool _static)
 {
     Array<Asset>        *assets             = _static ? &m_StaticAssets : &m_SceneAssets;
     u64                  new_assets_index   = assets->Count();
     Asset               *new_assets         = assets->PushBack(descs.Count());
-    Array<AssetHandle>  asset_handles(m_Allocator, descs.Count());
-    AssetHandle        *new_asset_handles = asset_handles.PushBack(descs.Count());
+    AssetHandle         *asset_handles      = Memory::Get()->PushToTA<AssetHandle>(descs.Count());
 
     u64 index = 0;
     for (const LoadTextureDesc& desc : descs)
@@ -311,9 +310,9 @@ Array<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureDesc>&
         m_WorkQueue.AddWork([this,
                              desc,
                              _static,
-                             asset        = new_assets         + index,
-                             asset_handle = new_asset_handles + index,
-                             asset_index  = new_assets_index   + index]
+                             asset        = new_assets       + index,
+                             asset_handle = asset_handles    + index,
+                             asset_index  = new_assets_index + index]
         {
             StaticString<REV_PATH_CAPACITY> filename;
             MakeFilename(filename, ASSET_KIND_TEXTURE, desc.name);
@@ -339,7 +338,7 @@ Array<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureDesc>&
 
             if (extension == ConstString(REV_CSTR_ARGS(".dds")))
             {
-                LoadDDSTexture(asset, data, _static);
+                LoadDDSTexture(asset, data, desc.name, _static);
             }
             // @TODO(Roman): Other texture file formats
             else
@@ -357,17 +356,16 @@ Array<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureDesc>&
 
     m_WorkQueue.Wait();
 
-    return asset_handles;
+    return ConstArray(asset_handles, descs.Count());
 }
 
-Array<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDesc>& descs, bool _static)
+ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDesc>& descs, bool _static)
 {
     GPU::ShaderManager  *shader_manager     = GraphicsAPI::GetShaderManager();
     Array<Asset>        *assets             = _static ? &m_StaticAssets : &m_SceneAssets;
     u64                  new_assets_index   = assets->Count();
     Asset               *new_assets         = assets->PushBack(descs.Count());
-    Array<AssetHandle>  asset_handles(m_Allocator, descs.Count());
-    AssetHandle        *new_asset_handles = asset_handles.PushBack(descs.Count());
+    AssetHandle         *asset_handles      = Memory::Get()->PushToTA<AssetHandle>(descs.Count());
 
     u64 index = 0;
     for (const LoadShaderDesc& desc : descs)
@@ -376,9 +374,9 @@ Array<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDesc>& d
                              desc,
                              shader_manager,
                              _static,
-                             asset        = new_assets         + index,
-                             asset_handle = new_asset_handles + index,
-                             asset_index  = new_assets_index   + index]
+                             asset        = new_assets       + index,
+                             asset_handle = asset_handles    + index,
+                             asset_index  = new_assets_index + index]
         {
             StaticString<REV_PATH_CAPACITY> filename;
             MakeFilename(filename, ASSET_KIND_SHADER, desc.name);
@@ -525,7 +523,7 @@ Array<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDesc>& d
 
     m_WorkQueue.Wait();
 
-    return asset_handles;
+    return ConstArray(asset_handles, descs.Count());
 }
 
 AssetHandle AssetManager::FindAsset(const ConstString& name, bool _static) const

@@ -480,7 +480,7 @@ REV_INTERNAL u64 BitsPerPixel(GPU::TEXTURE_FORMAT format)
     }
 }
 
-void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bool _static)
+void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, const ConstString& name, bool _static)
 {
     GPU::MemoryManager *memory_manager = GraphicsAPI::GetMemoryManager();
 
@@ -513,28 +513,28 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
             case FOURCC_DXT2:
             {
                 texture_format    = GPU::TEXTURE_FORMAT::DXT2;
-                compression_ratio = 4;
+                compression_ratio = 16; // 4;
                 block_compression = true;
             } break;
 
             case FOURCC_DXT3:
             {
                 texture_format    = GPU::TEXTURE_FORMAT::DXT3;
-                compression_ratio = 4;
+                compression_ratio = 16; // 4;
                 block_compression = true;
             } break;
 
             case FOURCC_DXT4:
             {
                 texture_format    = GPU::TEXTURE_FORMAT::DXT4;
-                compression_ratio = 4;
+                compression_ratio = 16; // 4;
                 block_compression = true;
             } break;
 
             case FOURCC_DXT5:
             {
                 texture_format    = GPU::TEXTURE_FORMAT::DXT5;
-                compression_ratio = 4;
+                compression_ratio = 16; // 4;
                 block_compression = true;
             } break;
 
@@ -569,6 +569,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
                                                                         cast<u16>(dds_header->depth),
                                                                         cast<u16>(dds_header->mipmap_count),
                                                                         texture_format,
+                                                                        name,
                                                                         _static);
         }
         else if (dx10_header->dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
@@ -584,6 +585,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
                                                                                        cast<u16>(dx10_header->array_size),
                                                                                        cast<u16>(dds_header->mipmap_count),
                                                                                        texture_format,
+                                                                                       name,
                                                                                        _static);
                 }
                 else
@@ -593,6 +595,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
                                                                                      cast<u16>(dx10_header->array_size),
                                                                                      cast<u16>(dds_header->mipmap_count),
                                                                                      texture_format,
+                                                                                     name,
                                                                                      _static);
                 }
             }
@@ -606,6 +609,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
                                                                                   cast<u16>(dds_header->height),
                                                                                   cast<u16>(dds_header->mipmap_count),
                                                                                   texture_format,
+                                                                                  name,
                                                                                   _static);
                 }
                 else
@@ -614,6 +618,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
                                                                                 cast<u16>(dds_header->height),
                                                                                 cast<u16>(dds_header->mipmap_count),
                                                                                 texture_format,
+                                                                                name,
                                                                                 _static);
                 }
             }
@@ -622,6 +627,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
         {
             asset->texture.resource = memory_manager->AllocateTexture1D(cast<u16>(dds_header->width),
                                                                         texture_format,
+                                                                        name,
                                                                         _static);
         }
         else
@@ -639,6 +645,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
                                                                         cast<u16>(dds_header->depth),
                                                                         cast<u16>(dds_header->mipmap_count),
                                                                         texture_format,
+                                                                        name,
                                                                         _static);
         }
         else if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
@@ -648,6 +655,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
                                                                           cast<u16>(dds_header->height),
                                                                           cast<u16>(dds_header->mipmap_count),
                                                                           texture_format,
+                                                                          name,
                                                                           _static);
         }
         else
@@ -657,6 +665,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bo
                                                                         cast<u16>(dds_header->height),
                                                                         cast<u16>(dds_header->mipmap_count),
                                                                         texture_format,
+                                                                        name,
                                                                         _static);
         }
     }

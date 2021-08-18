@@ -103,7 +103,7 @@ Logger::Logger(const Logger& other, const ConstString& name, TARGET target)
         }
     }
 
-    LogSuccess(m_Name, " has been duplicated from %s");
+    LogSuccess(m_Name, " has been duplicated from ", other.m_Name);
 }
 
 Logger::Logger(Logger&& other) noexcept

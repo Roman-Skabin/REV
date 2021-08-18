@@ -13,15 +13,18 @@ public:
     Sandbox();
     ~Sandbox();
 
+    REV_INLINE const REV::Logger& GetLogger() const { return m_Logger; }
+    REV_INLINE       REV::Logger& GetLogger()       { return m_Logger; }
+
+    REV_INLINE const DemoScene& GetDemoScene() const { return m_DemoScene; }
+    REV_INLINE       DemoScene& GetDemoScene()       { return m_DemoScene; }
+
 private:
     Sandbox(const Sandbox&) = delete;
     Sandbox(Sandbox&&)      = delete;
 
     Sandbox& operator=(const Sandbox&) = delete;
     Sandbox& operator=(Sandbox&&)      = delete;
-
-    const REV::Logger& GetLogger() const { return m_Logger; }
-          REV::Logger& GetLogger()       { return m_Logger; }
 
 private:
     REV::Logger m_Logger;

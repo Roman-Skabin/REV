@@ -27,14 +27,12 @@ REV_INTERNAL DXGI_FORMAT REVToDXGITextureFormat(TEXTURE_FORMAT format)
     {
         return cast<DXGI_FORMAT>(format & ~TEXTURE_FORMAT::_DDS_DX10);
     }
-    else
-    {
-        REV_FAILED_M("Unknown TEXTURE_FORMAT");
-        return DXGI_FORMAT_UNKNOWN;
-    }
+
+    REV_FAILED_M("Unknown TEXTURE_FORMAT");
+    return DXGI_FORMAT_UNKNOWN;
 }
 
-ResourceHandle MemoryManager::AllocateVertexBuffer(u32 vertex_count, bool _static, const StaticString<64>& name)
+ResourceHandle MemoryManager::AllocateVertexBuffer(u32 vertex_count, bool _static, const ConstString& name)
 {
     switch (GraphicsAPI::GetAPI())
     {
@@ -53,7 +51,7 @@ ResourceHandle MemoryManager::AllocateVertexBuffer(u32 vertex_count, bool _stati
     return { REV_U64_MAX, RESOURCE_KIND_VB };
 }
 
-ResourceHandle MemoryManager::AllocateIndexBuffer(u32 index_count, bool _static, const StaticString<64>& name)
+ResourceHandle MemoryManager::AllocateIndexBuffer(u32 index_count, bool _static, const ConstString& name)
 {
     switch (GraphicsAPI::GetAPI())
     {
@@ -72,7 +70,7 @@ ResourceHandle MemoryManager::AllocateIndexBuffer(u32 index_count, bool _static,
     return { REV_U64_MAX, RESOURCE_KIND_IB };
 }
 
-ResourceHandle MemoryManager::AllocateConstantBuffer(u32 bytes, bool _static, const StaticString<64>& name)
+ResourceHandle MemoryManager::AllocateConstantBuffer(u32 bytes, bool _static, const ConstString& name)
 {
     switch (GraphicsAPI::GetAPI())
     {
@@ -91,14 +89,14 @@ ResourceHandle MemoryManager::AllocateConstantBuffer(u32 bytes, bool _static, co
     return { REV_U64_MAX, RESOURCE_KIND_CB };
 }
 
-ResourceHandle MemoryManager::AllocateTexture1D(u16 width, TEXTURE_FORMAT texture_format, bool _static)
+ResourceHandle MemoryManager::AllocateTexture1D(u16 width, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
             ResourceHandle handle;
-            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture1D(width, REVToDXGITextureFormat(texture_format), _static);
+            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture1D(width, REVToDXGITextureFormat(texture_format), name, _static);
             handle.kind  = _static ? RESOURCE_KIND_STATIC_SR : RESOURCE_KIND_SR;
             return handle;
         } break;
@@ -110,14 +108,14 @@ ResourceHandle MemoryManager::AllocateTexture1D(u16 width, TEXTURE_FORMAT textur
     return { REV_U64_MAX, RESOURCE_KIND_SR };
 }
 
-ResourceHandle MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static)
+ResourceHandle MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
             ResourceHandle handle;
-            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture2D(width, height, mip_levels, REVToDXGITextureFormat(texture_format), _static);
+            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture2D(width, height, mip_levels, REVToDXGITextureFormat(texture_format), name, _static);
             handle.kind  = _static ? RESOURCE_KIND_STATIC_SR : RESOURCE_KIND_SR;
             return handle;
         } break;
@@ -129,14 +127,14 @@ ResourceHandle MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_l
     return { REV_U64_MAX, RESOURCE_KIND_SR };
 }
 
-ResourceHandle MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static)
+ResourceHandle MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
             ResourceHandle handle;
-            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture3D(width, height, depth, mip_levels, REVToDXGITextureFormat(texture_format), _static);
+            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture3D(width, height, depth, mip_levels, REVToDXGITextureFormat(texture_format), name, _static);
             handle.kind  = _static ? RESOURCE_KIND_STATIC_SR : RESOURCE_KIND_SR;
             return handle;
         } break;
@@ -148,14 +146,14 @@ ResourceHandle MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth
     return { REV_U64_MAX, RESOURCE_KIND_SR };
 }
 
-ResourceHandle MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static)
+ResourceHandle MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
             ResourceHandle handle;
-            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTextureCube(width, height, mip_levels, REVToDXGITextureFormat(texture_format), _static);
+            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTextureCube(width, height, mip_levels, REVToDXGITextureFormat(texture_format), name, _static);
             handle.kind  = _static ? RESOURCE_KIND_STATIC_SR : RESOURCE_KIND_SR;
             return handle;
         } break;
@@ -167,14 +165,14 @@ ResourceHandle MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip
     return { REV_U64_MAX, RESOURCE_KIND_SR };
 }
 
-ResourceHandle MemoryManager::AllocateTexture1DArray(u16 width, u16 count, TEXTURE_FORMAT texture_format, bool _static)
+ResourceHandle MemoryManager::AllocateTexture1DArray(u16 width, u16 count, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
             ResourceHandle handle;
-            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture1DArray(width, count, REVToDXGITextureFormat(texture_format), _static);
+            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture1DArray(width, count, REVToDXGITextureFormat(texture_format), name, _static);
             handle.kind  = _static ? RESOURCE_KIND_STATIC_SR : RESOURCE_KIND_SR;
             return handle;
         } break;
@@ -186,14 +184,14 @@ ResourceHandle MemoryManager::AllocateTexture1DArray(u16 width, u16 count, TEXTU
     return { REV_U64_MAX, RESOURCE_KIND_SR };
 }
 
-ResourceHandle MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static)
+ResourceHandle MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
             ResourceHandle handle;
-            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture2DArray(width, height, count, mip_levels, REVToDXGITextureFormat(texture_format), _static);
+            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTexture2DArray(width, height, count, mip_levels, REVToDXGITextureFormat(texture_format), name, _static);
             handle.kind  = _static ? RESOURCE_KIND_STATIC_SR : RESOURCE_KIND_SR;
             return handle;
         } break;
@@ -205,14 +203,14 @@ ResourceHandle MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 
     return { REV_U64_MAX, RESOURCE_KIND_SR };
 }
 
-ResourceHandle MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static)
+ResourceHandle MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
             ResourceHandle handle;
-            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTextureCubeArray(width, height, count, mip_levels, REVToDXGITextureFormat(texture_format), _static);
+            handle.index = cast<D3D12::MemoryManager *>(platform)->AllocateTextureCubeArray(width, height, count, mip_levels, REVToDXGITextureFormat(texture_format), name, _static);
             handle.kind  = _static ? RESOURCE_KIND_STATIC_SR : RESOURCE_KIND_SR;
             return handle;
         } break;

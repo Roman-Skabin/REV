@@ -156,18 +156,18 @@ namespace REV::D3D12
         MemoryManager(Allocator *allocator);
         ~MemoryManager();
 
-        u64 AllocateVertexBuffer(u32 vertex_count, bool _static, const StaticString<64>& name = null);
-        u64 AllocateIndexBuffer(u32 index_count, bool _static, const StaticString<64>& name = null);
-        u64 AllocateConstantBuffer(u32 bytes, bool _static, const StaticString<64>& name = null);
+        u64 AllocateVertexBuffer(u32 vertex_count, bool _static, const ConstString& name = null);
+        u64 AllocateIndexBuffer(u32 index_count, bool _static, const ConstString& name = null);
+        u64 AllocateConstantBuffer(u32 bytes, bool _static, const ConstString& name = null);
 
-        u64 AllocateTexture1D(  u16 width,                                        DXGI_FORMAT texture_format, bool _static);
-        u64 AllocateTexture2D(  u16 width, u16 height,            u16 mip_levels, DXGI_FORMAT texture_format, bool _static);
-        u64 AllocateTexture3D(  u16 width, u16 height, u16 depth, u16 mip_levels, DXGI_FORMAT texture_format, bool _static);
-        u64 AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, DXGI_FORMAT texture_format, bool _static);
+        u64 AllocateTexture1D(  u16 width,                                        DXGI_FORMAT texture_format, const ConstString& name, bool _static);
+        u64 AllocateTexture2D(  u16 width, u16 height,            u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
+        u64 AllocateTexture3D(  u16 width, u16 height, u16 depth, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
+        u64 AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
 
-        u64 AllocateTexture1DArray(  u16 width,             u16 count,                 DXGI_FORMAT texture_format, bool _static);
-        u64 AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, bool _static);
-        u64 AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, bool _static);
+        u64 AllocateTexture1DArray(  u16 width,             u16 count,                 DXGI_FORMAT texture_format, const ConstString& name, bool _static);
+        u64 AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
+        u64 AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
 
         u64 AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static);
 
@@ -257,17 +257,15 @@ namespace REV::D3D12
     private:
         void CreateNewPage(BufferMemory *buffer_memory, D3D12_RESOURCE_STATES initial_state);
 
-        Buffer *AllocateBuffer(BufferMemory *buffer_memory, u64 size, D3D12_RESOURCE_STATES initial_state, u64& index);
-        Texture *AllocateTexture(TextureMemory *texture_memory, const D3D12_RESOURCE_DESC& desc, u64& index);
+        Buffer *AllocateBuffer(BufferMemory *buffer_memory, u64 size, D3D12_RESOURCE_STATES initial_state, u64& index, const ConstString& name);
+        Texture *AllocateTexture(TextureMemory *texture_memory, const D3D12_RESOURCE_DESC& desc, u64& index, const ConstString& name);
 
         void UploadBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data);
         void UploadTextureData(ID3D12GraphicsCommandList *command_list, Texture *texture, u32 subres_count, D3D12_SUBRESOURCE_DATA *subresources);
 
-        MemoryManager(const MemoryManager&) = delete;
-        MemoryManager(MemoryManager&&)      = delete;
+        void SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, const ConstString& name);
 
-        MemoryManager& operator=(const MemoryManager&) = delete;
-        MemoryManager& operator=(MemoryManager&&)      = delete;
+        REV_DELETE_CONSTRS_AND_OPS(MemoryManager);
 
     private:
         DeviceContext             *m_DeviceContext;

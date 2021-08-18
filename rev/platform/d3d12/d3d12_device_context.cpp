@@ -223,6 +223,7 @@ void DeviceContext::EndFrame()
 
     // Present
     u32 present_flags = DXGI_PRESENT_DO_NOT_WAIT;
+    u32 sync_interval = m_VsyncEnabled;
 
     if (!m_VsyncEnabled && m_TearingSupported && !m_Window->Fullscreened())
     {
@@ -235,10 +236,10 @@ void DeviceContext::EndFrame()
     }
     else if (m_VsyncEnabled)
     {
-        present_flags |= DXGI_PRESENT_DO_NOT_SEQUENCE;
+        // present_flags |= DXGI_PRESENT_DO_NOT_SEQUENCE;
     }
 
-    error = m_SwapChain->Present(0, present_flags);
+    error = m_SwapChain->Present(sync_interval, present_flags);
     REV_CHECK(CheckResultAndPrintMessages(error, this));
 
     // Swap buffers
@@ -412,12 +413,11 @@ void DeviceContext::CreateGraphicsQueueAllocatorsAndLists()
 
     HRESULT error = m_Device->CreateCommandQueue(&graphics_queue_desc, IID_PPV_ARGS(&m_GraphicsQueue));
     REV_CHECK(CheckResultAndPrintMessages(error, this));
-    
-    error = m_GraphicsQueue->SetPrivateData(WKPDID_D3DDebugObjectName, REV_CSTRLEN("Graphics Queue"), "Graphics Queue");
+
+    error = m_GraphicsQueue->SetName(L"Graphics Queue");
     REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-    char name[64];
-    s32  name_len = 0;
+    wchar_t wname[CACHE_LINE_SIZE / sizeof(wchar_t)];
 
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
@@ -427,8 +427,9 @@ void DeviceContext::CreateGraphicsQueueAllocatorsAndLists()
         error = m_Device->CreateCommandAllocator(graphics_queue_desc.Type, IID_PPV_ARGS(graphics_allocator));
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        name_len = sprintf(name, "Graphics Allocator #%I32u", i);
-        error = (*graphics_allocator)->SetPrivateData(WKPDID_D3DDebugObjectName, name_len, name);
+        _snwprintf(wname, CACHE_LINE_SIZE / sizeof(wchar_t), L"Graphics Allocator #%I32u", i);
+
+        error = (*graphics_allocator)->SetName(wname);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
         error = m_Device->CreateCommandList(graphics_queue_desc.NodeMask,
@@ -438,8 +439,9 @@ void DeviceContext::CreateGraphicsQueueAllocatorsAndLists()
                                               IID_PPV_ARGS(graphics_list));
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        name_len = sprintf(name, "Graphics List #%I32u", i);
-        error = (*graphics_list)->SetPrivateData(WKPDID_D3DDebugObjectName, name_len, name);
+        _snwprintf(wname, CACHE_LINE_SIZE / sizeof(wchar_t), L"Graphics List #%I32u", i);
+
+        error = (*graphics_list)->SetName(wname);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
         error = (*graphics_list)->Close();
@@ -523,6 +525,8 @@ void DeviceContext::GetSwapChainRenderTargets()
     m_RTVDescSize      = m_Device->GetDescriptorHandleIncrementSize(rtv_desc_heap_desc.Type);
     m_RTVCPUDescHandle = m_RTVHeapDesc->GetCPUDescriptorHandleForHeapStart();
 
+    wchar_t wname[CACHE_LINE_SIZE / sizeof(wchar_t)];
+
     for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
     {
         ID3D12Resource **rt_buffer = m_RTBuffers + i;
@@ -531,7 +535,12 @@ void DeviceContext::GetSwapChainRenderTargets()
 
         m_Device->CreateRenderTargetView(m_RTBuffers[i], null, m_RTVCPUDescHandle);
 
-        m_RTVCPUDescHandle.ptr += m_RTVDescSize;
+        _snwprintf(wname, CACHE_LINE_SIZE / sizeof(wchar_t), L"RenderTarget #%I32u", i);
+
+        error = m_RTBuffers[i]->SetName(wname);
+        REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+        m_RTVCPUDescHandle.ptr += m_RTVDescSize;    
     }
 
     m_RTVCPUDescHandle.ptr -= SWAP_CHAIN_BUFFERS_COUNT * m_RTVDescSize;
@@ -582,6 +591,9 @@ void DeviceContext::CreateDepthBuffer()
                                               D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
                                               &ds_clear_value,
                                               IID_PPV_ARGS(&m_DSBuffer));
+    REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+    error = m_DSBuffer->SetName(L"DSBuffer");
     REV_CHECK(CheckResultAndPrintMessages(error, this));
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;

@@ -58,7 +58,7 @@ namespace REV
         REV_INLINE Settings     *GetSettings()     { return m_Settings;     }
 
     private:
-        void Run();
+        void Run(SceneBase *scene);
 
         Application(const Application&)  = delete;
         Application(Application&&)       = delete;

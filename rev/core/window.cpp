@@ -22,7 +22,7 @@ Window::Window(const Logger& logger, const ConstString& title)
       m_Minimized(false),
       m_FullscreenSetRequested(Settings::Get()->fullscreen),
       m_FullscreenUnsetRequested(false),
-      m_Logger(logger),
+      m_Logger(logger, null, Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
       m_Title(title),
       m_ClassName(title)
 {
@@ -176,7 +176,11 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             if (GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &bytes, sizeof(RAWINPUTHEADER)) == bytes
             &&  raw_input->header.dwType == RIM_TYPEMOUSE)
             {
-                Input::Get()->m_Mouse.Update(raw_input->data.mouse);
+                Mouse& mouse = Input::Get()->m_Mouse;
+
+                mouse.Update(raw_input->data.mouse);
+
+                window->m_Logger.LogInfo("Mouse: { x, y }: ", mouse.Pos(), ", { dx, dy }: ", mouse.DeltaPos(), ", wheel: ", mouse.Wheel(), ", delta wheel: ", mouse.DeltaWheel());
             }
 
             result = DefWindowProcA(handle, message, wparam, lparam);

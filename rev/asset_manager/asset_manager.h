@@ -94,9 +94,9 @@ namespace REV
         AssetHandle LoadTexture(const LoadTextureDesc& desc, bool _static);
         AssetHandle LoadShader(const LoadShaderDesc& desc, bool _static);
 
-        // @NOTE(Roman): Batch loaders. Return number of load assets
-        Array<AssetHandle> LoadTextures(const ConstArray<LoadTextureDesc>& descs, bool _static);
-        Array<AssetHandle> LoadShaders(const ConstArray<LoadShaderDesc>& descs, bool _static);
+        // @NOTE(Roman): Batch loaders
+        ConstArray<AssetHandle> LoadTextures(const ConstArray<LoadTextureDesc>& descs, bool _static);
+        ConstArray<AssetHandle> LoadShaders(const ConstArray<LoadShaderDesc>& descs, bool _static);
 
         REV_INLINE const Array<Asset>& GetStaticAssets() const { return m_StaticAssets; }
         REV_INLINE const Array<Asset>& GetSceneAssets()  const { return m_SceneAssets;  }
@@ -118,7 +118,7 @@ namespace REV
     private:
         AssetManager(Allocator *allocator, const Logger& logger);
         
-        void LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, bool _static);
+        void LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, const ConstString& name, bool _static);
 
         REV_DELETE_CONSTRS_AND_OPS(AssetManager);
 

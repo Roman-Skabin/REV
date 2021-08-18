@@ -5,7 +5,7 @@
 #pragma once
 
 #include "core/common.h"
-#include "tools/static_string.hpp"
+#include "tools/const_string.h"
 #include "math/vec.h"
 
 // @Cleanup(Roman): We do not need GPU memory manager on user side.
@@ -86,18 +86,18 @@ namespace REV::GPU
     {
     public:
         // @Optimize(Roman): Use (upload pointer + offset) as a CPU data storage for buffers?
-        ResourceHandle AllocateVertexBuffer(u32 vertex_count, bool _static, const StaticString<64>& name = null); // stride = sizeof(REV::Vertex)
-        ResourceHandle AllocateIndexBuffer(u32 index_count, bool _static, const StaticString<64>& name = null); // stride = sizeof(REV::Index)
-        ResourceHandle AllocateConstantBuffer(u32 bytes, bool _static, const StaticString<64>& name = null);
+        ResourceHandle AllocateVertexBuffer(u32 vertex_count, bool _static, const ConstString& name = null); // stride = sizeof(REV::Vertex)
+        ResourceHandle AllocateIndexBuffer(u32 index_count, bool _static, const ConstString& name = null); // stride = sizeof(REV::Index)
+        ResourceHandle AllocateConstantBuffer(u32 bytes, bool _static, const ConstString& name = null);
 
-        ResourceHandle AllocateTexture1D(  u16 width,                                        TEXTURE_FORMAT texture_format, bool _static);
-        ResourceHandle AllocateTexture2D(  u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
-        ResourceHandle AllocateTexture3D(  u16 width, u16 height, u16 depth, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
-        ResourceHandle AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
+        ResourceHandle AllocateTexture1D(  u16 width,                                        TEXTURE_FORMAT texture_format, const ConstString& name, bool _static);
+        ResourceHandle AllocateTexture2D(  u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static);
+        ResourceHandle AllocateTexture3D(  u16 width, u16 height, u16 depth, u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static);
+        ResourceHandle AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static);
 
-        ResourceHandle AllocateTexture1DArray(  u16 width,             u16 count,                 TEXTURE_FORMAT texture_format, bool _static);
-        ResourceHandle AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
-        ResourceHandle AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, bool _static);
+        ResourceHandle AllocateTexture1DArray(  u16 width,             u16 count,                 TEXTURE_FORMAT texture_format, const ConstString& name, bool _static);
+        ResourceHandle AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static);
+        ResourceHandle AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT texture_format, const ConstString& name, bool _static);
 
         ResourceHandle AllocateSampler(TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static);
 

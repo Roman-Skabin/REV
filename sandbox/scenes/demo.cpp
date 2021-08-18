@@ -5,7 +5,7 @@
 DemoScene::DemoScene(REV::Allocator *allocator)
     : SceneBase(allocator, REV::ConstString(REV_CSTR_ARGS("DemoScene")), 1024, 36*1024),
       m_CBuffer(),
-      m_CBufferData{ REV::Math::m4::identity(), REV::Math::v4(252.0f, 212.0f, 64.0f, 255.0f) / REV::Math::v4(255.0f), REV::Math::v3() },
+      m_CBufferData{ REV::Math::m4::identity(), REV::Math::v4(252.0f, 212.0f, 64.0f, 255.0f) / 255.0f, REV::Math::v3() },
       m_Translation(REV::Math::m4::identity()),
       m_Rect(m_Allocator),
       m_OriginalWindowTitle(REV::Application::Get()->GetWindow().Title())
@@ -20,10 +20,10 @@ void DemoScene::OnSetCurrent()
 {
     REV::Vertex vertices[] =
     {
-        { REV::Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
-        { REV::Math::v4(-0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
-        { REV::Math::v4( 0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
-        { REV::Math::v4( 0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2() },
+        { REV::Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2(0.0f, 1.0f) },
+        { REV::Math::v4(-0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2(0.0f, 0.0f) },
+        { REV::Math::v4( 0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2(1.0f, 0.0f) },
+        { REV::Math::v4( 0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2(1.0f, 1.0f) },
     };
     REV::Index indices[] =
     {
@@ -39,24 +39,24 @@ void DemoScene::OnSetCurrent()
 
     REV::AssetHandle demo_shader_resources[] =
     {
-        asset_manager->LoadTexture(REV::LoadTextureDesc(REV::ConstString(REV_CSTR_ARGS("wood")), 0, 0), false)
+        asset_manager->LoadTexture(REV::LoadTextureDesc(REV::ConstString(REV_CSTR_ARGS("Wood")), 0, 0), false)
     };
 
     REV::GPU::CBufferDesc demo_shader_cbuffers[] =
     {
-        { m_CBuffer = gpu_memory_manager->AllocateConstantBuffer(sizeof(CBufferData), false, REV::ConstString(REV_CSTR_ARGS("CB_DemoScene"))), 0, 0 }
+        { m_CBuffer = gpu_memory_manager->AllocateConstantBuffer(sizeof(CBufferData), false, REV::ConstString(REV_CSTR_ARGS("DemoSceneCB"))), 0, 0 }
     };
 
     REV::GPU::SamplerDesc demo_shader_samplers[] =
     {
-        { gpu_memory_manager->AllocateSampler(REV::GPU::TEXTURE_ADDRESS_MODE_CLAMP, REV::Math::v4(), REV::Math::v2(0.0f, 100.0f), false), 0, 0 }
+        { gpu_memory_manager->AllocateSampler(REV::GPU::TEXTURE_ADDRESS_MODE_WRAP, REV::Math::v4(1.0f), REV::Math::v2(0.0f, 100.0f), false), 0, 0 }
     };
 
-    asset_manager->LoadShader(REV::LoadShaderDesc(REV::ConstString(REV_CSTR_ARGS("demo_shader")),
-                                                  REV::ConstArray(REV_ARRAY_ARGS(demo_shader_resources)),
-                                                  REV::ConstArray(REV_ARRAY_ARGS(demo_shader_cbuffers)),
-                                                  REV::ConstArray(REV_ARRAY_ARGS(demo_shader_samplers))),
-                              false);
+    m_DemoShader = asset_manager->LoadShader(REV::LoadShaderDesc(REV::ConstString(REV_CSTR_ARGS("demo_shader")),
+                                                                 REV::ConstArray(REV_ARRAY_ARGS(demo_shader_resources)),
+                                                                 REV::ConstArray(REV_ARRAY_ARGS(demo_shader_cbuffers)),
+                                                                 REV::ConstArray(REV_ARRAY_ARGS(demo_shader_samplers))),
+                                             false);
 }
 
 void DemoScene::OnUnsetCurrent()
@@ -74,6 +74,7 @@ void DemoScene::OnUpdate()
 {
     REV::Application    *application = REV::Application::Get();
     const REV::Keyboard& keyboard    = application->GetInput()->GetKeyboard();
+    const REV::Mouse&    mouse       = application->GetInput()->GetMouse();
     REV::Window&         window      = application->GetWindow();
     REV::Timer&          timer       = application->GetTimer();
 
@@ -102,29 +103,16 @@ void DemoScene::OnUpdate()
     }
 
     REV::Math::v4 translation;
-
-    if (keyboard[REV::KEY::LEFT].Down())
-    {
-        translation.x = -timer.DeltaSeconds();
-    }
-    else if (keyboard[REV::KEY::RIGHT].Down())
-    {
-        translation.x = timer.DeltaSeconds();
-    }
-    if (keyboard[REV::KEY::UP].Down())
-    {
-        translation.y = timer.DeltaSeconds();
-    }
-    else if (keyboard[REV::KEY::DOWN].Down())
-    {
-        translation.y = -timer.DeltaSeconds();
-    }
-
+    /**/ if (keyboard[REV::KEY::LEFT ].Down()) translation.x = -timer.DeltaSeconds();
+    else if (keyboard[REV::KEY::RIGHT].Down()) translation.x =  timer.DeltaSeconds();
+    /**/ if (keyboard[REV::KEY::UP   ].Down()) translation.y =  timer.DeltaSeconds();
+    else if (keyboard[REV::KEY::DOWN ].Down()) translation.y = -timer.DeltaSeconds();
+    /**/ if (mouse.DeltaWheel())               translation.z =  mouse.DeltaWheel() * timer.DeltaSeconds();
     m_Translation *= REV::Math::m4::translation(translation);
 
-    m_CBufferData.mvp    = m_Translation * REV::Math::m4::rotation_z(timer.Seconds());
+    m_CBufferData.mvp    = m_Translation; // * REV::Math::m4::rotation_z(timer.Seconds());
     m_CBufferData.center = (m_CBufferData.mvp * ((m_Rect.vertices[0].position + m_Rect.vertices[2].position) / 2.0f)).xyz;
 
-    SetCurrentGraphicsShader(REV::AssetManager::Get()->FindAsset(REV::ConstString(REV_CSTR_ARGS("demo_shader")), false));
+    SetCurrentGraphicsShader(m_DemoShader);
     SubmitEntity(&m_Rect);
 }

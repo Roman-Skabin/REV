@@ -30,5 +30,6 @@ private:
     CBufferData              m_CBufferData;
     REV::Math::m4            m_Translation;
     REV::Entity              m_Rect;
+    REV::AssetHandle         m_DemoShader;
     REV::StaticString<128>   m_OriginalWindowTitle;
 };

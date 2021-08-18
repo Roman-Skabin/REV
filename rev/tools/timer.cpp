@@ -8,6 +8,7 @@
 namespace REV
 {
 
+// @TODO(Roman): #CrossPlatform
 REV_INTERNAL REV_INLINE void QPF(s64& val) { QueryPerformanceFrequency(cast<LARGE_INTEGER *>(&val)); }
 REV_INTERNAL REV_INLINE void QPC(s64& val) { QueryPerformanceCounter(cast<LARGE_INTEGER *>(&val));   }
 
@@ -18,7 +19,7 @@ REV_INTERNAL REV_INLINE s64 QPC() { s64 val = 0; QueryPerformanceCounter(cast<LA
 // Timer
 //
 
-Timer::Timer(const StaticString<256>& name)
+Timer::Timer(const ConstString& name)
     : m_TicksPerSecond(QPF()),
       m_InitialTicks(QPC()),
       m_Ticks(0),
@@ -38,11 +39,6 @@ Timer::Timer(const Timer& other)
     : m_Name(other.m_Name)
 {
     CopyMemory(this, &other, REV_StructFieldOffset(Timer, m_Name));
-}
-
-Timer::~Timer()
-{
-    ZeroMemory(this, REV_StructFieldOffset(Timer, m_Name));
 }
 
 void Timer::Tick()
@@ -98,14 +94,10 @@ Timer& Timer::operator=(const Timer& other)
 // ProfilingTimer
 //
 
-ProfilingTimer::ProfilingTimer(const StaticString<256>& name)
+ProfilingTimer::ProfilingTimer(const ConstString& name)
     : m_Timer(name)
 {
     m_Timer.Start();
-}
-
-ProfilingTimer::~ProfilingTimer()
-{
 }
 
 void ProfilingTimer::StopProfiling(const Logger& logger)

@@ -5,7 +5,6 @@ Sandbox::Sandbox()
       m_Logger(REV::ConstString(REV_CSTR_ARGS("Sandbox logger")), "../log/sandbox.log", REV::Logger::TARGET::FILE | REV::Logger::TARGET::CONSOLE),
       m_DemoScene(&m_Allocator)
 {
-    SetCurrentScene(&m_DemoScene);
 }
 
 Sandbox::~Sandbox()
@@ -15,6 +14,7 @@ Sandbox::~Sandbox()
 int REV_CDECL main(int argc, char **argv)
 {
     REV::Memory::Create(GB(1ui64), GB(3ui64));
-    Sandbox().Run();
+    Sandbox sandbox;
+    sandbox.Run(&sandbox.GetDemoScene());
     return 0;
 }

@@ -10,6 +10,8 @@
 namespace REV::Math
 {
 
+// @TODO(Roman): #Bug: Remove _mm_sign_epi32 functions
+
 union REV_INTRIN_TYPE quat final
 {
     struct { f32 x, y, z, w; };

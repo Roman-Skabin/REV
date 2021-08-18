@@ -3,10 +3,12 @@
 //
 
 #include "core/pch.h"
-#include "platform/d3d12/d3d12_common.h"
 #include "graphics/graphics_api.h"
-#include "platform/d3d12/d3d12_device_context.h"
 #include "tools/static_string_builder.hpp"
+#include "memory/memory.h"
+
+#include "platform/d3d12/d3d12_device_context.h"
+#include "platform/d3d12/d3d12_common.h"
 
 namespace REV::D3D12
 {
@@ -46,7 +48,7 @@ bool CheckResultAndPrintMessages(HRESULT hr, DeviceContext *device_context)
                 HRESULT error = device_context->InfoQueue()->GetMessage(DXGI_DEBUG_ALL, i, null, &message_length);
                 REV_CHECK(Succeeded(error));
 
-                DXGI_INFO_QUEUE_MESSAGE *message = cast<DXGI_INFO_QUEUE_MESSAGE *>(memory->PushToTransientArea(message_length));
+                DXGI_INFO_QUEUE_MESSAGE *message = cast<DXGI_INFO_QUEUE_MESSAGE *>(memory->PushToFrameArena(message_length));
                 error = device_context->InfoQueue()->GetMessage(DXGI_DEBUG_ALL, i, message, &message_length);
                 REV_CHECK(Succeeded(error));
 

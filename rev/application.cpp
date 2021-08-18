@@ -4,6 +4,7 @@
 
 #include "core/pch.h"
 #include "application.h"
+#include "memory/memory.h"
 
 namespace REV
 {
@@ -18,8 +19,7 @@ Application *Application::Get()
 
 Application::Application(const ConstString& name, const ConstString& ini_filename)
     : m_Logger(ConstString(REV_CSTR_ARGS("REV logger")), "../log/rev.log", Logger::TARGET::FILE),
-      m_Memory(Memory::Get()),
-      m_Allocator(m_Memory->PushToPermanentArea(GB(1)), GB(1), false, ConstString(REV_CSTR_ARGS("Default"))),
+      m_Allocator(Memory::Get()->PushToPermanentArena(GB(1)), GB(1), false, ConstString(REV_CSTR_ARGS("Default"))),
       m_WorkQueue(m_Logger),
       m_Settings(Settings::Init(ini_filename.Data())),
       m_Window(m_Logger, name),
@@ -64,9 +64,9 @@ void Application::Run(SceneBase *scene)
     m_Window.Show();
     while (!m_Window.Closed())
     {
-        m_WorkQueue.AddWork([this]{ m_Memory->ResetTransientArea(); });
-        m_WorkQueue.AddWork([this]{ m_Window.Resset();              });
-        m_WorkQueue.AddWork([this]{ m_Input->Reset();               });
+        m_WorkQueue.AddWork([    ] { Memory::Get()->ResetFrameArena(); });
+        m_WorkQueue.AddWork([this] { m_Window.Resset();                });
+        m_WorkQueue.AddWork([this] { m_Input->Reset();                 });
         m_WorkQueue.Wait();
 
         m_Window.PollEvents();

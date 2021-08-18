@@ -6,6 +6,7 @@
 #include "asset_manager/asset_manager.h"
 #include "graphics/graphics_api.h"
 #include "core/settings.h"
+#include "memory/memory.h"
 #include "math/math.h"
 
 // @TODO(Roman): #CrossPlatform
@@ -677,7 +678,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
     if (dds_header->flags & DDS_FLAG_LINEARSIZE)
     {
         u64 alloc_size = sizeof(GPU::TextureDesc) + sizeof(GPU::SubTextureDesc) * dds_header->mipmap_count;
-        texture_desc   = cast<GPU::TextureDesc *>(Memory::Get()->PushToTransientArea(alloc_size));
+        texture_desc   = cast<GPU::TextureDesc *>(Memory::Get()->PushToFrameArena(alloc_size));
 
         texture_desc->subtextures_count = dds_header->mipmap_count;
 

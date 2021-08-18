@@ -4,7 +4,7 @@
 
 #include "core/pch.h"
 #include "core/settings.h"
-#include "core/memory.h"
+#include "memory/memory.h"
 
 namespace REV
 {
@@ -196,7 +196,7 @@ REV_INTERNAL char *ReadEntireFileToTA(const char *filename)
         u64 data_size = 0;
         REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&data_size)));
 
-        char *data = Memory::Get()->PushToTA<char>(data_size + 1);
+        char *data = Memory::Get()->PushToFA<char>(data_size + 1);
 
         u32 bytes_read = 0;
         for (u64 offset = 0; offset < data_size; offset += bytes_read)

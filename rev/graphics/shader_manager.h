@@ -23,6 +23,8 @@ namespace REV
     };
     #pragma pack(pop)
 
+    typedef u32 Index;
+
 #ifndef ASSET_HANDLE_DEFINED
 #define ASSET_HANDLE_DEFINED
     struct AssetHandle

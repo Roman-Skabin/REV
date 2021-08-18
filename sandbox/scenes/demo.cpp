@@ -7,7 +7,7 @@ DemoScene::DemoScene(REV::Allocator *allocator)
       m_CBuffer(),
       m_CBufferData{ REV::Math::m4::identity(), REV::Math::v4(252.0f, 212.0f, 64.0f, 255.0f) / 255.0f, REV::Math::v3() },
       m_Translation(REV::Math::m4::identity()),
-      m_Rect(m_Allocator),
+      m_Rect(),
       m_OriginalWindowTitle(REV::Application::Get()->GetWindow().Title())
 {
 }
@@ -61,7 +61,6 @@ void DemoScene::OnSetCurrent()
 
 void DemoScene::OnUnsetCurrent()
 {
-    m_Rect.Destroy();
 }
 
 void DemoScene::OnSetResourcesData()

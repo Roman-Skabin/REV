@@ -6,6 +6,7 @@
 #include "core/scene.h"
 #include "graphics/graphics_api.h"
 #include "asset_manager/asset_manager.h"
+#include "memory/memory.h"
 
 namespace REV
 {
@@ -16,17 +17,11 @@ namespace REV
 
 void Entity::Create(u64 vcount, u64 icount)
 {
-    Vertex *vertex_memory = cast<Vertex *>(allocator->Allocate(vcount * sizeof(Vertex) + icount * sizeof(Index)));
+    Vertex *vertex_memory = cast<Vertex *>(Memory::Get()->PushToSceneArena(vcount * sizeof(Vertex) + icount * sizeof(Index)));
     Index  *index_memory  = cast<Index *>(vertex_memory + vcount);
 
     vertices = ConstArray(vertex_memory, vcount);
     indices  = ConstArray(index_memory,  icount);
-}
-
-void Entity::Destroy()
-{
-    Vertex *ptr = vertices.Data();
-    allocator->DeAlloc(ptr);
 }
 
 void Entity::SetData(const ConstArray<Vertex>& vertices, const ConstArray<Index>& indices)
@@ -82,6 +77,7 @@ void SceneBase::OnUnsetCurrentEx()
     AssetManager::Get()->FreeSceneAssets();
     GraphicsAPI::GetMemoryManager()->FreeSceneMemory();
     m_Allocator->DeAlloc(m_Vertices);
+    Memory::Get()->ResetSceneArena();
 }
 
 void SceneBase::SetCurrentGraphicsShader(AssetHandle shader_asset)

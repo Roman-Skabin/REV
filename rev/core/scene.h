@@ -12,27 +12,16 @@
 
 namespace REV
 {
-    typedef u32 Index;
-
     // @Cleanup(Roman): Temporary
     struct REV_API Entity
     {
         ConstArray<Vertex>  vertices;
         ConstArray<Index>   indices;
-        Allocator          *allocator;
 
-        REV_INLINE Entity(Allocator *allocator)
-            : vertices(null),
-              indices(null),
-              allocator(allocator)
-        {
-        }
-
+        REV_INLINE  Entity() : vertices(null), indices(null) {}
         REV_INLINE ~Entity() {}
 
         void Create(u64 vcount, u64 icount);
-        void Destroy();
-
         void SetData(const ConstArray<Vertex>& vertices, const ConstArray<Index>& indices);
     };
     

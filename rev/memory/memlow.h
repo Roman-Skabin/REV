@@ -1,11 +1,10 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #pragma once
 
 #include "core/common.h"
-#include "tools/critical_section.hpp"
 
 namespace REV
 {
@@ -72,59 +71,4 @@ namespace REV
     REV_INLINE void CopyMemory(void *dest, const void *src, u64 bytes) { memcpy(dest, src, bytes);                 }
     REV_INLINE void MoveMemory(void *dest, const void *src, u64 bytes) { memmove(dest, src, bytes);                }
     REV_INLINE void ZeroMemory(void *dest, u64 bytes)                  { FillMemoryU8(cast<u8 *>(dest), 0, bytes); }
-
-    class REV_API Memory final
-    {
-    public:
-        enum : u64 { MAX = 0xFFFFFFFFFFFFF000ui64 };
-
-        static Memory *Create(u64 transient_area_capacity, u64 permanent_area_capacity);
-        static Memory *Get();
-
-    private:
-        Memory(u64 transient_area_capacity, u64 permanent_area_capacity);
-
-    public:
-        ~Memory();
-
-        void *PushToTransientArea(u64 bytes);
-        void *PushToTransientAreaAligned(u64 bytes, u64 alignment);
-        void  ResetTransientArea();
-
-        void *PushToPermanentArea(u64 bytes);
-        void *PushToPermanentAreaAligned(u64 bytes, u64 alignment);
-
-        template<typename T> REV_INLINE T *PushToTA(u64 count = 1)                     { return cast<T *>(PushToTransientArea(count * sizeof(T)));                   }
-        template<typename T> REV_INLINE T *PushToTAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToTransientAreaAligned(count * sizeof(T), alignment)); }
-
-        template<typename T> REV_INLINE T *PushToPA(u64 count = 1)                     { return cast<T *>(PushToPermanentArea(count * sizeof(T)));                   }
-        template<typename T> REV_INLINE T *PushToPAA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushToPermanentAreaAligned(count * sizeof(T), alignment)); }
-
-        template<> REV_INLINE void *PushToTA(u64 bytes)                 { return PushToTransientArea(bytes);                   }
-        template<> REV_INLINE void *PushToTAA(u64 bytes, u64 alignment) { return PushToTransientAreaAligned(bytes, alignment); }
-
-        template<> REV_INLINE void *PushToPA(u64 bytes)                 { return PushToPermanentArea(bytes);                   }
-        template<> REV_INLINE void *PushToPAA(u64 bytes, u64 alignment) { return PushToPermanentAreaAligned(bytes, alignment); }
-
-    private:
-        Memory(const Memory&) = delete;
-        Memory(Memory&&)      = delete;
-
-        Memory& operator=(const Memory&) = delete;
-        Memory& operator=(Memory&&)      = delete;
-
-    private:
-        struct Area
-        {
-            byte *base     = null;
-            u64   size     = 0;
-            u64   capacity = 0;
-        };
-
-        Area                   m_TransientArea;
-        Area                   m_PermanentArea;
-        CriticalSection<false> m_CriticalSection;
-
-        static Memory *s_Memory;
-    };
 }

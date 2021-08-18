@@ -5,8 +5,9 @@
 #pragma once
 
 #include "tools/array.hpp"
-#include "platform/d3d12/d3d12_device_context.h"
 #include "graphics/memory_manager.h"
+
+#include "platform/d3d12/d3d12_device_context.h"
 
 // @TODO(Roman): Thread safety
 
@@ -272,7 +273,7 @@ namespace REV::D3D12
         ID3D12CommandAllocator    *m_CommandAllocator;
         ID3D12GraphicsCommandList *m_CommandList;
         ID3D12Fence               *m_Fence;
-        Event                      m_FenceEvent;
+        HANDLE                     m_FenceEvent;
         ResourceMemory             m_StaticMemory;
         ResourceMemory             m_SceneMemory;
     };

@@ -5,9 +5,8 @@
 #pragma once
 
 #include "graphics/shader_manager.h"
-#include "core/memory.h"
-#include "tools/list.hpp"
 #include "tools/array.hpp"
+
 #include "platform/d3d12/d3d12_memory_manager.h"
 
 #include <d3d12.h>

@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "core/memory.h"
 #include "core/allocator.h"
 #include "core/work_queue.h"
 #include "core/window.h"
@@ -37,7 +36,6 @@ namespace REV
 
         void SetCurrentScene(SceneBase *scene);
 
-        REV_INLINE const Memory       *GetMemory()       const { return m_Memory;       }
         REV_INLINE const Allocator&    GetAllocator()    const { return m_Allocator;    }
         REV_INLINE const WorkQueue&    GetWorkQueue()    const { return m_WorkQueue;    }
         REV_INLINE const Window&       GetWindow()       const { return m_Window;       }
@@ -47,7 +45,6 @@ namespace REV
         REV_INLINE const AssetManager *GetAssetManager() const { return m_AssetManager; }
         REV_INLINE const Settings     *GetSettings()     const { return m_Settings;     }
 
-        REV_INLINE Memory       *GetMemory()       { return m_Memory;       }
         REV_INLINE Allocator&    GetAllocator()    { return m_Allocator;    }
         REV_INLINE WorkQueue&    GetWorkQueue()    { return m_WorkQueue;    }
         REV_INLINE Window&       GetWindow()       { return m_Window;       }
@@ -60,17 +57,12 @@ namespace REV
     private:
         void Run(SceneBase *scene);
 
-        Application(const Application&)  = delete;
-        Application(Application&&)       = delete;
-
-        Application& operator=(const Application&) = delete;
-        Application& operator=(Application&&)      = delete;
+        REV_DELETE_CONSTRS_AND_OPS(Application);
 
     private:
         Logger        m_Logger;
 
     protected:
-        Memory       *m_Memory;
         Allocator     m_Allocator;
         WorkQueue     m_WorkQueue;
         Settings     *m_Settings;

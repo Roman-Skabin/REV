@@ -1,4 +1,5 @@
 #include "sandbox.h"
+#include "memory/memory.h"
 
 Sandbox::Sandbox()
     : Application(REV::ConstString(REV_CSTR_ARGS("Sandbox")), REV::ConstString(REV_CSTR_ARGS("../sandbox/sandbox.ini"))),
@@ -13,7 +14,7 @@ Sandbox::~Sandbox()
 
 int REV_CDECL main(int argc, char **argv)
 {
-    REV::Memory::Create(GB(1ui64), GB(3ui64));
+    REV::Memory::Create(GB(1ui64), REV::PAGE_SIZE, GB(3ui64));
     Sandbox sandbox;
     sandbox.Run(&sandbox.GetDemoScene());
     return 0;

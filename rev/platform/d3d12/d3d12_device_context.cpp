@@ -6,6 +6,7 @@
 
 #include "core/pch.h"
 #include "core/settings.h"
+
 #include "platform/d3d12/d3d12_device_context.h"
 #include "platform/d3d12/d3d12_common.h"
 

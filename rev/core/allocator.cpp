@@ -4,7 +4,7 @@
 
 #include "core/pch.h"
 #include "core/allocator.h"
-#include "core/memory.h"
+#include "memory/memlow.h"
 #include "math/math.h"
 
 namespace REV

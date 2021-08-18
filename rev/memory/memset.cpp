@@ -1,9 +1,9 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #include "core/pch.h"
-#include "core/memory.h"
+#include "memory/memlow.h"
 
 namespace REV
 {

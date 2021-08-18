@@ -6,6 +6,7 @@
 
 #include "tools/static_string.hpp"
 #include "math/mat.h"
+#include "memory/memory.h"
 
 namespace REV
 {
@@ -748,7 +749,7 @@ private:
 
             // @TODO(Roman): #CrossPlatform
             int   length = WideCharToMultiByte(CP_ACP, 0, val, wlength, null, 0, null, null);
-            char *buffer = Memory::Get()->PushToTA<char>(length + 1);
+            char *buffer = Memory::Get()->PushToFA<char>(length + 1);
 
             WideCharToMultiByte(CP_ACP, 0, val, wlength, buffer, length, null, null);
 

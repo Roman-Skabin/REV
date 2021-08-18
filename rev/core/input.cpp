@@ -4,6 +4,7 @@
 
 #include "core/pch.h"
 #include "core/input.h"
+#include "memory/memory.h"
 
 namespace REV
 {

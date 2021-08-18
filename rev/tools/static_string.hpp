@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "core/memory.h"
+#include "memory/memlow.h"
 #include "math/simd.h"
 #include "tools/const_string.h"
 

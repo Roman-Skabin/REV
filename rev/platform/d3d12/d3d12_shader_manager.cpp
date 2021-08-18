@@ -3,12 +3,12 @@
 //
 
 #include "core/pch.h"
-#include "platform/d3d12/d3d12_shader_manager.h"
 #include "graphics/graphics_api.h"
-#include "tools/async_file.h"
-#include "tools/const_string.h"
-#include "platform/d3d12/d3d12_common.h"
+#include "memory/memory.h"
 #include "asset_manager/asset_manager.h"
+
+#include "platform/d3d12/d3d12_shader_manager.h"
+#include "platform/d3d12/d3d12_common.h"
 
 #include <d3dcompiler.h>
 
@@ -116,7 +116,7 @@ u64 ShaderManager::CreateGraphicsShader(
     u64 resources_count = cbuffers.Count() + textures.Count() + samplers.Count();
 
     GPU::ResourceHandle  *shader_resoucres     = new (graphics_shader->bound_resources.PushBack(resources_count)) GPU::ResourceHandle();
-    D3D12_ROOT_PARAMETER *root_parameters      = memory->PushToTA<D3D12_ROOT_PARAMETER>(resources_count);
+    D3D12_ROOT_PARAMETER *root_parameters      = memory->PushToFA<D3D12_ROOT_PARAMETER>(resources_count);
     u64                   root_parameter_index = 0;
 
     for (u64 i = 0; i < cbuffers.Count(); ++i)

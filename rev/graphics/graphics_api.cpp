@@ -4,6 +4,7 @@
 
 #include "core/pch.h"
 #include "graphics/graphics_api.h"
+#include "memory/memory.h"
 
 #include "platform/d3d12/d3d12_device_context.h"
 #include "platform/d3d12/d3d12_memory_manager.h"

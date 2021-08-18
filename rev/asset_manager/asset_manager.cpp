@@ -8,6 +8,7 @@
 #include "math/math.h"
 #include "tools/static_string.hpp"
 #include "core/work_queue.h"
+#include "memory/memory.h"
 
 namespace REV
 {
@@ -24,7 +25,7 @@ REV_INTERNAL ConstArray<byte> ReadEntireFileToTA(const char *filename)
         u64 file_size = 0;
         REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&file_size)));
 
-        byte *data = Memory::Get()->PushToTA<byte>(file_size + 1);
+        byte *data = Memory::Get()->PushToFA<byte>(file_size + 1);
 
         u32 bytes_read = 0;
         for (u64 offset = 0; offset < file_size; offset += bytes_read)
@@ -177,7 +178,7 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
         u64 file_size = 0;
         REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&file_size)));
 
-        char *data = Memory::Get()->PushToTA<char>(file_size + 1);
+        char *data = Memory::Get()->PushToFA<char>(file_size + 1);
 
         u32 bytes_read = 0;
         for (u64 offset = 0; offset < file_size; offset += bytes_read)
@@ -302,7 +303,7 @@ ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureD
     Array<Asset>        *assets             = _static ? &m_StaticAssets : &m_SceneAssets;
     u64                  new_assets_index   = assets->Count();
     Asset               *new_assets         = assets->PushBack(descs.Count());
-    AssetHandle         *asset_handles      = Memory::Get()->PushToTA<AssetHandle>(descs.Count());
+    AssetHandle         *asset_handles      = Memory::Get()->PushToFA<AssetHandle>(descs.Count());
 
     u64 index = 0;
     for (const LoadTextureDesc& desc : descs)
@@ -365,7 +366,7 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
     Array<Asset>        *assets             = _static ? &m_StaticAssets : &m_SceneAssets;
     u64                  new_assets_index   = assets->Count();
     Asset               *new_assets         = assets->PushBack(descs.Count());
-    AssetHandle         *asset_handles      = Memory::Get()->PushToTA<AssetHandle>(descs.Count());
+    AssetHandle         *asset_handles      = Memory::Get()->PushToFA<AssetHandle>(descs.Count());
 
     u64 index = 0;
     for (const LoadShaderDesc& desc : descs)
@@ -427,7 +428,7 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
                 u64 file_size = 0;
                 REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&file_size)));
 
-                char *data = Memory::Get()->PushToTA<char>(file_size + 1);
+                char *data = Memory::Get()->PushToFA<char>(file_size + 1);
 
                 u32 bytes_read = 0;
                 for (u64 offset = 0; offset < file_size; offset += bytes_read)

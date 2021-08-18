@@ -6,6 +6,7 @@
 #include "core/window.h"
 #include "core/input.h"
 #include "core/settings.h"
+#include "memory/memory.h"
 #include "graphics/graphics_api.h"
 
 namespace REV
@@ -171,7 +172,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             UINT bytes = 0;
             GetRawInputData(raw_input_handle, RID_INPUT, 0, &bytes, sizeof(RAWINPUTHEADER));
 
-            RAWINPUT *raw_input = cast<RAWINPUT *>(Memory::Get()->PushToTransientArea(bytes));
+            RAWINPUT *raw_input = cast<RAWINPUT *>(Memory::Get()->PushToFrameArena(bytes));
 
             if (GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &bytes, sizeof(RAWINPUTHEADER)) == bytes
             &&  raw_input->header.dwType == RIM_TYPEMOUSE)

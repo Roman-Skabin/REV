@@ -3,12 +3,12 @@
 //
 
 #include "core/pch.h"
-#include "platform/d3d12/d3d12_memory_manager.h"
 #include "graphics/graphics_api.h"
-#include "core/memory.h"
-#include "platform/d3d12/d3d12_common.h"
-#include "core/scene.h"
+#include "memory/memory.h"
 #include "core/settings.h"
+
+#include "platform/d3d12/d3d12_memory_manager.h"
+#include "platform/d3d12/d3d12_common.h"
 
 namespace REV::D3D12
 {
@@ -18,7 +18,7 @@ MemoryManager::MemoryManager(Allocator *allocator)
       m_CommandAllocator(null),
       m_CommandList(null),
       m_Fence(null),
-      m_FenceEvent("D3D12::MemoryManager Event"),
+      m_FenceEvent(CreateEventExA(null, "D3D12::MemoryManager Event", 0, EVENT_ALL_ACCESS)),
       m_StaticMemory(allocator),
       m_SceneMemory(allocator)
 {
@@ -33,6 +33,8 @@ MemoryManager::MemoryManager(Allocator *allocator)
 
     error = m_DeviceContext->Device()->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_Fence));
     REV_CHECK(CheckResultAndPrintMessages(error));
+
+    REV_DEBUG_RESULT(m_FenceEvent);
 }
 
 MemoryManager::~MemoryManager()
@@ -44,6 +46,7 @@ MemoryManager::~MemoryManager()
         SafeRelease(m_CommandAllocator);
         SafeRelease(m_CommandList);
         SafeRelease(m_Fence);
+        if (m_FenceEvent) REV_DEBUG_RESULT(CloseHandle(m_FenceEvent));
     }
 }
 
@@ -485,10 +488,12 @@ void MemoryManager::EndImmediateExecution()
 
     if (m_Fence->GetCompletedValue() < fence_value)
     {
-        error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent.Handle());
+        error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent);
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        m_FenceEvent.Wait(INFINITE, true);
+        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
+        {
+        }
     }
 }
 
@@ -671,7 +676,7 @@ Texture *MemoryManager::AllocateTexture(TextureMemory *texture_memory, const D3D
     REV_CHECK(CheckResultAndPrintMessages(error));
 
     u32      wname_length = cast<u32>(4 + name.Length());
-    wchar_t *wname        = Memory::Get()->PushToTA<wchar_t>(wname_length + 1);
+    wchar_t *wname        = Memory::Get()->PushToFA<wchar_t>(wname_length + 1);
     CopyMemory(wname, REV_CSTR_ARGS(L"DEF "));
     MultiByteToWideChar(CP_ACP, 0, name.Data(), cast<u32>(name.Length()), wname + 4, wname_length - 4);
 
@@ -724,7 +729,7 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
 
     SafeRelease(device_4);
 
-    byte *push_memory = Memory::Get()->PushToTA<byte>(subres_count * (sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(u32) + sizeof(u64) + sizeof(u64)));
+    byte *push_memory = Memory::Get()->PushToFA<byte>(subres_count * (sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(u32) + sizeof(u64) + sizeof(u64)));
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints  = cast<D3D12_PLACED_SUBRESOURCE_FOOTPRINT *>(push_memory);
     u32                                *num_rows    = cast<u32 *>(footprints + subres_count);
@@ -774,7 +779,7 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
             def_length = def_length / sizeof(wchar_t) - 1;
 
             u32      wname_length = cast<u32>(7 + def_length);
-            wchar_t *wname        = Memory::Get()->PushToTA<wchar_t>(wname_length + 1);
+            wchar_t *wname        = Memory::Get()->PushToFA<wchar_t>(wname_length + 1);
 
             UINT data_size = (def_length + 1) * sizeof(wchar_t);
             error = texture->def_resource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &data_size, wname + 3);
@@ -841,7 +846,7 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
     HRESULT           error = S_OK;
     BufferMemoryPage *page  = buffer_memory->pages.GetPointer(buffer->page_index);
 
-    wchar_t *wname = Memory::Get()->PushToTA<wchar_t>(name.Length() + 1);
+    wchar_t *wname = Memory::Get()->PushToFA<wchar_t>(name.Length() + 1);
     MultiByteToWideChar(CP_ACP, 0, name.Data(), cast<u32>(name.Length()), wname, cast<u32>(name.Length()));
 
     UINT gotten_default_wname_length = 0;
@@ -852,7 +857,7 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
         gotten_default_wname_length = gotten_default_wname_length / sizeof(wchar_t) - 1;
 
         u32      new_default_wname_length = cast<u32>(gotten_default_wname_length + 1 + name.Length());
-        wchar_t *new_default_wname        = Memory::Get()->PushToTA<wchar_t>(new_default_wname_length + 1);
+        wchar_t *new_default_wname        = Memory::Get()->PushToFA<wchar_t>(new_default_wname_length + 1);
 
         UINT default_data_size = (new_default_wname_length + 1) * sizeof(wchar_t);
         error = page->def_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &default_data_size, new_default_wname);
@@ -867,7 +872,7 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
     else
     {
         u32      new_default_wname_length = cast<u32>(REV_CSTRLEN("DEF ") + name.Length());
-        wchar_t *new_default_wname        = Memory::Get()->PushToTA<wchar_t>(new_default_wname_length + 1);
+        wchar_t *new_default_wname        = Memory::Get()->PushToFA<wchar_t>(new_default_wname_length + 1);
 
         _snwprintf(new_default_wname, new_default_wname_length, L"DEF %.*s", cast<u32>(name.Length()), wname);
 
@@ -887,7 +892,7 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
             gotten_upload_wname_length = gotten_upload_wname_length / sizeof(wchar_t) - 1;
 
             u32      new_upload_wname_length = cast<u32>(gotten_upload_wname_length + 1 + name.Length());
-            wchar_t *new_upload_wname        = Memory::Get()->PushToTA<wchar_t>(new_upload_wname_length + 1);
+            wchar_t *new_upload_wname        = Memory::Get()->PushToFA<wchar_t>(new_upload_wname_length + 1);
 
             UINT upload_data_size = (new_upload_wname_length + 1) * sizeof(wchar_t);
             error = upl_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &upload_data_size, new_upload_wname);
@@ -902,7 +907,7 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
         else
         {
             u32      new_upload_wname_length = cast<u32>(7 + name.Length());
-            wchar_t *new_upload_wname        = Memory::Get()->PushToTA<wchar_t>(new_upload_wname_length + 1);
+            wchar_t *new_upload_wname        = Memory::Get()->PushToFA<wchar_t>(new_upload_wname_length + 1);
 
             _snwprintf(new_upload_wname, new_upload_wname_length, L"UPL #%I32u %.*s", i, cast<u32>(name.Length()), wname);
 

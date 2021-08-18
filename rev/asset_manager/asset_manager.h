@@ -5,7 +5,6 @@
 #pragma once
 
 #include "tools/array.hpp"
-#include "tools/const_string.h"
 #include "graphics/memory_manager.h"
 #include "graphics/shader_manager.h"
 #include "core/work_queue.h"

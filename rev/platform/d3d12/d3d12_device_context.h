@@ -4,10 +4,7 @@
 
 #pragma once
 
-#include "core/memory.h"
 #include "core/window.h"
-#include "tools/event.h"
-#include "core/scene.h"
 
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -23,7 +20,6 @@ namespace REV::D3D12
         SWAP_CHAIN_BUFFERS_COUNT = 2,
     };
 
-    // @TODO(Roman): Rename to DeviceContext
     class DeviceContext final
     {
     public:
@@ -79,11 +75,7 @@ namespace REV::D3D12
 
         void SetFullscreenMode(bool set);
 
-        DeviceContext(const DeviceContext&) = delete;
-        DeviceContext(DeviceContext&&)      = delete;
-
-        DeviceContext& operator=(const DeviceContext&) = delete;
-        DeviceContext& operator=(DeviceContext&&)      = delete;
+        REV_DELETE_CONSTRS_AND_OPS(DeviceContext);
 
     private:
         Logger                       m_Logger;

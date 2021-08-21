@@ -1,11 +1,6 @@
-Problems:
-    - We have to define everything at least 2 times. In the code and in the shaders. (Samplers for instsance)
-        - Solution #1: Custom Shaders? Argh, honestly, do not wanna write it.
-
 - Core
     - Complete core\platform.h
     - Move all STD includes from platform.h to pch.h?
-    - Redesign memory management. 3 areas: per-frame, per-scene and static. // @Optimization
     - Scene serialization
     - ISA wide CopyMemory, MoveMemory, ZeroMemory, CompareMemory // @Optimization
     - Single namespace for everything? (get rid of Math and GPU namespaces)
@@ -16,7 +11,7 @@ Problems:
     - Max view distance (max LOD & far)
 
 - Tools
-    - Change a bit String & StringBuidler (example: StaticString & StaticStringBuilder)
+    - Change a bit StringBuidler (example: StaticStringBuilder)
     - Several simultaneous read operations under the same async file?
     - Hash table
     - UTF-8 strings?
@@ -29,18 +24,12 @@ Problems:
 - Git
     - Custom commit/push scripts with tags checks like Jon's nocheckin
 
-- Window
-    - Switch to DPI stuff for monitor and window adjustment?
-
-- Math
-
 - GPU
-    - Add textures to the batch render. // @Optimization
     - Several adapters support? (NVidia has gotten rid of SLI so shall we?)
-    - Cross platform shaders.
+    - Cross platform shaders?
 
 - Graphics
-    - SRVs (textures), UAVs (rwbuffers, rwtextures), static samplers, (constants?)
+    - UAVs (rwbuffers, rwtextures), static samplers, (constants?)
     - Forward Rendering
     - Multisampling
     - Add Root Signature v1.1 specific settings.

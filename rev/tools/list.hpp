@@ -9,10 +9,10 @@
 
 namespace REV
 {
-    template<typename, bool, typename>
+    template<typename T, bool doubly_linked>
     class List;
 
-    template<typename T, typename Allocator_t = Allocator>
+    template<typename T>
     class DLinkedListNode final
     {
     public:
@@ -55,7 +55,7 @@ namespace REV
         REV_INLINE const DLinkedListNode *Next() const { return m_Next; }
         REV_INLINE const T&               Data() const { return m_Data; }
 
-        DLinkedListNode& operator=(const DLinkedListNode& other)
+        REV_INLINE DLinkedListNode& operator=(const DLinkedListNode& other)
         {
             if (this != &other)
             {
@@ -66,7 +66,7 @@ namespace REV
             return *this;
         }
     
-        DLinkedListNode& operator=(DLinkedListNode&& other) noexcept
+        REV_INLINE DLinkedListNode& operator=(DLinkedListNode&& other) noexcept
         {
             if (this != &other)
             {
@@ -85,9 +85,9 @@ namespace REV
         DLinkedListNode *m_Next;
         T                m_Data;
     
-        friend class List<T, true, Allocator_t>;
+        friend class List<T, true>;
     };
-    
+
     template<typename T>
     REV_INLINE auto operator==(const DLinkedListNode<T>& left, const DLinkedListNode<T>& right)
         -> decltype(left.Data() == right.Data())
@@ -106,7 +106,7 @@ namespace REV
             || left.Data() != right.Data();
     }
     
-    template<typename T, typename Allocator_t = Allocator>
+    template<typename T>
     class SLinkedListNode final
     {
     public:
@@ -142,7 +142,7 @@ namespace REV
         REV_INLINE const SLinkedListNode *Next() const { return m_Next; }
         REV_INLINE const T&               Data() const { return m_Data; }
     
-        SLinkedListNode& operator=(const SLinkedListNode& other)
+        REV_INLINE SLinkedListNode& operator=(const SLinkedListNode& other)
         {
             if (this != &other)
             {
@@ -152,7 +152,7 @@ namespace REV
             return *this;
         }
     
-        SLinkedListNode& operator=(SLinkedListNode&& other) noexcept
+        REV_INLINE SLinkedListNode& operator=(SLinkedListNode&& other) noexcept
         {
             if (this != &other)
             {
@@ -168,7 +168,7 @@ namespace REV
         SLinkedListNode *m_Next;
         T                m_Data;
     
-        friend class List<T, false, Allocator_t>;
+        friend class List<T, false>;
     };
     
     template<typename T>
@@ -187,10 +187,10 @@ namespace REV
             || left.Data() != right.Data();
     }
     
-    template<typename T, typename Allocator_t = Allocator>
+    template<typename T>
     struct SLinkedListIterator
     {
-        using Node = SLinkedListNode<T, Allocator_t>;
+        using Node = SLinkedListNode<T>;
     
         Node *node;
     
@@ -216,10 +216,10 @@ namespace REV
         REV_INLINE bool operator!=(SLinkedListIterator& other) const { return node != other.other; }
     };
 
-    template<typename T, typename Allocator_t = Allocator>
+    template<typename T>
     struct SLinkedListConstIterator
     {
-        using Node = SLinkedListNode<T, Allocator_t>;
+        using Node = SLinkedListNode<T>;
 
         const Node *node;
 
@@ -243,10 +243,10 @@ namespace REV
         REV_INLINE bool operator!=(SLinkedListConstIterator& other) const { return node != other.other; }
     };
 
-    template<typename T, typename Allocator_t = Allocator>
+    template<typename T>
     struct DLinkedListIterator
     {
-        using Node = DLinkedListNode<T, Allocator_t>;
+        using Node = DLinkedListNode<T>;
 
         Node *node;
 
@@ -274,10 +274,10 @@ namespace REV
         REV_INLINE bool operator!=(DLinkedListIterator& other) const { return node != other.other; }
     };
 
-    template<typename T, typename Allocator_t = Allocator>
+    template<typename T>
     struct DLinkedListConstIterator
     {
-        using Node = DLinkedListNode<T, Allocator_t>;
+        using Node = DLinkedListNode<T>;
 
         const Node *node;
 
@@ -303,17 +303,17 @@ namespace REV
         REV_INLINE bool operator!=(DLinkedListConstIterator& other) const { return node != other.other; }
     };
 
-    template<typename T, bool doubly_linked = false, typename Allocator_t = Allocator>
+    template<typename T, bool doubly_linked = false>
     class List final
     {
     public:
         using Type          = T;
-        using Node          = RTTI::conditional_t<doubly_linked, DLinkedListNode<T, Allocator_t>, SLinkedListNode<T, Allocator_t>>;
-        using Iterator      = RTTI::conditional_t<doubly_linked, DLinkedListIterator<T, Allocator_t>, SLinkedListIterator<T, Allocator_t>>;
-        using ConstIterator = RTTI::conditional_t<doubly_linked, DLinkedListConstIterator<T, Allocator_t>, SLinkedListConstIterator<T, Allocator_t>>;
+        using Node          = RTTI::conditional_t<doubly_linked, DLinkedListNode<T>, SLinkedListNode<T>>;
+        using Iterator      = RTTI::conditional_t<doubly_linked, DLinkedListIterator<T>, SLinkedListIterator<T>>;
+        using ConstIterator = RTTI::conditional_t<doubly_linked, DLinkedListConstIterator<T>, SLinkedListConstIterator<T>>;
     
     public:
-        REV_INLINE explicit List(Allocator_t *allocator)
+        REV_INLINE explicit List(Allocator *allocator)
             : m_Allocator(allocator),
               m_Count(0),
               m_First(null),
@@ -630,11 +630,11 @@ namespace REV
                 --m_Count;
             }
         }
-    
+
     private:
-        Allocator_t *m_Allocator;
-        u64          m_Count;
-        Node        *m_First;
-        Node        *m_Last;
+        Allocator *m_Allocator;
+        u64        m_Count;
+        Node      *m_First;
+        Node      *m_Last;
     };
 }

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "tools/string.hpp"
+#include "tools/string.h"
 #include "math/mat.h"
 
 namespace REV

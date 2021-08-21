@@ -26,11 +26,13 @@ namespace REV
 
         void SetTitle(const StaticString<128>& new_title);
 
-        REV_INLINE const HWND               Handle()   const { return m_Handle;  }
-        REV_INLINE const StaticString<128>& Title()    const { return m_Title;   }
-        REV_INLINE const Math::v2s&         Position() const { return m_XYWH.xy; }
-        REV_INLINE const Math::v2s&         Size()     const { return m_XYWH.wh; }
-        REV_INLINE const Math::v4s&         XYWH()     const { return m_XYWH;    }
+        REV_INLINE const HWND               Handle()    const { return m_Handle;  }
+        REV_INLINE Math::v4s REV_VECTORCALL XYWH()      const { return m_XYWH;    }
+        REV_INLINE Math::v2s REV_VECTORCALL Position()  const { return m_XYWH.xy; }
+        REV_INLINE Math::v2s REV_VECTORCALL Size()      const { return m_XYWH.wh; }
+        REV_INLINE const u32                DPI()       const { return m_DPI;     }
+        REV_INLINE const Logger&            GetLogger() const { return m_Logger;  }
+        REV_INLINE const StaticString<128>& Title()     const { return m_Title;   }
 
         REV_INLINE bool Closed()       const { return m_Closed;       }
         REV_INLINE bool Moved()        const { return m_Moved;        }
@@ -53,6 +55,7 @@ namespace REV
         HINSTANCE         m_Instance;
         HWND              m_Handle;
         Math::v4s         m_XYWH;
+        u32               m_DPI;
 
         // Flags
         u32 m_Closed                   : 1;

@@ -8,6 +8,7 @@
 #include "core/rtti.hpp"
 
 #pragma warning(disable: 4251) // class 'type1' needs to have dll-interface to be used by clients of class 'type2'
+#pragma warning(disable: 4200) // nonstandard extension used: zero-sized array in struct/union
 
 // REV predefined macros:
 //     _REV_DEV            - for engine developers, is used to build DLL.
@@ -66,7 +67,7 @@ enum
 #define REV__CSTRCAT(a, b) a ## b
 #define REV_CSTRCAT(a, b)  REV__CSTRCAT(a, b)
 
-#define REV_CSTRLEN(cstr) (sizeof(cstr) - sizeof(*cstr))
+#define REV_CSTRLEN(cstr) (sizeof(cstr) - sizeof(*(cstr)))
 
 #define REV_CSTR_ARGS(cstr)   cstr,  REV_CSTRLEN(cstr)
 #define REV_ARRAY_ARGS(array) array, ::REV::Helpers::ArrayCount(array)
@@ -123,7 +124,7 @@ using namespace Types;
 #if _REV_GLOBAL_TYPES
 } // REV
 
-using namespace REV::Types;
+using namespace ::REV::Types;
 
 namespace REV
 {

@@ -6,6 +6,7 @@
 
 #include "tools/array.hpp"
 #include "graphics/memory_manager.h"
+#include "memory/arena.h"
 
 #include "platform/d3d12/d3d12_device_context.h"
 

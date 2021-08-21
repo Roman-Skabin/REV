@@ -24,6 +24,7 @@ namespace REV
 
         enum class MESSAGE_KIND
         {
+            DEBUG,
             INFO,
             SUCCESS,
             WARNING,
@@ -44,9 +45,13 @@ namespace REV
         template<typename ...T>
         REV_INLINE void REV_CDECL Log(MESSAGE_KIND message_kind, const T& ...args) const
         {
+            #if !REV_DEBUG
+                if (message_kind == MESSAGE_KIND::DEBUG) return;
+            #endif
             PrintMessage(message_kind, ConstructMessage(message_kind, args...));
         }
 
+        template<typename ...T> REV_INLINE void REV_CDECL LogDebug(const T& ...args)   const { Log(MESSAGE_KIND::DEBUG,   args...); }
         template<typename ...T> REV_INLINE void REV_CDECL LogInfo(const T& ...args)    const { Log(MESSAGE_KIND::INFO,    args...); }
         template<typename ...T> REV_INLINE void REV_CDECL LogSuccess(const T& ...args) const { Log(MESSAGE_KIND::SUCCESS, args...); }
         template<typename ...T> REV_INLINE void REV_CDECL LogWarning(const T& ...args) const { Log(MESSAGE_KIND::WARNING, args...); }
@@ -85,6 +90,7 @@ namespace REV
 
             switch (message_kind)
             {
+                case MESSAGE_KIND::DEBUG:   builder.Build(ConstString(REV_CSTR_ARGS("(Debug): ")));   break;
                 case MESSAGE_KIND::INFO:    builder.Build(ConstString(REV_CSTR_ARGS("(Info): ")));    break;
                 case MESSAGE_KIND::SUCCESS: builder.Build(ConstString(REV_CSTR_ARGS("(Success): "))); break;
                 case MESSAGE_KIND::WARNING: builder.Build(ConstString(REV_CSTR_ARGS("(Warning): "))); break;

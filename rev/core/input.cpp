@@ -28,7 +28,7 @@ void Keyboard::Update()
 // Mouse
 //
 
-Mouse::Mouse(const Logger& logger, HWND window_handle)
+Mouse::Mouse(const Logger& logger, const Window& window)
     : m_Pos(),
       m_DeltaPos(),
       m_Wheel(0),
@@ -43,26 +43,17 @@ Mouse::Mouse(const Logger& logger, HWND window_handle)
     rid.usUsagePage = 0x01;
     rid.usUsage     = 0x02;
     rid.dwFlags     = 0;
-    rid.hwndTarget  = window_handle;
+    rid.hwndTarget  = window.Handle();
 
-    if (RegisterRawInputDevices(&rid, 1, sizeof(RAWINPUTDEVICE)))
-    {
-        logger.LogSuccess("Mouse has been created");
+    REV_DEBUG_RESULT(RegisterRawInputDevices(&rid, 1, sizeof(RAWINPUTDEVICE)));
 
-        POINT screen_pos = {0};
-        RECT  window_rect = {0};
-        if (GetCursorPos(&screen_pos)
-        &&  GetWindowRect(window_handle, &window_rect))
-        {
-            m_Pos.x = screen_pos.x - window_rect.left;
-            m_Pos.y = window_rect.bottom - (screen_pos.y - window_rect.top);
-        }
-    }
-    else
-    {
-        logger.LogError("Mouse has not been created");
-        REV_FAILED_M("Mouse creation failure");
-    }
+    POINT cursor_screen_pos = {0};
+    REV_DEBUG_RESULT(GetCursorPos(&cursor_screen_pos));
+
+    m_Pos.x = cursor_screen_pos.x;
+    m_Pos.y = cursor_screen_pos.y;
+
+    logger.LogSuccess("Mouse has been created");
 }
 
 void Mouse::Reset()
@@ -79,18 +70,29 @@ void Mouse::Reset()
     m_X2Button.Reset();
 }
 
-void Mouse::Update(const RAWMOUSE& raw_mouse)
+void Mouse::Update(const RAWMOUSE& raw_mouse, const Window& window)
 {
-    m_DeltaPos.x =  raw_mouse.lLastX;
-    m_DeltaPos.y = -raw_mouse.lLastY;
+    m_DeltaPos.x = raw_mouse.lLastX;
+    m_DeltaPos.y = raw_mouse.lLastY;
 
-    m_Pos.x += m_DeltaPos.x;
-    m_Pos.y += m_DeltaPos.y;
+    Math::v2s screen_size(GetSystemMetricsForDpi(SM_CXSCREEN, window.DPI()),
+                          GetSystemMetricsForDpi(SM_CYSCREEN, window.DPI()));
+
+    // m_Pos = Math::v2s::clamp(m_Pos + m_DeltaPos, Math::v2s(), screen_size);
+
+    POINT point = {0};
+    REV_DEBUG_RESULT(GetCursorPos(&point));
+    REV_DEBUG_RESULT(ScreenToClient(window.Handle(), &point));
+    m_Pos = Math::v2s::clamp(Math::v2s(point.x, point.y), Math::v2s(), window.Size());
+
+    window.GetLogger().LogDebug("Mouse: ", m_Pos, ", delta: ", m_DeltaPos);
 
     if (raw_mouse.ulButtons & RI_MOUSE_WHEEL)
     {
         m_DeltaWheel  = cast<s16>(raw_mouse.usButtonData) / WHEEL_DELTA;
         m_Wheel      += m_DeltaWheel;
+
+        window.GetLogger().LogDebug("Wheel: ", m_Wheel, ", delta: ", m_DeltaWheel);
     }
 
     bool down = m_LeftButton.Down();
@@ -248,7 +250,7 @@ Input *Input::Get()
 }
 
 Input::Input(const Window& window, const Logger& logger)
-    : m_Mouse(logger, window.Handle()),
+    : m_Mouse(logger, window),
       m_Gamepad(logger),
       m_Keyboard()
 {

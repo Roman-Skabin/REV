@@ -20,13 +20,13 @@ public:
     REV_INLINE StaticString()
         : m_Length(0)
     {
-        FillMemoryChar(m_Data, '\0', aligned_capacity);
+        ZeroMemory(m_Data, aligned_capacity);
     }
 
     REV_INLINE StaticString(nullptr_t)
         : m_Length(0)
     {
-        FillMemoryChar(m_Data, '\0', aligned_capacity);
+        ZeroMemory(m_Data, aligned_capacity);
     }
 
     REV_INLINE StaticString(char symbol, u64 count = 1)
@@ -34,7 +34,7 @@ public:
     {
         REV_CHECK_M(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
         FillMemoryChar(m_Data, symbol, m_Length);
-        FillMemoryChar(m_Data + m_Length, '\0', aligned_capacity - m_Length);
+        ZeroMemory(m_Data + m_Length, aligned_capacity - m_Length);
     }
 
     REV_INLINE StaticString(const char *cstring, u64 length)
@@ -42,7 +42,7 @@ public:
     {
         REV_CHECK_M(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
         CopyMemory(m_Data, cstring, m_Length);
-        FillMemoryChar(m_Data + m_Length, '\0', aligned_capacity - m_Length);
+        ZeroMemory(m_Data + m_Length, aligned_capacity - m_Length);
     }
 
     REV_INLINE StaticString(const ConstString& const_string)
@@ -50,7 +50,7 @@ public:
     {
         REV_CHECK_M(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
         CopyMemory(m_Data, const_string.Data(), m_Length);
-        FillMemoryChar(m_Data + m_Length, '\0', aligned_capacity - m_Length);
+        ZeroMemory(m_Data + m_Length, aligned_capacity - m_Length);
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
@@ -59,7 +59,7 @@ public:
     {
         REV_CHECK_M(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
         CopyMemory(m_Data, other.m_Data, m_Length);
-        FillMemoryChar(m_Data + m_Length, '\0', aligned_capacity - m_Length);
+        ZeroMemory(m_Data + m_Length, aligned_capacity - m_Length);
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
@@ -68,14 +68,14 @@ public:
     {
         REV_CHECK_M(m_Length < aligned_capacity, "Length is to high, max allowed length is %I64u", aligned_capacity);
         CopyMemory(m_Data, other.m_Data, m_Length);
-        FillMemoryChar(m_Data + m_Length, '\0', aligned_capacity - m_Length);
+        ZeroMemory(m_Data + m_Length, aligned_capacity - m_Length);
     }
 
     REV_INLINE ~StaticString()
     {
     }
 
-    void Insert(u64 where, char symbol, u64 count = 1)
+    StaticString& Insert(u64 where, char symbol, u64 count = 1)
     {
         u64 entire_length = m_Length + count;
         REV_CHECK_M(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
@@ -92,9 +92,10 @@ public:
         }
 
         FillMemoryChar(m_Data + where, symbol, count);
+        return *this;
     }
 
-    void Insert(u64 where, const char *cstring, u64 length)
+    StaticString& Insert(u64 where, const char *cstring, u64 length)
     {
         u64 entire_length = m_Length + length;
         REV_CHECK_M(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
@@ -111,90 +112,41 @@ public:
         }
 
         CopyMemory(m_Data + where, cstring, length);
+        return *this;
     }
 
-    void Insert(u64 where, const ConstString& const_string)
+    StaticString& Insert(u64 where, const ConstString& const_string)
     {
-        u64 entire_length = m_Length + const_string.Length();
-        REV_CHECK_M(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
-
-        u64 old_length = m_Length;
-
-        m_Length += const_string.Length();
-
-        if (where < old_length)
-        {
-            MoveMemory(m_Data + where + const_string.Length(),
-                       m_Data + where,
-                       old_length - where);
-        }
-
-        CopyMemory(m_Data + where, const_string.Data(), const_string.Length());
+        return Insert(where, const_string.Data(), const_string.Length());
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    void Insert(u64 where, const StaticString<other_capacity, other_aligned_capacity>& static_string)
+    StaticString& Insert(u64 where, const StaticString<other_capacity, other_aligned_capacity>& static_string)
     {
-        u64 entire_length = m_Length + static_string.m_Length;
-        REV_CHECK_M(entire_length < aligned_capacity, "Entire length (%I64u) is too big for current static string capacity (%I64u)", entire_length, aligned_capacity);
-
-        u64 old_length = m_Length;
-
-        m_Length += static_string.m_Length;
-
-        if (where < old_length)
-        {
-            MoveMemory(m_Data + where + static_string.m_Length,
-                       m_Data + where,
-                       old_length - where);
-        }
-
-        CopyMemory(m_Data + where, static_string.m_Data, static_string.m_Length);
+        return Insert(where, static_string.Data(), static_string.Length());
     }
 
-    REV_INLINE void PushFront(char symbol, u64 count = 1)
-    {
-        Insert(0, symbol, count);
-    }
-
-    REV_INLINE void PushFront(const char *cstring, u64 length)
-    {
-        Insert(0, cstring, length);
-    }
-
-    REV_INLINE void PushFront(const ConstString& const_string)
-    {
-        Insert(0, const_string);
-    }
+    REV_INLINE StaticString& PushFront(char symbol, u64 count = 1)      { return Insert(0, symbol, count);   }
+    REV_INLINE StaticString& PushFront(const char *cstring, u64 length) { return Insert(0, cstring, length); }
+    REV_INLINE StaticString& PushFront(const ConstString& const_string) { return Insert(0, const_string);    }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    REV_INLINE void PushFront(const StaticString<other_capacity, other_aligned_capacity>& static_string)
+    REV_INLINE StaticString& PushFront(const StaticString<other_capacity, other_aligned_capacity>& static_string)
     {
-        Insert(0, static_string);
+        return Insert(0, static_string);
     }
 
-    REV_INLINE void PushBack(char symbol, u64 count = 1)
-    {
-        Insert(m_Length, symbol, count);
-    }
-
-    REV_INLINE void PushBack(const char *cstring, u64 length)
-    {
-        Insert(m_Length, cstring, length);
-    }
-
-    REV_INLINE void PushBack(const ConstString& const_string)
-    {
-        Insert(m_Length, const_string);
-    }
+    REV_INLINE StaticString& PushBack(char symbol, u64 count = 1)      { return Insert(m_Length, symbol, count);   }
+    REV_INLINE StaticString& PushBack(const char *cstring, u64 length) { return Insert(m_Length, cstring, length); }
+    REV_INLINE StaticString& PushBack(const ConstString& const_string) { return Insert(m_Length, const_string);    }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    REV_INLINE void PushBack(const StaticString<other_capacity, other_aligned_capacity>& static_string)
+    REV_INLINE StaticString& PushBack(const StaticString<other_capacity, other_aligned_capacity>& static_string)
     {
-        Insert(m_Length, static_string);
+        return Insert(m_Length, static_string);
     }
 
-    void Erase(u64 from, u64 to = npos)
+    StaticString& Erase(u64 from, u64 to = npos)
     {
         if (to == npos) to = from + 1;
         REV_CHECK_M(from < m_Length && from < to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
@@ -205,53 +157,69 @@ public:
         }
 
         u64 delta = to - from;
-        FillMemoryChar(m_Data + m_Length - delta, '\0', delta);
+        ZeroMemory(m_Data + m_Length - delta, delta);
 
         m_Length -= delta;
-    }
-
-    REV_INLINE void EraseFront() { Erase(0);            }
-    REV_INLINE void EraseBack()  { Erase(m_Length - 1); }
-
-    REV_INLINE void Clear()
-    {
-        FillMemoryChar(m_Data, '\0', m_Length);
-        m_Length = 0;
-    }
-
-    REV_INLINE StaticString& Replace(u64 from, u64 to, char symbol, u64 count = 1)
-    {
-        Erase(from, to);
-        Insert(from, symbol, count);
         return *this;
     }
 
-    REV_INLINE StaticString& Replace(u64 from, u64 to, const char *cstring, u64 length)
+    REV_INLINE StaticString& EraseFront() { return Erase(0);            }
+    REV_INLINE StaticString& EraseBack()  { return Erase(m_Length - 1); }
+
+    REV_INLINE StaticString& Clear()
     {
-        Erase(from, to);
-        Insert(from, cstring, length);
+        ZeroMemory(m_Data, m_Length);
+        m_Length = 0;
+        return *this;
+    }
+
+    StaticString& Replace(u64 from, u64 to, char symbol, u64 count = 1)
+    {
+        if (to == npos) to = from + 1;
+        REV_CHECK_M(from < m_Length && from < to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
+
+        u64 delta = to - from;
+        FillMemoryChar(m_Data + from, symbol, delta);
+
+        if (count > delta)
+        {
+            Insert(to, symbol, count - delta);
+        }
+
+        return *this;
+    }
+
+    StaticString& Replace(u64 from, u64 to, const char *cstring, u64 cstring_length)
+    {
+        if (to == npos) to = from + 1;
+        REV_CHECK_M(from < m_Length && from < to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
+
+        u64 delta = to - from;
+        CopyMemory(m_Data + from, cstring, delta);
+
+        if (cstring_length > delta)
+        {
+            Insert(to, cstring + delta, cstring_length - delta);
+        }
+
         return *this;
     }
 
     REV_INLINE StaticString& Replace(u64 from, u64 to, const ConstString& const_string)
     {
-        Erase(from, to);
-        Insert(from, const_string);
-        return *this;
+        return Replace(from, to, const_string.Data(), const_string.Length());
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
     REV_INLINE StaticString& Replace(u64 from, u64 to, const StaticString<other_capacity, other_aligned_capacity>& static_string)
     {
-        Erase(from, to);
-        Insert(from, static_string);
-        return *this;
+        return Replace(from, to, static_string.Data(), static_string.Length());
     }
 
     void Reverse()
     {
         char *first = m_Data;
-        char *last  = m_Data + m_Length - 1;
+        char *last  = pLast();
 
         while (first < last)
         {
@@ -261,7 +229,7 @@ public:
         }
     }
 
-    REV_INLINE StaticString SubString(u64 from) const
+    StaticString SubString(u64 from) const
     {
         REV_CHECK_M(from <= m_Length, "Bad arguments: from = %I64u, length = %I64u", from, m_Length);
         if (from == 0)
@@ -278,7 +246,7 @@ public:
         }
     }
 
-    REV_INLINE StaticString SubString(u64 from, u64 to) const
+    StaticString SubString(u64 from, u64 to) const
     {
         REV_CHECK_M(from <= to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
         if (from == 0 && to == m_Length)
@@ -344,78 +312,22 @@ public:
         return npos;
     }
 
-    u64 Find(const ConstString& const_string, u64 offset = 0) const
+    REV_INLINE u64 Find(const ConstString& const_string, u64 offset = 0) const
     {
-        REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
-
-        const char *_end = m_Data + m_Length;
-
-        for (const char *it = m_Data + offset; it < _end; ++it)
-        {
-            const char *sub_end = it + const_string.Length();
-
-            if (sub_end > _end)
-            {
-                return npos;
-            }
-
-            const char *sub         = it;
-            const char *cstr        = const_string.Data();
-            u64         cstr_length = const_string.Length();
-
-            while (cstr_length-- && *sub++ == *cstr++)
-            {
-            }
-
-            if (sub == sub_end)
-            {
-                return it - m_Data;
-            }
-        }
-
-        return npos;
+        return Find(const_string.Data(), const_string.Length(), offset);
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    u64 Find(const StaticString<other_capacity, other_aligned_capacity>& static_string, u64 offset = 0) const
+    REV_INLINE u64 Find(const StaticString<other_capacity, other_aligned_capacity>& static_string, u64 offset = 0) const
     {
-        REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
-
-        const char *_end = m_Data + m_Length;
-
-        for (const char *it = m_Data + offset; it < _end; ++it)
-        {
-            const char *sub_end = it + static_string.m_Length;
-
-            if (sub_end > _end)
-            {
-                return npos;
-            }
-
-            const char *sub         = it;
-            const char *sstr        = static_string.m_Data;
-            u64         sstr_length = static_string.m_Length;
-
-            while (sstr_length-- && *sub++ == *sstr++)
-            {
-            }
-
-            if (sub == sub_end)
-            {
-                return it - m_Data;
-            }
-        }
-
-        return npos;
+        return Find(static_string.Data(), static_string.Length(), offset);
     }
 
     u64 RFind(char what, u64 offset = 0) const
     {
         REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
 
-        const char *last = m_Data + m_Length - 1;
-
-        for (const char *it = last - offset; it >= m_Data; --it)
+        for (const char *it = pLast() - offset; it >= m_Data; --it)
         {
             if (*it == what)
             {
@@ -445,39 +357,13 @@ public:
 
     s8 Compare(const ConstString& const_string) const
     {
-        if (m_Length < const_string.Length()) return -1;
-        if (m_Length > const_string.Length()) return  1;
-
-        const char *left   = m_Data;
-        const char *right  = const_string.Data();
-        u64         length = m_Length;
-
-        while (length-- && *left++ == *right++)
-        {
-        }
-
-        if (*left < *right) return -1;
-        if (*left > *right) return  1;
-        return 0;
+        return Compare(const_string.Data(), const_string.Length());
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
     s8 Compare(const StaticString<other_capacity, other_aligned_capacity>& static_string) const
     {
-        if (m_Length < static_string.m_Length) return -1;
-        if (m_Length > static_string.m_Length) return  1;
-
-        const char *left   = m_Data;
-        const char *right  = static_string.m_Data;
-        u64         length = m_Length;
-
-        while (length-- && *left++ == *right++)
-        {
-        }
-
-        if (*left < *right) return -1;
-        if (*left > *right) return  1;
-        return 0;
+        return Compare(static_string.Data(), static_string.Length());
     }
 
     REV_INLINE bool Equals(const char *cstring, u64 length) const
@@ -597,7 +483,7 @@ public:
 
     REV_INLINE StaticString& operator=(nullptr_t)
     {
-        FillMemoryChar(m_Data, '\0', m_Length);
+        ZeroMemory(m_Data, m_Length);
         m_Length = 0;
         return *this;
     }
@@ -606,7 +492,7 @@ public:
     {
         if (m_Length > 1)
         {
-            FillMemoryChar(m_Data + 1, '\0', m_Length - 1);
+            ZeroMemory(m_Data + 1, m_Length - 1);
         }
 
         m_Length = 1;
@@ -621,7 +507,7 @@ public:
 
         if (m_Length > const_string.Length())
         {
-            FillMemoryChar(m_Data + const_string.Length(), '\0', m_Length - const_string.Length());
+            ZeroMemory(m_Data + const_string.Length(), m_Length - const_string.Length());
         }
 
         m_Length = const_string.Length();
@@ -639,7 +525,7 @@ public:
 
             if (m_Length > other.m_Length)
             {
-                FillMemoryChar(m_Data + other.m_Length, '\0', m_Length - other.m_Length);
+                ZeroMemory(m_Data + other.m_Length, m_Length - other.m_Length);
             }
 
             m_Length = other.m_Length;
@@ -657,7 +543,7 @@ public:
 
             if (m_Length > other.m_Length)
             {
-                FillMemoryChar(m_Data + other.m_Length, '\0', m_Length - other.m_Length);
+                ZeroMemory(m_Data + other.m_Length, m_Length - other.m_Length);
             }
 
             m_Length = other.m_Length;
@@ -666,23 +552,13 @@ public:
         return *this;
     }
 
-    REV_INLINE StaticString& operator+=(char right)
-    {
-        PushBack(right);
-        return *this;
-    }
-
-    REV_INLINE StaticString& operator+=(const ConstString& right)
-    {
-        PushBack(right);
-        return *this;
-    }
+    REV_INLINE StaticString& operator+=(char right)               { return PushBack(right); }
+    REV_INLINE StaticString& operator+=(const ConstString& right) { return PushBack(right); }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
     REV_INLINE StaticString& operator+=(const StaticString<other_capacity, other_aligned_capacity>& right)
     {
-        PushBack(right);
-        return *this;
+        return PushBack(right);
     }
 
     REV_INLINE char operator[](u64 index) const

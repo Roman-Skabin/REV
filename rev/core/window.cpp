@@ -9,6 +9,10 @@
 #include "memory/memory.h"
 #include "graphics/graphics_api.h"
 
+#if WINVER < 0x0605
+    #error "Unsupported Windows version: minimal version is 1703"
+#endif
+
 namespace REV
 {
 
@@ -16,6 +20,7 @@ Window::Window(const Logger& logger, const ConstString& title)
     : m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
       m_Handle(null),
       m_XYWH(Settings::Get()->window_xywh),
+      m_DPI(GetDpiForSystem()),
       m_Closed(true),
       m_Moved(false),
       m_Resized(false),
@@ -23,7 +28,7 @@ Window::Window(const Logger& logger, const ConstString& title)
       m_Minimized(false),
       m_FullscreenSetRequested(Settings::Get()->fullscreen),
       m_FullscreenUnsetRequested(false),
-      m_Logger(logger, null, Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
+      m_Logger(logger, null, Logger::TARGET::FILE),
       m_Title(title),
       m_ClassName(title)
 {
@@ -36,13 +41,21 @@ Window::Window(const Logger& logger, const ConstString& title)
     wcexa.lpszClassName = m_ClassName.Data();
     REV_DEBUG_RESULT(RegisterClassExA(&wcexa));
 
+    REV_DEBUG_RESULT(SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2));
+    REV_DEBUG_RESULT(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2));
+    REV_DEBUG_RESULT(GetAwarenessFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) == DPI_AWARENESS_PER_MONITOR_AWARE);
+
+#if WINVER >= 0x0606
+    REV_DEBUG_RESULT(SetThreadDpiHostingBehavior(DPI_HOSTING_BEHAVIOR_MIXED) != DPI_HOSTING_BEHAVIOR_INVALID);
+#endif
+
     s32 width  = m_XYWH.z;
     s32 height = m_XYWH.w;
 
     if (width != REV_S32_MIN && height != REV_S32_MIN)
     {
         RECT wr = { 0, 0, width, height };
-        if (AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, false))
+        if (AdjustWindowRectEx(&wr, WS_OVERLAPPEDWINDOW, false, 0))
         {
             width  = wr.right  - wr.left;
             height = wr.bottom - wr.top;
@@ -50,10 +63,26 @@ Window::Window(const Logger& logger, const ConstString& title)
     }
 
     REV_DEBUG_RESULT(m_Handle = CreateWindowExA(0, wcexa.lpszClassName, m_Title.Data(), WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wcexa.hInstance, 0));
+    SetWindowLongPtrA(m_Handle, GWLP_USERDATA, cast<LONG_PTR>(this));
+
+    // @NOTE(Roman): Initial DPI changes. Windows doesn't send WM_DPICHANGED message
+    //               on its creation even if the window is being created on a monitor
+    //               DPI > system DPI (96)
+    {
+        u32 monitor_dpi = GetDpiForWindow(m_Handle);
+
+        width  = MulDiv(width,  monitor_dpi, m_DPI);
+        height = MulDiv(height, monitor_dpi, m_DPI);
+
+        REV_DEBUG_RESULT(SetWindowPos(m_Handle, null,
+                                    0, 0,
+                                    width, height,
+                                    SWP_ASYNCWINDOWPOS | SWP_NOREPOSITION | SWP_NOZORDER | SWP_NOACTIVATE));
+        
+        m_DPI = monitor_dpi;
+    }
 
     m_Logger.LogSuccess("Window \"", m_Title, "\" has been created");
-
-    SetWindowLongPtrA(m_Handle, GWLP_USERDATA, cast<LONG_PTR>(this));
 }
 
 Window::~Window()
@@ -138,13 +167,14 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
         {
             Math::v2s new_size(cast<s32>(lparam & 0xFFFF), cast<s32>(lparam >> 16));
 
-            if ((window->m_XYWH.wh.w != new_size.w || window->m_XYWH.wh.h != new_size.h) && wparam != SIZE_MINIMIZED)
+            if ((window->m_XYWH.wh != new_size) && wparam != SIZE_MINIMIZED)
             {
-                window->m_XYWH.wh   = new_size;
                 window->m_Minimized = false;
                 window->m_Resized   = true;
 
-                window->m_Logger.LogInfo("Window \"", window->m_Title, "\" has been resized: ", window->m_XYWH.wh);
+                window->m_Logger.LogDebug("Window: old size: ", window->m_XYWH.wh, ", new size: ", new_size);
+
+                window->m_XYWH.wh = new_size;
             }
             else if (wparam == SIZE_MINIMIZED)
             {
@@ -155,11 +185,15 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
         case WM_WINDOWPOSCHANGED: // 0x0047
         {
             WINDOWPOS *window_pos = cast<WINDOWPOS *>(lparam);
-            if (window->m_XYWH.x != window_pos->x || window->m_XYWH.y != window_pos->y)
+            Math::v2s  new_pos(window_pos->x, window_pos->y);
+
+            if (window->m_XYWH.xy != new_pos)
             {
-                window->m_XYWH.x = window_pos->x;
-                window->m_XYWH.y = window_pos->y;
-                window->m_Moved  = true;
+                window->m_Moved = true;
+
+                window->m_Logger.LogDebug("Window: old position: ", window->m_XYWH.xy, ", new position: ", new_pos);
+
+                window->m_XYWH.xy = new_pos;
             }
 
             result = DefWindowProcA(handle, message, wparam, lparam);
@@ -173,15 +207,12 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             GetRawInputData(raw_input_handle, RID_INPUT, 0, &bytes, sizeof(RAWINPUTHEADER));
 
             RAWINPUT *raw_input = cast<RAWINPUT *>(Memory::Get()->PushToFrameArena(bytes));
+            u32       ret_bytes = GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &bytes, sizeof(RAWINPUTHEADER));
+            REV_CHECK(ret_bytes == bytes);
 
-            if (GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &bytes, sizeof(RAWINPUTHEADER)) == bytes
-            &&  raw_input->header.dwType == RIM_TYPEMOUSE)
+            if (raw_input->header.dwType == RIM_TYPEMOUSE)
             {
-                Mouse& mouse = Input::Get()->m_Mouse;
-
-                mouse.Update(raw_input->data.mouse);
-
-                window->m_Logger.LogInfo("Mouse: { x, y }: ", mouse.Pos(), ", { dx, dy }: ", mouse.DeltaPos(), ", wheel: ", mouse.Wheel(), ", delta wheel: ", mouse.DeltaWheel());
+                Input::Get()->m_Mouse.Update(raw_input->data.mouse, *window);
             }
 
             result = DefWindowProcA(handle, message, wparam, lparam);
@@ -191,6 +222,21 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
         {
             // @NOTE(Roman): suppress bip sound on alt+enter
             result = MNC_CLOSE << 16;
+        } break;
+
+        case WM_DPICHANGED: // 0x02E0
+        {
+            u32   new_dpi  = cast<u32>(wparam >> 16);
+            RECT *new_size = cast<RECT *>(lparam);
+
+            REV_DEBUG_RESULT(SetWindowPos(handle, null,
+                                          new_size->left, new_size->top,
+                                          new_size->right - new_size->left, new_size->bottom - new_size->top,
+                                          SWP_ASYNCWINDOWPOS | SWP_NOZORDER | SWP_NOACTIVATE));
+
+            window->m_Logger.LogDebug("DPI for window \"", window->m_Title, "\" has been changed. Old DPI: ", window->m_DPI, ", new DPI: ", new_dpi);
+
+            window->m_DPI = new_dpi;
         } break;
 
         default:

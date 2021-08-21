@@ -106,7 +106,7 @@ void DemoScene::OnUpdate()
     else if (keyboard[REV::KEY::RIGHT].Down()) translation.x =  timer.DeltaSeconds();
     /**/ if (keyboard[REV::KEY::UP   ].Down()) translation.y =  timer.DeltaSeconds();
     else if (keyboard[REV::KEY::DOWN ].Down()) translation.y = -timer.DeltaSeconds();
-    /**/ if (mouse.DeltaWheel())               translation.z =  mouse.DeltaWheel() * timer.DeltaSeconds();
+    /**/ if (mouse.DeltaWheel())               translation.z = -mouse.DeltaWheel() * timer.DeltaSeconds();
     m_Translation *= REV::Math::m4::translation(translation);
 
     m_CBufferData.mvp    = m_Translation; // * REV::Math::m4::rotation_z(timer.Seconds());

@@ -60,6 +60,7 @@ AssetManager::AssetManager(Allocator *allocator, const Logger& logger)
       m_Logger(logger, ConstString(REV_CSTR_ARGS("AssetManager logger")), Logger::TARGET::CONSOLE | Logger::TARGET::FILE),
       m_WorkQueue(m_Logger)
 {
+    m_Logger.LogSuccess("AssetManager has been created");
 }
 
 AssetManager::~AssetManager()
@@ -70,6 +71,8 @@ AssetManager::~AssetManager()
     {
         // @TODO(Roman): Release assets resoucres
     }
+
+    m_Logger.LogInfo("AssetManager has been destroyed");
 }
 
 void AssetManager::FreeSceneAssets()

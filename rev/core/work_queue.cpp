@@ -31,8 +31,7 @@ WorkQueue::WorkQueue(const Logger& logger)
         REV_DEBUG_RESULT(CloseHandle(CreateThread(null, 0, ThreadProc, this, 0, null)));
     }
 
-    logger.LogSuccess("Work queue has been created");
-    logger.LogInfo("Additional threads count = ", cpu_virtual_threads_count);
+    logger.LogSuccess("Work queue has been created. Additional threads count: ", cpu_virtual_threads_count);
 }
 
 WorkQueue::~WorkQueue()

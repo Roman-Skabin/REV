@@ -69,7 +69,6 @@ namespace REV::GPU
     struct TextureDesc final
     {
         u64            subtextures_count;
-        #pragma warning(suppress: 4200)
         SubTextureDesc subtexture_desc[0];
     };
 
@@ -117,7 +116,6 @@ namespace REV::GPU
         REV_REMOVE_OOP_STUFF(MemoryManager);
 
     private:
-        #pragma warning(suppress: 4200)
         byte platform[0];
 
         friend class ::REV::GraphicsAPI;

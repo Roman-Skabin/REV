@@ -23,7 +23,6 @@ struct BlockHeader
     u64          data_bytes;
     BlockHeader *prev;
     BlockHeader *next_free;
-    #pragma warning(suppress: 4200)
     byte         data[0];
 };
 
@@ -37,6 +36,7 @@ Allocator::Allocator(void *base_address, u64 capacity, bool clear_memory, const 
       m_AllocationsCount(0),
       m_ReAllocationsCount(0),
       m_DeAllocationsCount(0),
+      m_MaxMemoryUsed(0),
 #endif
       m_CriticalSection(),
       m_Name(name),
@@ -109,6 +109,10 @@ Allocator::~Allocator()
         DebugFC(DEBUG_COLOR::INFO, "    Reallocations overall: %I64u", m_ReAllocationsCount);
         DebugFC(DEBUG_COLOR::INFO, "    Deallocations overall: %I64u", m_DeAllocationsCount);
     }
+    DebugFC(DEBUG_COLOR::INFO, "    Max memory used: %I64u B = %f KB = %f MB = %f GB", m_MaxMemoryUsed,
+                                                                                       m_MaxMemoryUsed / 1024.0f,
+                                                                                       m_MaxMemoryUsed / 1048576.0f,
+                                                                                       m_MaxMemoryUsed / 1073741824.0f);
 #endif
     ZeroMemory(this, REV_StructFieldOffset(Allocator, m_CriticalSection));
 }
@@ -247,6 +251,7 @@ void *Allocator::Allocate(u64 bytes)
 
 #if REV_DEBUG
     ++m_AllocationsCount;
+    m_MaxMemoryUsed = Math::max(m_MaxMemoryUsed, m_Used);
 #endif
 
     m_CriticalSection.Leave();
@@ -585,6 +590,7 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
 
 #if REV_DEBUG
     ++m_ReAllocationsCount;
+    m_MaxMemoryUsed = Math::max(m_MaxMemoryUsed, m_Used);
 #endif
 
     m_CriticalSection.Leave();

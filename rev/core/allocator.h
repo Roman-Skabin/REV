@@ -72,6 +72,7 @@ namespace REV
         u64                     m_AllocationsCount;
         u64                     m_ReAllocationsCount;
         u64                     m_DeAllocationsCount;
+        u64                     m_MaxMemoryUsed;
     #endif
         CriticalSection<false>  m_CriticalSection;
         ConstString             m_Name;

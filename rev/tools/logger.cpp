@@ -157,6 +157,7 @@ void Logger::PrintMessage(MESSAGE_KIND message_kind, const StaticString<1024>& m
         {
             switch (message_kind)
             {
+                case MESSAGE_KIND::DEBUG:
                 case MESSAGE_KIND::INFO:
                 {
                     REV_DEBUG_RESULT(WriteConsoleA(m_Console, buffer_data, buffer_length, 0, 0));

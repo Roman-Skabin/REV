@@ -74,7 +74,7 @@
 // @NOTE(Roman): On x64 CPUs we wanna see at least nothing but SSE.
 //               And I don't care is it SSE 4.2 or just SSE.
 //               https://store.steampowered.com/hwsurvey says
-//               there are 97.58% CPUs supported SSE 4.2 (9/16/2020).
+//               there are 97.58% CPUs support SSE 4.2 (9/16/2020).
 //               So if your CPU does not support SSE 4.2
 //               some instractions will be illegal probably.
 #define REV_ISA_SSE    0
@@ -136,6 +136,7 @@
 //  #include <mfreadwrite.h>
 #elif REV_PLATFORM_MACOS
     // @TODO(Roman): Platform-specific includes
+    #include <sys/mman.h>
     #include <sys/syslimits.h>
 #elif REV_PLATFORM_LINUX
     // @TODO(Roman): Platform-specific includes

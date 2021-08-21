@@ -9,14 +9,14 @@
 
 namespace REV
 {
-    template<typename T, typename Allocator_t = Allocator>
+    template<typename T>
     class Array final
     {
     public:
         using Type = T;
         static constexpr const u64 npos = REV_U64_MAX;
     
-        explicit Array(Allocator_t *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT)
+        explicit Array(Allocator *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT)
             : m_Header(null)
         {
             REV_CHECK(allocator);
@@ -29,7 +29,7 @@ namespace REV
             m_Header->alignment_in_bytes = alignment_in_bytes;
         }
 
-        Array(const ConstArray<T>& const_array, Allocator_t *allocator, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT)
+        Array(const ConstArray<T>& const_array, Allocator *allocator, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT)
             : m_Header(null)
         {
             REV_CHECK(allocator);
@@ -347,12 +347,11 @@ namespace REV
     private:
         struct Header
         {
-            Allocator_t *allocator;
-            u64          count;
-            u64          capacity;
-            u64          alignment_in_bytes;
-            #pragma warning(suppress: 4200)
-            T            data[0];
+            Allocator *allocator;
+            u64        count;
+            u64        capacity;
+            u64        alignment_in_bytes;
+            T          data[0];
         };
     
         Header *m_Header;

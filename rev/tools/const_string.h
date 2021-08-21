@@ -24,14 +24,14 @@ namespace REV
         ConstString SubString(u64 from) const;
         ConstString SubString(u64 from, u64 to) const;
 
-        u64 Find(char symbol, u64 offset = 0) const;
-        u64 Find(const char *cstring, u64 cstring_length, u64 offset = 0) const;
-        u64 Find(const ConstString& const_string, u64 offset = 0) const;
+                   u64 Find(char symbol, u64 offset = 0)                             const;
+                   u64 Find(const char *cstring, u64 cstring_length, u64 offset = 0) const;
+        REV_INLINE u64 Find(const ConstString& const_string, u64 offset = 0)         const { return Find(const_string.m_Data, const_string.m_Length, offset); }
 
         u64 RFind(char symbol, u64 offset = 0) const;
 
-        s8 Compare(const char *cstring, u64 cstring_length) const;
-        s8 Compare(const ConstString& other) const;
+                   s8 Compare(const char *cstring, u64 cstring_length) const;
+        REV_INLINE s8 Compare(const ConstString& other)                const { return Compare(other.m_Data, other.m_Length); }
 
         REV_INLINE const char *Data()   const { return  m_Data;   }
         REV_INLINE u64         Length() const { return  m_Length; }

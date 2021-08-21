@@ -104,7 +104,6 @@ namespace REV
             REV_REMOVE_OOP_STUFF(ShaderManager);
 
         private:
-            #pragma warning(suppress: 4200)
             byte platform[0];
 
             friend class ::REV::GraphicsAPI;

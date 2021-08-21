@@ -109,7 +109,7 @@ namespace REV
     class REV_API Mouse final
     {
     public:
-        Mouse(const Logger& logger, HWND window_handle);
+        Mouse(const Logger& logger, const Window& window);
 
         REV_INLINE Math::v2s            Pos()          const { return m_Pos;          }
         REV_INLINE Math::v2s            DeltaPos()     const { return m_DeltaPos;     }
@@ -122,7 +122,7 @@ namespace REV
         REV_INLINE const DigitalButton& X2Button()     const { return m_X2Button;     }
 
         void Reset();
-        void Update(const RAWMOUSE& raw_mouse);
+        void Update(const RAWMOUSE& raw_mouse, const Window& window);
 
     private:
         Math::v2s     m_Pos;

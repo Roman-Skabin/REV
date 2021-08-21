@@ -1,0 +1,15 @@
+Minimal:
+    OS:  Windows 10, 1703
+    CPU: Intel: Silvermont, Nehalem
+         AMD:   Bulldozer, Jaguar
+    GPU: NVidia GeForce GTX 1060.
+    RAM: ?
+    HDD: ?
+
+Recomended:
+    OS:  Windows 10, 1803
+    CPU: Intel: Haswell
+         AND:   Excavator
+    GPU: NVidia GeForce GTX 1060
+    RAM: ?
+    HDD: ?

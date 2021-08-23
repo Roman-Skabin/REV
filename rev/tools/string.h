@@ -135,14 +135,17 @@ public:
 
     u64 RFind(char symbol, u64 offset = 0) const;
 
-               s8 Compare(const char *cstring, u64 cstring_length) const;
-    REV_INLINE s8 Compare(const ConstString& const_string)         const { return Compare(const_string.Data(), const_string.Length()); }
-    REV_INLINE s8 Compare(const String& string)                    const { return Compare(string.Data(),       string.Length());       }
+    REV_INLINE COMPARE_RESULT Compare(const char *cstring, u64 cstring_length) const { return CompareStrings(m_Header->data, m_Header->length, cstring,             cstring_length);        }
+    REV_INLINE COMPARE_RESULT Compare(const ConstString& const_string)         const { return CompareStrings(m_Header->data, m_Header->length, const_string.Data(), const_string.Length()); }
+    REV_INLINE COMPARE_RESULT Compare(const String& string) const
+    {
+        return CompareStringsAligned(m_Header->data, AlignUp(m_Header->length, 16), string.m_Header->data, AlignUp(string.m_Header->length, 16));
+    }
 
     template<u64 ssc, u64 ssac>
-    REV_INLINE s8 Compare(const StaticString<ssc, ssac>& static_string) const
+    REV_INLINE COMPARE_RESULT Compare(const StaticString<ssc, ssac>& static_string) const
     {
-        return Compare(static_string.Data(), static_string.Length());
+        return CompareStringsAligned(m_Header->data, AlignUp(m_Header->length, 16), static_string.m_Data, AlignUp(static_string.m_Length, 16));
     }
 
     REV_INLINE u64 Length()    const { return m_Header->length;             }

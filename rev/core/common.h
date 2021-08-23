@@ -214,7 +214,7 @@ using namespace Helpers;
 #if _REV_GLOBAL_HELPERS
 } // REV
 
-using namespace REV::Helpers;
+using namespace ::REV::Helpers;
 
 namespace REV
 {

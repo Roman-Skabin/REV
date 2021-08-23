@@ -5,6 +5,7 @@
 #pragma once
 
 #include "core/common.h"
+#include "memory/memlow.h"
 
 namespace REV
 {
@@ -30,8 +31,8 @@ namespace REV
 
         u64 RFind(char symbol, u64 offset = 0) const;
 
-                   s8 Compare(const char *cstring, u64 cstring_length) const;
-        REV_INLINE s8 Compare(const ConstString& other)                const { return Compare(other.m_Data, other.m_Length); }
+        REV_INLINE COMPARE_RESULT Compare(const char *cstring, u64 cstring_length) const { return CompareStrings(m_Data, m_Length, cstring,      cstring_length); }
+        REV_INLINE COMPARE_RESULT Compare(const ConstString& other)                const { return CompareStrings(m_Data, m_Length, other.m_Data, other.m_Length); }
 
         REV_INLINE const char *Data()   const { return  m_Data;   }
         REV_INLINE u64         Length() const { return  m_Length; }

@@ -101,6 +101,9 @@ namespace REV
             REV_CHECK(KEY::FIRST <= key && key <= KEY::LAST);
             return m_Keys[cast<u32>(key)];
         }
+    
+    private:
+        REV_DELETE_CONSTRS_AND_OPS(Keyboard);
 
     private:
         Key m_Keys[cast<u32>(KEY::MAX)];
@@ -111,19 +114,22 @@ namespace REV
     public:
         Mouse(const Logger& logger, const Window& window);
 
-        REV_INLINE Math::v2s            Pos()          const { return m_Pos;          }
-        REV_INLINE Math::v2s            DeltaPos()     const { return m_DeltaPos;     }
-        REV_INLINE s32                  Wheel()        const { return m_Wheel;        }
-        REV_INLINE s32                  DeltaWheel()   const { return m_DeltaWheel;   }
-        REV_INLINE const DigitalButton& LeftButton()   const { return m_LeftButton;   }
-        REV_INLINE const DigitalButton& MiddleButton() const { return m_MiddleButton; }
-        REV_INLINE const DigitalButton& RightButton()  const { return m_RightButton;  }
-        REV_INLINE const DigitalButton& X1Button()     const { return m_X1Button;     }
-        REV_INLINE const DigitalButton& X2Button()     const { return m_X2Button;     }
+        REV_INLINE Math::v2s REV_VECTORCALL Pos()          const { return m_Pos;          }
+        REV_INLINE Math::v2s REV_VECTORCALL DeltaPos()     const { return m_DeltaPos;     }
+        REV_INLINE s32                      Wheel()        const { return m_Wheel;        }
+        REV_INLINE s32                      DeltaWheel()   const { return m_DeltaWheel;   }
+        REV_INLINE const DigitalButton&     LeftButton()   const { return m_LeftButton;   }
+        REV_INLINE const DigitalButton&     MiddleButton() const { return m_MiddleButton; }
+        REV_INLINE const DigitalButton&     RightButton()  const { return m_RightButton;  }
+        REV_INLINE const DigitalButton&     X1Button()     const { return m_X1Button;     }
+        REV_INLINE const DigitalButton&     X2Button()     const { return m_X2Button;     }
 
         void Reset();
         void Update(const RAWMOUSE& raw_mouse, const Window& window);
 
+    private:
+        REV_DELETE_CONSTRS_AND_OPS(Mouse);
+    
     private:
         Math::v2s     m_Pos;
         Math::v2s     m_DeltaPos;
@@ -146,9 +152,9 @@ namespace REV
         {
         }
 
-        REV_INLINE f32                  Deadzone() const { return m_Deadzone; }
-        REV_INLINE Math::v2             Offset()   const { return m_Offset;   }
-        REV_INLINE const DigitalButton& Button()   const { return m_Button;   }
+        REV_INLINE f32                     Deadzone() const { return m_Deadzone; }
+        REV_INLINE Math::v2 REV_VECTORCALL Offset()   const { return m_Offset;   }
+        REV_INLINE const DigitalButton&    Button()   const { return m_Button;   }
 
         REV_INLINE void Update(f32 x, f32 y, bool down)
         {
@@ -156,7 +162,7 @@ namespace REV
             m_Offset.y = Math::abs(y) <= m_Deadzone ? 0 : y;
             m_Button.Update(down);
         }
-
+    
     private:
         f32           m_Deadzone;
         Math::v2      m_Offset;
@@ -167,7 +173,6 @@ namespace REV
     {
     public:
         Gamepad(const Logger& logger);
-        Gamepad(Gamepad&& other) noexcept;
 
         REV_INLINE const DigitalButton& ButtonA()       const { return m_ButtonA;       }
         REV_INLINE const DigitalButton& ButtonB()       const { return m_ButtonB;       }
@@ -188,6 +193,9 @@ namespace REV
         REV_INLINE bool                 Connected()     const { return m_Connected;     }
 
         void Update(const Logger& logger);
+    
+    private:
+        REV_DELETE_CONSTRS_AND_OPS(Gamepad);
 
     private:
         DigitalButton m_ButtonA;
@@ -227,11 +235,7 @@ namespace REV
         REV_INLINE const Gamepad&  GetGamepad()  const { return m_Gamepad;  }
 
     private:
-        Input(const Input&) = delete;
-        Input(Input&&)      = delete;
-
-        Input& operator=(const Input&) = delete;
-        Input& operator=(Input&&)      = delete;
+        REV_DELETE_CONSTRS_AND_OPS(Input);
 
     private:
         Mouse    m_Mouse;

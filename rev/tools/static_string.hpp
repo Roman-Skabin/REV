@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "memory/memlow.h"
 #include "math/simd.h"
 #include "tools/const_string.h"
 
@@ -15,6 +14,8 @@ template<u64 capacity, u64 aligned_capacity = AlignUp(capacity, CACHE_LINE_SIZE)
 class StaticString final
 {
 public:
+    static_assert(aligned_capacity && aligned_capacity % 16 == 0, "StaticString capacity must be multiple of 16");
+
     static constexpr u64 npos = REV_U64_MAX;
 
     REV_INLINE StaticString()
@@ -288,22 +289,12 @@ public:
 
         for (const char *it = m_Data + offset; it < _end; ++it)
         {
-            const char *sub_end = it + cstring_length;
-
-            if (sub_end > _end)
+            if (it + cstring_length > _end)
             {
                 return npos;
             }
 
-            const char *sub         = it;
-            const char *cstr        = cstring;
-            u64         cstr_length = cstring_length;
-
-            while (cstr_length-- && *sub++ == *cstr++)
-            {
-            }
-
-            if (sub == sub_end)
+            if (CompareStrings(it, cstring_length, cstring, cstring_length) == COMPARE_RESULT_EQ)
             {
                 return it - m_Data;
             }
@@ -338,42 +329,30 @@ public:
         return npos;
     }
 
-    s8 Compare(const char *cstring, u64 cstring_length) const
+    REV_INLINE COMPARE_RESULT Compare(const char *cstring, u64 cstring_length) const
     {
-        if (m_Length < cstring_length) return -1;
-        if (m_Length > cstring_length) return  1;
-
-        const char *left  = m_Data;
-        const char *right = cstring;
-
-        while (cstring_length-- && *left++ == *right++)
-        {
-        }
-
-        if (*left < *right) return -1;
-        if (*left > *right) return  1;
-        return 0;
+        return CompareStrings(m_Data, m_Length, cstring, cstring_length);
     }
 
-    s8 Compare(const ConstString& const_string) const
+    REV_INLINE COMPARE_RESULT Compare(const ConstString& const_string) const
     {
-        return Compare(const_string.Data(), const_string.Length());
+        return CompareStrings(m_Data, m_Length, const_string.Data(), const_string.Length());
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
-    s8 Compare(const StaticString<other_capacity, other_aligned_capacity>& static_string) const
+    REV_INLINE COMPARE_RESULT Compare(const StaticString<other_capacity, other_aligned_capacity>& static_string) const
     {
-        return Compare(static_string.Data(), static_string.Length());
+        return CompareStringsAligned(m_Data, AlignUp(m_Length, 16), static_string.m_Data, AlignUp(static_string.m_Length, 16));
     }
 
-    REV_INLINE bool Equals(const char *cstring, u64 length) const
+    REV_INLINE bool Equals(const char *cstring, u64 cstring_length) const
     {
-        return !Compare(cstring, length);
+        return CompareStrings(m_Data, m_Length, cstring, cstring_length) == COMPARE_RESULT_EQ;
     }
 
     REV_INLINE bool Equals(const ConstString& const_string) const
     {
-        return !Compare(const_string);
+        return CompareStrings(m_Data, m_Length, const_string.Data(), const_string.Length()) == COMPARE_RESULT_EQ;
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
@@ -393,18 +372,18 @@ public:
         }
         else
         {
-            return !Compare(static_string);
+            return CompareStringsAligned(m_Data, AlignUp(m_Length, 16), static_string.m_Data, AlignUp(static_string.m_Length, 16)) == COMPARE_RESULT_EQ;
         }
     }
 
-    REV_INLINE bool NotEquals(const char *cstring, u64 length) const
+    REV_INLINE bool NotEquals(const char *cstring, u64 cstring_length) const
     {
-        return Compare(cstring, length);
+        return CompareStrings(m_Data, m_Length, cstring, cstring_length) != COMPARE_RESULT_EQ;
     }
 
     REV_INLINE bool NotEquals(const ConstString& const_string) const
     {
-        return Compare(const_string);
+        return CompareStrings(m_Data, m_Length, const_string.Data(), const_string.Length()) != COMPARE_RESULT_EQ;
     }
 
     template<u64 other_capacity, u64 other_aligned_capacity>
@@ -424,7 +403,7 @@ public:
         }
         else
         {
-            return Compare(static_string);
+            return CompareStringsAligned(m_Data, AlignUp(m_Length, 16), static_string.m_Data, AlignUp(static_string.m_Length, 16)) != COMPARE_RESULT_EQ;
         }
     }
 

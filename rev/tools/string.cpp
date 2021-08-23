@@ -312,22 +312,12 @@ u64 String::Find(const char *cstring, u64 cstring_length, u64 offset) const
 
     for (const char *it = m_Header->data + offset; it < _end; ++it)
     {
-        const char *sub_end = it + cstring_length;
-
-        if (sub_end > _end)
+        if (it + cstring_length > _end)
         {
             return npos;
         }
 
-        const char *sub         = it;
-        const char *cstr        = cstring;
-        u64         cstr_length = cstring_length;
-
-        while (cstr_length-- && *sub++ == *cstr++)
-        {
-        }
-
-        if (sub == sub_end)
+        if (CompareStrings(it, cstring_length, cstring, cstring_length) == COMPARE_RESULT_EQ)
         {
             return it - m_Header->data;
         }
@@ -349,23 +339,6 @@ u64 String::RFind(char symbol, u64 offset) const
     }
 
     return npos;
-}
-
-s8 String::Compare(const char *cstring, u64 cstring_length) const
-{
-    if (m_Header->length < cstring_length) return -1;
-    if (m_Header->length > cstring_length) return  1;
-
-    const char *left  = m_Header->data;
-    const char *right = cstring;
-
-    while (cstring_length-- && *left++ == *right++)
-    {
-    }
-
-    if (*left < *right) return -1;
-    if (*left > *right) return  1;
-    return 0;
 }
 
 String& String::operator=(nullptr_t)

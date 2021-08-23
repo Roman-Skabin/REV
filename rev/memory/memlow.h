@@ -56,19 +56,36 @@ namespace REV
     }
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8) && RTTI::is_copy_assignable_v<T>>>
-    REV_INLINE void FillMemory(T *mem, u64 count, const T& val)
+    REV_INLINE void FillMemory(T *mem, const T& val, u64 count)
     {
         while (count--) *mem++ = val;
     }
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::cmpgt(sizeof(T), 8) && RTTI::is_move_assignable_v<T>>>
-    REV_INLINE void FillMemory(T *mem, u64 count, T&& val)
+    REV_INLINE void FillMemory(T *mem, T&& val, u64 count)
     {
         while (count--) *mem++ = RTTI::move(val);
     }
 
-    // @TODO(Roman): ISA wide CopyMemory, MoveMemory, ZeroMemory, CompareMemory
+    // @TODO(Roman): ISA wide CopyMemory, MoveMemory, ZeroMemory
     REV_INLINE void CopyMemory(void *dest, const void *src, u64 bytes) { memcpy(dest, src, bytes);                 }
     REV_INLINE void MoveMemory(void *dest, const void *src, u64 bytes) { memmove(dest, src, bytes);                }
     REV_INLINE void ZeroMemory(void *dest, u64 bytes)                  { FillMemoryU8(cast<u8 *>(dest), 0, bytes); }
+
+    enum COMPARE_RESULT : s8
+    {
+        COMPARE_RESULT_LT = -1,
+        COMPARE_RESULT_EQ =  0,
+        COMPARE_RESULT_GT =  1
+    };
+    
+    // @TODO(Roman): ISA wide CompareMemory
+    REV_INLINE int CompareMemory(const void *left, const void *right, u64 bytes) { return memcmp(left, right, bytes); }
+
+    REV_API COMPARE_RESULT REV_VECTORCALL CompareStrings(const char *left, u64 left_length, const char *right, u64 right_length);
+    REV_API COMPARE_RESULT REV_VECTORCALL CompareUnicodeStrings(const wchar_t *left, u64 left_length, const wchar_t *right, u64 right_length);
+
+    // @Important(Roman): Strings must be 16-byte aligned
+    REV_API COMPARE_RESULT REV_VECTORCALL CompareStringsAligned(const char *left, u64 left_length, const char *right, u64 right_length);
+    REV_API COMPARE_RESULT REV_VECTORCALL CompareUnicodeStringsAligned(const wchar_t *left, u64 left_length, const wchar_t *right, u64 right_length);
 }

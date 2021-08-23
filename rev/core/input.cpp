@@ -47,11 +47,10 @@ Mouse::Mouse(const Logger& logger, const Window& window)
 
     REV_DEBUG_RESULT(RegisterRawInputDevices(&rid, 1, sizeof(RAWINPUTDEVICE)));
 
-    POINT cursor_screen_pos = {0};
-    REV_DEBUG_RESULT(GetCursorPos(&cursor_screen_pos));
-
-    m_Pos.x = cursor_screen_pos.x;
-    m_Pos.y = cursor_screen_pos.y;
+    POINT point = {0};
+    REV_DEBUG_RESULT(GetCursorPos(&point));
+    REV_DEBUG_RESULT(ScreenToClient(window.Handle(), &point));
+    m_Pos = Math::v2s::clamp(Math::v2s(point.x, point.y), Math::v2s(), window.Size());
 
     logger.LogSuccess("Mouse has been created");
 }
@@ -74,11 +73,6 @@ void Mouse::Update(const RAWMOUSE& raw_mouse, const Window& window)
 {
     m_DeltaPos.x = raw_mouse.lLastX;
     m_DeltaPos.y = raw_mouse.lLastY;
-
-    Math::v2s screen_size(GetSystemMetricsForDpi(SM_CXSCREEN, window.DPI()),
-                          GetSystemMetricsForDpi(SM_CYSCREEN, window.DPI()));
-
-    // m_Pos = Math::v2s::clamp(m_Pos + m_DeltaPos, Math::v2s(), screen_size);
 
     POINT point = {0};
     REV_DEBUG_RESULT(GetCursorPos(&point));
@@ -166,28 +160,6 @@ Gamepad::Gamepad(const Logger& logger)
     {
         logger.LogInfo("Gamepad is not connected");
     }
-}
-
-Gamepad::Gamepad(Gamepad&& other) noexcept
-    : m_ButtonA(RTTI::move(other.m_ButtonA)),
-      m_ButtonB(RTTI::move(other.m_ButtonB)),
-      m_ButtonX(RTTI::move(other.m_ButtonX)),
-      m_ButtonY(RTTI::move(other.m_ButtonY)),
-      m_LeftTrigger(RTTI::move(other.m_LeftTrigger)),
-      m_RightTrigger(RTTI::move(other.m_RightTrigger)),
-      m_LeftShoulder(RTTI::move(other.m_LeftShoulder)),
-      m_RightShoulder(RTTI::move(other.m_RightShoulder)),
-      m_ButtonUp(RTTI::move(other.m_ButtonUp)),
-      m_ButtonDown(RTTI::move(other.m_ButtonDown)),
-      m_ButtonLeft(RTTI::move(other.m_ButtonLeft)),
-      m_ButtonRight(RTTI::move(other.m_ButtonRight)),
-      m_LeftStick(RTTI::move(other.m_LeftStick)),
-      m_RightStick(RTTI::move(other.m_RightStick)),
-      m_ButtonStart(RTTI::move(other.m_ButtonStart)),
-      m_ButtonBack(RTTI::move(other.m_ButtonBack)),
-      m_Connected(other.m_Connected)
-{
-    other.m_Connected = false;
 }
 
 void Gamepad::Update(const Logger& logger)

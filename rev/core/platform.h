@@ -163,10 +163,13 @@
     #include <intrin.h>
 #elif REV_COMPILER_GCC
     // @TODO(Roman): Compiler-specific includes
+    #include <x86intrin.h>
 #elif REV_COMPILER_CLANG
     // @TODO(Roman): Compiler-specific includes
+    #include <x86intrin.h>
 #elif REV_COMPILER_MINGW
     // @TODO(Roman): Compiler-specific includes
+    #include <x86intrin.h>
 #endif
 
 //

@@ -7,6 +7,7 @@
 #include "core/common.h"
 #include "tools/const_string.h"
 #include "tools/static_string_builder.hpp"
+#include "tools/file.h"
 
 namespace REV
 {
@@ -14,15 +15,15 @@ namespace REV
     class REV_API Logger final
     {
     public:
-        enum class TARGET
+        enum TARGET : u32
         {
-            NONE    = 0,
-            FILE    = BIT(0),
-            CONSOLE = BIT(1),
-            WINDBG  = BIT(2),
+            TARGET_NONE    = 0,
+            TARGET_FILE    = BIT(0),
+            TARGET_CONSOLE = BIT(1),
+            TARGET_WINDBG  = BIT(2),
         };
 
-        enum class MESSAGE_KIND
+        enum class MESSAGE_KIND : u32
         {
             DEBUG,
             INFO,
@@ -34,10 +35,10 @@ namespace REV
     public:
         Logger(
             const ConstString& name,
-            const char        *filename, // @NOTE(Roman): Required if you are logging to the file
+            const ConstString& filename, // @NOTE(Roman): Required if you are logging to the file
             TARGET             target
         );
-        Logger(const Logger& other, const ConstString& name = null, TARGET target = TARGET::NONE);
+        Logger(const Logger& other, const ConstString& name = null, TARGET target = TARGET_NONE);
         Logger(Logger&& other) noexcept;
 
         ~Logger();
@@ -64,7 +65,7 @@ namespace REV
         template<typename ...T>
         StaticString<1024> REV_CDECL ConstructMessage(MESSAGE_KIND message_kind, const T& ...args) const
         {
-            // [dd.mm.yyyy hh:mm:ss]<LoggerName>(MessageKind): Mesesage.
+            // [dd.mm.yyyy hh:mm:ss]<LoggerName>(MessageKind): Message.
 
             time_t raw_time;
             time(&raw_time);
@@ -90,12 +91,12 @@ namespace REV
 
             switch (message_kind)
             {
-                case MESSAGE_KIND::DEBUG:   builder.Build(ConstString(REV_CSTR_ARGS("(Debug): ")));   break;
-                case MESSAGE_KIND::INFO:    builder.Build(ConstString(REV_CSTR_ARGS("(Info): ")));    break;
-                case MESSAGE_KIND::SUCCESS: builder.Build(ConstString(REV_CSTR_ARGS("(Success): "))); break;
-                case MESSAGE_KIND::WARNING: builder.Build(ConstString(REV_CSTR_ARGS("(Warning): "))); break;
-                case MESSAGE_KIND::ERROR:   builder.Build(ConstString(REV_CSTR_ARGS("(Error): ")));   break;
-                default:                    REV_FAILED_M("Wrong MESSAGE_KIND: %I32u", message_kind);  break;
+                case MESSAGE_KIND::DEBUG:   builder.Build("(Debug): ");                              break;
+                case MESSAGE_KIND::INFO:    builder.Build("(Info): ");                               break;
+                case MESSAGE_KIND::SUCCESS: builder.Build("(Success): ");                            break;
+                case MESSAGE_KIND::WARNING: builder.Build("(Warning): ");                            break;
+                case MESSAGE_KIND::ERROR:   builder.Build("(Error): ");                              break;
+                default:                    REV_ERROR_M("Wrong MESSAGE_KIND: %I32u", message_kind); break;
             }
 
             builder.Build(args...);
@@ -112,9 +113,9 @@ namespace REV
         void PrintMessage(MESSAGE_KIND message_kind, const StaticString<1024>& message) const;
 
     private:
-        HANDLE m_File;
-        HANDLE m_Console;
-        TARGET m_Target;
+        mutable File m_File;
+        HANDLE       m_Console;
+        TARGET       m_Target;
         union
         {
             u16 full;
@@ -127,5 +128,5 @@ namespace REV
         StaticString<CACHE_LINE_SIZE> m_Name;
     };
 
-    REV_ENUM_CLASS_OPERATORS(Logger::TARGET)
+    REV_ENUM_OPERATORS(Logger::TARGET)
 }

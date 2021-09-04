@@ -97,22 +97,26 @@ Allocator::~Allocator()
 #if REV_DEBUG
     if (m_AllocationsCount > m_DeAllocationsCount)
     {
-        DebugFC(DEBUG_COLOR::ERROR, "Allocator \"%s\": Memory leak detected:", m_Name.Data());
-        DebugFC(DEBUG_COLOR::ERROR, "    Allocations overall: %I64u", m_AllocationsCount);
-        DebugFC(DEBUG_COLOR::ERROR, "    Reallocations overall: %I64u", m_ReAllocationsCount);
-        DebugFC(DEBUG_COLOR::ERROR, "    Deallocations overall: %I64u", m_DeAllocationsCount);
+        PrintDebugMessage(DEBUG_COLOR::ERROR, "Allocator \"%s\": Memory leak detected:", m_Name.Data());
+        PrintDebugMessage(DEBUG_COLOR::ERROR, "    Allocations overall: %I64u", m_AllocationsCount);
+        PrintDebugMessage(DEBUG_COLOR::ERROR, "    Reallocations overall: %I64u", m_ReAllocationsCount);
+        PrintDebugMessage(DEBUG_COLOR::ERROR, "    Deallocations overall: %I64u", m_DeAllocationsCount);
     }
     else
     {
-        DebugFC(DEBUG_COLOR::INFO, "Allocator \"%s\": Stats:", m_Name.Data());
-        DebugFC(DEBUG_COLOR::INFO, "    Allocations overall: %I64u", m_AllocationsCount);
-        DebugFC(DEBUG_COLOR::INFO, "    Reallocations overall: %I64u", m_ReAllocationsCount);
-        DebugFC(DEBUG_COLOR::INFO, "    Deallocations overall: %I64u", m_DeAllocationsCount);
+        PrintDebugMessage(DEBUG_COLOR::INFO, "Allocator \"%s\": Stats:", m_Name.Data());
+        PrintDebugMessage(DEBUG_COLOR::INFO, "    Allocations overall: %I64u", m_AllocationsCount);
+        PrintDebugMessage(DEBUG_COLOR::INFO, "    Reallocations overall: %I64u", m_ReAllocationsCount);
+        PrintDebugMessage(DEBUG_COLOR::INFO, "    Deallocations overall: %I64u", m_DeAllocationsCount);
     }
-    DebugFC(DEBUG_COLOR::INFO, "    Max memory used: %I64u B = %f KB = %f MB = %f GB", m_MaxMemoryUsed,
-                                                                                       m_MaxMemoryUsed / 1024.0f,
-                                                                                       m_MaxMemoryUsed / 1048576.0f,
-                                                                                       m_MaxMemoryUsed / 1073741824.0f);
+    PrintDebugMessage(DEBUG_COLOR::INFO, "    Max memory used: %I64u B = %f KB = %f MB = %f GB", m_MaxMemoryUsed,
+                                                                                                 m_MaxMemoryUsed / 1024.0f,
+                                                                                                 m_MaxMemoryUsed / 1048576.0f,
+                                                                                                 m_MaxMemoryUsed / 1073741824.0f);
+    PrintDebugMessage(DEBUG_COLOR::INFO, "    Capacity: %I64u B = %f KB = %f MB = %f GB", m_Capacity,
+                                                                                          m_Capacity / 1024.0f,
+                                                                                          m_Capacity / 1048576.0f,
+                                                                                          m_Capacity / 1073741824.0f);
 #endif
     ZeroMemory(this, REV_StructFieldOffset(Allocator, m_CriticalSection));
 }

@@ -4,6 +4,7 @@
 
 #include "core/pch.h"
 #include "tools/const_string.h"
+#include "tools/string.h"
 
 namespace REV
 {

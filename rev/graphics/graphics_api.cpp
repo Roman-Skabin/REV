@@ -69,12 +69,12 @@ void GraphicsAPI::Init(Window *window, Allocator *allocator, const Logger& logge
 
         case API::VULKAN:
         {
-            REV_FAILED_M("Vulkan API is not supported yet.");
+            REV_ERROR_M("Vulkan API is not supported yet.");
         } break;
 
         default:
         {
-            REV_FAILED_M("Unknown graphics API.");
+            REV_ERROR_M("Unknown graphics API.");
         } break;
     }
 }
@@ -93,12 +93,12 @@ void GraphicsAPI::Destroy()
 
         case API::VULKAN:
         {
-            REV_FAILED_M("Vulkan API is not supported yet.");
+            REV_ERROR_M("Vulkan API is not supported yet.");
         } break;
 
         default:
         {
-            REV_FAILED_M("Unknown graphics API.");
+            REV_ERROR_M("Unknown graphics API.");
         } break;
     }
 }

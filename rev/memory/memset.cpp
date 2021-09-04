@@ -3,6 +3,8 @@
 //
 
 #include "core/pch.h"
+
+/*
 #include "memory/memlow.h"
 
 namespace REV
@@ -162,154 +164,6 @@ void REV_VECTORCALL FillMemoryF64(f64 *mem, f64 val, u64 count)
     if (index < count)
     {
         __stosq(cast<u64 *>(mm128_mem), *cast<u64 *>(&val), count - index);
-    }
-#endif
-}
-
-void REV_VECTORCALL FillMemoryChar(char *mem, char val, u64 count)
-{
-#if REV_ISA >= REV_ISA_AVX512
-    __m512i *mm512_mem = cast<__m512i *>(mem);
-    __m512i  mm512_val = _mm512_set1_epi8(val);
-
-    u64 index = 0;
-    while (index + 64 <= count)
-    {
-        _mm512_storeu_si512(mm512_mem++, mm512_val);
-        index += 64;
-    }
-
-    __m256i *mm256_mem = cast<__m256i *>(mm512_mem);
-
-    if (index + 32 <= count)
-    {
-        _mm256_storeu_si256(mm256_mem++, _mm512_castsi512_si256(mm512_val));
-        index += 32;
-    }
-
-    __m128i *mm128_mem = cast<__m128i *>(mm256_mem);
-
-    if (index + 16 <= count)
-    {
-        _mm_storeu_si128(mm128_mem++, _mm512_castsi512_si128(mm512_val));
-        index += 16;
-    }
-
-    if (index < count)
-    {
-        __stosb(cast<u8 *>(mm128_mem), val, count - index);
-    }
-#elif REV_ISA >= REV_ISA_AVX
-    __m256i *mm256_mem = cast<__m256i *>(mem);
-    __m256i  mm256_val = _mm256_set1_epi8(val);
-
-    u64 index = 0;
-    while (index + 32 <= count)
-    {
-        _mm256_storeu_si256(mm256_mem++, mm256_val);
-        index += 32;
-    }
-
-    __m128i *mm128_mem = cast<__m128i *>(mm256_mem);
-
-    if (index + 16 <= count)
-    {
-        _mm_storeu_si128(mm128_mem++, _mm256_castsi256_si128(mm256_val));
-        index += 16;
-    }
-
-    if (index < count)
-    {
-        __stosb(cast<u8 *>(mm128_mem), val, count - index);
-    }
-#else
-    __m128i *mm128_mem = cast<__m128i *>(mem);
-    __m128i  mm128_val = _mm_set1_epi8(val);
-
-    u64 index = 0;
-    while (index + 16 <= count)
-    {
-        _mm_storeu_si128(mm128_mem++, mm128_val);
-        index += 16;
-    }
-
-    if (index < count)
-    {
-        __stosb(cast<u8 *>(mm128_mem), val, count - index);
-    }
-#endif
-}
-
-void REV_VECTORCALL FillMemoryU8(u8 *mem, u8 val, u64 count)
-{
-#if REV_ISA >= REV_ISA_AVX512
-    __m512i *mm512_mem = cast<__m512i *>(mem);
-    __m512i  mm512_val = _mm512_set1_epi8(val);
-
-    u64 index = 0;
-    while (index + 64 <= count)
-    {
-        _mm512_storeu_si512(mm512_mem++, mm512_val);
-        index += 64;
-    }
-
-    __m256i *mm256_mem = cast<__m256i *>(mm512_mem);
-
-    if (index + 32 <= count)
-    {
-        _mm256_storeu_si256(mm256_mem++, _mm512_castsi512_si256(mm512_val));
-        index += 32;
-    }
-
-    __m128i *mm128_mem = cast<__m128i *>(mm256_mem);
-
-    if (index + 16 <= count)
-    {
-        _mm_storeu_si128(mm128_mem++, _mm512_castsi512_si128(mm512_val));
-        index += 16;
-    }
-
-    if (index < count)
-    {
-        __stosb(cast<u8 *>(mm128_mem), val, count - index);
-    }
-#elif REV_ISA >= REV_ISA_AVX
-    __m256i *mm256_mem = cast<__m256i *>(mem);
-    __m256i  mm256_val = _mm256_set1_epi8(val);
-
-    u64 index = 0;
-    while (index + 32 <= count)
-    {
-        _mm256_storeu_si256(mm256_mem++, mm256_val);
-        index += 32;
-    }
-
-    __m128i *mm128_mem = cast<__m128i *>(mm256_mem);
-
-    if (index + 16 <= count)
-    {
-        _mm_storeu_si128(mm128_mem++, _mm256_castsi256_si128(mm256_val));
-        index += 16;
-    }
-
-    if (index < count)
-    {
-        __stosb(cast<u8 *>(mm128_mem), val, count - index);
-    }
-#else
-    __m128i *mm128_mem = cast<__m128i *>(mem);
-    __m128i  mm128_val = _mm_set1_epi8(val);
-
-    u64 index = 0;
-    while (index + 16 <= count)
-    {
-        _mm_storeu_si128(mm128_mem++, mm128_val);
-        index += 16;
-    }
-
-    if (index < count)
-    {
-        __stosb(cast<u8 *>(mm128_mem), val, count - index);
     }
 #endif
 }
@@ -537,3 +391,5 @@ void REV_VECTORCALL FillMemoryU64(u64 *mem, u64 val, u64 count)
 }
 
 }
+
+*/

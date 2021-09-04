@@ -28,7 +28,7 @@ REV_INTERNAL DXGI_FORMAT REVToDXGITextureFormat(TEXTURE_FORMAT format)
         return cast<DXGI_FORMAT>(format & ~TEXTURE_FORMAT::_DDS_DX10);
     }
 
-    REV_FAILED_M("Unknown TEXTURE_FORMAT");
+    REV_ERROR_M("Unknown TEXTURE_FORMAT");
     return DXGI_FORMAT_UNKNOWN;
 }
 

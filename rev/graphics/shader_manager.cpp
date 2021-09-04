@@ -165,12 +165,12 @@ CompileShaderResult ShaderManager::CompileShader(const ConstString& code, const 
 
                 case SHADER_KIND_COMPUTE:
                 {
-                    REV_FAILED_M("Compute shaders are not supported yet.");
+                    REV_ERROR_M("Compute shaders are not supported yet.");
                 } break;
 
                 default:
                 {
-                    REV_FAILED_M("Wrong SHADER_KIND: %I32u", kind);
+                    REV_ERROR_M("Wrong SHADER_KIND: %I32u", kind);
                 } break;
             }
 

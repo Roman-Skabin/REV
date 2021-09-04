@@ -12,10 +12,11 @@ namespace REV
 {
     // @Issue(Roman): Several simultaneous read operations under the same file?
     // @TODO(Roman): #CrossPlatform
+    // @TODO(Roman): Process safety
     class REV_API AsyncFile final
     {
     public:
-        enum FLAGS
+        enum FLAGS : u32
         {
             FLAG_NONE   = 0,
             FLAG_READ   = BIT(0),
@@ -23,14 +24,14 @@ namespace REV
             FLAG_DELETE = BIT(2),
 
             // @NOTE(Roman): Internal
-            _FLAG_WWEC  = BIT(31),
+            _FLAG_WWEC  = 0x8000'0000,
         };
 
     public:
         AsyncFile(const ConstString& filename, FLAGS flags);
         AsyncFile(const StaticString<REV_PATH_CAPACITY>& filename, FLAGS flags);
         AsyncFile(const AsyncFile& other);
-        AsyncFile(AsyncFile&& other) noexcept;
+        AsyncFile(AsyncFile&& other);
 
         ~AsyncFile();
 

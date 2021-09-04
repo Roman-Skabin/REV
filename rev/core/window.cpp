@@ -28,7 +28,7 @@ Window::Window(const Logger& logger, const ConstString& title)
       m_Minimized(false),
       m_FullscreenSetRequested(Settings::Get()->fullscreen),
       m_FullscreenUnsetRequested(false),
-      m_Logger(logger, null, Logger::TARGET::FILE),
+      m_Logger(logger, null, Logger::TARGET_FILE),
       m_Title(title),
       m_ClassName(title)
 {

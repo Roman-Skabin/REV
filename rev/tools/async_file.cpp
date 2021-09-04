@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #include "core/pch.h"
@@ -37,6 +37,11 @@ AsyncFile::AsyncFile(const ConstString& filename, FLAGS flags)
         desired_access       |= GENERIC_WRITE;
         shared_mode          |= FILE_SHARE_WRITE;
         creation_disposition  = CREATE_ALWAYS;
+        flags_and_attributes  = FILE_ATTRIBUTE_NORMAL;
+    }
+    if (m_Flags & FLAG_DELETE)
+    {
+        shared_mode          |= FILE_SHARE_DELETE;
         flags_and_attributes  = FILE_ATTRIBUTE_NORMAL;
     }
 
@@ -137,7 +142,7 @@ AsyncFile::AsyncFile(const AsyncFile& other)
                                 DUPLICATE_SAME_ACCESS));
 }
 
-AsyncFile::AsyncFile(AsyncFile&& other) noexcept
+AsyncFile::AsyncFile(AsyncFile&& other)
 {
     CopyMemory(this, &other, REV_StructFieldOffset(AsyncFile, m_Name));
     m_Name = other.m_Name;

@@ -96,15 +96,6 @@ public:
     {
     }
 
-    REV_INLINE StaticStringBuilder(const StaticString<capacity, aligned_capacity>& static_string)
-        : m_IntFormat(),
-          m_FloatFormat(),
-          m_TextFormat(),
-          m_PointerFormat(),
-          m_StaticString(static_string)
-    {
-    }
-
     REV_INLINE StaticStringBuilder(const StaticStringBuilder& other)
         : m_IntFormat(other.m_IntFormat),
           m_FloatFormat(other.m_FloatFormat),
@@ -127,50 +118,54 @@ public:
     REV_INLINE u64 BufferLength() const { return m_StaticString.Length(); }
 
     template<typename ...Args>
-    REV_INLINE void Build(const Args&... args)
+    REV_INLINE StaticStringBuilder& Build(const Args&... args)
     {
         (..., BuildOne(args));
+        return *this;
     }
 
     template<typename ...Args>
-    REV_INLINE void BuildLn(const Args&... args)
+    REV_INLINE StaticStringBuilder& BuildLn(const Args&... args)
     {
         (..., BuildOne(args));
         BuildOne('\n');
+        return *this;
     }
 
-    REV_INLINE void REV_CDECL BuildF(const char *format, ...)
+    REV_INLINE StaticStringBuilder& REV_CDECL BuildF(const char *format, ...)
     {
         va_list args;
         va_start(args, format);
-
         m_StaticString.m_Length += vsnprintf(m_StaticString.m_Data + m_StaticString.m_Length,
-                                             m_StaticString.Capacity(),
+                                             m_StaticString.Capacity() - m_StaticString.m_Length,
                                              format,
                                              args);
-
         va_end(args);
+        return *this;
     }
 
-    REV_INLINE void REV_CDECL BuildVA(const char *format, va_list args)
+    REV_INLINE StaticStringBuilder& REV_CDECL BuildVA(const char *format, va_list args)
     {
         m_StaticString.m_Length += vsnprintf(m_StaticString.m_Data + m_StaticString.m_Length,
-                                             m_StaticString.Capacity(),
+                                             m_StaticString.Capacity() - m_StaticString.m_Length,
                                              format,
                                              args);
+        return *this;
     }
 
-    REV_INLINE void ResetSpecs()
+    REV_INLINE StaticStringBuilder& ResetSpecs()
     {
         m_IntFormat     = IntFormat();
         m_FloatFormat   = FloatFormat();
         m_TextFormat    = TextFormat();
         m_PointerFormat = PointerFormat();
+        return *this;
     }
 
-    REV_INLINE void Clear()
+    REV_INLINE StaticStringBuilder& Clear()
     {
         m_StaticString.Clear();
+        return *this;
     }
 
     StaticStringBuilder& operator=(const StaticStringBuilder& other)

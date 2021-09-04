@@ -6,6 +6,7 @@
 #include "graphics/graphics_api.h"
 #include "memory/memory.h"
 #include "asset_manager/asset_manager.h"
+#include "tools/file.h"
 
 #include "platform/d3d12/d3d12_shader_manager.h"
 #include "platform/d3d12/d3d12_common.h"
@@ -25,7 +26,7 @@ ShaderManager::ShaderManager(Allocator *allocator, const Logger& logger)
       m_StaticComputeShaders(allocator),
       m_SceneGraphicsShaders(allocator),
       m_SceneComputeShaders(allocator),
-      m_Logger(logger, ConstString(REV_CSTR_ARGS("ShaderManager logger")), Logger::TARGET::FILE | Logger::TARGET::CONSOLE)
+      m_Logger(logger, ConstString(REV_CSTR_ARGS("ShaderManager logger")), Logger::TARGET_FILE | Logger::TARGET_CONSOLE)
 {
 }
 
@@ -269,7 +270,7 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
 
                 default:
                 {
-                    REV_FAILED_M("Invalid or unsupported resource kind: %I64u", resource.kind);
+                    REV_ERROR_M("Invalid or unsupported resource kind: %I64u", resource.kind);
                 } break;
             }
 
@@ -347,7 +348,7 @@ ID3DBlob *ShaderManager::CompileShader(const ConstString& hlsl_code, const char 
 
     if (Failed(error))
     {
-        REV_FAILED_M("Shader compilation failure:\n%s", errors->GetBufferPointer());
+        REV_ERROR_M("Shader compilation failure:\n%s", errors->GetBufferPointer());
     }
 
     SafeRelease(errors);
@@ -357,67 +358,61 @@ ID3DBlob *ShaderManager::CompileShader(const ConstString& hlsl_code, const char 
 
 void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const ConstString& shader_cache_filename)
 {
-    HANDLE file = CreateFileA(shader_cache_filename.Data(), GENERIC_READ, 0, null, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY | FILE_FLAG_SEQUENTIAL_SCAN, null);
-    REV_CHECK(file != INVALID_HANDLE_VALUE);
+    File file(shader_cache_filename, File::FLAG_READ | File::FLAG_EXISTS | File::FLAG_SEQ);
     
-    u64 file_size = 0;
-    REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&file_size)));
-
     GPU::SHADER_KIND shader_kind = GPU::SHADER_KIND_UNKNOWN;
-    REV_DEBUG_RESULT(ReadFile(file, &shader_kind, sizeof(GPU::SHADER_KIND), null, null));
+    file.Read(&shader_kind, sizeof(GPU::SHADER_KIND));
 
     REV_CHECK(shader_kind & GPU::SHADER_KIND_VERTEX)
     {
         u32 size = 0;
-        REV_DEBUG_RESULT(ReadFile(file, &size, sizeof(size), null, null));
+        file.Read(&size, sizeof(size));
 
         HRESULT error = D3DCreateBlob(size, &graphics_shader->vertex_shader);
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        REV_DEBUG_RESULT(ReadFile(file, graphics_shader->vertex_shader->GetBufferPointer(), size, null, null));
+        file.Read(graphics_shader->vertex_shader->GetBufferPointer(), size);
     }
     if (shader_kind & GPU::SHADER_KIND_HULL)
     {
         u32 size = 0;
-        REV_DEBUG_RESULT(ReadFile(file, &size, sizeof(size), null, null));
+        file.Read(&size, sizeof(size));
 
         HRESULT error = D3DCreateBlob(size, &graphics_shader->hull_shader);
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        REV_DEBUG_RESULT(ReadFile(file, graphics_shader->hull_shader->GetBufferPointer(), size, null, null));
+        file.Read(graphics_shader->hull_shader->GetBufferPointer(), size);
     }
     if (shader_kind & GPU::SHADER_KIND_DOMAIN)
     {
         u32 size = 0;
-        REV_DEBUG_RESULT(ReadFile(file, &size, sizeof(size), null, null));
+        file.Read(&size, sizeof(size));
 
         HRESULT error = D3DCreateBlob(size, &graphics_shader->domain_shader);
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        REV_DEBUG_RESULT(ReadFile(file, graphics_shader->domain_shader->GetBufferPointer(), size, null, null));
+        file.Read(graphics_shader->domain_shader->GetBufferPointer(), size);
     }
     if (shader_kind & GPU::SHADER_KIND_GEOMETRY)
     {
         u32 size = 0;
-        REV_DEBUG_RESULT(ReadFile(file, &size, sizeof(size), null, null));
+        file.Read(&size, sizeof(size));
 
         HRESULT error = D3DCreateBlob(size, &graphics_shader->geometry_shader);
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        REV_DEBUG_RESULT(ReadFile(file, graphics_shader->geometry_shader->GetBufferPointer(), size, null, null));
+        file.Read(graphics_shader->geometry_shader->GetBufferPointer(), size);
     }
     REV_CHECK(shader_kind & GPU::SHADER_KIND_PIXEL)
     {
         u32 size = 0;
-        REV_DEBUG_RESULT(ReadFile(file, &size, sizeof(size), null, null));
+        file.Read(&size, sizeof(size));
 
         HRESULT error = D3DCreateBlob(size, &graphics_shader->pixel_shader);
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        REV_DEBUG_RESULT(ReadFile(file, graphics_shader->pixel_shader->GetBufferPointer(), size, null, null));
+        file.Read(graphics_shader->pixel_shader->GetBufferPointer(), size);
     }
-
-    REV_DEBUG_RESULT(CloseHandle(file));
 }
 
 void ShaderManager::CreateDescHeapsAndViews(
@@ -533,7 +528,7 @@ void ShaderManager::CreateDescHeapsAndViews(
 
                 default:
                 {
-                    REV_FAILED_M("Invalid TEXTURE_KIND: %I32u", texture.kind);
+                    REV_ERROR_M("Invalid TEXTURE_KIND: %I32u", texture.kind);
                 } break;
             }
 
@@ -580,21 +575,21 @@ void ShaderManager::CreateRootSignature(GraphicsShader *graphics_shader, const D
     else if (vrsd.Version == D3D_ROOT_SIGNATURE_VERSION_1_1)
     {
         // @TODO(Roman): Root Signature v1.1 support
-        REV_FAILED_M("Root Signature v1.1 is not supported yet");
+        REV_ERROR_M("Root Signature v1.1 is not supported yet");
     }
     else
     {
         // @NOTE(Roman): This is the first and the last time
         //               we're asserting Root Signature version.
         //               It's not needed to do this another places.
-        REV_FAILED_M("Unsuppored or unknown Root Signature version");
+        REV_ERROR_M("Unsuppored or unknown Root Signature version");
     }
 
     ID3DBlob *error_blob = null;
     HRESULT   error      = D3D12SerializeVersionedRootSignature(&vrsd, &graphics_shader->signature, &error_blob);
     if (Failed(error))
     {
-        REV_FAILED_M("Versioned Root Signature creation failure: %s", error_blob->GetBufferPointer());
+        REV_ERROR_M("Versioned Root Signature creation failure: %s", error_blob->GetBufferPointer());
     }
     SafeRelease(error_blob);
 

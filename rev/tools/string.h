@@ -158,6 +158,8 @@ public:
     REV_INLINE const String& ToString() const { return *this; }
     REV_INLINE       String& ToString()       { return *this; }
 
+    REV_INLINE ConstString ToConstString() const { return ConstString(m_Header->data, m_Header->length); }
+
     REV_INLINE bool Empty() const { return !m_Header->length; }
 
     REV_INLINE const Allocator *GetAllocator() const { return m_Header->allocator; }

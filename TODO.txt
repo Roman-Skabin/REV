@@ -12,10 +12,10 @@
 
 - Tools
     - Change a bit StringBuidler (example: StaticStringBuilder)
+    - Create StaticString and StaticStringBuilder on arenas
     - Several simultaneous read operations under the same async file?
     - Hash table
     - UTF-8 strings?
-    - File
 
 - Build
     - [Pre?]build system. Build only edited files

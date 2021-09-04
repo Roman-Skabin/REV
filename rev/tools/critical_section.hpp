@@ -27,12 +27,16 @@ namespace REV
               m_Owner(other.m_Owner),
               m_RecursionCount(other.m_RecursionCount)
         {
-            other.m_Semaphore = null;
+            other.m_Semaphore = INVALID_HANDLE_VALUE;
         }
     
         REV_INLINE ~CriticalSection()
         {
-            if (m_Semaphore) CloseHandle(m_Semaphore);
+            if (m_Semaphore != INVALID_HANDLE_VALUE)
+            {
+                REV_DEBUG_RESULT(CloseHandle(m_Semaphore));
+                m_Semaphore = INVALID_HANDLE_VALUE;
+            }
         }
     
         void Enter()
@@ -52,7 +56,7 @@ namespace REV
             }
             _InterlockedIncrement64(&m_RecursionCount);
         }
-    
+
         REV_INLINE void Leave()
         {
             if (_InterlockedDecrement64(&m_RecursionCount) == 0)
@@ -61,9 +65,9 @@ namespace REV
                 ReleaseSemaphore(m_Semaphore, 1, null);
             }
         }
-    
+
         REV_INLINE bool Waitable() const { return true; }
-    
+
         REV_INLINE CriticalSection& operator=(CriticalSection&& other)
         {
             if (this != &other)
@@ -71,22 +75,22 @@ namespace REV
                 m_Semaphore      = other.m_Semaphore;
                 m_Owner          = other.m_Owner;
                 m_RecursionCount = other.m_RecursionCount;
-    
-                other.m_Semaphore = null;
+
+                other.m_Semaphore = INVALID_HANDLE_VALUE;
             }
             return *this;
         }
-    
+
     private:
         CriticalSection(const CriticalSection&)            = delete;
         CriticalSection& operator=(const CriticalSection&) = delete;
-    
+
     private:
         volatile HANDLE m_Semaphore;
         volatile HANDLE m_Owner;
         volatile s64    m_RecursionCount;
     };
-    
+
     template<>
     class CriticalSection<false>
     {

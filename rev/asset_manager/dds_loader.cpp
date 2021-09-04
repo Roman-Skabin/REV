@@ -549,14 +549,14 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
             default:
             {
                 // @TODO(Roman): #OtherFormats
-                REV_FAILED_M("Unhandled DDS texture format: %.4s", dds_header->pixel_format.fourcc.str);
+                REV_ERROR_M("Unhandled DDS texture format: %.4s", dds_header->pixel_format.fourcc.str);
             } break;
         };
     }
     else
     {
         // @TODO(Roman): #OtherFormats: BC4, BC5, Uncompressed RGB(A), YCrCb
-        REV_FAILED_M("Unhandled DDS texture format");
+        REV_ERROR_M("Unhandled DDS texture format");
     }
 
     if (dx10_header)
@@ -633,7 +633,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         }
         else
         {
-            REV_FAILED_M("Incorrect dimension");
+            REV_ERROR_M("Incorrect dimension");
         }
     }
     else
@@ -727,7 +727,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
     }
     else if (dds_header->flags & DDS_FLAG_PITCH)
     {
-        REV_FAILED_M("Only BC1-BC5 foramts are supported. Any format supported only with DDS_HEADER_DXT10.");
+        REV_ERROR_M("Only BC1-BC5 foramts are supported. Any format supported only with DDS_HEADER_DXT10.");
     }
 
     memory_manager->SetTextureData(asset->texture.resource, texture_desc);

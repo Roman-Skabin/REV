@@ -183,7 +183,7 @@ u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, DXGI
     u16 max_mip_levels = GetMaxMipLevels(width, height);
     if (mip_levels > max_mip_levels)
     {
-        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        PrintDebugMessage(DEBUG_COLOR::WARNING, "Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
         mip_levels = max_mip_levels;
     }
 
@@ -221,7 +221,7 @@ u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_l
     u16 max_mip_levels = GetMaxMipLevels(width, height, depth);
     if (mip_levels > max_mip_levels)
     {
-        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        PrintDebugMessage(DEBUG_COLOR::WARNING, "Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
         mip_levels = max_mip_levels;
     }
 
@@ -258,7 +258,7 @@ u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, DX
     u16 max_mip_levels = GetMaxMipLevels(width, height);
     if (mip_levels > max_mip_levels)
     {
-        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        PrintDebugMessage(DEBUG_COLOR::WARNING, "Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
         mip_levels = max_mip_levels;
     }
 
@@ -326,7 +326,7 @@ u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 
     u16 max_mip_levels = GetMaxMipLevels(width, height);
     if (mip_levels > max_mip_levels)
     {
-        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        PrintDebugMessage(DEBUG_COLOR::WARNING, "Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
         mip_levels = max_mip_levels;
     }
 
@@ -364,7 +364,7 @@ u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u1
     u16 max_mip_levels = GetMaxMipLevels(width, height);
     if (mip_levels > max_mip_levels)
     {
-        DebugFC(DEBUG_COLOR::WARNING, "Warning: Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        PrintDebugMessage(DEBUG_COLOR::WARNING, "Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
         mip_levels = max_mip_levels;
     }
 

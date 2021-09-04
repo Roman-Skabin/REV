@@ -125,6 +125,7 @@
 
 #if REV_PLATFORM_WIN64
     #include <Windows.h>
+    #include <shlwapi.h>
     #undef GetMessage
 
     #include <Xinput.h>

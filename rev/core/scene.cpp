@@ -131,7 +131,7 @@ void SceneBase::FlushBatch()
         }
         else
         {
-            REV_FAILED_M("FlushBatch gotta be called during the frame ONLY!!!");
+            REV_ERROR_M("FlushBatch gotta be called during the frame ONLY!!!");
         }
 
         Asset *graphics_shader_asset = asset_manager->GetAsset(m_CurrentGraphicsShader);

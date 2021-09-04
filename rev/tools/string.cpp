@@ -171,29 +171,29 @@ String& String::Replace(u64 from, u64 to, char symbol, u64 count)
     if (to == npos) to = from + 1;
     REV_CHECK_M(from < m_Header->length && from < to && to <= m_Header->length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Header->length);
 
-    u64 delta = to - from;
-    FillMemoryChar(m_Header->data + from, symbol, delta);
+    u64 delta      = to - from;
+    u64 fill_count = Math::min(count, delta);
+    u64 rest_count = count - fill_count;
+    FillMemoryChar(m_Header->data + from, symbol, fill_count);
 
-    if (count > delta)
-    {
-        Insert(to, symbol, count - delta);
-    }
+    /**/ if (rest_count)         Insert(to, symbol, rest_count);
+    else if (fill_count < delta) Erase(from + fill_count, m_Header->length);
 
     return *this;
 }
 
-String& String::Replace(u64 from, u64 to, const char *cstring, u64 length)
+String& String::Replace(u64 from, u64 to, const char *cstring, u64 cstring_length)
 {
     if (to == npos) to = from + 1;
     REV_CHECK_M(from < m_Header->length && from < to && to <= m_Header->length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Header->length);
 
-    u64 delta = to - from;
-    CopyMemory(m_Header->data + from, cstring, delta);
+    u64 delta       = to - from;
+    u64 copy_length = Math::min(cstring_length, delta);
+    u64 rest_length = cstring_length - copy_length;
+    CopyMemory(m_Header->data + from, cstring, copy_length);
 
-    if (length > delta)
-    {
-        Insert(to, cstring + delta, length - delta);
-    }
+    /**/ if (rest_length)         Insert(to, cstring + copy_length, rest_length);
+    else if (copy_length < delta) Erase(from + copy_length, m_Header->length);
 
     return *this;
 }

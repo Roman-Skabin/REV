@@ -24,7 +24,7 @@ namespace REV
         void Create(u64 vcount, u64 icount);
         void SetData(const ConstArray<Vertex>& vertices, const ConstArray<Index>& indices);
     };
-    
+
     class REV_API SceneBase
     {
     protected:
@@ -57,7 +57,7 @@ namespace REV
         ConstString                m_Name;
         Allocator                 *m_Allocator;
 
-        AssetHandle               m_CurrentGraphicsShader;
+        AssetHandle                m_CurrentGraphicsShader;
 
         GPU::ResourceHandle        m_VertexBuffer;
         GPU::ResourceHandle        m_IndexBuffer;

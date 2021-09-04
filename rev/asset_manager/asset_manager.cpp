@@ -9,36 +9,12 @@
 #include "tools/static_string.hpp"
 #include "core/work_queue.h"
 #include "memory/memory.h"
+#include "tools/file.h"
 
 namespace REV
 {
 
 REV_GLOBAL AssetManager *g_AssetManager = null;
-
-// @TODO(Roman): #Tools, #MakePublic.
-REV_INTERNAL ConstArray<byte> ReadEntireFileToTA(const char *filename)
-{
-    // @TODO(Roman): #CrossPlatform
-    HANDLE file = CreateFileA(filename, GENERIC_READ, 0, null, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY | FILE_FLAG_SEQUENTIAL_SCAN, null);
-    if (file != INVALID_HANDLE_VALUE)
-    {
-        u64 file_size = 0;
-        REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&file_size)));
-
-        byte *data = Memory::Get()->PushToFA<byte>(file_size + 1);
-
-        u32 bytes_read = 0;
-        for (u64 offset = 0; offset < file_size; offset += bytes_read)
-        {
-            u32 bytes_to_read = Math::clamp<u32, u64>(file_size - offset, 0, REV_U32_MAX);
-            REV_DEBUG_RESULT(ReadFile(file, data + offset, bytes_to_read, &bytes_read, null));
-        }
-
-        REV_DEBUG_RESULT(CloseHandle(file));
-        return ConstArray(data, file_size);
-    }
-    return null;
-}
 
 AssetManager *AssetManager::Create(Allocator *allocator, const Logger& logger)
 {
@@ -57,7 +33,7 @@ AssetManager::AssetManager(Allocator *allocator, const Logger& logger)
     : m_Allocator(allocator),
       m_StaticAssets(allocator),
       m_SceneAssets(allocator),
-      m_Logger(logger, ConstString(REV_CSTR_ARGS("AssetManager logger")), Logger::TARGET::CONSOLE | Logger::TARGET::FILE),
+      m_Logger(logger, ConstString(REV_CSTR_ARGS("AssetManager logger")), Logger::TARGET_CONSOLE | Logger::TARGET_FILE),
       m_WorkQueue(m_Logger)
 {
     m_Logger.LogSuccess("AssetManager has been created");
@@ -97,7 +73,17 @@ AssetHandle AssetManager::LoadTexture(const LoadTextureDesc& desc, bool _static)
         return handle;
     }
 
-    ConstArray<byte> data = ReadEntireFileToTA(filename.Data());
+    ConstArray<byte> data;
+    {
+        File texture_file(filename, File::FLAG_READ | File::FLAG_EXISTS);
+
+        u64   filedata_size = texture_file.Size();
+        byte *filedata      = Memory::Get()->PushToFA<byte>(filedata_size + 1);
+
+        texture_file.Read(filedata, filedata_size);
+
+        data = ConstArray(filedata, filedata_size);
+    }
 
     Asset *asset = assets->PushBack();
     asset->kind                    = ASSET_KIND_TEXTURE;
@@ -118,7 +104,7 @@ AssetHandle AssetManager::LoadTexture(const LoadTextureDesc& desc, bool _static)
     else
     {
         ConstString format = extension.SubString(1);
-        REV_FAILED_M("Unsupported texture format: %.*s", format.Length(), format.Data());
+        REV_ERROR_M("Unsupported texture format: %.*s", format.Length(), format.Data());
     }
 
     AssetHandle handle;
@@ -145,30 +131,10 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
         return handle;
     }
 
-    bool compile_shaders = false;
+    bool cache_exists = File::Exists(cache_filename);
 
-    // @TODO(Roman): #CrossPlatform
-    HANDLE file = CreateFileA(filename.Data(), GENERIC_READ | GENERIC_WRITE, 0, null, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, null);
-    REV_CHECK_M(file != INVALID_HANDLE_VALUE, "file '%.*s' does not exist", filename.Length(), filename.Data());
-
-    HANDLE cache_file = CreateFileA(cache_filename.Data(), GENERIC_READ | GENERIC_WRITE, 0, null, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, null);
-    if (cache_file == INVALID_HANDLE_VALUE)
-    {
-        cache_file = CreateFileA(cache_filename.Data(), GENERIC_READ | GENERIC_WRITE, 0, null, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, null);
-        REV_CHECK(cache_file != INVALID_HANDLE_VALUE);
-
-        compile_shaders = true;
-    }
-    else
-    {
-        FILETIME last_file_write_time = {0};
-        REV_DEBUG_RESULT(GetFileTime(file, null, null, &last_file_write_time));
-
-        FILETIME last_cache_file_write_time = {0};
-        REV_DEBUG_RESULT(GetFileTime(cache_file, null, null, &last_cache_file_write_time));
-
-        compile_shaders = *cast<u64 *>(&last_file_write_time) > *cast<u64 *>(&last_cache_file_write_time);
-    }
+    File file(filename, File::FLAG_READ | File::FLAG_EXISTS | File::FLAG_SEQ);
+    File cache_file(cache_filename, File::FLAG_RW | File::FLAG_SEQ | (cache_exists ? File::FLAG_EXISTS : File::FLAG_NEW));
 
     GPU::CompileShaderResult vs_cache;
     GPU::CompileShaderResult hs_cache;
@@ -176,23 +142,12 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
     GPU::CompileShaderResult gs_cache;
     GPU::CompileShaderResult ps_cache;
 
-    if (compile_shaders)
+    if (!cache_exists || file.LastWriteTime() > cache_file.LastWriteTime())
     {
-        u64 file_size = 0;
-        REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&file_size)));
+        char *data = Memory::Get()->PushToFA<char>(file.Size() + 1);
+        file.Read(data, file.Size());
 
-        char *data = Memory::Get()->PushToFA<char>(file_size + 1);
-
-        u32 bytes_read = 0;
-        for (u64 offset = 0; offset < file_size; offset += bytes_read)
-        {
-            u64 bytes_rest    = file_size - offset;
-            u32 bytes_to_read = Math::clamp<u32, u64>(bytes_rest, 0, REV_U32_MAX);
-
-            REV_DEBUG_RESULT(ReadFile(file, data + offset, bytes_to_read, &bytes_read, null));
-        }
-
-        ConstString code(data, file_size);
+        ConstString code(data, file.Size());
         ConstString name(filename.Data(), filename.Length());
 
         volatile u64              shaders_count = 0;
@@ -248,37 +203,37 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
 
         m_Logger.LogInfo('"', name, "\" shaders' compilation has been done. ", shaders_count, "/5 shaders has been successfully compiled.");
 
-        REV_DEBUG_RESULT(WriteFile(cache_file, (GPU::SHADER_KIND *)&shader_kind, sizeof(GPU::SHADER_KIND), null, null));
+        cache_file.Write(const_cast<GPU::SHADER_KIND *>(&shader_kind), sizeof(GPU::SHADER_KIND));
 
         u32 count = cast<u32>(vs_cache.bytecode.Count());
         {
-            REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-            REV_DEBUG_RESULT(WriteFile(cache_file, vs_cache.bytecode.Data(), count,         null, null));
+            cache_file.Write(&count, sizeof(count));
+            cache_file.Write(vs_cache.bytecode.Data(), count);
         }
         if (count = cast<u32>(hs_cache.bytecode.Count()))
         {
-            REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-            REV_DEBUG_RESULT(WriteFile(cache_file, hs_cache.bytecode.Data(), count,         null, null));
+            cache_file.Write(&count, sizeof(count));
+            cache_file.Write(hs_cache.bytecode.Data(), count);
         }
         if (count = cast<u32>(ds_cache.bytecode.Count()))
         {
-            REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-            REV_DEBUG_RESULT(WriteFile(cache_file, ds_cache.bytecode.Data(), count,         null, null));
+            cache_file.Write(&count, sizeof(count));
+            cache_file.Write(ds_cache.bytecode.Data(), count);
         }
         if (count = cast<u32>(gs_cache.bytecode.Count()))
         {
-            REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-            REV_DEBUG_RESULT(WriteFile(cache_file, gs_cache.bytecode.Data(), count,         null, null));
+            cache_file.Write(&count, sizeof(count));
+            cache_file.Write(gs_cache.bytecode.Data(), count);
         }
         count = cast<u32>(ps_cache.bytecode.Count());
         {
-            REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-            REV_DEBUG_RESULT(WriteFile(cache_file, ps_cache.bytecode.Data(), count,         null, null));
+            cache_file.Write(&count, sizeof(count));
+            cache_file.Write(ps_cache.bytecode.Data(), count);
         }
     }
 
-    REV_DEBUG_RESULT(CloseHandle(cache_file));
-    REV_DEBUG_RESULT(CloseHandle(file));
+    cache_file.Close();
+    file.Close();
 
     m_WorkQueue.AddWork([shader_manager, &vs_cache] { shader_manager->ReleaseCompiledShader(vs_cache); });
     m_WorkQueue.AddWork([shader_manager, &hs_cache] { shader_manager->ReleaseCompiledShader(hs_cache); });
@@ -328,7 +283,17 @@ ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureD
                 return;
             }
 
-            ConstArray<byte> data = ReadEntireFileToTA(filename.Data());
+            ConstArray<byte> data;
+            {
+                File texture_file(filename, File::FLAG_READ | File::FLAG_EXISTS);
+
+                u64   filedata_size = texture_file.Size();
+                byte *filedata      = Memory::Get()->PushToFA<byte>(filedata_size + 1);
+
+                texture_file.Read(filedata, filedata_size);
+
+                data = ConstArray(filedata, filedata_size);
+            }
 
             asset->kind                    = ASSET_KIND_TEXTURE;
             asset->texture.shader_register = desc.shader_register;
@@ -348,7 +313,7 @@ ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureD
             else
             {
                 ConstString format = extension.SubString(1);
-                REV_FAILED_M("Unsupported texture format: %.*s", format.Length(), format.Data());
+                REV_ERROR_M("Unsupported texture format: %.*s", format.Length(), format.Data());
             }
 
             asset_handle->index   = asset_index;
@@ -395,30 +360,10 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
                 return;
             }
 
-            bool compile_shaders = false;
+            bool cache_exists = File::Exists(cache_filename);
 
-            // @TODO(Roman): #CrossPlatform
-            HANDLE file = CreateFileA(filename.Data(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, null, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, null);
-            REV_CHECK_M(file != INVALID_HANDLE_VALUE, "file '%.*s' does not exist", filename.Length(), filename.Data());
-
-            HANDLE cache_file = CreateFileA(cache_filename.Data(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, null, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, null);
-            if (cache_file == INVALID_HANDLE_VALUE)
-            {
-                cache_file = CreateFileA(cache_filename.Data(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, null, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, null);
-                REV_CHECK(cache_file != INVALID_HANDLE_VALUE);
-
-                compile_shaders = true;
-            }
-            else
-            {
-                FILETIME last_file_write_time = {0};
-                REV_DEBUG_RESULT(GetFileTime(file, null, null, &last_file_write_time));
-
-                FILETIME last_cache_file_write_time = {0};
-                REV_DEBUG_RESULT(GetFileTime(cache_file, null, null, &last_cache_file_write_time));
-
-                compile_shaders = *cast<u64 *>(&last_file_write_time) > *cast<u64 *>(&last_cache_file_write_time);
-            }
+            File file(filename, File::FLAG_READ | File::FLAG_EXISTS | File::FLAG_SEQ);
+            File cache_file(cache_filename, File::FLAG_RW | File::FLAG_SEQ | (cache_exists ? File::FLAG_EXISTS : File::FLAG_NEW));
 
             GPU::CompileShaderResult vs_cache;
             GPU::CompileShaderResult hs_cache;
@@ -426,23 +371,12 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
             GPU::CompileShaderResult gs_cache;
             GPU::CompileShaderResult ps_cache;
 
-            if (compile_shaders)
+            if (!cache_exists || file.LastWriteTime() > cache_file.LastWriteTime())
             {
-                u64 file_size = 0;
-                REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&file_size)));
+                char *data = Memory::Get()->PushToFA<char>(file.Size() + 1);
+                file.Read(data, file.Size());
 
-                char *data = Memory::Get()->PushToFA<char>(file_size + 1);
-
-                u32 bytes_read = 0;
-                for (u64 offset = 0; offset < file_size; offset += bytes_read)
-                {
-                    u64 bytes_rest    = file_size - offset;
-                    u32 bytes_to_read = Math::clamp<u32, u64>(bytes_rest, 0, REV_U32_MAX);
-
-                    REV_DEBUG_RESULT(ReadFile(file, data + offset, bytes_to_read, &bytes_read, null));
-                }
-
-                ConstString code(data, file_size);
+                ConstString code(data, file.Size());
                 ConstString name(filename.Data(), filename.Length());
 
                 u64              shaders_count = 0;
@@ -476,37 +410,37 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
                 }
                 m_Logger.LogInfo('"', name, "\" shaders' compilation has been done. ", shaders_count, "/5 shaders has been successfully compiled.");
 
-                REV_DEBUG_RESULT(WriteFile(cache_file, &shader_kind, sizeof(GPU::SHADER_KIND), null, null));
+                cache_file.Write(&shader_kind, sizeof(GPU::SHADER_KIND));
 
                 u32 count = cast<u32>(vs_cache.bytecode.Count());
                 {
-                    REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-                    REV_DEBUG_RESULT(WriteFile(cache_file, vs_cache.bytecode.Data(), count,         null, null));
+                    cache_file.Write(&count, sizeof(count));
+                    cache_file.Write(vs_cache.bytecode.Data(), count);
                 }
                 if (count = cast<u32>(hs_cache.bytecode.Count()))
                 {
-                    REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-                    REV_DEBUG_RESULT(WriteFile(cache_file, hs_cache.bytecode.Data(), count,         null, null));
+                    cache_file.Write(&count, sizeof(count));
+                    cache_file.Write(hs_cache.bytecode.Data(), count);
                 }
                 if (count = cast<u32>(ds_cache.bytecode.Count()))
                 {
-                    REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-                    REV_DEBUG_RESULT(WriteFile(cache_file, ds_cache.bytecode.Data(), count,         null, null));
+                    cache_file.Write(&count, sizeof(count));
+                    cache_file.Write(ds_cache.bytecode.Data(), count);
                 }
                 if (count = cast<u32>(gs_cache.bytecode.Count()))
                 {
-                    REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-                    REV_DEBUG_RESULT(WriteFile(cache_file, gs_cache.bytecode.Data(), count,         null, null));
+                    cache_file.Write(&count, sizeof(count));
+                    cache_file.Write(gs_cache.bytecode.Data(), count);
                 }
                 count = cast<u32>(ps_cache.bytecode.Count());
                 {
-                    REV_DEBUG_RESULT(WriteFile(cache_file, &count,                   sizeof(count), null, null));
-                    REV_DEBUG_RESULT(WriteFile(cache_file, ps_cache.bytecode.Data(), count,         null, null));
+                    cache_file.Write(&count, sizeof(count));
+                    cache_file.Write(ps_cache.bytecode.Data(), count);
                 }
             }
 
-            REV_DEBUG_RESULT(CloseHandle(cache_file));
-            REV_DEBUG_RESULT(CloseHandle(file));
+            cache_file.Close();
+            file.Close();
 
             shader_manager->ReleaseCompiledShader(vs_cache);
             shader_manager->ReleaseCompiledShader(hs_cache);
@@ -579,14 +513,12 @@ Asset *AssetManager::GetAsset(const ConstString& name, bool _static)
     return null;
 }
 
-REV_INTERNAL void ChangeExtension(StaticString<REV_PATH_CAPACITY>& filename, const char *found_filename)
+REV_INTERNAL void ChangeExtension(StaticString<REV_PATH_CAPACITY>& filename, const ConstString& found_filename)
 {
-    ConstString found_name(found_filename, strlen(found_filename));
+    u64 found_filename_dot_index = found_filename.RFind('.');
+    REV_CHECK(found_filename_dot_index != ConstString::npos);
 
-    u64 found_name_dot_index = found_name.RFind('.');
-    REV_CHECK(found_name_dot_index != ConstString::npos);
-
-    ConstString& extension = found_name.SubString(found_name_dot_index + 1);
+    ConstString& extension = found_filename.SubString(found_filename_dot_index + 1);
 
     u64 filename_dot_index = filename.RFind('.');
     REV_CHECK(filename_dot_index != ConstString::npos);
@@ -603,62 +535,57 @@ void AssetManager::MakeFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET
     {
         case ASSET_KIND_TEXTURE: filename.PushBack(REV_CSTR_ARGS("textures/")); break;
         case ASSET_KIND_SHADER:  filename.PushBack(REV_CSTR_ARGS("shaders/"));  break;
-        default:                 REV_FAILED_M("Wrong ASSET_KIND: %I32u", kind); break;
+        default:                 REV_ERROR_M("Wrong ASSET_KIND: %I32u", kind); break;
     }
 
     filename += asset_name;
     filename.PushBack(REV_CSTR_ARGS(".*"));
 
-    // @TODO(Roman): #CrossPlatform
-    WIN32_FIND_DATAA find_data   = {};
-    HANDLE           find_handle = FindFirstFileA(filename.Data(), &find_data);
-    if (find_handle == INVALID_HANDLE_VALUE && GetLastError() == ERROR_FILE_NOT_FOUND)
+    ConstString expected_extension;
+    switch (GraphicsAPI::GetAPI())
     {
-        filename.Clear();
-        switch (kind)
-        {
-            case ASSET_KIND_TEXTURE: m_Logger.LogError("Texture \"", asset_name, "\" is not found"); break;
-            case ASSET_KIND_SHADER:  m_Logger.LogError("Shader \"", asset_name, "\" is not found");  break;
-        }
+        case GraphicsAPI::API::D3D12:  expected_extension.AssignCSTR(REV_CSTR_ARGS(".hlsl")); break;
+        case GraphicsAPI::API::VULKAN: expected_extension.AssignCSTR(REV_CSTR_ARGS(".glsl")); break;
     }
-    else
-    {
-        ChangeExtension(filename, find_data.cFileName);
 
-        if (kind == ASSET_KIND_SHADER)
+    File::Find(filename, [this, &filename, kind, &asset_name, &expected_extension](const ConstString& found_filename, bool file_not_found)
+    {
+        if (file_not_found)
         {
-            ConstString expected_extension;
-            switch (GraphicsAPI::GetAPI())
+            filename.Clear();
+            switch (kind)
             {
-                case GraphicsAPI::API::D3D12:  expected_extension = ConstString(REV_CSTR_ARGS(".hlsl")); break;
-                case GraphicsAPI::API::VULKAN: expected_extension = ConstString(REV_CSTR_ARGS(".glsl")); break;
+                case ASSET_KIND_TEXTURE: m_Logger.LogError("Texture \"", asset_name, "\" is not found"); break;
+                case ASSET_KIND_SHADER:  m_Logger.LogError("Shader \"", asset_name, "\" is not found");  break;
             }
 
-            u32 last_error = 0;
-            while (true)
+            return File::FIND_RESULT_BREAK;
+        }
+        else
+        {
+            ChangeExtension(filename, found_filename);
+
+            if (kind == ASSET_KIND_SHADER)
             {
                 u64 dot_index = filename.RFind('.');
+                REV_CHECK(dot_index != filename.npos);
+
                 ConstString got_extension(filename.Data() + dot_index, filename.Length() - dot_index);
 
-                if (got_extension != expected_extension)
+                if (got_extension == expected_extension)
                 {
-                    REV_DEBUG_RESULT(FindNextFileA(find_handle, &find_data));
-                    last_error = GetLastError();
-
-                    if (last_error == ERROR_SUCCESS)
-                    {
-                        ChangeExtension(filename, find_data.cFileName);
-                        continue;
-                    }
-
-                    REV_CHECK(last_error == ERROR_NO_MORE_FILES);
+                    return File::FIND_RESULT_FOUND;
                 }
-
-                break;
+                else
+                {
+                    filename.Replace(dot_index + 1, filename.Length(), '*');
+                    return File::FIND_RESULT_CONTINUE;
+                }
             }
+
+            return File::FIND_RESULT_FOUND;
         }
-        REV_DEBUG_RESULT(FindClose(find_handle));
-    }
+    });
 }
 
 void AssetManager::MakeCacheFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET_KIND kind, const ConstString& asset_name)
@@ -669,12 +596,11 @@ void AssetManager::MakeCacheFilename(StaticString<REV_PATH_CAPACITY>& filename, 
     switch (kind)
     {
         case ASSET_KIND_SHADER: filename.PushBack(REV_CSTR_ARGS("shaders/cache/"));  break;
-        default:                REV_FAILED_M("Cache exists only for shaders", kind); break;
+        default:                REV_ERROR_M("Cache exists only for shaders", kind); break;
     }
 
-    // @TODO(Roman): #CrossPlatform
-    BOOL result = CreateDirectoryA(filename.Data(), null);
-    REV_CHECK_M(result || GetLastError() == ERROR_ALREADY_EXISTS, "One or more intermediate directories do not exist. Final directory path: \"%.*s\"", filename.Length(), filename.Data());
+    Path path(filename);
+    path.Create();
 
     switch (GraphicsAPI::GetAPI())
     {

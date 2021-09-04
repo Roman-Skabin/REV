@@ -32,7 +32,7 @@ void DemoScene::OnSetCurrent()
     };
 
     m_Rect.Create(REV::ArrayCount(vertices), REV::ArrayCount(indices));
-    m_Rect.SetData(REV::ConstArray(REV_ARRAY_ARGS(vertices)), REV::ConstArray(REV_ARRAY_ARGS(indices)));
+    m_Rect.SetData(REV::ConstArray(REV_CARRAY_ARGS(vertices)), REV::ConstArray(REV_CARRAY_ARGS(indices)));
 
     REV::AssetManager       *asset_manager      = REV::AssetManager::Get();
     REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
@@ -53,9 +53,9 @@ void DemoScene::OnSetCurrent()
     };
 
     m_DemoShader = asset_manager->LoadShader(REV::LoadShaderDesc(REV::ConstString(REV_CSTR_ARGS("demo_shader")),
-                                                                 REV::ConstArray(REV_ARRAY_ARGS(demo_shader_resources)),
-                                                                 REV::ConstArray(REV_ARRAY_ARGS(demo_shader_cbuffers)),
-                                                                 REV::ConstArray(REV_ARRAY_ARGS(demo_shader_samplers))),
+                                                                 REV::ConstArray(REV_CARRAY_ARGS(demo_shader_resources)),
+                                                                 REV::ConstArray(REV_CARRAY_ARGS(demo_shader_cbuffers)),
+                                                                 REV::ConstArray(REV_CARRAY_ARGS(demo_shader_samplers))),
                                              false);
 }
 

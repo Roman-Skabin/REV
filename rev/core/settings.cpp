@@ -5,6 +5,7 @@
 #include "core/pch.h"
 #include "core/settings.h"
 #include "memory/memory.h"
+#include "tools/file.h"
 
 namespace REV
 {
@@ -66,7 +67,7 @@ REV_INTERNAL void REV_CDECL SyntaxError(Lexer *lexer, const char *format, ...)
 
     lexer->token.pos.c = cast<u32>(lexer->stream - lexer->line_start);
 
-    DebugFC(DEBUG_COLOR::ERROR, "%s(%I32u:%I32u): INI syntax error: %s.", lexer->filename, lexer->token.pos.r, lexer->token.pos.c, buffer);
+    PrintDebugMessage(DEBUG_COLOR::ERROR, "%s(%I32u:%I32u): INI syntax error: %s.", lexer->filename, lexer->token.pos.r, lexer->token.pos.c, buffer);
     // @TODO(Roman): #CrossPlatform
     ExitProcess(1);
 }
@@ -186,60 +187,9 @@ REV_INTERNAL REV_INLINE bool IsToken(Lexer *lexer, TOKEN_KIND token_kind)
     return lexer->token.kind == token_kind;
 }
 
-// @TODO(Roman): #Tools, #MakePublic.
-REV_INTERNAL char *ReadEntireFileToTA(const char *filename)
-{
-    // @TODO(Roman): #CrossPlatform
-    HANDLE file = CreateFileA(filename, GENERIC_READ, 0, null, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY | FILE_FLAG_SEQUENTIAL_SCAN, null);
-    if (file != INVALID_HANDLE_VALUE)
-    {
-        u64 data_size = 0;
-        REV_DEBUG_RESULT(GetFileSizeEx(file, cast<LARGE_INTEGER *>(&data_size)));
-
-        char *data = Memory::Get()->PushToFA<char>(data_size + 1);
-
-        u32 bytes_read = 0;
-        for (u64 offset = 0; offset < data_size; offset += bytes_read)
-        {
-            u64 bytes_rest    = data_size - offset;
-            u32 bytes_to_read = Math::clamp<u32, u64>(bytes_rest, 0, REV_U32_MAX);
-
-            REV_DEBUG_RESULT(ReadFile(file, data + offset, bytes_to_read, &bytes_read, null));
-        }
-
-        REV_DEBUG_RESULT(CloseHandle(file));
-        return data;
-    }
-    return null;
-}
-
-REV_INTERNAL void WriteDefaultSettingsToFile(const char *filename)
-{
-    // @TODO(Roman): #CrossPlatform.
-    HANDLE file = CreateFileA(filename, GENERIC_WRITE, FILE_SHARE_WRITE, null, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, null);
-    REV_CHECK(file != INVALID_HANDLE_VALUE);
-
-    char default_settings[] =
-    "window_x             = 10\n"
-    "window_y             = 10\n"
-    "window_width         = 960\n"
-    "window_height        = 540\n"
-    "fullscreen           = false\n"
-    "render_target_width  = 1920\n"
-    "render_target_height = 1080\n"
-    "graphics_api         = D3D12\n"
-    "filtering            = TRILINEAR\n"
-    "anisotropy           = 1\n"
-    "vsync                = false\n"
-    "assets_folder        = \"assets\"\n";
-
-    REV_DEBUG_RESULT(WriteFile(file, REV_CSTR_ARGS(default_settings), null, null));
-    REV_DEBUG_RESULT(CloseHandle(file));
-}
-
 REV_GLOBAL Settings *g_Settings = null;
 
-Settings *Settings::Init(const char *ini_filename)
+Settings *Settings::Init(const ConstString& ini_filename)
 {
     REV_CHECK_M(!g_Settings, "Settings is already created. Use Settings::Get() function instead");
     g_Settings                   = Memory::Get()->PushToPA<Settings>();
@@ -252,11 +202,14 @@ Settings *Settings::Init(const char *ini_filename)
     g_Settings->vsync            = false;
     g_Settings->assets_folder    = ConstString(REV_CSTR_ARGS("assets"));
 
-    const char *stream = ReadEntireFileToTA(ini_filename);
-    if (stream)
+    File file(ini_filename, File::FLAG_RW | File::FLAG_SEQ);
+    if (file.Size())
     {
+        char *stream = Memory::Get()->PushToFA<char>(file.Size() + 1);
+        file.Read(stream, file.Size());
+
         Lexer lexer;
-        lexer.filename   = ini_filename;
+        lexer.filename   = ini_filename.Data();
         lexer.stream     = stream;
         lexer.line_start = stream;
         NextToken(&lexer);
@@ -419,7 +372,21 @@ Settings *Settings::Init(const char *ini_filename)
     }
     else
     {
-        WriteDefaultSettingsToFile(ini_filename);
+        char default_settings[] =
+        "window_x             = 10\n"
+        "window_y             = 10\n"
+        "window_width         = 960\n"
+        "window_height        = 540\n"
+        "fullscreen           = false\n"
+        "render_target_width  = 1920\n"
+        "render_target_height = 1080\n"
+        "graphics_api         = D3D12\n"
+        "filtering            = TRILINEAR\n"
+        "anisotropy           = 1\n"
+        "vsync                = false\n"
+        "assets_folder        = \"assets\"\n";
+
+        file.Write(REV_CSTR_ARGS(default_settings));
     }
 
     return g_Settings;

@@ -10,6 +10,8 @@
 namespace REV
 {
 
+// @TODO(Roman): Create static string on Arena.
+
 template<u64 capacity, u64 aligned_capacity = AlignUp(capacity, CACHE_LINE_SIZE)>
 class StaticString final
 {
@@ -179,13 +181,13 @@ public:
         if (to == npos) to = from + 1;
         REV_CHECK_M(from < m_Length && from < to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
 
-        u64 delta = to - from;
-        FillMemoryChar(m_Data + from, symbol, delta);
+        u64 delta      = to - from;
+        u64 fill_count = Math::min(count, delta);
+        u64 rest_count = count - fill_count;
+        FillMemoryChar(m_Data + from, symbol, fill_count);
 
-        if (count > delta)
-        {
-            Insert(to, symbol, count - delta);
-        }
+        /**/ if (rest_count)         Insert(to, symbol, rest_count);
+        else if (fill_count < delta) Erase(from + fill_count, m_Length);
 
         return *this;
     }
@@ -195,13 +197,13 @@ public:
         if (to == npos) to = from + 1;
         REV_CHECK_M(from < m_Length && from < to && to <= m_Length, "Bad arguments: from = %I64u, to = %I64u, length = %I64u", from, to, m_Length);
 
-        u64 delta = to - from;
-        CopyMemory(m_Data + from, cstring, delta);
+        u64 delta       = to - from;
+        u64 copy_length = Math::min(cstring_length, delta);
+        u64 rest_length = cstring_length - copy_length;
+        CopyMemory(m_Data + from, cstring, copy_length);
 
-        if (cstring_length > delta)
-        {
-            Insert(to, cstring + delta, cstring_length - delta);
-        }
+        /**/ if (rest_length)         Insert(to, cstring + copy_length, rest_length);
+        else if (copy_length < delta) Erase(from + copy_length, m_Length);
 
         return *this;
     }
@@ -457,8 +459,9 @@ public:
         return m_Data + index;
     }
 
-    REV_INLINE const StaticString& ToString() const { return *this; }
-    REV_INLINE       StaticString& ToString()       { return *this; }
+    REV_INLINE const StaticString& ToString()      const { return *this; }
+    REV_INLINE       StaticString& ToString()            { return *this; }
+    REV_INLINE       ConstString   ToConstString() const { return ConstString(m_Data, m_Length); }
 
     REV_INLINE StaticString& operator=(nullptr_t)
     {

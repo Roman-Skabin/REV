@@ -36,6 +36,7 @@ namespace REV
 
         void SetCurrentScene(SceneBase *scene);
 
+        REV_INLINE const Logger&       GetLogger()       const { return m_Logger;       }
         REV_INLINE const Allocator&    GetAllocator()    const { return m_Allocator;    }
         REV_INLINE const WorkQueue&    GetWorkQueue()    const { return m_WorkQueue;    }
         REV_INLINE const Window&       GetWindow()       const { return m_Window;       }
@@ -45,6 +46,7 @@ namespace REV
         REV_INLINE const AssetManager *GetAssetManager() const { return m_AssetManager; }
         REV_INLINE const Settings     *GetSettings()     const { return m_Settings;     }
 
+        REV_INLINE Logger&       GetLogger()       { return m_Logger;       }
         REV_INLINE Allocator&    GetAllocator()    { return m_Allocator;    }
         REV_INLINE WorkQueue&    GetWorkQueue()    { return m_WorkQueue;    }
         REV_INLINE Window&       GetWindow()       { return m_Window;       }

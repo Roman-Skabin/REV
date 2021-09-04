@@ -32,7 +32,7 @@ namespace REV
         static Settings *Get();
 
     private:
-        static Settings *Init(const char *ini_filename);
+        static Settings *Init(const ConstString& ini_filename);
 
         friend class ::REV::Application;
     };

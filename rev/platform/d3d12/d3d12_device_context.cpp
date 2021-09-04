@@ -13,7 +13,7 @@
 namespace REV::D3D12 {
 
 DeviceContext::DeviceContext(Window *window, const Logger& logger)
-    : m_Logger(logger, ConstString(REV_CSTR_ARGS("DeviceContext logger")), Logger::TARGET::FILE | Logger::TARGET::CONSOLE),
+    : m_Logger(logger, ConstString(REV_CSTR_ARGS("DeviceContext logger")), Logger::TARGET_FILE | Logger::TARGET_CONSOLE),
       m_Window(window),
       m_RTSize(Settings::Get()->render_target_wh),
       m_ActualRTSize(m_RTSize),

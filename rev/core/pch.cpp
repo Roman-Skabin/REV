@@ -9,7 +9,9 @@
 //
 
 #if REV_PLATFORM_WIN64
-    #pragma comment(lib, "User32.lib")      // Windows
+    #pragma comment(lib, "kernel32.lib")    // Windows
+    #pragma comment(lib, "user32.lib")      // Windows
+    #pragma comment(lib, "shlwapi.lib")     // Windows
     #pragma comment(lib, "d3d12.lib")       // DirectX
     #pragma comment(lib, "dxgi.lib")        // DirectX
     #pragma comment(lib, "d3dcompiler.lib") // DirectX

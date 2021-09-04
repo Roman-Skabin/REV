@@ -90,6 +90,12 @@ namespace REV
             return *this;
         }
 
+        REV_INLINE void AssignCSTR(const char *cstring, u64 cstring_length)
+        {
+            m_Length = cstring_length;
+            m_Data   = const_cast<char *>(cstring);
+        }
+
         REV_INLINE ConstString& operator=(const ConstString& other)
         {
             if (this != &other)

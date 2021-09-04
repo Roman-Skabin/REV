@@ -25,9 +25,9 @@ Memory *Memory::Get()
 }
 
 Memory::Memory(u64 frame_arena_capacity, u64 scene_arena_capacity, u64 permanent_arena_capacity)
-    : m_FrameArena(),
-      m_SceneArena(),
-      m_PermanentArena()
+    : m_FrameArena(ConstString(REV_CSTR_ARGS("Frame"))),
+      m_SceneArena(ConstString(REV_CSTR_ARGS("Scene"))),
+      m_PermanentArena(ConstString(REV_CSTR_ARGS("Permanent")))
 {
     REV_CHECK_M(frame_arena_capacity,     "Frame arena capacity must be greater than 0");
     REV_CHECK_M(scene_arena_capacity,     "Scene arena capacity must be greater than 0");

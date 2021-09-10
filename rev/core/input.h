@@ -99,14 +99,14 @@ namespace REV
         REV_INLINE const Key& operator[](KEY key) const
         {
             REV_CHECK(KEY::FIRST <= key && key <= KEY::LAST);
-            return m_Keys[cast<u32>(key)];
+            return m_Keys[cast(u32, key)];
         }
     
     private:
         REV_DELETE_CONSTRS_AND_OPS(Keyboard);
 
     private:
-        Key m_Keys[cast<u32>(KEY::MAX)];
+        Key m_Keys[cast(u32, KEY::MAX)];
     };
 
     class REV_API Mouse final

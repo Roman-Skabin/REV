@@ -18,7 +18,7 @@ void Keyboard::Update()
     byte keyboard_state[256];
     REV_DEBUG_RESULT(GetKeyboardState(keyboard_state));
 
-    for (u32 key = cast<u32>(KEY::FIRST); key < cast<u32>(KEY::MAX); ++key)
+    for (u32 key = cast(u32, KEY::FIRST); key < cast(u32, KEY::MAX); ++key)
     {
         m_Keys[key].Update(keyboard_state[key] >> 7);
     }
@@ -83,7 +83,7 @@ void Mouse::Update(const RAWMOUSE& raw_mouse, const Window& window)
 
     if (raw_mouse.ulButtons & RI_MOUSE_WHEEL)
     {
-        m_DeltaWheel  = cast<s16>(raw_mouse.usButtonData) / WHEEL_DELTA;
+        m_DeltaWheel  = cast(s16, raw_mouse.usButtonData) / WHEEL_DELTA;
         m_Wheel      += m_DeltaWheel;
 
         window.GetLogger().LogDebug("Wheel: ", m_Wheel, ", delta: ", m_DeltaWheel);
@@ -129,16 +129,16 @@ Gamepad::Gamepad(const Logger& logger)
       m_ButtonB(),
       m_ButtonX(),
       m_ButtonY(),
-      m_LeftTrigger(XINPUT_GAMEPAD_TRIGGER_THRESHOLD  / cast<f32>(REV_BYTE_MAX)),
-      m_RightTrigger(XINPUT_GAMEPAD_TRIGGER_THRESHOLD / cast<f32>(REV_BYTE_MAX)),
+      m_LeftTrigger(XINPUT_GAMEPAD_TRIGGER_THRESHOLD  / cast(f32, REV_BYTE_MAX)),
+      m_RightTrigger(XINPUT_GAMEPAD_TRIGGER_THRESHOLD / cast(f32, REV_BYTE_MAX)),
       m_LeftShoulder(),
       m_RightShoulder(),
       m_ButtonUp(),
       m_ButtonDown(),
       m_ButtonLeft(),
       m_ButtonRight(),
-      m_LeftStick(XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE   / cast<f32>(REV_S16_MAX)),
-      m_RightStick(XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / cast<f32>(REV_S16_MAX)),
+      m_LeftStick(XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE   / cast(f32, REV_S16_MAX)),
+      m_RightStick(XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE / cast(f32, REV_S16_MAX)),
       m_ButtonStart(),
       m_ButtonBack(),
       m_Connected(false)
@@ -146,7 +146,7 @@ Gamepad::Gamepad(const Logger& logger)
     if (!g_Xinput)
     {
         REV_DEBUG_RESULT(g_Xinput         = LoadLibraryA(XINPUT_DLL_A));
-        REV_DEBUG_RESULT(g_XInputGetState = cast<XInputGetStateProc *>(GetProcAddress(g_Xinput, "XInputGetState")));
+        REV_DEBUG_RESULT(g_XInputGetState = cast(XInputGetStateProc *, GetProcAddress(g_Xinput, "XInputGetState")));
     }
 
     logger.LogSuccess("Gamepad has been created");
@@ -187,11 +187,11 @@ void Gamepad::Update(const Logger& logger)
         m_ButtonStart.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_START));
         m_ButtonBack.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_BACK));
 
-        m_LeftTrigger.Update(xinput_state.Gamepad.bLeftTrigger / cast<f32>(REV_BYTE_MAX));
-        m_RightTrigger.Update(xinput_state.Gamepad.bRightTrigger / cast<f32>(REV_BYTE_MAX));
+        m_LeftTrigger.Update(xinput_state.Gamepad.bLeftTrigger / cast(f32, REV_BYTE_MAX));
+        m_RightTrigger.Update(xinput_state.Gamepad.bRightTrigger / cast(f32, REV_BYTE_MAX));
 
         // @NOTE(Roman): negative invlerp (ret = [-1, 1])
-        #define ADAPT_OFFSET(stick_dir) ((((stick_dir) + 0x8000) / cast<f32>(0xFFFF) - 0.5f) * 2.0f)
+        #define ADAPT_OFFSET(stick_dir) ((((stick_dir) + 0x8000) / cast(f32, 0xFFFF) - 0.5f) * 2.0f)
 
         m_LeftStick.Update(ADAPT_OFFSET(xinput_state.Gamepad.sThumbLX), ADAPT_OFFSET(xinput_state.Gamepad.sThumbLY), IS_DIGITAL_DOWN(XINPUT_GAMEPAD_LEFT_THUMB));
         m_RightStick.Update(ADAPT_OFFSET(xinput_state.Gamepad.sThumbRX), ADAPT_OFFSET(xinput_state.Gamepad.sThumbRY), IS_DIGITAL_DOWN(XINPUT_GAMEPAD_RIGHT_THUMB));

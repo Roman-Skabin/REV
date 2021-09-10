@@ -16,7 +16,7 @@ void DeviceContext::StartFrame()
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast<D3D12::DeviceContext *>(platform)->StartFrame();
+            cast(D3D12::DeviceContext *, platform)->StartFrame();
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -31,7 +31,7 @@ void DeviceContext::EndFrame()
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast<D3D12::DeviceContext *>(platform)->EndFrame();
+            cast(D3D12::DeviceContext *, platform)->EndFrame();
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -46,7 +46,7 @@ bool DeviceContext::VSyncEnabled()
     {
         case GraphicsAPI::API::D3D12:
         {
-            return cast<D3D12::DeviceContext *>(platform)->VSyncEnabled();
+            return cast(D3D12::DeviceContext *, platform)->VSyncEnabled();
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -62,7 +62,7 @@ void DeviceContext::SetVSync(bool enable)
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast<D3D12::DeviceContext *>(platform)->SetVSync(enable);
+            cast(D3D12::DeviceContext *, platform)->SetVSync(enable);
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -77,7 +77,7 @@ void DeviceContext::WaitForGPU()
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast<D3D12::DeviceContext *>(platform)->WaitForGPU();
+            cast(D3D12::DeviceContext *, platform)->WaitForGPU();
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -92,7 +92,7 @@ bool DeviceContext::FrameStarted()
     {
         case GraphicsAPI::API::D3D12:
         {
-            return cast<D3D12::DeviceContext *>(platform)->FrameStarted();
+            return cast(D3D12::DeviceContext *, platform)->FrameStarted();
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -108,7 +108,7 @@ void DeviceContext::SetFullscreenMode(bool set)
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast<D3D12::DeviceContext *>(platform)->SetFullscreenMode(set);
+            cast(D3D12::DeviceContext *, platform)->SetFullscreenMode(set);
         } break;
 
         case GraphicsAPI::API::VULKAN:

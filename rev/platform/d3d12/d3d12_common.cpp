@@ -25,7 +25,7 @@ REV_INTERNAL REV_INLINE void AddCategory(char *message, u64& message_len, const 
 {
     message_len += sprintf(message + message_len,
                            " [%.*s MESSAGE, MESSAGE_ID = %I32d]",
-                           cast<int>(cat_len - 1),
+                           cast(int, cat_len - 1),
                            category,
                            id);
 }
@@ -48,7 +48,7 @@ bool CheckResultAndPrintMessages(HRESULT hr, DeviceContext *device_context)
                 HRESULT error = device_context->InfoQueue()->GetMessage(DXGI_DEBUG_ALL, i, null, &message_length);
                 REV_CHECK(Succeeded(error));
 
-                DXGI_INFO_QUEUE_MESSAGE *message = cast<DXGI_INFO_QUEUE_MESSAGE *>(memory->PushToFrameArena(message_length));
+                DXGI_INFO_QUEUE_MESSAGE *message = cast(DXGI_INFO_QUEUE_MESSAGE *, memory->PushToFrameArena(message_length));
                 error = device_context->InfoQueue()->GetMessage(DXGI_DEBUG_ALL, i, message, &message_length);
                 REV_CHECK(Succeeded(error));
 
@@ -115,7 +115,7 @@ bool CheckResultAndPrintMessages(HRESULT hr, DeviceContext *device_context)
 bool CheckResultAndPrintMessages(HRESULT hr)
 {
 #if REV_DEBUG
-    return CheckResultAndPrintMessages(hr, cast<DeviceContext *>(GraphicsAPI::GetDeviceContext()));
+    return CheckResultAndPrintMessages(hr, cast(DeviceContext *, GraphicsAPI::GetDeviceContext()));
 #endif
     return true;
 }

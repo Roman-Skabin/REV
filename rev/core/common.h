@@ -132,23 +132,23 @@ namespace REV
 
 #define REV_S8_MIN  0x80
 #define REV_S16_MIN 0x8000
-#define REV_S32_MIN 0x80000000
-#define REV_S64_MIN 0x8000000000000000
+#define REV_S32_MIN 0x8000'0000
+#define REV_S64_MIN 0x8000'0000'0000'0000
 
 #define REV_S8_MAX  0x7F
 #define REV_S16_MAX 0x7FFF
-#define REV_S32_MAX 0x7FFFFFFF
-#define REV_S64_MAX 0x7FFFFFFFFFFFFFFF
+#define REV_S32_MAX 0x7FFF'FFFF
+#define REV_S64_MAX 0x7FFF'FFFF'FFFF'FFFF
 
 #define REV_U8_MIN  0x00
 #define REV_U16_MIN 0x0000
-#define REV_U32_MIN 0x00000000
-#define REV_U64_MIN 0x0000000000000000
+#define REV_U32_MIN 0x0000'0000
+#define REV_U64_MIN 0x0000'0000'0000'0000
 
 #define REV_U8_MAX  0xFF
 #define REV_U16_MAX 0xFFFF
-#define REV_U32_MAX 0xFFFFFFFF
-#define REV_U64_MAX 0xFFFFFFFFFFFFFFFF
+#define REV_U32_MAX 0xFFFF'FFFF
+#define REV_U64_MAX 0xFFFF'FFFF'FFFF'FFFF
 
 #define REV_F32_MIN     0hFF7FFFFF
 #define REV_F32_MAX     0h7F7FFFFF
@@ -169,36 +169,32 @@ namespace REV
 // Helpers
 //
 
+#define KB(x) (  (x) * 1024)
+#define MB(x) (KB(x) * 1024)
+#define GB(x) (MB(x) * 1024)
+#define TB(x) (GB(x) * 1024)
+
+#define cast(Type, expr) ((Type)(expr))
+
 namespace Helpers
 {
 
-template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T KB(T x) { return    x  * 1024; }
-template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T MB(T x) { return KB(x) * 1024; }
-template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T GB(T x) { return MB(x) * 1024; }
-template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_arithmetic_v<T>>> constexpr REV_INLINE T TB(T x) { return GB(x) * 1024; }
-
-template<typename T, typename = ::REV::RTTI::enable_if_t<::REV::RTTI::is_integral_v<T>>> constexpr REV_INLINE T   BIT(T x)        { return 1     << x; }
-template<>                                                                               constexpr REV_INLINE u64 BIT<u64>(u64 x) { return 1ui64 << x; }
-
-#pragma warning(suppress: 4172)
-template<typename To, typename From> constexpr REV_INLINE To cast(From x) { return (To)x; }
-
 template<typename T, u64 count> constexpr REV_INLINE u64 ArrayCount(T (&)[count]) { return count; }
 
-#define REV_ArrayCountInStruct(_struct, _field) ArrayCount(cast<_struct *>(null)->_field)
-#define REV_StructFieldSize(_struct, _field)    sizeof(cast<_struct *>(null)->_field)
-#define REV_StructFieldOffset(_struct, _field)  cast<u64>(&(cast<_struct *>(null)->_field))
+#define REV_ArrayCountInStruct(_struct, _field) ArrayCount(cast(_struct *, null)->_field)
+#define REV_StructFieldSize(_struct, _field)    sizeof(cast(_struct *, null)->_field)
+#define REV_StructFieldOffset(_struct, _field)  cast(u64, &(cast(_struct *, null)->_field))
 
-template<typename T, typename U, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
-constexpr REV_INLINE RTTI::max_size_t<T, U> AlignUp(T x, U a = DEFAULT_ALIGNMENT)
+template<typename T, typename U, typename Ret = RTTI::max_size_t<T, U>, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
+constexpr REV_INLINE Ret AlignUp(T x, U a = DEFAULT_ALIGNMENT)
 {
-    return cast<RTTI::max_size_t<T, U>>((x + (a - 1)) & ~(a - 1));
+    return cast(Ret, (x + (a - 1)) & ~(a - 1));
 }
 
-template<typename T, typename U, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
-constexpr REV_INLINE RTTI::max_size_t<T, U> AlignDown(T x, U a = DEFAULT_ALIGNMENT)
+template<typename T, typename U, typename Ret = RTTI::max_size_t<T, U>, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
+constexpr REV_INLINE Ret AlignDown(T x, U a = DEFAULT_ALIGNMENT)
 {
-    return cast<RTTI::max_size_t<T, U>>(x & ~(a - 1));
+    return cast(Ret, x & ~(a - 1));
 }
 
 template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>>
@@ -240,18 +236,18 @@ namespace REV
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE ENUM_CLASS& operator&=(T&          left, ENUM_CLASS right) { return (ENUM_CLASS&)( (RTTI::underlying_type_t<ENUM_CLASS>&)left &= (RTTI::underlying_type_t<ENUM_CLASS>)right); } \
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE ENUM_CLASS& operator^=(ENUM_CLASS& left, T          right) { return (ENUM_CLASS&)( (RTTI::underlying_type_t<ENUM_CLASS>&)left ^= (RTTI::underlying_type_t<ENUM_CLASS>)right); } \
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE ENUM_CLASS& operator^=(T&          left, ENUM_CLASS right) { return (ENUM_CLASS&)( (RTTI::underlying_type_t<ENUM_CLASS>&)left ^= (RTTI::underlying_type_t<ENUM_CLASS>)right); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator==(T           left, ENUM_CLASS right) { return         left  == cast<T>(right); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator!=(T           left, ENUM_CLASS right) { return         left  != cast<T>(right); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator<=(T           left, ENUM_CLASS right) { return         left  <= cast<T>(right); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator>=(T           left, ENUM_CLASS right) { return         left  >= cast<T>(right); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator< (T           left, ENUM_CLASS right) { return         left  <  cast<T>(right); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator> (T           left, ENUM_CLASS right) { return         left  >  cast<T>(right); } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator==(ENUM_CLASS  left, T          right) { return cast<T>(left) ==         right;  } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator!=(ENUM_CLASS  left, T          right) { return cast<T>(left) !=         right;  } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator<=(ENUM_CLASS  left, T          right) { return cast<T>(left) <=         right;  } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator>=(ENUM_CLASS  left, T          right) { return cast<T>(left) >=         right;  } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator< (ENUM_CLASS  left, T          right) { return cast<T>(left) <          right;  } \
-    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator> (ENUM_CLASS  left, T          right) { return cast<T>(left) >          right;  }
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator==(T           left, ENUM_CLASS right) { return         left  == cast(T, right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator!=(T           left, ENUM_CLASS right) { return         left  != cast(T, right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator<=(T           left, ENUM_CLASS right) { return         left  <= cast(T, right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator>=(T           left, ENUM_CLASS right) { return         left  >= cast(T, right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator< (T           left, ENUM_CLASS right) { return         left  <  cast(T, right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator> (T           left, ENUM_CLASS right) { return         left  >  cast(T, right); } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator==(ENUM_CLASS  left, T          right) { return cast(T, left) ==         right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator!=(ENUM_CLASS  left, T          right) { return cast(T, left) !=         right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator<=(ENUM_CLASS  left, T          right) { return cast(T, left) <=         right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator>=(ENUM_CLASS  left, T          right) { return cast(T, left) >=         right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator< (ENUM_CLASS  left, T          right) { return cast(T, left) <          right;  } \
+    template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>> constexpr REV_INLINE bool        operator> (ENUM_CLASS  left, T          right) { return cast(T, left) >          right;  }
 
 #define REV_ENUM_OPERATORS(ENUM) REV_ENUM_CLASS_OPERATORS(ENUM)
 

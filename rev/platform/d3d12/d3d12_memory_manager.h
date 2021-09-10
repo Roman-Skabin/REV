@@ -30,7 +30,7 @@ namespace REV::D3D12
         BUFFER_KIND_CONSTANT_BUFFER,
         BUFFER_KIND_RW_BUFFER,        // @TODO(Roman): ...
 
-        BUFFER_KIND_STATIC = BIT<u32>(31)
+        BUFFER_KIND_STATIC = 1ui32 << 31
     };
     REV_ENUM_OPERATORS(BUFFER_KIND)
 

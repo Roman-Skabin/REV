@@ -17,7 +17,7 @@ Sandbox::~Sandbox()
 
 int REV_CDECL main(int argc, char **argv)
 {
-    REV::Memory::Create(GB(1ui64), REV::PAGE_SIZE, GB(3ui64));
+    REV::Memory::Create(MB(512), MB(512), GB(3ui64));
     Sandbox sandbox;
     sandbox.Run(&sandbox.GetDemoScene());
     return 0;

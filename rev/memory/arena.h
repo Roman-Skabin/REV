@@ -23,8 +23,8 @@ namespace REV
         void *PushBytes(u64 bytes);
         void *PushBytesAligned(u64 bytes, u64 alignment);
 
-        template<typename T> REV_INLINE T *Push(u64 count = 1)                     { return cast<T *>(PushBytes(count * sizeof(T)));                   }
-        template<typename T> REV_INLINE T *PushA(u64 count = 1, u64 alignment = 0) { return cast<T *>(PushBytesAligned(count * sizeof(T), alignment)); }
+        template<typename T> REV_INLINE T *Push(u64 count = 1)                     { return cast(T *, PushBytes(count * sizeof(T)));                   }
+        template<typename T> REV_INLINE T *PushA(u64 count = 1, u64 alignment = 0) { return cast(T *, PushBytesAligned(count * sizeof(T), alignment)); }
 
         template<> REV_INLINE void *Push<void>(u64 bytes)                 { return PushBytes(bytes);                   }
         template<> REV_INLINE void *PushA<void>(u64 bytes, u64 alignment) { return PushBytesAligned(bytes, alignment); }

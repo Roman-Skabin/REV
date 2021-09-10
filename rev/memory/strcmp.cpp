@@ -17,11 +17,11 @@ COMPARE_RESULT REV_VECTORCALL CompareStrings(const char *left, u64 left_length, 
 
     while (left_length)
     {
-        __m128i mm_left  = _mm_lddqu_si128(reinterpret_cast<const __m128i *>(left));
-        __m128i mm_right = _mm_lddqu_si128(reinterpret_cast<const __m128i *>(right));
+        __m128i mm_left  = _mm_lddqu_si128(cast(const __m128i *, left));
+        __m128i mm_right = _mm_lddqu_si128(cast(const __m128i *, right));
 
-        int index = _mm_cmpestri(mm_left,  static_cast<int>(chunk_length),
-                                 mm_right, static_cast<int>(chunk_length),
+        int index = _mm_cmpestri(mm_left,  cast(int, chunk_length),
+                                 mm_right, cast(int, chunk_length),
                                  _SIDD_SBYTE_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_MASKED_NEGATIVE_POLARITY | _SIDD_LEAST_SIGNIFICANT);
 
         if (index < chunk_length)
@@ -52,11 +52,11 @@ COMPARE_RESULT REV_VECTORCALL CompareUnicodeStrings(const wchar_t *left, u64 lef
 
     while (left_length)
     {
-        __m128i mm_left  = _mm_lddqu_si128(reinterpret_cast<const __m128i *>(left));
-        __m128i mm_right = _mm_lddqu_si128(reinterpret_cast<const __m128i *>(right));
+        __m128i mm_left  = _mm_lddqu_si128(cast(const __m128i *, left));
+        __m128i mm_right = _mm_lddqu_si128(cast(const __m128i *, right));
 
-        int index = _mm_cmpestri(mm_left,  static_cast<int>(chunk_length),
-                                 mm_right, static_cast<int>(chunk_length),
+        int index = _mm_cmpestri(mm_left,  cast(int, chunk_length),
+                                 mm_right, cast(int, chunk_length),
                                  _SIDD_SWORD_OPS | _SIDD_CMP_EQUAL_EACH | _SIDD_MASKED_NEGATIVE_POLARITY | _SIDD_LEAST_SIGNIFICANT);
 
         if (index < chunk_length)
@@ -87,8 +87,8 @@ COMPARE_RESULT REV_VECTORCALL CompareStringsAligned(const char *left, u64 left_l
 
     while (left_length)
     {
-        __m128i mm_left  = _mm_lddqu_si128(reinterpret_cast<const __m128i *>(left));
-        __m128i mm_right = _mm_lddqu_si128(reinterpret_cast<const __m128i *>(right));
+        __m128i mm_left  = _mm_lddqu_si128(cast(const __m128i *, left));
+        __m128i mm_right = _mm_lddqu_si128(cast(const __m128i *, right));
 
         int index = _mm_cmpestri(mm_left,  16,
                                  mm_right, 16,
@@ -120,8 +120,8 @@ COMPARE_RESULT REV_VECTORCALL CompareUnicodeStringsAligned(const wchar_t *left, 
 
     while (left_length)
     {
-        __m128i mm_left  = _mm_lddqu_si128(reinterpret_cast<const __m128i *>(left));
-        __m128i mm_right = _mm_lddqu_si128(reinterpret_cast<const __m128i *>(right));
+        __m128i mm_left  = _mm_lddqu_si128(cast(const __m128i *, left));
+        __m128i mm_right = _mm_lddqu_si128(cast(const __m128i *, right));
 
         int index = _mm_cmpestri(mm_left,  8,
                                  mm_right, 8,

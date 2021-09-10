@@ -144,9 +144,9 @@ public:
     template<u64 get_index, u64 count = RTTI::sequence_count_v<First, Rest...>>
     constexpr REV_INLINE const auto& Get() const &
     {
-        if constexpr REV_INLINE (get_index < count)
+        if constexpr (get_index < count)
         {
-            if constexpr REV_INLINE (index == get_index) return BaseNode::Get();
+            if constexpr (index == get_index) return BaseNode::Get();
             else                              return BaseTuple::Get<get_index, count>();
         }
         else
@@ -158,9 +158,9 @@ public:
     template<u64 get_index, u64 count = RTTI::sequence_count_v<First, Rest...>>
     constexpr REV_INLINE auto& Get() &
     {
-        if constexpr REV_INLINE (get_index < count)
+        if constexpr (get_index < count)
         {
-            if constexpr REV_INLINE (index == get_index) return BaseNode::Get();
+            if constexpr (index == get_index) return BaseNode::Get();
             else                              return BaseTuple::Get<get_index, count>();
         }
         else
@@ -172,9 +172,9 @@ public:
     template<u64 get_index, u64 count = RTTI::sequence_count_v<First, Rest...>>
     constexpr REV_INLINE const auto&& Get() const &&
     {
-        if constexpr REV_INLINE (get_index < count)
+        if constexpr (get_index < count)
         {
-            if constexpr REV_INLINE (index == get_index) return BaseNode::Get();
+            if constexpr (index == get_index) return BaseNode::Get();
             else                              return BaseTuple::Get<get_index, count>();
         }
         else
@@ -186,9 +186,9 @@ public:
     template<u64 get_index, u64 count = RTTI::sequence_count_v<First, Rest...>>
     constexpr REV_INLINE auto&& Get() &&
     {
-        if constexpr REV_INLINE (get_index < count)
+        if constexpr (get_index < count)
         {
-            if constexpr REV_INLINE (index == get_index) return BaseNode::Get();
+            if constexpr (index == get_index) return BaseNode::Get();
             else                              return BaseTuple::Get<get_index, count>();
         }
         else
@@ -200,60 +200,60 @@ public:
     template<typename T>
     constexpr REV_INLINE const auto& Get() const &
     {
-        if constexpr REV_INLINE (RTTI::is_any_of_v<T, First, Rest...>)
+        if constexpr (RTTI::is_any_of_v<T, First, Rest...>)
         {
-            if constexpr REV_INLINE (RTTI::is_same_v<T, BaseNode::Type>) return BaseNode::Get();
+            if constexpr (RTTI::is_same_v<T, BaseNode::Type>) return BaseNode::Get();
             else                                              return BaseTuple::Get<T>();
         }
         else
         {
             static_assert(false, "There is no such type in tuple");
-            return cast<const T&>(T());
+            return static_cast(const T&, T());
         }
     }
 
     template<typename T>
     constexpr REV_INLINE auto& Get() &
     {
-        if constexpr REV_INLINE (RTTI::is_any_of_v<T, First, Rest...>)
+        if constexpr (RTTI::is_any_of_v<T, First, Rest...>)
         {
-            if constexpr REV_INLINE (RTTI::is_same_v<T, BaseNode::Type>) return BaseNode::Get();
+            if constexpr (RTTI::is_same_v<T, BaseNode::Type>) return BaseNode::Get();
             else                                              return BaseTuple::Get<T>();
         }
         else
         {
             static_assert(false, "There is no such type in tuple");
-            return cast<T&>(T());
+            return static_cast(T&, T());
         }
     }
 
     template<typename T>
     constexpr REV_INLINE const auto&& Get() const &&
     {
-        if constexpr REV_INLINE (RTTI::is_any_of_v<T, First, Rest...>)
+        if constexpr (RTTI::is_any_of_v<T, First, Rest...>)
         {
-            if constexpr REV_INLINE (RTTI::is_same_v<T, BaseNode::Type>) return BaseNode::Get();
+            if constexpr (RTTI::is_same_v<T, BaseNode::Type>) return BaseNode::Get();
             else                                              return BaseTuple::Get<T>();
         }
         else
         {
             static_assert(false, "There is no such type in tuple");
-            return cast<const T&&>(T());
+            return static_cast(const T&&, T());
         }
     }
 
     template<typename T>
     constexpr REV_INLINE auto&& Get() &&
     {
-        if constexpr REV_INLINE (RTTI::is_any_of_v<T, First, Rest...>)
+        if constexpr (RTTI::is_any_of_v<T, First, Rest...>)
         {
-            if constexpr REV_INLINE (RTTI::is_same_v<T, BaseNode::Type>) return BaseNode::Get();
+            if constexpr (RTTI::is_same_v<T, BaseNode::Type>) return BaseNode::Get();
             else                                              return BaseTuple::Get<T>();
         }
         else
         {
             static_assert(false, "There is no such type in tuple");
-            return cast<T&&>(T());
+            return static_cast(T&&, T());
         }
     }
 

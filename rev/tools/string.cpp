@@ -14,7 +14,7 @@ String::String(Allocator *allocator, u64 initial_capacity, u64 alignment_in_byte
     REV_CHECK(allocator);
     if (alignment_in_bytes < REV::DEFAULT_ALIGNMENT) alignment_in_bytes = REV::DEFAULT_ALIGNMENT;
 
-    m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + initial_capacity, alignment_in_bytes));
+    m_Header                     = cast(Header *, allocator->AllocateAligned(sizeof(Header) + initial_capacity, alignment_in_bytes));
     m_Header->allocator          = allocator;
     m_Header->length             = 0;
     m_Header->capacity           = initial_capacity;
@@ -27,7 +27,7 @@ String::String(Allocator *allocator, char symbol, u64 count, u64 alignment_in_by
     REV_CHECK(allocator);
     if (alignment_in_bytes < REV::DEFAULT_ALIGNMENT) alignment_in_bytes = REV::DEFAULT_ALIGNMENT;
 
-    m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + 2 * count, alignment_in_bytes));
+    m_Header                     = cast(Header *, allocator->AllocateAligned(sizeof(Header) + 2 * count, alignment_in_bytes));
     m_Header->allocator          = allocator;
     m_Header->length             = count;
     m_Header->capacity           = 2 * count;
@@ -42,7 +42,7 @@ String::String(Allocator *allocator, const char *cstring, u64 length, u64 alignm
     REV_CHECK(allocator);
     if (alignment_in_bytes < REV::DEFAULT_ALIGNMENT) alignment_in_bytes = REV::DEFAULT_ALIGNMENT;
 
-    m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + 2 * length, alignment_in_bytes));
+    m_Header                     = cast(Header *, allocator->AllocateAligned(sizeof(Header) + 2 * length, alignment_in_bytes));
     m_Header->allocator          = allocator;
     m_Header->length             = length;
     m_Header->capacity           = 2 * length;
@@ -57,7 +57,7 @@ String::String(Allocator *allocator, const ConstString& const_string, u64 alignm
     REV_CHECK(allocator);
     if (alignment_in_bytes < REV::DEFAULT_ALIGNMENT) alignment_in_bytes = REV::DEFAULT_ALIGNMENT;
 
-    m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + 2 * const_string.Length(), alignment_in_bytes));
+    m_Header                     = cast(Header *, allocator->AllocateAligned(sizeof(Header) + 2 * const_string.Length(), alignment_in_bytes));
     m_Header->allocator          = allocator;
     m_Header->length             = const_string.Length();
     m_Header->capacity           = 2 * const_string.Length();
@@ -68,7 +68,7 @@ String::String(Allocator *allocator, const ConstString& const_string, u64 alignm
 
 String::String(const String& other)
 {
-    m_Header = cast<Header *>(other.m_Header->allocator->AllocateAligned(sizeof(Header) + other.m_Header->capacity,
+    m_Header = cast(Header *, other.m_Header->allocator->AllocateAligned(sizeof(Header) + other.m_Header->capacity,
                                                                          other.m_Header->alignment_in_bytes));
     CopyMemory(m_Header, other.m_Header, sizeof(Header) + other.m_Header->length);
 }
@@ -159,7 +159,7 @@ void String::Reserve(u64 capacity)
 {
     if (m_Header->length <= capacity && m_Header->capacity != capacity)
     {
-        m_Header = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+        m_Header = cast(Header *, m_Header->allocator->ReAllocateAligned(cast(void *&, m_Header),
                                                                          sizeof(Header) + capacity,
                                                                          m_Header->alignment_in_bytes));
         m_Header->capacity = capacity;
@@ -415,7 +415,7 @@ void String::Expand()
     if (m_Header->length > m_Header->capacity)
     {
         m_Header->capacity *= 2;
-        m_Header            = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+        m_Header            = cast(Header *, m_Header->allocator->ReAllocateAligned(cast(void *&, m_Header),
                                                                                     sizeof(Header) + m_Header->capacity,
                                                                                     m_Header->alignment_in_bytes));
     }
@@ -426,7 +426,7 @@ void String::Fit()
     if (2 * m_Header->length < m_Header->capacity)
     {
         m_Header->capacity = 2 * m_Header->length;
-        m_Header           = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+        m_Header           = cast(Header *, m_Header->allocator->ReAllocateAligned(cast(void *&, m_Header),
                                                                                    sizeof(Header) + m_Header->capacity,
                                                                                    m_Header->alignment_in_bytes));
     }

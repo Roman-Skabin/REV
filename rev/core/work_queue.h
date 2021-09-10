@@ -10,6 +10,8 @@
 
 namespace REV
 {
+    // @TODO(Roman): Fix the destructor: terminate threads and close semaphore.
+    //               Work entries should hold thread handles to terminate them in destructor.
     class REV_API WorkQueue final
     {
     public:

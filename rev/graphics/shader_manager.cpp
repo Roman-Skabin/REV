@@ -23,7 +23,7 @@ ShaderHandle ShaderManager::CreateGraphicsShader(
     {
         case GraphicsAPI::API::D3D12:
         {
-            handle.index   = cast<D3D12::ShaderManager *>(platform)->CreateGraphicsShader(shader_cache_filename, textures, cbuffers, samplers, _static);
+            handle.index   = cast(D3D12::ShaderManager *, platform)->CreateGraphicsShader(shader_cache_filename, textures, cbuffers, samplers, _static);
             handle._static = _static;
         } break;
 
@@ -40,7 +40,7 @@ void ShaderManager::SetCurrentGraphicsShader(ShaderHandle graphics_shader)
     {
         case GraphicsAPI::API::D3D12:
         {
-            D3D12::ShaderManager *shader_manager = cast<D3D12::ShaderManager *>(platform);
+            D3D12::ShaderManager *shader_manager = cast(D3D12::ShaderManager *, platform);
             shader_manager->SetCurrentGraphicsShader(shader_manager->GetGraphicsShader(graphics_shader));
         } break;
 
@@ -56,7 +56,7 @@ void ShaderManager::BindVertexBuffer(ShaderHandle graphics_shader, ResourceHandl
     {
         case GraphicsAPI::API::D3D12:
         {
-            D3D12::ShaderManager *shader_manager = cast<D3D12::ShaderManager *>(platform);
+            D3D12::ShaderManager *shader_manager = cast(D3D12::ShaderManager *, platform);
             shader_manager->BindVertexBuffer(shader_manager->GetGraphicsShader(graphics_shader), resource_handle);
         } break;
 
@@ -72,7 +72,7 @@ void ShaderManager::BindIndexBuffer(ShaderHandle graphics_shader, ResourceHandle
     {
         case GraphicsAPI::API::D3D12:
         {
-            D3D12::ShaderManager *shader_manager = cast<D3D12::ShaderManager *>(platform);
+            D3D12::ShaderManager *shader_manager = cast(D3D12::ShaderManager *, platform);
             shader_manager->BindIndexBuffer(shader_manager->GetGraphicsShader(graphics_shader), resource_handle);
         } break;
 
@@ -88,7 +88,7 @@ void ShaderManager::Draw(ShaderHandle graphics_shader)
     {
         case GraphicsAPI::API::D3D12:
         {
-            D3D12::ShaderManager *shader_manager = cast<D3D12::ShaderManager *>(platform);
+            D3D12::ShaderManager *shader_manager = cast(D3D12::ShaderManager *, platform);
             shader_manager->Draw(shader_manager->GetGraphicsShader(graphics_shader));
         } break;
 
@@ -106,7 +106,7 @@ CompileShaderResult ShaderManager::CompileShader(const ConstString& code, const 
     {
         case GraphicsAPI::API::D3D12:
         {
-            D3D12::ShaderManager *shader_manager = cast<D3D12::ShaderManager *>(platform);
+            D3D12::ShaderManager *shader_manager = cast(D3D12::ShaderManager *, platform);
             Logger               *logger         = &shader_manager->GetLogger();
 
             ID3DBlob *blob = null;
@@ -177,7 +177,7 @@ CompileShaderResult ShaderManager::CompileShader(const ConstString& code, const 
             if (blob)
             {
                 result.blob     = blob;
-                result.bytecode = ConstArray(cast<byte *>(blob->GetBufferPointer()), blob->GetBufferSize());
+                result.bytecode = ConstArray(cast(byte *, blob->GetBufferPointer()), blob->GetBufferSize());
             }
         } break;
 

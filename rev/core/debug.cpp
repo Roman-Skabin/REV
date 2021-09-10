@@ -33,9 +33,9 @@ void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...)
     g_CriticalSection.Enter();
     {
     #if REV_PLATFORM_WIN64
-        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(color)));
+        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast(u16, color)));
         REV_DEBUG_RESULT(WriteConsoleA(g_Console, builder.BufferData(), (u32)builder.BufferLength(), null, null));
-        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::INFO)));
+        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast(u16, DEBUG_COLOR::INFO)));
         OutputDebugStringA(builder.BufferData());
     #else
         REV_ERROR_M("Unhandled platform dependent code!");
@@ -59,7 +59,7 @@ void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, 
         case DEBUG_COLOR::ERROR:   builder.Build("Error: ");   break;
         case DEBUG_COLOR::WARNING: builder.Build("Warning: "); break;
         case DEBUG_COLOR::SUCCESS: builder.Build("Success: "); break;
-        default:                   REV_ERROR_M("Wrong DEBUG_COLOR value: 0x%x", color); break;
+        default:                   REV_ERROR_M("Wrong DEBUG_COLOR value: 0x%X", color); break;
     }
 
     REV_CHECK(format);
@@ -88,9 +88,9 @@ void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, 
     g_CriticalSection.Enter();
     {
     #if REV_PLATFORM_WIN64
-        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(color)));
+        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast(u16, color)));
         REV_DEBUG_RESULT(WriteConsoleA(g_Console, builder.BufferData(), (u32)builder.BufferLength(), null, null));
-        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast<u16>(DEBUG_COLOR::INFO)));
+        REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast(u16, DEBUG_COLOR::INFO)));
         OutputDebugStringA(builder.BufferData());
     #else
         REV_ERROR_M("Unhandled platform dependent code!");

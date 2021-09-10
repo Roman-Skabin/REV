@@ -48,19 +48,19 @@ void WorkQueue::AddWork(const Work& work)
 
         if (new_next_entry_to_write != m_NextEntryToRead)
         {
-            m_Works[old_next_entry_to_write] = work;
-
             s32 old = _InterlockedCompareExchange(&m_NextEntryToWrite,
                                                   new_next_entry_to_write,
                                                   old_next_entry_to_write);
 
             if (old == old_next_entry_to_write)
             {
+                m_Works[old_next_entry_to_write] = work;
+                
                 _InterlockedIncrement(&m_CompletionGoal);
                 ReleaseSemaphore(m_Semaphore, 1, null);
-            }
 
-            break;
+                break;
+            }
         }
     }
 }
@@ -92,7 +92,7 @@ void WorkQueue::Wait()
 
 u32 WINAPI ThreadProc(void *arg)
 {
-    WorkQueue *work_queue = cast<WorkQueue *>(arg);
+    WorkQueue *work_queue = cast(WorkQueue *, arg);
     while (true)
     {
         s32 old_next_entry_to_read = work_queue->m_NextEntryToRead;

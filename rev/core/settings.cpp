@@ -65,7 +65,7 @@ REV_INTERNAL void REV_CDECL SyntaxError(Lexer *lexer, const char *format, ...)
     
     va_end(args);
 
-    lexer->token.pos.c = cast<u32>(lexer->stream - lexer->line_start);
+    lexer->token.pos.c = cast(u32, lexer->stream - lexer->line_start);
 
     PrintDebugMessage(DEBUG_COLOR::ERROR, "%s(%I32u:%I32u): INI syntax error: %s.", lexer->filename, lexer->token.pos.r, lexer->token.pos.c, buffer);
     // @TODO(Roman): #CrossPlatform
@@ -145,11 +145,11 @@ tokenize_again:
     }
     else
     {
-        SyntaxError(lexer, "undefined token: %.*s", cast<int>(lexer->stream - lexer->token.start), lexer->token.start);
+        SyntaxError(lexer, "undefined token: %.*s", cast(int, lexer->stream - lexer->token.start), lexer->token.start);
     }
 
     lexer->token.end   = lexer->stream;
-    lexer->token.pos.c = cast<u32>(lexer->token.start - lexer->line_start + 1);
+    lexer->token.pos.c = cast(u32, lexer->token.start - lexer->line_start + 1);
 
     #undef ELSE_IF_CHAR
 }
@@ -323,7 +323,7 @@ Settings *Settings::Init(const ConstString& ini_filename)
                     NextToken(&lexer);
                     CheckToken(&lexer, TOKEN_KIND_INT);
 
-                    g_Settings->anisotropy = cast<u8>(lexer.token.u32_val);
+                    g_Settings->anisotropy = cast(u8, lexer.token.u32_val);
                 }
                 else if (TokenEquals(&lexer, REV_CSTR_ARGS("fullscreen")))
                 {
@@ -365,7 +365,7 @@ Settings *Settings::Init(const ConstString& ini_filename)
                 }
                 else
                 {
-                    SyntaxError(&lexer, "unexpected setting: %.*s", cast<int>(lexer.stream - lexer.token.start), lexer.token.start);
+                    SyntaxError(&lexer, "unexpected setting: %.*s", cast(int, lexer.stream - lexer.token.start), lexer.token.start);
                 }
             }
         }

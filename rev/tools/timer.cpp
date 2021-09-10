@@ -9,11 +9,11 @@ namespace REV
 {
 
 // @TODO(Roman): #CrossPlatform
-REV_INTERNAL REV_INLINE void QPF(s64& val) { QueryPerformanceFrequency(cast<LARGE_INTEGER *>(&val)); }
-REV_INTERNAL REV_INLINE void QPC(s64& val) { QueryPerformanceCounter(cast<LARGE_INTEGER *>(&val));   }
+REV_INTERNAL REV_INLINE void QPF(s64& val) { QueryPerformanceFrequency(cast(LARGE_INTEGER *, &val)); }
+REV_INTERNAL REV_INLINE void QPC(s64& val) { QueryPerformanceCounter(cast(LARGE_INTEGER *, &val));   }
 
-REV_INTERNAL REV_INLINE s64 QPF() { s64 val = 0; QueryPerformanceFrequency(cast<LARGE_INTEGER *>(&val)); return val; }
-REV_INTERNAL REV_INLINE s64 QPC() { s64 val = 0; QueryPerformanceCounter(cast<LARGE_INTEGER *>(&val));   return val; }
+REV_INTERNAL REV_INLINE s64 QPF() { s64 val = 0; QueryPerformanceFrequency(cast(LARGE_INTEGER *, &val)); return val; }
+REV_INTERNAL REV_INLINE s64 QPC() { s64 val = 0; QueryPerformanceCounter(cast(LARGE_INTEGER *, &val));   return val; }
 
 //
 // Timer
@@ -52,11 +52,11 @@ void Timer::Tick()
         m_DeltaTicks = cur_ticks - m_Ticks;
         m_Ticks      = cur_ticks;
 
-        m_DeltaSeconds = m_DeltaTicks / cast<f32>(m_TicksPerSecond);
-        m_Seconds      = m_Ticks      / cast<f32>(m_TicksPerSecond);
+        m_DeltaSeconds = m_DeltaTicks / cast(f32, m_TicksPerSecond);
+        m_Seconds      = m_Ticks      / cast(f32, m_TicksPerSecond);
     }
 
-    m_TotalSeconds = (cur_ticks + m_StopDuration) / cast<f32>(m_TicksPerSecond);
+    m_TotalSeconds = (cur_ticks + m_StopDuration) / cast(f32, m_TicksPerSecond);
 }
 
 void Timer::Start()

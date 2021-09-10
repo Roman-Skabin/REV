@@ -21,7 +21,7 @@ Arena::Arena(const ConstString& name)
 }
 
 Arena::Arena(void *base, u64 capacity, const ConstString& name)
-    : m_Base(cast<byte *>(base)),
+    : m_Base(cast(byte *, base)),
       m_Used(0),
       m_Capacity(capacity),
       m_Name(name),
@@ -77,7 +77,7 @@ void *Arena::PushBytes(u64 bytes)
     m_CriticalSection.Enter();
 
     REV_CHECK_M(bytes <= m_Capacity - m_Used,
-                "Arena overflow: bytes to allocate: %I64u, remain capacity: %I64u.",
+                "Arena overflow: bytes to allocate: %I64u, remain capacity: %I64u",
                 bytes,
                 m_Capacity - m_Used);
 
@@ -104,7 +104,7 @@ void *Arena::PushBytesAligned(u64 bytes, u64 alignment)
     m_CriticalSection.Enter();
 
     REV_CHECK_M(aligned_bytes <= m_Capacity - m_Used,
-                "Arena overflow: bytes to allocate: %I64u, remain capacity: %I64u.",
+                "Arena overflow: bytes to allocate: %I64u, remain capacity: %I64u",
                 aligned_bytes,
                 m_Capacity - m_Used);
 

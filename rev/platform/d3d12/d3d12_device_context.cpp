@@ -95,7 +95,7 @@ DeviceContext::~DeviceContext()
     #if REV_DEBUG
         if (m_DXGIDebug)
         {
-            error = m_DXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, cast<DXGI_DEBUG_RLO_FLAGS>(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+            error = m_DXGIDebug->ReportLiveObjects(DXGI_DEBUG_ALL, cast(DXGI_DEBUG_RLO_FLAGS, DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
             REV_CHECK(CheckResultAndPrintMessages(error, this));
             REV_CHECK(CheckResultAndPrintMessages(REV_FORCE_PRINT_MESSAGES, this));
 
@@ -131,8 +131,8 @@ void DeviceContext::StartFrame()
     D3D12_VIEWPORT viewport;
     viewport.TopLeftX = 0.0f;
     viewport.TopLeftY = 0.0f;
-    viewport.Width    = cast<f32>(m_ActualRTSize.w);
-    viewport.Height   = cast<f32>(m_ActualRTSize.h);
+    viewport.Width    = cast(f32, m_ActualRTSize.w);
+    viewport.Height   = cast(f32, m_ActualRTSize.h);
     viewport.MinDepth = -1.0f;
     viewport.MaxDepth =  1.0f;
 
@@ -171,7 +171,7 @@ void DeviceContext::StartFrame()
     ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
     D3D12_RESOURCE_BARRIER begin_barriers[] = { rt_barrier, ds_barrier };
-    graphics_list->ResourceBarrier(cast<UINT>(ArrayCount(begin_barriers)), begin_barriers);
+    graphics_list->ResourceBarrier(cast(UINT, ArrayCount(begin_barriers)), begin_barriers);
 
     // Clear
     f32 clear_color[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -210,7 +210,7 @@ void DeviceContext::EndFrame()
     ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
     D3D12_RESOURCE_BARRIER end_barriers[] = { rt_barrier, ds_barrier };
-    graphics_list->ResourceBarrier(cast<UINT>(ArrayCount(end_barriers)), end_barriers);
+    graphics_list->ResourceBarrier(cast(UINT, ArrayCount(end_barriers)), end_barriers);
 
     // Close and execute lists
     HRESULT error = graphics_list->Close();
@@ -220,7 +220,7 @@ void DeviceContext::EndFrame()
     {
         graphics_list,
     };
-    m_GraphicsQueue->ExecuteCommandLists(cast<UINT>(ArrayCount(command_lists)), command_lists);
+    m_GraphicsQueue->ExecuteCommandLists(cast(UINT, ArrayCount(command_lists)), command_lists);
 
     // Present
     u32 present_flags = DXGI_PRESENT_DO_NOT_WAIT;
@@ -331,7 +331,7 @@ void DeviceContext::CreateAdapterAndDevice()
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: ", cast<const wchar_t *>(adapter_desc.Description), ", Feature Level: D3D_FEATURE_LEVEL_12_1");
+        m_Logger.LogInfo("GPU Adapter: ", cast(const wchar_t *, adapter_desc.Description), ", Feature Level: D3D_FEATURE_LEVEL_12_1");
     }
     else
     {
@@ -361,7 +361,7 @@ void DeviceContext::CreateAdapterAndDevice()
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: ", cast<const wchar_t *>(adapter_desc.Description), ", Feature Level: D3D_FEATURE_LEVEL_12_0");
+        m_Logger.LogInfo("GPU Adapter: ", cast(const wchar_t *, adapter_desc.Description), ", Feature Level: D3D_FEATURE_LEVEL_12_0");
     }
 }
 

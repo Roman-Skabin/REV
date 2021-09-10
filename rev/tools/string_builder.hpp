@@ -283,8 +283,8 @@ private:
 
             while (val > 0)
             {
-                *buffer++ = int_to_char[val % cast<T>(Base)];
-                val /= cast<T>(Base);
+                *buffer++ = int_to_char[val % cast(T, Base)];
+                val /= cast(T, Base);
             }
 
             --buffer;
@@ -372,7 +372,7 @@ private:
                 while (expexp > 0.0f)
                 {
                     T mod      = fmodf(exponent, 10.0f);
-                    *buffer++  = int_to_char[cast<u64>(mod)];
+                    *buffer++  = int_to_char[cast(u64, mod)];
                     exponent  /= 10.0f;
                     modff(exponent, &expexp);
                 }
@@ -385,7 +385,7 @@ private:
                 while (expexp > 0.0)
                 {
                     T mod      = fmod(exponent, 10.0);
-                    *buffer++  = int_to_char[cast<u64>(mod)];
+                    *buffer++  = int_to_char[cast(u64, mod)];
                     exponent  /= 10.0;
                     modf(exponent, &expexp);
                 }
@@ -420,7 +420,7 @@ private:
                 {
                     fraction  *= 10.0f;
                     T mod      = fmodf(fraction, 10.0f);
-                    *buffer++  = int_to_char[cast<u64>(mod)];
+                    *buffer++  = int_to_char[cast(u64, mod)];
                 }
             }
             else
@@ -429,7 +429,7 @@ private:
                 {
                     fraction  *= 10.0;
                     T mod      = fmod(fraction, 10.0);
-                    *buffer++  = int_to_char[cast<u64>(mod)];
+                    *buffer++  = int_to_char[cast(u64, mod)];
                 }
             }
 
@@ -751,7 +751,7 @@ private:
         }
         else if constexpr (RTTI::is_pointer_v<T>)
         {
-            ParsePointer(buffer, cast<u64>(val));
+            ParsePointer(buffer, cast(u64, val));
             m_String.PushBack(buffer);
         }
         else if constexpr (RTTI::is_nullptr_t_v<T>)

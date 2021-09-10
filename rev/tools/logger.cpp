@@ -126,7 +126,7 @@ void Logger::PrintMessage(MESSAGE_KIND message_kind, const StaticString<1024>& m
     if (m_Target & TARGET_CONSOLE)
     {
         const char *buffer_data   = message.Data();
-        u32         buffer_length = cast<u32>(message.Length());
+        u32         buffer_length = cast(u32, message.Length());
 
         switch (message_kind)
         {

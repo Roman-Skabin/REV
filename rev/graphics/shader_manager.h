@@ -39,12 +39,12 @@ namespace REV
         enum SHADER_KIND : u32
         {
             SHADER_KIND_UNKNOWN  = 0,
-            SHADER_KIND_VERTEX   = BIT(0),
-            SHADER_KIND_HULL     = BIT(1),
-            SHADER_KIND_DOMAIN   = BIT(2),
-            SHADER_KIND_GEOMETRY = BIT(3),
-            SHADER_KIND_PIXEL    = BIT(4),
-            SHADER_KIND_COMPUTE  = BIT(5),
+            SHADER_KIND_VERTEX   = 1 << 0,
+            SHADER_KIND_HULL     = 1 << 1,
+            SHADER_KIND_DOMAIN   = 1 << 2,
+            SHADER_KIND_GEOMETRY = 1 << 3,
+            SHADER_KIND_PIXEL    = 1 << 4,
+            SHADER_KIND_COMPUTE  = 1 << 5,
 
             SHADER_KIND_COUNT
         };
@@ -81,7 +81,6 @@ namespace REV
         class REV_API ShaderManager final
         {
         public:
-            // @Optimize, #Tools(Roman): Pass ConstList.
             ShaderHandle CreateGraphicsShader(
                 const ConstString&              shader_cache_filename,
                 const ConstArray<AssetHandle>&  textures,

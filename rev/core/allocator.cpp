@@ -60,7 +60,7 @@ Allocator::Allocator(void *base_address, u64 capacity, bool clear_memory, const 
         m_VallocUsed = false;
     }
 
-    m_First         = cast<BlockHeader *>(base_address);
+    m_First         = cast(BlockHeader *, base_address);
     m_LastAllocated = m_First;
 }
 
@@ -159,7 +159,7 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
 
     if (first_in_list)
     {
-        BlockHeader *next_block = cast<BlockHeader *>(first_in_list->data + first_in_list->data_bytes);
+        BlockHeader *next_block = cast(BlockHeader *, first_in_list->data + first_in_list->data_bytes);
         REV_CHECK_M(next_block->block_state == BLOCK_STATE::ALLOCATED,
                     "Allocator \"%s\": Internal error.\n"
                     "    We could not have next block in free list\n"
@@ -169,7 +169,7 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
 
         first_in_list->block_state = BLOCK_STATE::ALLOCATED;
 
-        BlockHeader *new_next_header = cast<BlockHeader *>(first_in_list->data + bytes);
+        BlockHeader *new_next_header = cast(BlockHeader *, first_in_list->data + bytes);
         new_next_header->block_state = BLOCK_STATE::IN_FREE_LIST;
         new_next_header->data_bytes  = first_in_list->data_bytes - bytes - sizeof(BlockHeader);
         new_next_header->prev        = first_in_list;
@@ -202,7 +202,7 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
     }
     else
     {
-        BlockHeader *header = cast<BlockHeader *>(m_LastAllocated->data + m_LastAllocated->data_bytes);
+        BlockHeader *header = cast(BlockHeader *, m_LastAllocated->data + m_LastAllocated->data_bytes);
 
         if (BlockInAllocatorRange(header))
         {
@@ -265,7 +265,7 @@ void *Allocator::Allocate(u64 bytes)
 
 void Allocator::MergeNearbyBlocksInFreeList(BlockHeader *header)
 {
-    BlockHeader *next_header = cast<BlockHeader *>(header->data + header->data_bytes);
+    BlockHeader *next_header = cast(BlockHeader *, header->data + header->data_bytes);
     BlockHeader *prev_header = header->prev;
 
     if (BlockInAllocatorRange(next_header))
@@ -287,7 +287,7 @@ void Allocator::MergeNearbyBlocksInFreeList(BlockHeader *header)
                         "    If next block is in free list, so we have to have allocated block(s) after it.",
                         m_Name.Data());
 
-            BlockHeader *nexts_next = cast<BlockHeader *>(next_header->data + next_header->data_bytes);
+            BlockHeader *nexts_next = cast(BlockHeader *, next_header->data + next_header->data_bytes);
             if (BlockInAllocatorRange(nexts_next))
             {
                 REV_CHECK_M(nexts_next->block_state == BLOCK_STATE::ALLOCATED,
@@ -351,9 +351,9 @@ void Allocator::DeAllocate(void *&mem)
                     m_Name.Data(),
                     mem,
                     m_First->data,
-                    cast<byte *>(m_First) + m_Capacity - 1);
+                    cast(byte *, m_First) + m_Capacity - 1);
 
-        BlockHeader *header = cast<BlockHeader *>(cast<byte *>(mem) - sizeof(BlockHeader));
+        BlockHeader *header = cast(BlockHeader *, cast(byte *, mem) - sizeof(BlockHeader));
         REV_CHECK_M(header->block_state == BLOCK_STATE::ALLOCATED,
                     "Allocator \"%s\": This memory block (0x%p) is not allocated yet/already",
                     m_Name.Data(),
@@ -379,7 +379,7 @@ void Allocator::DeAllocate(void *&mem)
 BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
 {
     BlockHeader *res_header  = null;
-    BlockHeader *next_header = cast<BlockHeader *>(header->data + header->data_bytes);
+    BlockHeader *next_header = cast(BlockHeader *, header->data + header->data_bytes);
 
     if (BlockInAllocatorRange(next_header))
     {
@@ -400,7 +400,7 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                 m_Used             += bytes - header->data_bytes;
                 header->data_bytes  = bytes;
 
-                BlockHeader *nexts_next = cast<BlockHeader *>(next_header->data + next_header->data_bytes);
+                BlockHeader *nexts_next = cast(BlockHeader *, next_header->data + next_header->data_bytes);
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     REV_CHECK_M(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
@@ -431,13 +431,13 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                 m_Used             += bytes - header->data_bytes;
                 header->data_bytes  = bytes;
 
-                BlockHeader *new_next_header = cast<BlockHeader *>(header->data + header->data_bytes);
+                BlockHeader *new_next_header = cast(BlockHeader *, header->data + header->data_bytes);
                 new_next_header->block_state = BLOCK_STATE::IN_FREE_LIST;
                 new_next_header->data_bytes  = new_next_header_bytes;
                 new_next_header->prev        = header;
                 new_next_header->next_free   = next_save.next_free;
 
-                BlockHeader *nexts_next = cast<BlockHeader *>(next_save.data + next_save.data_bytes);
+                BlockHeader *nexts_next = cast(BlockHeader *, next_save.data + next_save.data_bytes);
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     REV_CHECK_M(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
@@ -468,13 +468,13 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                 m_Used             -= delta_bytse;
                 header->data_bytes  = bytes;
 
-                BlockHeader *new_next_header = cast<BlockHeader *>(header->data + header->data_bytes);
+                BlockHeader *new_next_header = cast(BlockHeader *, header->data + header->data_bytes);
                 new_next_header->block_state = BLOCK_STATE::IN_FREE_LIST;
                 new_next_header->data_bytes  = next_save.data_bytes + delta_bytse;
                 new_next_header->prev        = header;
                 new_next_header->next_free   = next_save.next_free;
                 
-                BlockHeader *nexts_next = cast<BlockHeader *>(next_save.data + next_save.data_bytes);
+                BlockHeader *nexts_next = cast(BlockHeader *, next_save.data + next_save.data_bytes);
                 if (BlockInAllocatorRange(nexts_next))
                 {
                     REV_CHECK_M(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
@@ -541,9 +541,9 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
                 m_Name.Data(),
                 mem,
                 m_First->data,
-                cast<byte *>(m_First) + m_Capacity - 1);
+                cast(byte *, m_First) + m_Capacity - 1);
 
-    BlockHeader *header = cast<BlockHeader *>(cast<byte *>(mem) - sizeof(BlockHeader));
+    BlockHeader *header = cast(BlockHeader *, cast(byte *, mem) - sizeof(BlockHeader));
 
     REV_CHECK_M(header->block_state == BLOCK_STATE::ALLOCATED,
                 "Allocator \"%s\": This memory block (0x%p) is not allocated yet/already.",
@@ -637,7 +637,7 @@ bool Allocator::MemInAllocatorRange(void *mem)
 {
     m_CriticalSection.Enter();
 
-    bool in = m_First->data <= mem && mem < cast<byte *>(m_First) + m_Capacity;
+    bool in = m_First->data <= mem && mem < cast(byte *, m_First) + m_Capacity;
 
     m_CriticalSection.Leave();
     return in;
@@ -645,7 +645,7 @@ bool Allocator::MemInAllocatorRange(void *mem)
 
 bool Allocator::BlockInAllocatorRange(BlockHeader *block)
 {
-    return m_First <= block && block < cast<BlockHeader *>(cast<byte *>(m_First) + m_Capacity - sizeof(BlockHeader));
+    return m_First <= block && block < cast(BlockHeader *, cast(byte *, m_First) + m_Capacity - sizeof(BlockHeader));
 }
 
 }

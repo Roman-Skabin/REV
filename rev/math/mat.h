@@ -155,8 +155,8 @@ union REV_INTRIN_TYPE m2 final
     REV_INLINE m2& REV_VECTORCALL operator*=(f32 r) { mm = _mm_mul_ps(mm, _mm_set_ps1(r)); return *this; }
     REV_INLINE m2& REV_VECTORCALL operator/=(f32 r) { mm = _mm_div_ps(mm, _mm_set_ps1(r)); return *this; }
 
-    REV_INLINE v2  operator[](u8 i) const { REV_CHECK(i < 2); return cast<const v2 *>(this)[i]; }
-    REV_INLINE v2& operator[](u8 i)       { REV_CHECK(i < 2); return cast<      v2 *>(this)[i]; }
+    REV_INLINE v2  operator[](u8 i) const { REV_CHECK(i < 2); return cast(const v2 *, this)[i]; }
+    REV_INLINE v2& operator[](u8 i)       { REV_CHECK(i < 2); return cast(      v2 *, this)[i]; }
 };
 
 REV_INLINE m2 REV_VECTORCALL operator+(m2 l, m2 r) { return m2(_mm_add_ps(l.mm, r.mm)); }
@@ -373,7 +373,7 @@ public:
 
 #if REV_ISA >= REV_ISA_AVX512
     REV_INLINE m3(__m512 _zmm)
-        : ymm0(*cast<__m256 *>(_zmm)),
+        : ymm0(*cast(__m256 *, _zmm)),
           e22(mm_extract_f32<8>(_zmm))
     {
     }
@@ -864,8 +864,8 @@ public:
         return *this;
     }
 
-    REV_INLINE v3  operator[](u8 i) const { REV_CHECK(i < 3); return cast<v3 *>(this)[i]; }
-    REV_INLINE v3& operator[](u8 i)       { REV_CHECK(i < 3); return cast<v3 *>(this)[i]; }
+    REV_INLINE v3  operator[](u8 i) const { REV_CHECK(i < 3); return cast(v3 *, this)[i]; }
+    REV_INLINE v3& operator[](u8 i)       { REV_CHECK(i < 3); return cast(v3 *, this)[i]; }
 
     friend REV_INLINE m3 REV_VECTORCALL operator+(m3 l, m3 r);
     friend REV_INLINE m3 REV_VECTORCALL operator-(m3 l, m3 r);
@@ -1895,8 +1895,8 @@ union REV_INTRIN_TYPE m4 final
         return *this;
     }
 
-    REV_INLINE v4  operator[](u8 i) const { REV_CHECK(i < 4); return cast<v4 *>(this)[i]; }
-    REV_INLINE v4& operator[](u8 i)       { REV_CHECK(i < 4); return cast<v4 *>(this)[i]; }
+    REV_INLINE v4  operator[](u8 i) const { REV_CHECK(i < 4); return cast(v4 *, this)[i]; }
+    REV_INLINE v4& operator[](u8 i)       { REV_CHECK(i < 4); return cast(v4 *, this)[i]; }
 };
 
 REV_INLINE m4 REV_VECTORCALL operator+(m4 l, m4 r)

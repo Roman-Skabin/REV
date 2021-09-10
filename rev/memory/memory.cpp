@@ -41,7 +41,7 @@ Memory::Memory(u64 frame_arena_capacity, u64 scene_arena_capacity, u64 permanent
     REV_CHECK(memory_capacity <= MAX_MEMORY);
 
 #if REV_PLATFORM_WIN64
-    byte *base = cast<byte *>(VirtualAlloc(null, memory_capacity, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+    byte *base = cast(byte *, VirtualAlloc(null, memory_capacity, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
     REV_CHECK_M(base, "Physical memory overflow");
 #else
     byte *base = mmap(null, memory_capacity, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);

@@ -185,8 +185,8 @@ union REV_INTRIN_TYPE quat final
         int m4_2_2 = _mm_extract_ps(col2, 2);
 
         return m3(  _mm_cvtss_f32(col0),   _mm_cvtss_f32(col1),   _mm_cvtss_f32(col2),
-                  *cast<f32 *>(&m4_1_0), *cast<f32 *>(&m4_1_1), *cast<f32 *>(&m4_1_2),
-                  *cast<f32 *>(&m4_2_0), *cast<f32 *>(&m4_2_1), *cast<f32 *>(&m4_2_2));
+                  *cast(f32 *, &m4_1_0), *cast(f32 *, &m4_1_1), *cast(f32 *, &m4_1_2),
+                  *cast(f32 *, &m4_2_0), *cast(f32 *, &m4_2_1), *cast(f32 *, &m4_2_2));
     }
 
     REV_INLINE m4 REV_VECTORCALL to_m4()
@@ -234,8 +234,8 @@ union REV_INTRIN_TYPE quat final
         int m4_2_2 = _mm_extract_ps(col2, 2);
 
         return m4(  _mm_cvtss_f32(col0),   _mm_cvtss_f32(col1),   _mm_cvtss_f32(col2), 0.0f,
-                  *cast<f32 *>(&m4_1_0), *cast<f32 *>(&m4_1_1), *cast<f32 *>(&m4_1_2), 0.0f,
-                  *cast<f32 *>(&m4_2_0), *cast<f32 *>(&m4_2_1), *cast<f32 *>(&m4_2_2), 0.0f,
+                  *cast(f32 *, &m4_1_0), *cast(f32 *, &m4_1_1), *cast(f32 *, &m4_1_2), 0.0f,
+                  *cast(f32 *, &m4_2_0), *cast(f32 *, &m4_2_1), *cast(f32 *, &m4_2_2), 0.0f,
                                    0.0f,                  0.0f,                  0.0f, 1.0f);
     }
 

@@ -12,7 +12,7 @@ Event::Event(const char *name, FLAGS flags)
     : m_Handle(null),
       m_Flags(flags)
 {
-    REV_DEBUG_RESULT(m_Handle = CreateEventExA(null, name, cast<u32>(m_Flags), EVENT_ALL_ACCESS));
+    REV_DEBUG_RESULT(m_Handle = CreateEventExA(null, name, cast(u32, m_Flags), EVENT_ALL_ACCESS));
 }
 
 Event::Event(const Event& other)

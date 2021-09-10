@@ -80,7 +80,7 @@ void DemoScene::OnUpdate()
     REV_LOCAL f32 last_print_time;
     if (!window.Fullscreened() && timer.Seconds() - last_print_time >= 0.1)
     {
-        f32 FPS = timer.TicksPerSecond() / cast<f32>(timer.DeltaTicks());
+        f32 FPS = timer.TicksPerSecond() / cast(f32, timer.DeltaTicks());
 
         REV::StaticStringBuilder<128> ssb;
         ssb.m_FloatFormat.Precision = 2;

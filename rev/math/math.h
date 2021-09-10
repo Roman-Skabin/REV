@@ -84,8 +84,8 @@ namespace REV::Math
         {
             if (RTTI::is_signed_v<T>)
             {
-                __m128i mm_abs = _mm_abs_epi8(_mm_set1_epi8(*cast<char *>(&val)));
-                return *cast<T *>(mm_abs.m128i_i8);
+                __m128i mm_abs = _mm_abs_epi8(_mm_set1_epi8(*cast(char *, &val)));
+                return *cast(T *, mm_abs.m128i_i8);
             }
             return val;
         }
@@ -93,8 +93,8 @@ namespace REV::Math
         {
             if (RTTI::is_signed_v<T>)
             {
-                __m128i mm_abs = _mm_abs_epi16(_mm_set1_epi16(*cast<short *>(&val)));
-                return *cast<T *>(mm_abs.m128i_i16);
+                __m128i mm_abs = _mm_abs_epi16(_mm_set1_epi16(*cast(short *, &val)));
+                return *cast(T *, mm_abs.m128i_i16);
             }
             return val;
         }
@@ -106,8 +106,8 @@ namespace REV::Math
             }
             else if constexpr (RTTI::is_signed_v<T>)
             {
-                __m128i mm_abs = _mm_abs_epi32(_mm_set1_epi32(*cast<int *>(&val)));
-                return *cast<T *>(mm_abs.m128i_i32);
+                __m128i mm_abs = _mm_abs_epi32(_mm_set1_epi32(*cast(int *, &val)));
+                return *cast(T *, mm_abs.m128i_i32);
             }
             return val;
         }
@@ -120,8 +120,8 @@ namespace REV::Math
             else if constexpr (RTTI::is_signed_v<T>)
             {
                 #if REV_ISA >= REV_ISA_AVX512
-                    __m128i mm_abs = _mm_abs_epi64(_mm_set1_epi64(cast<int *>(&val)));
-                    return *cast<T *>(mm_abs.m128i_i32);
+                    __m128i mm_abs = _mm_abs_epi64(_mm_set1_epi64(cast(int *, &val)));
+                    return *cast(T *, mm_abs.m128i_i32);
                 #else
                     return val < 0 ? -val : val;
                 #endif
@@ -138,10 +138,10 @@ namespace REV::Math
     REV_INLINE bool REV_VECTORCALL is_negative(T val)
     {
         /**/ if constexpr (RTTI::is_unsigned_v<T>) return false;
-        else if constexpr (sizeof(T) == 1) return *cast<u8  *>(&val) & 0x80;
-        else if constexpr (sizeof(T) == 2) return *cast<u16 *>(&val) & 0x8000;
-        else if constexpr (sizeof(T) == 4) return *cast<u32 *>(&val) & 0x8000'0000;
-        else if constexpr (sizeof(T) == 8) return *cast<u64 *>(&val) & 0x8000'0000'0000'0000;
+        else if constexpr (sizeof(T) == 1) return *cast(u8  *, &val) & 0x80;
+        else if constexpr (sizeof(T) == 2) return *cast(u16 *, &val) & 0x8000;
+        else if constexpr (sizeof(T) == 4) return *cast(u32 *, &val) & 0x8000'0000;
+        else if constexpr (sizeof(T) == 8) return *cast(u64 *, &val) & 0x8000'0000'0000'0000;
         else return val < 0;
     }
 
@@ -155,26 +155,26 @@ namespace REV::Math
         {
             if constexpr (RTTI::is_signed_v<T>)
             {
-                __m128i mm_min = _mm_min_epi8(_mm_set1_epi8(*cast<char *>(&l)), _mm_set1_epi8(*cast<char *>(&r)));
-                return *cast<T *>(mm_min.m128i_i8);
+                __m128i mm_min = _mm_min_epi8(_mm_set1_epi8(*cast(char *, &l)), _mm_set1_epi8(*cast(char *, &r)));
+                return *cast(T *, mm_min.m128i_i8);
             }
             else
             {
-                __m128i mm_min = _mm_min_epu8(_mm_set1_epi8(*cast<char *>(&l)), _mm_set1_epi8(*cast<char *>(&r)));
-                return *cast<T *>(mm_min.m128i_u8);
+                __m128i mm_min = _mm_min_epu8(_mm_set1_epi8(*cast(char *, &l)), _mm_set1_epi8(*cast(char *, &r)));
+                return *cast(T *, mm_min.m128i_u8);
             }
         }
         else if constexpr (sizeof(T) == 2)
         {
             if constexpr (RTTI::is_signed_v<T>)
             {
-                __m128i mm_min = _mm_min_epi16(_mm_cvtsi32_si128(*cast<s16 *>(&l)), _mm_cvtsi32_si128(*cast<s16 *>(&r)));
-                return *cast<T *>(mm_min.m128i_i16);
+                __m128i mm_min = _mm_min_epi16(_mm_cvtsi32_si128(*cast(s16 *, &l)), _mm_cvtsi32_si128(*cast(s16 *, &r)));
+                return *cast(T *, mm_min.m128i_i16);
             }
             else
             {
-                __m128i mm_min = _mm_min_epu16(_mm_cvtsi32_si128(*cast<u16 *>(&l)), _mm_cvtsi32_si128(*cast<u16 *>(&r)));
-                return *cast<T *>(mm_min.m128i_u16);
+                __m128i mm_min = _mm_min_epu16(_mm_cvtsi32_si128(*cast(u16 *, &l)), _mm_cvtsi32_si128(*cast(u16 *, &r)));
+                return *cast(T *, mm_min.m128i_u16);
             }
         }
         else if constexpr (sizeof(T) == 4)
@@ -182,17 +182,17 @@ namespace REV::Math
             if constexpr (RTTI::is_floating_point_v<T>)
             {
                 __m128 mm_min = _mm_min_ss(_mm_load_ss(&l), _mm_load_ss(&r));
-                return *cast<T *>(mm_min.m128_f32);
+                return *cast(T *, mm_min.m128_f32);
             }
             else if constexpr (RTTI::is_signed_v<T>)
             {
-                __m128i mm_min = _mm_min_epi32(_mm_cvtsi32_si128(*cast<int *>(&l)), _mm_cvtsi32_si128(*cast<int *>(&r)));
-                return *cast<T *>(mm_min.m128i_i32);
+                __m128i mm_min = _mm_min_epi32(_mm_cvtsi32_si128(*cast(int *, &l)), _mm_cvtsi32_si128(*cast(int *, &r)));
+                return *cast(T *, mm_min.m128i_i32);
             }
             else
             {
-                __m128i mm_min = _mm_min_epu32(_mm_cvtsi32_si128(*cast<int *>(&l)), _mm_cvtsi32_si128(*cast<int *>(&r)));
-                return *cast<T *>(mm_min.m128i_u32);
+                __m128i mm_min = _mm_min_epu32(_mm_cvtsi32_si128(*cast(int *, &l)), _mm_cvtsi32_si128(*cast(int *, &r)));
+                return *cast(T *, mm_min.m128i_u32);
             }
         }
         else if constexpr (sizeof(T) == 8)
@@ -200,26 +200,26 @@ namespace REV::Math
             if constexpr (RTTI::is_floating_point_v<T>)
             {
                 __m128d mm_min = _mm_min_sd(_mm_load_sd(&l), _mm_load_sd(&r));
-                return *cast<T *>(mm_min.m128d_f64);
+                return *cast(T *, mm_min.m128d_f64);
             }
             else if constexpr (RTTI::is_signed_v<T>)
             {
                 #if REV_ISA >= REV_ISA_AVX512
-                    __m128i mm_min = _mm_min_epi64(_mm_cvtsi64_si128(*cast<s64 *>(&l)), _mm_cvtsi64_si128(*cast<s64 *>(&r)));
-                    return *cast<T *>(mm_min.m128i_i64);
+                    __m128i mm_min = _mm_min_epi64(_mm_cvtsi64_si128(*cast(s64 *, &l)), _mm_cvtsi64_si128(*cast(s64 *, &r)));
+                    return *cast(T *, mm_min.m128i_i64);
                 #else
-                    __m128i mm_l    = _mm_cvtsi64_si128(*cast<s64 *>(&l));
-                    __m128i mm_r    = _mm_cvtsi64_si128(*cast<s64 *>(&r));
+                    __m128i mm_l    = _mm_cvtsi64_si128(*cast(s64 *, &l));
+                    __m128i mm_r    = _mm_cvtsi64_si128(*cast(s64 *, &r));
                     __m128i gt_mask = _mm_cmpgt_epi64(mm_l, mm_r);
                     __m128i mm_min  = _mm_blendv_epi8(mm_l, mm_r, gt_mask); // @NOTE(Roman): dest[i+7:i] = mask[i+7:i] ? b[i+7:i] : a[i+7:i];
-                    return *cast<T *>(mm_min.m128i_i64);
+                    return *cast(T *, mm_min.m128i_i64);
                 #endif
             }
             else
             {
                 #if REV_ISA >= REV_ISA_AVX512
-                    __m128i mm_min = _mm_min_epu64(_mm_cvtsi64_si128(*cast<s64 *>(&l)), _mm_cvtsi64_si128(*cast<s64 *>(&r)));
-                    return *cast<T *>(mm_min.m128i_u64);
+                    __m128i mm_min = _mm_min_epu64(_mm_cvtsi64_si128(*cast(s64 *, &l)), _mm_cvtsi64_si128(*cast(s64 *, &r)));
+                    return *cast(T *, mm_min.m128i_u64);
                 #else
                     return l < r ? l : r;
                 #endif
@@ -242,26 +242,26 @@ namespace REV::Math
         {
             if constexpr (RTTI::is_signed_v<T>)
             {
-                __m128i mm_max = _mm_max_epi8(_mm_set1_epi8(*cast<char *>(&l)), _mm_set1_epi8(*cast<char *>(&r)));
-                return *cast<T *>(mm_max.m128i_i8);
+                __m128i mm_max = _mm_max_epi8(_mm_set1_epi8(*cast(char *, &l)), _mm_set1_epi8(*cast(char *, &r)));
+                return *cast(T *, mm_max.m128i_i8);
             }
             else
             {
-                __m128i mm_max = _mm_max_epu8(_mm_set1_epi8(*cast<char *>(&l)), _mm_set1_epi8(*cast<char *>(&r)));
-                return *cast<T *>(mm_max.m128i_u8);
+                __m128i mm_max = _mm_max_epu8(_mm_set1_epi8(*cast(char *, &l)), _mm_set1_epi8(*cast(char *, &r)));
+                return *cast(T *, mm_max.m128i_u8);
             }
         }
         else if constexpr (sizeof(T) == 2)
         {
             if constexpr (RTTI::is_signed_v<T>)
             {
-                __m128i mm_max = _mm_max_epi16(_mm_cvtsi32_si128(*cast<s16 *>(&l)), _mm_cvtsi32_si128(*cast<s16 *>(&r)));
-                return *cast<T *>(mm_max.m128i_i16);
+                __m128i mm_max = _mm_max_epi16(_mm_cvtsi32_si128(*cast(s16 *, &l)), _mm_cvtsi32_si128(*cast(s16 *, &r)));
+                return *cast(T *, mm_max.m128i_i16);
             }
             else
             {
-                __m128i mm_max = _mm_max_epu16(_mm_cvtsi32_si128(*cast<u16 *>(&l)), _mm_cvtsi32_si128(*cast<u16 *>(&r)));
-                return *cast<T *>(mm_max.m128i_u16);
+                __m128i mm_max = _mm_max_epu16(_mm_cvtsi32_si128(*cast(u16 *, &l)), _mm_cvtsi32_si128(*cast(u16 *, &r)));
+                return *cast(T *, mm_max.m128i_u16);
             }
         }
         else if constexpr (sizeof(T) == 4)
@@ -269,17 +269,17 @@ namespace REV::Math
             if constexpr (RTTI::is_floating_point_v<T>)
             {
                 __m128 mm_max = _mm_max_ss(_mm_load_ss(&l), _mm_load_ss(&r));
-                return *cast<T *>(mm_max.m128_f32);
+                return *cast(T *, mm_max.m128_f32);
             }
             else if constexpr (RTTI::is_signed_v<T>)
             {
-                __m128i mm_max = _mm_max_epi32(_mm_cvtsi32_si128(*cast<int *>(&l)), _mm_cvtsi32_si128(*cast<int *>(&r)));
-                return *cast<T *>(mm_max.m128i_i32);
+                __m128i mm_max = _mm_max_epi32(_mm_cvtsi32_si128(*cast(int *, &l)), _mm_cvtsi32_si128(*cast(int *, &r)));
+                return *cast(T *, mm_max.m128i_i32);
             }
             else
             {
-                __m128i mm_max = _mm_max_epu32(_mm_cvtsi32_si128(*cast<int *>(&l)), _mm_cvtsi32_si128(*cast<int *>(&r)));
-                return *cast<T *>(mm_max.m128i_u32);
+                __m128i mm_max = _mm_max_epu32(_mm_cvtsi32_si128(*cast(int *, &l)), _mm_cvtsi32_si128(*cast(int *, &r)));
+                return *cast(T *, mm_max.m128i_u32);
             }
         }
         else if constexpr (sizeof(T) == 8)
@@ -287,26 +287,26 @@ namespace REV::Math
             if constexpr (RTTI::is_floating_point_v<T>)
             {
                 __m128d mm_max = _mm_max_sd(_mm_load_sd(&l), _mm_load_sd(&r));
-                return *cast<T *>(mm_max.m128d_f64);
+                return *cast(T *, mm_max.m128d_f64);
             }
             else if constexpr (RTTI::is_signed_v<T>)
             {
                 #if REV_ISA >= REV_ISA_AVX512
-                    __m128i mm_min = _mm_max_epi64(_mm_cvtsi64_si128(*cast<s64 *>(&l)), _mm_cvtsi64_si128(*cast<s64 *>(&r)));
-                    return *cast<T *>(mm_min.m128i_i64);
+                    __m128i mm_min = _mm_max_epi64(_mm_cvtsi64_si128(*cast(s64 *, &l)), _mm_cvtsi64_si128(*cast(s64 *, &r)));
+                    return *cast(T *, mm_min.m128i_i64);
                 #else
-                    __m128i mm_l    = _mm_cvtsi64_si128(*cast<s64 *>(&l));
-                    __m128i mm_r    = _mm_cvtsi64_si128(*cast<s64 *>(&r));
+                    __m128i mm_l    = _mm_cvtsi64_si128(*cast(s64 *, &l));
+                    __m128i mm_r    = _mm_cvtsi64_si128(*cast(s64 *, &r));
                     __m128i gt_mask = _mm_cmpgt_epi64(mm_l, mm_r);
                     __m128i mm_max  = _mm_blendv_epi8(mm_r, mm_l, gt_mask); // @NOTE(Roman): dest[i+7:i] = mask[i+7:i] ? b[i+7:i] : a[i+7:i];
-                    return *cast<T *>(mm_max.m128i_i64);
+                    return *cast(T *, mm_max.m128i_i64);
                 #endif
             }
             else
             {
                 #if REV_ISA >= REV_ISA_AVX512
-                    __m128i mm_min = _mm_max_epu64(_mm_cvtsi64_si128(*cast<s64 *>(&l)), _mm_cvtsi64_si128(*cast<s64 *>(&r)));
-                    return *cast<T *>(mm_min.m128i_u64);
+                    __m128i mm_min = _mm_max_epu64(_mm_cvtsi64_si128(*cast(s64 *, &l)), _mm_cvtsi64_si128(*cast(s64 *, &r)));
+                    return *cast(T *, mm_min.m128i_u64);
                 #else
                     return l > r ? l : r;
                 #endif
@@ -328,36 +328,36 @@ namespace REV::Math
     #else
         if constexpr (sizeof(T) == 1)
         {
-            __m128i mm_val = _mm_set1_epi8(*cast<char *>(&val));
-            __m128i mm_min = _mm_set1_epi8(*cast<char *>(&min_val));
-            __m128i mm_max = _mm_set1_epi8(*cast<char *>(&max_val));
+            __m128i mm_val = _mm_set1_epi8(*cast(char *, &val));
+            __m128i mm_min = _mm_set1_epi8(*cast(char *, &min_val));
+            __m128i mm_max = _mm_set1_epi8(*cast(char *, &max_val));
 
             if constexpr (RTTI::is_signed_v<T>)
             {
                 __m128i mm_res = _mm_max_epi8(mm_min, _mm_min_epi8(mm_val, mm_max));
-                return *cast<T *>(mm_res.m128i_i8);
+                return *cast(T *, mm_res.m128i_i8);
             }
             else
             {
                 __m128i mm_res = _mm_max_epu8(mm_min, _mm_min_epu8(mm_val, mm_max));
-                return *cast<T *>(mm_res.m128i_u8);
+                return *cast(T *, mm_res.m128i_u8);
             }
         }
         else if constexpr (sizeof(T) == 2)
         {
-            __m128i mm_val = _mm_cvtsi32_si128(*cast<short *>(&val));
-            __m128i mm_min = _mm_cvtsi32_si128(*cast<short *>(&min_val));
-            __m128i mm_max = _mm_cvtsi32_si128(*cast<short *>(&max_val));
+            __m128i mm_val = _mm_cvtsi32_si128(*cast(short *, &val));
+            __m128i mm_min = _mm_cvtsi32_si128(*cast(short *, &min_val));
+            __m128i mm_max = _mm_cvtsi32_si128(*cast(short *, &max_val));
 
             if constexpr (RTTI::is_signed_v<T>)
             {
                 __m128i mm_res = _mm_max_epi16(mm_min, _mm_min_epi16(mm_val, mm_max));
-                return *cast<T *>(mm_res.m128i_i16);
+                return *cast(T *, mm_res.m128i_i16);
             }
             else
             {
                 __m128i mm_res = _mm_max_epu16(mm_min, _mm_min_epu16(mm_val, mm_max));
-                return *cast<T *>(mm_res.m128i_u16);
+                return *cast(T *, mm_res.m128i_u16);
             }
         }
         else if constexpr (sizeof(T) == 4)
@@ -368,23 +368,23 @@ namespace REV::Math
                 __m128 mm_min = _mm_load_ss(&min_val);
                 __m128 mm_max = _mm_load_ss(&max_val);
                 __m128 mm_res = _mm_max_ss(mm_min, _mm_min_ss(mm_val, mm_max));
-                return *cast<T *>(mm_res.m128_f32);
+                return *cast(T *, mm_res.m128_f32);
             }
             else
             {
-                __m128i mm_val = _mm_cvtsi32_si128(*cast<int *>(&val));
-                __m128i mm_min = _mm_cvtsi32_si128(*cast<int *>(&min_val));
-                __m128i mm_max = _mm_cvtsi32_si128(*cast<int *>(&max_val));
+                __m128i mm_val = _mm_cvtsi32_si128(*cast(int *, &val));
+                __m128i mm_min = _mm_cvtsi32_si128(*cast(int *, &min_val));
+                __m128i mm_max = _mm_cvtsi32_si128(*cast(int *, &max_val));
 
                 if constexpr (RTTI::is_signed_v<T>)
                 {
                     __m128i mm_res = _mm_max_epi32(mm_min, _mm_min_epi32(mm_val, mm_max));
-                    return *cast<T *>(mm_res.m128i_i32);
+                    return *cast(T *, mm_res.m128i_i32);
                 }
                 else
                 {
                     __m128i mm_res = _mm_max_epu32(mm_min, _mm_min_epu32(mm_val, mm_max));
-                    return *cast<T *>(mm_res.m128i_u32);
+                    return *cast(T *, mm_res.m128i_u32);
                 }
             }
         }
@@ -396,31 +396,31 @@ namespace REV::Math
                 __m128d mm_min = _mm_load_sd(&min_val);
                 __m128d mm_max = _mm_load_sd(&max_val);
                 __m128d mm_res = _mm_max_sd(mm_min, _mm_min_sd(mm_val, mm_max));
-                return *cast<T *>(mm_res.m128d_f64);
+                return *cast(T *, mm_res.m128d_f64);
             }
             else if constexpr (RTTI::is_signed_v<T>)
             {
-                __m128i mm_val = _mm_cvtsi64_si128(*cast<s64 *>(&val));
-                __m128i mm_min = _mm_cvtsi64_si128(*cast<s64 *>(&min_val));
-                __m128i mm_max = _mm_cvtsi64_si128(*cast<s64 *>(&max_val));
+                __m128i mm_val = _mm_cvtsi64_si128(*cast(s64 *, &val));
+                __m128i mm_min = _mm_cvtsi64_si128(*cast(s64 *, &min_val));
+                __m128i mm_max = _mm_cvtsi64_si128(*cast(s64 *, &max_val));
 
                 #if REV_ISA >= REV_ISA_AVX512
                     __m128i mm_res = _mm_max_epi64(mm_min, _mm_min_epi64(mm_val, mm_max));
-                    return *cast<T *>(mm_res.m128i_i64);
+                    return *cast(T *, mm_res.m128i_i64);
                 #else
                     __m128i min_res = _mm_blendv_epi8(mm_val,  mm_max, _mm_cmpgt_epi64(mm_val, mm_max));
                     __m128i mm_res  = _mm_blendv_epi8(min_res, mm_min, _mm_cmpgt_epi64(mm_min, min_res));
-                    return *cast<T *>(mm_res.m128i_i64);
+                    return *cast(T *, mm_res.m128i_i64);
                 #endif
             }
             else
             {
                 #if REV_ISA >= REV_ISA_AVX512
-                    __m128i mm_val = _mm_cvtsi64_si128(*cast<s64 *>(&val));
-                    __m128i mm_min = _mm_cvtsi64_si128(*cast<s64 *>(&min_val));
-                    __m128i mm_max = _mm_cvtsi64_si128(*cast<s64 *>(&max_val));
+                    __m128i mm_val = _mm_cvtsi64_si128(*cast(s64 *, &val));
+                    __m128i mm_min = _mm_cvtsi64_si128(*cast(s64 *, &min_val));
+                    __m128i mm_max = _mm_cvtsi64_si128(*cast(s64 *, &max_val));
                     __m128i mm_res = _mm_max_epu64(mm_min, _mm_min_epu64(mm_val, mm_max));
-                    return *cast<T *>(mm_res.m128i_u64);
+                    return *cast(T *, mm_res.m128i_u64);
                 #else
                     T min_res = val < max_val ? val : max_val;
                     return min_val > min_res ? min_val : min_res;
@@ -446,7 +446,7 @@ namespace REV::Math
         }
         else
         {
-            return cast<Ret>(clamp(val, min_val, max_val));
+            return cast(Ret, clamp(val, min_val, max_val));
         }
     }
 }

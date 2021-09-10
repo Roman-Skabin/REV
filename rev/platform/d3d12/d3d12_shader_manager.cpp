@@ -175,7 +175,7 @@ u64 ShaderManager::CreateGraphicsShader(
 
     // @TODO(Roman): Static samplers
     D3D12_ROOT_SIGNATURE_DESC root_signature_desc;
-    root_signature_desc.NumParameters     = cast<u32>(resources_count);
+    root_signature_desc.NumParameters     = cast(u32, resources_count);
     root_signature_desc.pParameters       = root_parameters;
     root_signature_desc.NumStaticSamplers = 0;
     root_signature_desc.pStaticSamplers   = null;
@@ -192,7 +192,7 @@ u64 ShaderManager::CreateGraphicsShader(
     };
     D3D12_INPUT_LAYOUT_DESC input_layout;
     input_layout.pInputElementDescs = elements;
-    input_layout.NumElements        = cast<u32>(ArrayCount(elements));
+    input_layout.NumElements        = cast(u32, ArrayCount(elements));
 #endif
 
     CreatePipelineState(graphics_shader, input_layout, false, D3D12_CULL_MODE_NONE, true);
@@ -202,8 +202,8 @@ u64 ShaderManager::CreateGraphicsShader(
 
 void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shader)
 {
-    DeviceContext *device_context = cast<DeviceContext *>(GraphicsAPI::GetDeviceContext());
-    MemoryManager *memory_manager = cast<MemoryManager *>(GraphicsAPI::GetMemoryManager());
+    DeviceContext *device_context = cast(DeviceContext *, GraphicsAPI::GetDeviceContext());
+    MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
     AssetManager  *asset_manager = AssetManager::Get();
 
     ID3D12GraphicsCommandList *graphics_list = device_context->CurrentGraphicsList();
@@ -221,7 +221,7 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
                 graphics_shader.cbv_srv_uav_desc_heap,
                 graphics_shader.sampler_desc_heap
             };
-            graphics_list->SetDescriptorHeaps(cast<u32>(ArrayCount(desc_heaps)), desc_heaps);
+            graphics_list->SetDescriptorHeaps(cast(u32, ArrayCount(desc_heaps)), desc_heaps);
         }
         else if (graphics_shader.cbv_srv_uav_desc_heap)
         {
@@ -283,38 +283,38 @@ void ShaderManager::BindVertexBuffer(GraphicsShader& graphics_shader, const GPU:
 {
     REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_VB, "Resource #%I64u is not a vertex buffer", resource_handle.index);
 
-    MemoryManager *memory_manager = cast<MemoryManager *>(GraphicsAPI::GetMemoryManager());
+    MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
     Buffer&        buffer         = memory_manager->GetBuffer(resource_handle);
 
     D3D12_VERTEX_BUFFER_VIEW vbv;
     vbv.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(resource_handle);
-    vbv.SizeInBytes    = cast<u32>(buffer.actual_size);
+    vbv.SizeInBytes    = cast(u32, buffer.actual_size);
     vbv.StrideInBytes  = buffer.vstride;
 
-    cast<DeviceContext *>(GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->IASetVertexBuffers(0, 1, &vbv);
+    cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->IASetVertexBuffers(0, 1, &vbv);
 }
 
 void ShaderManager::BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource_handle)
 {
     REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_IB, "Resource #%I64u is not an index buffer", resource_handle.index);
 
-    MemoryManager *memory_manager = cast<MemoryManager *>(GraphicsAPI::GetMemoryManager());
+    MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
     Buffer&        buffer         = memory_manager->GetBuffer(resource_handle);
 
     D3D12_INDEX_BUFFER_VIEW ibv;
     ibv.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(resource_handle);
-    ibv.SizeInBytes    = cast<u32>(buffer.actual_size);
+    ibv.SizeInBytes    = cast(u32, buffer.actual_size);
     ibv.Format         = DXGI_FORMAT_R32_UINT;
 
-    cast<DeviceContext *>(GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->IASetIndexBuffer(&ibv);
+    cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->IASetIndexBuffer(&ibv);
 
     graphics_shader.index_buffer = resource_handle;
 }
 
 void ShaderManager::Draw(const GraphicsShader& graphics_shader)
 {
-    Buffer& buffer = cast<MemoryManager *>(GraphicsAPI::GetMemoryManager())->GetBuffer(graphics_shader.index_buffer);
-    cast<DeviceContext *>(GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->DrawIndexedInstanced(buffer.icount, 1, 0, 0, 0);
+    Buffer& buffer = cast(MemoryManager *, GraphicsAPI::GetMemoryManager())->GetBuffer(graphics_shader.index_buffer);
+    cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->DrawIndexedInstanced(buffer.icount, 1, 0, 0, 0);
 }
 
 ID3DBlob *ShaderManager::CompileShader(const ConstString& hlsl_code, const char *name, const char *entry_point, const char *target)
@@ -327,7 +327,7 @@ ID3DBlob *ShaderManager::CompileShader(const ConstString& hlsl_code, const char 
     compile_flags |= D3DCOMPILE_OPTIMIZATION_LEVEL3
                   |  D3DCOMPILE_SKIP_VALIDATION;
 #endif
-    if (cast<DeviceContext *>(GraphicsAPI::GetDeviceContext())->HalfPrecisionSupported())
+    if (cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->HalfPrecisionSupported())
     {
         compile_flags |= D3DCOMPILE_PARTIAL_PRECISION;
     }
@@ -421,15 +421,15 @@ void ShaderManager::CreateDescHeapsAndViews(
     const ConstArray<GPU::CBufferDesc>&  cbuffers,
     const ConstArray<GPU::SamplerDesc>&  samplers)
 {
-    ID3D12Device  *device         = cast<DeviceContext *>(GraphicsAPI::GetDeviceContext())->Device();
-    MemoryManager *memory_manager = cast<MemoryManager *>(GraphicsAPI::GetMemoryManager());
+    ID3D12Device  *device         = cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->Device();
+    MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
     AssetManager  *asset_manager  = AssetManager::Get();
 
     if (cbuffers.Count() || textures.Count())
     {
         D3D12_DESCRIPTOR_HEAP_DESC cbv_srv_uav_desc_heap_desc;
         cbv_srv_uav_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        cbv_srv_uav_desc_heap_desc.NumDescriptors = cast<u32>(textures.Count() + cbuffers.Count());
+        cbv_srv_uav_desc_heap_desc.NumDescriptors = cast(u32, textures.Count() + cbuffers.Count());
         cbv_srv_uav_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         cbv_srv_uav_desc_heap_desc.NodeMask       = 0;
 
@@ -445,7 +445,7 @@ void ShaderManager::CreateDescHeapsAndViews(
 
             D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
             cbv_desc.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(cbuffer_desc.resource);
-            cbv_desc.SizeInBytes    = cast<u32>(cbuffer.aligned_size);
+            cbv_desc.SizeInBytes    = cast(u32, cbuffer.aligned_size);
 
             device->CreateConstantBufferView(&cbv_desc, cbv_srv_uav_cpu_descriptor_handle);
             cbv_srv_uav_cpu_descriptor_handle.ptr += cbv_srv_uav_descriptor_size;
@@ -541,7 +541,7 @@ void ShaderManager::CreateDescHeapsAndViews(
     {
         D3D12_DESCRIPTOR_HEAP_DESC sampler_desc_heap_desc = {};
         sampler_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-        sampler_desc_heap_desc.NumDescriptors = cast<u32>(samplers.Count());
+        sampler_desc_heap_desc.NumDescriptors = cast(u32, samplers.Count());
         sampler_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         sampler_desc_heap_desc.NodeMask       = 0;
 
@@ -593,7 +593,7 @@ void ShaderManager::CreateRootSignature(GraphicsShader *graphics_shader, const D
     }
     SafeRelease(error_blob);
 
-    error = cast<DeviceContext *>(GraphicsAPI::GetDeviceContext())->Device()->CreateRootSignature(0,
+    error = cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->Device()->CreateRootSignature(0,
                                                                                                   graphics_shader->signature->GetBufferPointer(),
                                                                                                   graphics_shader->signature->GetBufferSize(),
                                                                                                   IID_PPV_ARGS(&graphics_shader->root_signature));
@@ -760,7 +760,7 @@ void ShaderManager::CreatePipelineState(GraphicsShader *graphics_shader, const D
     gpsd.CachedPSO             = cached_pipeline_state;
     gpsd.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-    HRESULT error = cast<DeviceContext *>(GraphicsAPI::GetDeviceContext())->Device()->CreateGraphicsPipelineState(&gpsd, IID_PPV_ARGS(&graphics_shader->pipeline_state));
+    HRESULT error = cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->Device()->CreateGraphicsPipelineState(&gpsd, IID_PPV_ARGS(&graphics_shader->pipeline_state));
     REV_CHECK(CheckResultAndPrintMessages(error));
 }
 

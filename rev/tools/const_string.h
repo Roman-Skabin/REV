@@ -16,7 +16,7 @@ namespace REV
 
         REV_INLINE ConstString()                                : m_Length(0),              m_Data(null)                  {}
         REV_INLINE ConstString(nullptr_t)                       : m_Length(0),              m_Data(null)                  {}
-        REV_INLINE ConstString(const char *cstring, u64 length) : m_Length(length),         m_Data(cast<char *>(cstring)) {}
+        REV_INLINE ConstString(const char *cstring, u64 length) : m_Length(length),         m_Data(cast(char *, cstring)) {}
         REV_INLINE ConstString(const ConstString& other)        : m_Length(other.m_Length), m_Data(other.m_Data)          {}
         REV_INLINE ConstString(ConstString&& other) noexcept    : m_Length(other.m_Length), m_Data(other.m_Data)          { other.m_Length = 0; other.m_Data = null; }
 
@@ -93,7 +93,7 @@ namespace REV
         REV_INLINE void AssignCSTR(const char *cstring, u64 cstring_length)
         {
             m_Length = cstring_length;
-            m_Data   = const_cast<char *>(cstring);
+            m_Data   = cast(char *, cstring);
         }
 
         REV_INLINE ConstString& operator=(const ConstString& other)

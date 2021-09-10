@@ -17,8 +17,8 @@ namespace REV
 
 void Entity::Create(u64 vcount, u64 icount)
 {
-    Vertex *vertex_memory = cast<Vertex *>(Memory::Get()->PushToSceneArena(vcount * sizeof(Vertex) + icount * sizeof(Index)));
-    Index  *index_memory  = cast<Index *>(vertex_memory + vcount);
+    Vertex *vertex_memory = cast(Vertex *, Memory::Get()->PushToSceneArena(vcount * sizeof(Vertex) + icount * sizeof(Index)));
+    Index  *index_memory  = cast(Index *, vertex_memory + vcount);
 
     vertices = ConstArray(vertex_memory, vcount);
     indices  = ConstArray(index_memory,  icount);
@@ -53,8 +53,8 @@ SceneBase::SceneBase(Allocator *allocator, const ConstString& name, u64 max_vert
 void SceneBase::OnSetCurrentEx()
 {
     // @Optimize(Roman): use upload pointers?
-    m_Vertices = cast<Vertex *>(m_Allocator->Allocate(m_VerticesCapacity * sizeof(Vertex) + m_IndicesCapacity * sizeof(Index))),
-    m_Indices  = cast<Index *>(m_Vertices + m_VerticesCapacity);
+    m_Vertices = cast(Vertex *, Memory::Get()->PushToSceneArena(m_VerticesCapacity * sizeof(Vertex) + m_IndicesCapacity * sizeof(Index))),
+    m_Indices  = cast(Index *, m_Vertices + m_VerticesCapacity);
 
     StaticString<CACHE_LINE_SIZE> vb_name(m_Name);
     StaticString<CACHE_LINE_SIZE> ib_name(m_Name);
@@ -64,8 +64,8 @@ void SceneBase::OnSetCurrentEx()
 
     GPU::MemoryManager *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
 
-    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast<u32>(m_VerticesCapacity), false, ConstString(vb_name.Data(), vb_name.Length()));
-    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast<u32>(m_IndicesCapacity), false, ConstString(ib_name.Data(), ib_name.Length()));
+    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast(u32, m_VerticesCapacity), false, ConstString(vb_name.Data(), vb_name.Length()));
+    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast(u32, m_IndicesCapacity), false, ConstString(ib_name.Data(), ib_name.Length()));
 
     OnSetCurrent();
 }
@@ -76,7 +76,6 @@ void SceneBase::OnUnsetCurrentEx()
 
     AssetManager::Get()->FreeSceneAssets();
     GraphicsAPI::GetMemoryManager()->FreeSceneMemory();
-    m_Allocator->DeAlloc(m_Vertices);
     Memory::Get()->ResetSceneArena();
 }
 

@@ -14,7 +14,7 @@ namespace REV::D3D12
 {
 
 MemoryManager::MemoryManager(Allocator *allocator)
-    : m_DeviceContext(cast<DeviceContext *>(GraphicsAPI::GetDeviceContext())),
+    : m_DeviceContext(cast(DeviceContext *, GraphicsAPI::GetDeviceContext())),
       m_CommandAllocator(null),
       m_CommandList(null),
       m_Fence(null),
@@ -136,14 +136,14 @@ REV_INTERNAL REV_INLINE u16 GetMaxMipLevels(u16 width, u16 height)
 {
     u32 count = 0;
     _BitScanReverse(&count, width & height);
-    return cast<u16>(count + 1);
+    return cast(u16, count + 1);
 }
 
 REV_INTERNAL REV_INLINE u16 GetMaxMipLevels(u16 width, u16 height, u16 depth)
 {
     u32 count = 0;
     _BitScanReverse(&count, width & height & depth);
-    return cast<u16>(count + 1);
+    return cast(u16, count + 1);
 }
 
 u64 MemoryManager::AllocateTexture1D(u16 width, DXGI_FORMAT texture_format, const ConstString& name, bool _static)
@@ -408,9 +408,9 @@ u64 MemoryManager::AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math:
         case FILTERING::TRILINEAR:   sampler->desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;       break;
         case FILTERING::ANISOTROPIC: sampler->desc.Filter = D3D12_FILTER_ANISOTROPIC;              break;
     }
-    sampler->desc.AddressU       = cast<D3D12_TEXTURE_ADDRESS_MODE>(address_mode);
-    sampler->desc.AddressV       = cast<D3D12_TEXTURE_ADDRESS_MODE>(address_mode);
-    sampler->desc.AddressW       = cast<D3D12_TEXTURE_ADDRESS_MODE>(address_mode);
+    sampler->desc.AddressU       = cast(D3D12_TEXTURE_ADDRESS_MODE, address_mode);
+    sampler->desc.AddressV       = cast(D3D12_TEXTURE_ADDRESS_MODE, address_mode);
+    sampler->desc.AddressW       = cast(D3D12_TEXTURE_ADDRESS_MODE, address_mode);
     sampler->desc.MipLODBias     = 0.0f;
     sampler->desc.MaxAnisotropy  = settings->anisotropy;
     sampler->desc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER; // D3D12_COMPARISON_FUNC_ALWAYS
@@ -445,8 +445,8 @@ void MemoryManager::SetTextureData(Texture *texture, GPU::TextureDesc *texture_d
 
     UploadTextureData(m_DeviceContext->CurrentGraphicsList(),
                       texture,
-                      cast<u32>(texture_desc->subtextures_count),
-                      cast<D3D12_SUBRESOURCE_DATA *>(texture_desc->subtexture_desc));
+                      cast(u32, texture_desc->subtextures_count),
+                      cast(D3D12_SUBRESOURCE_DATA *, texture_desc->subtexture_desc));
 }
 
 void MemoryManager::SetTextureDataImmediately(Texture *texture, GPU::TextureDesc *texture_desc)
@@ -460,8 +460,8 @@ void MemoryManager::SetTextureDataImmediately(Texture *texture, GPU::TextureDesc
 
     UploadTextureData(m_CommandList,
                       texture,
-                      cast<u32>(texture_desc->subtextures_count),
-                      cast<D3D12_SUBRESOURCE_DATA *>(texture_desc->subtexture_desc));
+                      cast(u32, texture_desc->subtextures_count),
+                      cast(D3D12_SUBRESOURCE_DATA *, texture_desc->subtexture_desc));
 }
 
 void MemoryManager::StartImmediateExecution()
@@ -479,7 +479,7 @@ void MemoryManager::EndImmediateExecution()
     REV_CHECK(CheckResultAndPrintMessages(error));
 
     ID3D12CommandList *command_lists[] = { m_CommandList };
-    m_DeviceContext->GraphicsQueue()->ExecuteCommandLists(cast<u32>(ArrayCount(command_lists)), command_lists);
+    m_DeviceContext->GraphicsQueue()->ExecuteCommandLists(cast(u32, ArrayCount(command_lists)), command_lists);
 
     u64 fence_value = m_Fence->GetCompletedValue() + 1;
 
@@ -607,7 +607,7 @@ void MemoryManager::CreateNewPage(BufferMemory *buffer_memory, D3D12_RESOURCE_ST
                                                 IID_PPV_ARGS(page->upl_mem + i));
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        error = page->upl_mem[i]->Map(0, &read_range, cast<void **>(page->upl_ptrs + i));
+        error = page->upl_mem[i]->Map(0, &read_range, cast(void **, page->upl_ptrs + i));
         REV_CHECK(CheckResultAndPrintMessages(error));
     }
 }
@@ -675,10 +675,10 @@ Texture *MemoryManager::AllocateTexture(TextureMemory *texture_memory, const D3D
                                                                        IID_PPV_ARGS(&texture->def_resource));
     REV_CHECK(CheckResultAndPrintMessages(error));
 
-    u32      wname_length = cast<u32>(4 + name.Length());
+    u32      wname_length = cast(u32, 4 + name.Length());
     wchar_t *wname        = Memory::Get()->PushToFA<wchar_t>(wname_length + 1);
     CopyMemory(wname, REV_CSTR_ARGS(L"DEF "));
-    MultiByteToWideChar(CP_ACP, 0, name.Data(), cast<u32>(name.Length()), wname + 4, wname_length - 4);
+    MultiByteToWideChar(CP_ACP, 0, name.Data(), cast(u32, name.Length()), wname + 4, wname_length - 4);
 
     error = texture->def_resource->SetName(wname);
     REV_CHECK(CheckResultAndPrintMessages(error));
@@ -731,11 +731,11 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
 
     byte *push_memory = Memory::Get()->PushToFA<byte>(subres_count * (sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(u32) + sizeof(u64) + sizeof(u64)));
 
-    D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints  = cast<D3D12_PLACED_SUBRESOURCE_FOOTPRINT *>(push_memory);
-    u32                                *num_rows    = cast<u32 *>(footprints + subres_count);
-    u64                                *row_bytes   = cast<u64 *>(num_rows   + subres_count);
-    u64                                *total_bytes = cast<u64 *>(row_bytes  + subres_count);
-    device->GetCopyableFootprints(&texture->desc, 0, subres_count, info1.Offset, footprints, cast<UINT *>(num_rows), row_bytes, total_bytes);
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints  = cast(D3D12_PLACED_SUBRESOURCE_FOOTPRINT *, push_memory);
+    u32                                *num_rows    = cast(u32 *, footprints + subres_count);
+    u64                                *row_bytes   = cast(u64 *, num_rows   + subres_count);
+    u64                                *total_bytes = cast(u64 *, row_bytes  + subres_count);
+    device->GetCopyableFootprints(&texture->desc, 0, subres_count, info1.Offset, footprints, cast(UINT *, num_rows), row_bytes, total_bytes);
 
     ID3D12Resource **upload_resource = texture->upl_resources + m_DeviceContext->CurrentBuffer();
     byte           **upload_pointer  = texture->upl_pointers  + m_DeviceContext->CurrentBuffer();
@@ -778,7 +778,7 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
 
             def_length = def_length / sizeof(wchar_t) - 1;
 
-            u32      wname_length = cast<u32>(7 + def_length);
+            u32      wname_length = cast(u32, 7 + def_length);
             wchar_t *wname        = Memory::Get()->PushToFA<wchar_t>(wname_length + 1);
 
             UINT data_size = (def_length + 1) * sizeof(wchar_t);
@@ -794,7 +794,7 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
 
         D3D12_RANGE read_range = {0, 0};
 
-        error = (*upload_resource)->Map(0, &read_range, cast<void **>(upload_pointer));
+        error = (*upload_resource)->Map(0, &read_range, cast(void **, upload_pointer));
         REV_CHECK(CheckResultAndPrintMessages(error));
     }
 
@@ -813,7 +813,7 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
         for (u32 z = 0; z < footprint->Footprint.Depth; ++z)
         {
             byte *dest_slice =              dest_subres_data    + dest_subres_slice_pitch * z;
-            byte *src_slice  = cast<byte *>(subres_data->pData) + subres_data->SlicePitch * z;
+            byte *src_slice  = cast(byte *, subres_data->pData) + subres_data->SlicePitch * z;
 
             for (u32 y = 0; y < rows_in_dest_subres; ++y)
             {
@@ -847,7 +847,7 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
     BufferMemoryPage *page  = buffer_memory->pages.GetPointer(buffer->page_index);
 
     wchar_t *wname = Memory::Get()->PushToFA<wchar_t>(name.Length() + 1);
-    MultiByteToWideChar(CP_ACP, 0, name.Data(), cast<u32>(name.Length()), wname, cast<u32>(name.Length()));
+    MultiByteToWideChar(CP_ACP, 0, name.Data(), cast(u32, name.Length()), wname, cast(u32, name.Length()));
 
     UINT gotten_default_wname_length = 0;
     error = page->def_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &gotten_default_wname_length, null);
@@ -856,7 +856,7 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
     {
         gotten_default_wname_length = gotten_default_wname_length / sizeof(wchar_t) - 1;
 
-        u32      new_default_wname_length = cast<u32>(gotten_default_wname_length + 1 + name.Length());
+        u32      new_default_wname_length = cast(u32, gotten_default_wname_length + 1 + name.Length());
         wchar_t *new_default_wname        = Memory::Get()->PushToFA<wchar_t>(new_default_wname_length + 1);
 
         UINT default_data_size = (new_default_wname_length + 1) * sizeof(wchar_t);
@@ -864,17 +864,17 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
         REV_CHECK(CheckResultAndPrintMessages(error));
         REV_CHECK(gotten_default_wname_length == default_data_size / sizeof(wchar_t) - 1);
 
-        _snwprintf(new_default_wname + gotten_default_wname_length, new_default_wname_length - gotten_default_wname_length, L" %.*s", cast<u32>(name.Length()), wname);
+        _snwprintf(new_default_wname + gotten_default_wname_length, new_default_wname_length - gotten_default_wname_length, L" %.*s", cast(u32, name.Length()), wname);
 
         error = page->def_mem->SetName(new_default_wname);
         REV_CHECK(CheckResultAndPrintMessages(error));
     }
     else
     {
-        u32      new_default_wname_length = cast<u32>(REV_CSTRLEN("DEF ") + name.Length());
+        u32      new_default_wname_length = cast(u32, REV_CSTRLEN("DEF ") + name.Length());
         wchar_t *new_default_wname        = Memory::Get()->PushToFA<wchar_t>(new_default_wname_length + 1);
 
-        _snwprintf(new_default_wname, new_default_wname_length, L"DEF %.*s", cast<u32>(name.Length()), wname);
+        _snwprintf(new_default_wname, new_default_wname_length, L"DEF %.*s", cast(u32, name.Length()), wname);
 
         error = page->def_mem->SetName(new_default_wname);
         REV_CHECK(CheckResultAndPrintMessages(error));
@@ -891,7 +891,7 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
         {
             gotten_upload_wname_length = gotten_upload_wname_length / sizeof(wchar_t) - 1;
 
-            u32      new_upload_wname_length = cast<u32>(gotten_upload_wname_length + 1 + name.Length());
+            u32      new_upload_wname_length = cast(u32, gotten_upload_wname_length + 1 + name.Length());
             wchar_t *new_upload_wname        = Memory::Get()->PushToFA<wchar_t>(new_upload_wname_length + 1);
 
             UINT upload_data_size = (new_upload_wname_length + 1) * sizeof(wchar_t);
@@ -899,17 +899,17 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
             REV_CHECK(CheckResultAndPrintMessages(error));
             REV_CHECK(gotten_upload_wname_length == upload_data_size / sizeof(wchar_t) - 1);
 
-            _snwprintf(new_upload_wname + gotten_upload_wname_length, new_upload_wname_length - gotten_upload_wname_length, L" %.*s", cast<u32>(name.Length()), wname);
+            _snwprintf(new_upload_wname + gotten_upload_wname_length, new_upload_wname_length - gotten_upload_wname_length, L" %.*s", cast(u32, name.Length()), wname);
 
             error = upl_mem->SetName(new_upload_wname);
             REV_CHECK(CheckResultAndPrintMessages(error));
         }
         else
         {
-            u32      new_upload_wname_length = cast<u32>(7 + name.Length());
+            u32      new_upload_wname_length = cast(u32, 7 + name.Length());
             wchar_t *new_upload_wname        = Memory::Get()->PushToFA<wchar_t>(new_upload_wname_length + 1);
 
-            _snwprintf(new_upload_wname, new_upload_wname_length, L"UPL #%I32u %.*s", i, cast<u32>(name.Length()), wname);
+            _snwprintf(new_upload_wname, new_upload_wname_length, L"UPL #%I32u %.*s", i, cast(u32, name.Length()), wname);
 
             error = upl_mem->SetName(new_upload_wname);
             REV_CHECK(CheckResultAndPrintMessages(error));

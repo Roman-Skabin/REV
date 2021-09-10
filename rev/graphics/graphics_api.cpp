@@ -60,9 +60,9 @@ void GraphicsAPI::Init(Window *window, Allocator *allocator, const Logger& logge
             byte *memory_manager_area = device_context_area + sizeof(D3D12::DeviceContext);
             byte *shader_manager_area = memory_manager_area + sizeof(D3D12::MemoryManager);
 
-            s_DeviceContext = cast<GPU::DeviceContext *>(new (device_context_area) D3D12::DeviceContext(window, logger));
-            s_MemoryManager = cast<GPU::MemoryManager *>(new (memory_manager_area) D3D12::MemoryManager(allocator));
-            s_ShaderManager = cast<GPU::ShaderManager *>(new (shader_manager_area) D3D12::ShaderManager(allocator, logger));
+            s_DeviceContext = cast(GPU::DeviceContext *, new (device_context_area) D3D12::DeviceContext(window, logger));
+            s_MemoryManager = cast(GPU::MemoryManager *, new (memory_manager_area) D3D12::MemoryManager(allocator));
+            s_ShaderManager = cast(GPU::ShaderManager *, new (shader_manager_area) D3D12::ShaderManager(allocator, logger));
 
             d3d12_initialized = true;
         } break;
@@ -86,9 +86,9 @@ void GraphicsAPI::Destroy()
         case API::D3D12:
         {
             // @Important(Roman): DeviceContext's destruction must be the last one
-            cast<D3D12::ShaderManager *>(s_ShaderManager->platform)->~ShaderManager();
-            cast<D3D12::MemoryManager *>(s_MemoryManager->platform)->~MemoryManager();
-            cast<D3D12::DeviceContext *>(s_DeviceContext->platform)->~DeviceContext();
+            cast(D3D12::ShaderManager *, s_ShaderManager->platform)->~ShaderManager();
+            cast(D3D12::MemoryManager *, s_MemoryManager->platform)->~MemoryManager();
+            cast(D3D12::DeviceContext *, s_DeviceContext->platform)->~DeviceContext();
         } break;
 
         case API::VULKAN:

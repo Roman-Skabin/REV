@@ -340,9 +340,9 @@ struct DX10Header
 
 REV_INTERNAL u64 BitsPerPixel(GPU::TEXTURE_FORMAT format)
 {
-    if (cast<bool>(format & GPU::TEXTURE_FORMAT::_DDS_DX10))
+    if (cast(bool, format & GPU::TEXTURE_FORMAT::_DDS_DX10))
     {
-        switch (cast<u32>(format & ~GPU::TEXTURE_FORMAT::_DDS_DX10))
+        switch (cast(u32, format & ~GPU::TEXTURE_FORMAT::_DDS_DX10))
         {
             /*   1 */ case DXGI_FORMAT_R32G32B32A32_TYPELESS:      return 128;
             /*   2 */ case DXGI_FORMAT_R32G32B32A32_FLOAT:         return 128;
@@ -485,10 +485,10 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
 {
     GPU::MemoryManager *memory_manager = GraphicsAPI::GetMemoryManager();
 
-    u32 magic = *cast<u32 *>(data.Data());
+    u32 magic = *cast(u32 *, data.Data());
     REV_CHECK_M(magic == DDS_MAGIC, "This is not a DDS file");
 
-    DDSHeader *dds_header = cast<DDSHeader *>(data.Data() + sizeof(u32));
+    DDSHeader *dds_header = cast(DDSHeader *, data.Data() + sizeof(u32));
     REV_CHECK_M(dds_header->self_size == sizeof(DDSHeader) && dds_header->pixel_format.self_size == sizeof(PixelFormat), "Invalid DDS file layout");
 
     DX10Header          *dx10_header    = null;
@@ -514,36 +514,36 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
             case FOURCC_DXT2:
             {
                 texture_format    = GPU::TEXTURE_FORMAT::DXT2;
-                compression_ratio = 16; // 4;
+                compression_ratio = 16;
                 block_compression = true;
             } break;
 
             case FOURCC_DXT3:
             {
                 texture_format    = GPU::TEXTURE_FORMAT::DXT3;
-                compression_ratio = 16; // 4;
+                compression_ratio = 16;
                 block_compression = true;
             } break;
 
             case FOURCC_DXT4:
             {
                 texture_format    = GPU::TEXTURE_FORMAT::DXT4;
-                compression_ratio = 16; // 4;
+                compression_ratio = 16;
                 block_compression = true;
             } break;
 
             case FOURCC_DXT5:
             {
                 texture_format    = GPU::TEXTURE_FORMAT::DXT5;
-                compression_ratio = 16; // 4;
+                compression_ratio = 16;
                 block_compression = true;
             } break;
 
             case FOURCC_DX10:
             {
-                dx10_header     = cast<DX10Header *>(data.Data() + sizeof(u32) + sizeof(DDSHeader));
+                dx10_header     = cast(DX10Header *, data.Data() + sizeof(u32) + sizeof(DDSHeader));
                 data_offset    += sizeof(DX10Header);
-                texture_format  = cast<GPU::TEXTURE_FORMAT>(dx10_header->format) | GPU::TEXTURE_FORMAT::_DDS_DX10;
+                texture_format  = cast(GPU::TEXTURE_FORMAT, dx10_header->format) | GPU::TEXTURE_FORMAT::_DDS_DX10;
             } break;
 
             default:
@@ -565,10 +565,10 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         {
             REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
             REV_CHECK(dx10_header->array_size == 1);
-            asset->texture.resource = memory_manager->AllocateTexture3D(cast<u16>(dds_header->width),
-                                                                        cast<u16>(dds_header->height),
-                                                                        cast<u16>(dds_header->depth),
-                                                                        cast<u16>(dds_header->mipmap_count),
+            asset->texture.resource = memory_manager->AllocateTexture3D(cast(u16, dds_header->width),
+                                                                        cast(u16, dds_header->height),
+                                                                        cast(u16, dds_header->depth),
+                                                                        cast(u16, dds_header->mipmap_count),
                                                                         texture_format,
                                                                         name,
                                                                         _static);
@@ -581,20 +581,20 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                 {
                     REV_CHECK(dx10_header->misc_flags & MISC_FLAG_TEXTURECUBE);
                     REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-                    asset->texture.resource = memory_manager->AllocateTextureCubeArray(cast<u16>(dds_header->width),
-                                                                                       cast<u16>(dds_header->height),
-                                                                                       cast<u16>(dx10_header->array_size),
-                                                                                       cast<u16>(dds_header->mipmap_count),
+                    asset->texture.resource = memory_manager->AllocateTextureCubeArray(cast(u16, dds_header->width),
+                                                                                       cast(u16, dds_header->height),
+                                                                                       cast(u16, dx10_header->array_size),
+                                                                                       cast(u16, dds_header->mipmap_count),
                                                                                        texture_format,
                                                                                        name,
                                                                                        _static);
                 }
                 else
                 {
-                    asset->texture.resource = memory_manager->AllocateTexture2DArray(cast<u16>(dds_header->width),
-                                                                                     cast<u16>(dds_header->height),
-                                                                                     cast<u16>(dx10_header->array_size),
-                                                                                     cast<u16>(dds_header->mipmap_count),
+                    asset->texture.resource = memory_manager->AllocateTexture2DArray(cast(u16, dds_header->width),
+                                                                                     cast(u16, dds_header->height),
+                                                                                     cast(u16, dx10_header->array_size),
+                                                                                     cast(u16, dds_header->mipmap_count),
                                                                                      texture_format,
                                                                                      name,
                                                                                      _static);
@@ -606,18 +606,18 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                 {
                     REV_CHECK(dx10_header->misc_flags & MISC_FLAG_TEXTURECUBE);
                     REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-                    asset->texture.resource = memory_manager->AllocateTextureCube(cast<u16>(dds_header->width),
-                                                                                  cast<u16>(dds_header->height),
-                                                                                  cast<u16>(dds_header->mipmap_count),
+                    asset->texture.resource = memory_manager->AllocateTextureCube(cast(u16, dds_header->width),
+                                                                                  cast(u16, dds_header->height),
+                                                                                  cast(u16, dds_header->mipmap_count),
                                                                                   texture_format,
                                                                                   name,
                                                                                   _static);
                 }
                 else
                 {
-                    asset->texture.resource = memory_manager->AllocateTexture2D(cast<u16>(dds_header->width),
-                                                                                cast<u16>(dds_header->height),
-                                                                                cast<u16>(dds_header->mipmap_count),
+                    asset->texture.resource = memory_manager->AllocateTexture2D(cast(u16, dds_header->width),
+                                                                                cast(u16, dds_header->height),
+                                                                                cast(u16, dds_header->mipmap_count),
                                                                                 texture_format,
                                                                                 name,
                                                                                 _static);
@@ -626,7 +626,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         }
         else if (dx10_header->dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D)
         {
-            asset->texture.resource = memory_manager->AllocateTexture1D(cast<u16>(dds_header->width),
+            asset->texture.resource = memory_manager->AllocateTexture1D(cast(u16, dds_header->width),
                                                                         texture_format,
                                                                         name,
                                                                         _static);
@@ -641,10 +641,10 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         if (dds_header->flags & DDS_FLAG_DEPTH)
         {
             REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
-            asset->texture.resource = memory_manager->AllocateTexture3D(cast<u16>(dds_header->width),
-                                                                        cast<u16>(dds_header->height),
-                                                                        cast<u16>(dds_header->depth),
-                                                                        cast<u16>(dds_header->mipmap_count),
+            asset->texture.resource = memory_manager->AllocateTexture3D(cast(u16, dds_header->width),
+                                                                        cast(u16, dds_header->height),
+                                                                        cast(u16, dds_header->depth),
+                                                                        cast(u16, dds_header->mipmap_count),
                                                                         texture_format,
                                                                         name,
                                                                         _static);
@@ -652,9 +652,9 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         else if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
         {
             REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-            asset->texture.resource = memory_manager->AllocateTextureCube(cast<u16>(dds_header->width),
-                                                                          cast<u16>(dds_header->height),
-                                                                          cast<u16>(dds_header->mipmap_count),
+            asset->texture.resource = memory_manager->AllocateTextureCube(cast(u16, dds_header->width),
+                                                                          cast(u16, dds_header->height),
+                                                                          cast(u16, dds_header->mipmap_count),
                                                                           texture_format,
                                                                           name,
                                                                           _static);
@@ -662,9 +662,9 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         else
         {
             REV_CHECK(dds_header->width && dds_header->height);
-            asset->texture.resource = memory_manager->AllocateTexture2D(cast<u16>(dds_header->width),
-                                                                        cast<u16>(dds_header->height),
-                                                                        cast<u16>(dds_header->mipmap_count),
+            asset->texture.resource = memory_manager->AllocateTexture2D(cast(u16, dds_header->width),
+                                                                        cast(u16, dds_header->height),
+                                                                        cast(u16, dds_header->mipmap_count),
                                                                         texture_format,
                                                                         name,
                                                                         _static);
@@ -678,7 +678,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
     if (dds_header->flags & DDS_FLAG_LINEARSIZE)
     {
         u64 alloc_size = sizeof(GPU::TextureDesc) + sizeof(GPU::SubTextureDesc) * dds_header->mipmap_count;
-        texture_desc   = cast<GPU::TextureDesc *>(Memory::Get()->PushToFrameArena(alloc_size));
+        texture_desc   = cast(GPU::TextureDesc *, Memory::Get()->PushToFrameArena(alloc_size));
 
         texture_desc->subtextures_count = dds_header->mipmap_count;
 
@@ -715,7 +715,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
 
             GPU::SubTextureDesc *sub_texture = texture_desc->subtexture_desc + i;
 
-            sub_texture->data            = cast<byte *>(mipmap_level_data);
+            sub_texture->data            = cast(byte *, mipmap_level_data);
             sub_texture->bytes_per_row   = row_bytes;
             sub_texture->bytes_per_tex2d = slice_bytes;
 

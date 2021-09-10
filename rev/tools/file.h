@@ -97,13 +97,13 @@ namespace REV
         REV_INLINE bool IsEOF()  const { return m_Offset == m_Size;               }
         REV_INLINE bool Empty()  const { return !m_Size;                          }
         REV_INLINE bool Opened() const { return m_Handle != INVALID_HANDLE_VALUE; }
+        REV_INLINE bool Closed() const { return m_Handle == INVALID_HANDLE_VALUE; }
 
         REV_INLINE s64  Offset() const { return m_Offset; }
         REV_INLINE u64  Size()   const { return m_Size;   }
         REV_INLINE FLAG Flags()  const { return m_Flags;  }
 
         REV_INLINE const StaticString<REV_PATH_CAPACITY>& Name() const { return m_Name; }
-        REV_INLINE       StaticString<REV_PATH_CAPACITY>& Name()       { return m_Name; }
 
         File& operator=(nullptr_t);
         File& operator=(const File& other);

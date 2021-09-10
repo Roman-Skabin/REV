@@ -6,11 +6,14 @@
     - Single namespace for everything? (get rid of Math and GPU namespaces)
     - Minimize number of system calls // @Optimization
     - Vertex buffer/index files (some custom formats for various types of meshes)?
+    - Stack trace in PrintDebugMessage on error.
 
 - Settings
+    - Logs folder, ini folder
     - Max view distance (max LOD & far)
 
 - Tools
+    - Fix CriticalSection (GetCurrentThread returns pseudo handle so it always = INVALID_HANDLE_VALUE)
     - Change a bit StringBuidler (example: StaticStringBuilder)
     - Create StaticString and StaticStringBuilder on arenas
     - Several simultaneous read operations under the same async file?

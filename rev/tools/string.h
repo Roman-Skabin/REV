@@ -29,7 +29,7 @@ public:
         REV_CHECK(allocator);
         if (alignment_in_bytes < REV::DEFAULT_ALIGNMENT) alignment_in_bytes = REV::DEFAULT_ALIGNMENT;
 
-        m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + ssc, alignment_in_bytes));
+        m_Header                     = cast(Header *, allocator->AllocateAligned(sizeof(Header) + ssc, alignment_in_bytes));
         m_Header->allocator          = allocator;
         m_Header->length             = static_string.Length();
         m_Header->capacity           = ssc;

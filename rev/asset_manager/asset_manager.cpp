@@ -159,8 +159,8 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
             vs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_VERTEX);
             if (vs_cache.blob)
             {
-                _InterlockedIncrement64(cast<s64 *>(&shaders_count));
-                _InterlockedOr((volatile long *)&shader_kind, GPU::SHADER_KIND_VERTEX);
+                _InterlockedIncrement64(cast(s64 *, &shaders_count));
+                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_VERTEX);
             }
         });
         m_WorkQueue.AddWork([&hs_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
@@ -168,8 +168,8 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
             hs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_HULL);
             if (hs_cache.blob)
             {
-                _InterlockedIncrement64(cast<s64 *>(&shaders_count));
-                _InterlockedOr((volatile long *)&shader_kind, GPU::SHADER_KIND_HULL);
+                _InterlockedIncrement64(cast(s64 *, &shaders_count));
+                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_HULL);
             }
         });
         m_WorkQueue.AddWork([&ds_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
@@ -177,8 +177,8 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
             ds_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_DOMAIN);
             if (ds_cache.blob)
             {
-                _InterlockedIncrement64(cast<s64 *>(&shaders_count));
-                _InterlockedOr((volatile long *)&shader_kind, GPU::SHADER_KIND_DOMAIN);
+                _InterlockedIncrement64(cast(s64 *, &shaders_count));
+                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_DOMAIN);
             }
         });
         m_WorkQueue.AddWork([&gs_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
@@ -186,8 +186,8 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
             gs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_GEOMETRY);
             if (gs_cache.blob)
             {
-                _InterlockedIncrement64(cast<s64 *>(&shaders_count));
-                _InterlockedOr((volatile long *)&shader_kind, GPU::SHADER_KIND_GEOMETRY);
+                _InterlockedIncrement64(cast(s64 *, &shaders_count));
+                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_GEOMETRY);
             }
         });
         m_WorkQueue.AddWork([&ps_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
@@ -195,37 +195,37 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
             ps_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_PIXEL);
             if (ps_cache.blob)
             {
-                _InterlockedIncrement64(cast<s64 *>(&shaders_count));
-                _InterlockedOr((volatile long *)&shader_kind, GPU::SHADER_KIND_PIXEL);
+                _InterlockedIncrement64(cast(s64 *, &shaders_count));
+                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_PIXEL);
             }
         });
         m_WorkQueue.Wait();
 
         m_Logger.LogInfo('"', name, "\" shaders' compilation has been done. ", shaders_count, "/5 shaders has been successfully compiled.");
 
-        cache_file.Write(const_cast<GPU::SHADER_KIND *>(&shader_kind), sizeof(GPU::SHADER_KIND));
+        cache_file.Write(cast(GPU::SHADER_KIND *, &shader_kind), sizeof(GPU::SHADER_KIND));
 
-        u32 count = cast<u32>(vs_cache.bytecode.Count());
+        u32 count = cast(u32, vs_cache.bytecode.Count());
         {
             cache_file.Write(&count, sizeof(count));
             cache_file.Write(vs_cache.bytecode.Data(), count);
         }
-        if (count = cast<u32>(hs_cache.bytecode.Count()))
+        if (count = cast(u32, hs_cache.bytecode.Count()))
         {
             cache_file.Write(&count, sizeof(count));
             cache_file.Write(hs_cache.bytecode.Data(), count);
         }
-        if (count = cast<u32>(ds_cache.bytecode.Count()))
+        if (count = cast(u32, ds_cache.bytecode.Count()))
         {
             cache_file.Write(&count, sizeof(count));
             cache_file.Write(ds_cache.bytecode.Data(), count);
         }
-        if (count = cast<u32>(gs_cache.bytecode.Count()))
+        if (count = cast(u32, gs_cache.bytecode.Count()))
         {
             cache_file.Write(&count, sizeof(count));
             cache_file.Write(gs_cache.bytecode.Data(), count);
         }
-        count = cast<u32>(ps_cache.bytecode.Count());
+        count = cast(u32, ps_cache.bytecode.Count());
         {
             cache_file.Write(&count, sizeof(count));
             cache_file.Write(ps_cache.bytecode.Data(), count);
@@ -412,27 +412,27 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
 
                 cache_file.Write(&shader_kind, sizeof(GPU::SHADER_KIND));
 
-                u32 count = cast<u32>(vs_cache.bytecode.Count());
+                u32 count = cast(u32, vs_cache.bytecode.Count());
                 {
                     cache_file.Write(&count, sizeof(count));
                     cache_file.Write(vs_cache.bytecode.Data(), count);
                 }
-                if (count = cast<u32>(hs_cache.bytecode.Count()))
+                if (count = cast(u32, hs_cache.bytecode.Count()))
                 {
                     cache_file.Write(&count, sizeof(count));
                     cache_file.Write(hs_cache.bytecode.Data(), count);
                 }
-                if (count = cast<u32>(ds_cache.bytecode.Count()))
+                if (count = cast(u32, ds_cache.bytecode.Count()))
                 {
                     cache_file.Write(&count, sizeof(count));
                     cache_file.Write(ds_cache.bytecode.Data(), count);
                 }
-                if (count = cast<u32>(gs_cache.bytecode.Count()))
+                if (count = cast(u32, gs_cache.bytecode.Count()))
                 {
                     cache_file.Write(&count, sizeof(count));
                     cache_file.Write(gs_cache.bytecode.Data(), count);
                 }
-                count = cast<u32>(ps_cache.bytecode.Count());
+                count = cast(u32, ps_cache.bytecode.Count());
                 {
                     cache_file.Write(&count, sizeof(count));
                     cache_file.Write(ps_cache.bytecode.Data(), count);

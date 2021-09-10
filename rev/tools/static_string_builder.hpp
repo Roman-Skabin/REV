@@ -112,6 +112,9 @@ public:
     REV_INLINE const StaticString<capacity, aligned_capacity>& ToString() const { return m_StaticString; }
     REV_INLINE       StaticString<capacity, aligned_capacity>& ToString()       { return m_StaticString; }
 
+    REV_INLINE const StaticString<capacity, aligned_capacity>& Buffer() const { return m_StaticString; }
+    REV_INLINE       StaticString<capacity, aligned_capacity>& Buffer()       { return m_StaticString; }
+
     REV_INLINE const char *BufferData() const { return m_StaticString.Data(); }
     REV_INLINE       char *BufferData()       { return m_StaticString.Data(); }
 
@@ -253,8 +256,8 @@ private:
 
             while (val > 0)
             {
-                *buffer++ = int_to_char[val % cast<T>(m_IntFormat.Base)];
-                val /= cast<T>(m_IntFormat.Base);
+                *buffer++ = int_to_char[val % cast(T, m_IntFormat.Base)];
+                val /= cast(T, m_IntFormat.Base);
             }
 
             buffer_end = buffer--;
@@ -365,7 +368,7 @@ private:
                 while (expexp > 0.0f)
                 {
                     T mod      = fmodf(exponent, 10.0f);
-                    *buffer++  = int_to_char[cast<u64>(mod)];
+                    *buffer++  = int_to_char[cast(u64, mod)];
                     exponent  /= 10.0f;
                     modff(exponent, &expexp);
                 }
@@ -377,7 +380,7 @@ private:
                 while (expexp > 0.0)
                 {
                     T mod      = fmod(exponent, 10.0);
-                    *buffer++  = int_to_char[cast<u64>(mod)];
+                    *buffer++  = int_to_char[cast(u64, mod)];
                     exponent  /= 10.0;
                     modf(exponent, &expexp);
                 }
@@ -414,7 +417,7 @@ private:
                 {
                     fraction  *= 10.0f;
                     T mod      = fmodf(fraction, 10.0f);
-                    *buffer++  = int_to_char[cast<u64>(mod)];
+                    *buffer++  = int_to_char[cast(u64, mod)];
                 }
             }
             else
@@ -423,7 +426,7 @@ private:
                 {
                     fraction  *= 10.0;
                     T mod      = fmod(fraction, 10.0);
-                    *buffer++  = int_to_char[cast<u64>(mod)];
+                    *buffer++  = int_to_char[cast(u64, mod)];
                 }
             }
 
@@ -740,7 +743,7 @@ private:
             fill           = m_TextFormat.Fill;
             text_alignment = m_TextFormat.TextAlignment;
 
-            int wlength = cast<int>(wcslen(val));
+            int wlength = cast(int, wcslen(val));
 
             // @TODO(Roman): #CrossPlatform
             int   length = WideCharToMultiByte(CP_ACP, 0, val, wlength, null, 0, null, null);
@@ -752,7 +755,7 @@ private:
         }
         else if constexpr (RTTI::is_pointer_v<T>)
         {
-            u64 length = ParsePointer(buffer, cast<u64>(val));
+            u64 length = ParsePointer(buffer, cast(u64, val));
             m_StaticString.PushBack(buffer, length);
         }
         else if constexpr (RTTI::is_nullptr_t_v<T>)

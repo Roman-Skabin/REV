@@ -18,9 +18,9 @@ namespace REV
         enum TARGET : u32
         {
             TARGET_NONE    = 0,
-            TARGET_FILE    = BIT(0),
-            TARGET_CONSOLE = BIT(1),
-            TARGET_WINDBG  = BIT(2),
+            TARGET_FILE    = 1 << 0,
+            TARGET_CONSOLE = 1 << 1,
+            TARGET_WINDBG  = 1 << 2,
         };
 
         enum class MESSAGE_KIND : u32

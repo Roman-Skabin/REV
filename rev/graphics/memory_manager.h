@@ -20,13 +20,13 @@ namespace REV::GPU
     {
         RESOURCE_KIND_UNKNOWN = 0,
 
-        RESOURCE_KIND_VB      = BIT(0),
-        RESOURCE_KIND_IB      = BIT(1),
-        RESOURCE_KIND_CB      = BIT(2),
-        RESOURCE_KIND_SR      = BIT(3),
-        RESOURCE_KIND_SAMPLER = BIT(4),
+        RESOURCE_KIND_VB      = 1 << 0,
+        RESOURCE_KIND_IB      = 1 << 1,
+        RESOURCE_KIND_CB      = 1 << 2,
+        RESOURCE_KIND_SR      = 1 << 3,
+        RESOURCE_KIND_SAMPLER = 1 << 4,
 
-        RESOURCE_KIND_STATIC = BIT<u64>(63),
+        RESOURCE_KIND_STATIC = 1ui64 << 63,
 
         RESOURCE_KIND_BUFFER = RESOURCE_KIND_VB | RESOURCE_KIND_IB | RESOURCE_KIND_CB,
 
@@ -55,7 +55,7 @@ namespace REV::GPU
         DXT4,
         DXT5,
 
-        _DDS_DX10 = BIT<u32>(31), // @NOTE(Roman): Internal
+        _DDS_DX10 = 1ui32 << 31, // @NOTE(Roman): Internal
     };
     REV_ENUM_CLASS_OPERATORS(TEXTURE_FORMAT);
 

@@ -21,23 +21,23 @@ namespace REV
     #undef MoveMemory
     #undef ZeroMemory
 
-    REV_INLINE void FillMemoryF32 (f32  *mem, f32  val, u64 count) { __stosd(reinterpret_cast<u32 *>(mem), *reinterpret_cast<u32 *>(&val), count); }
-    REV_INLINE void FillMemoryF64 (f64  *mem, f64  val, u64 count) { __stosq(reinterpret_cast<u64 *>(mem), *reinterpret_cast<u64 *>(&val), count); }
-    REV_INLINE void FillMemoryChar(char *mem, char val, u64 count) {  memset(                        mem ,                           val , count); }
-    REV_INLINE void FillMemoryU8  (u8   *mem, u8   val, u64 count) {  memset(                        mem ,                           val , count); }
-    REV_INLINE void FillMemoryU16 (u16  *mem, u16  val, u64 count) { __stosw(                        mem ,                           val , count); }
-    REV_INLINE void FillMemoryU32 (u32  *mem, u32  val, u64 count) { __stosd(                        mem ,                           val , count); }
-    REV_INLINE void FillMemoryU64 (u64  *mem, u64  val, u64 count) { __stosq(                        mem ,                           val , count); }
+    REV_INLINE void FillMemoryF32 (f32  *mem, f32  val, u64 count) { __stosd(cast(u32 *, mem), *cast(u32 *, &val), count); }
+    REV_INLINE void FillMemoryF64 (f64  *mem, f64  val, u64 count) { __stosq(cast(u64 *, mem), *cast(u64 *, &val), count); }
+    REV_INLINE void FillMemoryChar(char *mem, char val, u64 count) {  memset(            mem ,               val , count); }
+    REV_INLINE void FillMemoryU8  (u8   *mem, u8   val, u64 count) {  memset(            mem ,               val , count); }
+    REV_INLINE void FillMemoryU16 (u16  *mem, u16  val, u64 count) { __stosw(            mem ,               val , count); }
+    REV_INLINE void FillMemoryU32 (u32  *mem, u32  val, u64 count) { __stosd(            mem ,               val , count); }
+    REV_INLINE void FillMemoryU64 (u64  *mem, u64  val, u64 count) { __stosq(            mem ,               val , count); }
 
     template<typename T, typename = RTTI::enable_if_t<RTTI::cmple(sizeof(T), 8)>>
     REV_INLINE void FillMemory(T *mem, T val, u64 count)
     {
-        /**/ if constexpr (RTTI::is_floating_point_v<T> && sizeof(T) == 4) __stosd(reinterpret_cast<u32 *>(mem), *reinterpret_cast<u32 *>(&val), count);
-        else if constexpr (RTTI::is_floating_point_v<T> && sizeof(T) == 8) __stosq(reinterpret_cast<u64 *>(mem), *reinterpret_cast<u64 *>(&val), count);
-        else if constexpr (RTTI::is_integral_v<T>       && sizeof(T) == 1)  memset(                        mem ,                           val , count);
-        else if constexpr (RTTI::is_integral_v<T>       && sizeof(T) == 2) __stosw(reinterpret_cast<u16 *>(mem), *reinterpret_cast<u16 *>(&val), count);
-        else if constexpr (RTTI::is_integral_v<T>       && sizeof(T) == 4) __stosd(reinterpret_cast<u32 *>(mem), *reinterpret_cast<u32 *>(&val), count);
-        else if constexpr (RTTI::is_integral_v<T>       && sizeof(T) == 8) __stosq(reinterpret_cast<u64 *>(mem), *reinterpret_cast<u64 *>(&val), count);
+        /**/ if constexpr (RTTI::is_floating_point_v<T> && sizeof(T) == 4) __stosd(cast(u32 *, mem), *cast(u32 *, &val), count);
+        else if constexpr (RTTI::is_floating_point_v<T> && sizeof(T) == 8) __stosq(cast(u64 *, mem), *cast(u64 *, &val), count);
+        else if constexpr (RTTI::is_integral_v<T>       && sizeof(T) == 1)  memset(            mem ,               val , count);
+        else if constexpr (RTTI::is_integral_v<T>       && sizeof(T) == 2) __stosw(cast(u16 *, mem), *cast(u16 *, &val), count);
+        else if constexpr (RTTI::is_integral_v<T>       && sizeof(T) == 4) __stosd(cast(u32 *, mem), *cast(u32 *, &val), count);
+        else if constexpr (RTTI::is_integral_v<T>       && sizeof(T) == 8) __stosq(cast(u64 *, mem), *cast(u64 *, &val), count);
         else                                                               while (count--) *mem++ = val;
     }
 
@@ -72,7 +72,7 @@ namespace REV
     #if REV_RELEASE
         memcpy(dest, src, bytes);
     #else
-        __movsb(reinterpret_cast<byte *>(dest), reinterpret_cast<const byte *>(src), bytes);
+        __movsb(cast(byte *, dest), cast(const byte *, src), bytes);
     #endif
     }
 

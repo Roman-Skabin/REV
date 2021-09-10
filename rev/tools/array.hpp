@@ -22,7 +22,7 @@ namespace REV
             REV_CHECK(allocator);
             if (alignment_in_bytes < REV::DEFAULT_ALIGNMENT) alignment_in_bytes = REV::DEFAULT_ALIGNMENT;
     
-            m_Header                     = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + initial_capacity * sizeof(T), alignment_in_bytes));
+            m_Header                     = cast(Header *, allocator->AllocateAligned(sizeof(Header) + initial_capacity * sizeof(T), alignment_in_bytes));
             m_Header->allocator          = allocator;
             m_Header->count              = 0;
             m_Header->capacity           = initial_capacity;
@@ -37,7 +37,7 @@ namespace REV
 
             u64 capacity = 2 * const_array.Count();
 
-            m_Header = cast<Header *>(allocator->AllocateAligned(sizeof(Header) + capacity * sizeof(T), alignment_in_bytes));
+            m_Header = cast(Header *, allocator->AllocateAligned(sizeof(Header) + capacity * sizeof(T), alignment_in_bytes));
             m_Header->allocator          = allocator;
             m_Header->count              = const_array.Count();
             m_Header->capacity           = capacity;
@@ -49,7 +49,7 @@ namespace REV
         Array(const Array& other)
             : m_Header(null)
         {
-            m_Header = cast<Header *>(other.m_Header->allocator->AllocateAligned(sizeof(Header) + other.m_Header->capacity * sizeof(T),
+            m_Header = cast(Header *, other.m_Header->allocator->AllocateAligned(sizeof(Header) + other.m_Header->capacity * sizeof(T),
                                                                                  other.m_Header->alignment_in_bytes));
             CopyMemory(m_Header, other.m_Header, sizeof(Header) + other.m_Header->count * sizeof(T));
         }
@@ -131,7 +131,7 @@ namespace REV
         {
             if (m_Header->count <= capacity && m_Header->capacity != capacity)
             {
-                m_Header = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                m_Header = cast(Header *, m_Header->allocator->ReAllocateAligned(cast(void *&, m_Header),
                                                                                  sizeof(Header) + capacity * sizeof(T),
                                                                                  m_Header->alignment_in_bytes));
                 m_Header->capacity = capacity;
@@ -243,7 +243,7 @@ namespace REV
             {
                 m_Header->capacity = 2 * new_count;
 
-                m_Header = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                m_Header = cast(Header *, m_Header->allocator->ReAllocateAligned(cast(void *&, m_Header),
                                                                                  sizeof(Header) + m_Header->capacity * sizeof(T),
                                                                                  m_Header->alignment_in_bytes));
             }
@@ -259,7 +259,7 @@ namespace REV
             if (m_Header != other.m_Header)
             {
                 DestroyAll();
-                m_Header = cast<Header *>(other.m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                m_Header = cast(Header *, other.m_Header->allocator->ReAllocateAligned(cast(void *&, m_Header),
                                                                                        sizeof(Header) + other.m_Header->capacity * sizeof(T),
                                                                                        other.m_Header->alignment_in_bytes));
                 CopyMemory(m_Header, other.m_Header, sizeof(Header) + other.m_Header->count * sizeof(T));
@@ -313,7 +313,7 @@ namespace REV
             if (m_Header->count > m_Header->capacity)
             {
                 m_Header->capacity *= 2;
-                m_Header            = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                m_Header            = cast(Header *, m_Header->allocator->ReAllocateAligned(cast(void *&, m_Header),
                                                                                             sizeof(Header) + m_Header->capacity * sizeof(T),
                                                                                             m_Header->alignment_in_bytes));
             }
@@ -324,7 +324,7 @@ namespace REV
             if (2 * m_Header->count < m_Header->capacity)
             {
                 m_Header->capacity = 2 * m_Header->count;
-                m_Header           = cast<Header *>(m_Header->allocator->ReAllocateAligned(cast<void *&>(m_Header),
+                m_Header           = cast(Header *, m_Header->allocator->ReAllocateAligned(cast(void *&, m_Header),
                                                                                            sizeof(Header) + m_Header->capacity * sizeof(T),
                                                                                            m_Header->alignment_in_bytes));
             }

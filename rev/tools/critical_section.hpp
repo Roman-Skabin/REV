@@ -20,6 +20,7 @@ namespace REV
               m_Owner(null),
               m_RecursionCount(0)
         {
+            REV_CHECK(m_Semaphore != INVALID_HANDLE_VALUE);
         }
     
         REV_INLINE CriticalSection(CriticalSection&& other)
@@ -72,6 +73,8 @@ namespace REV
         {
             if (this != &other)
             {
+                REV_DEBUG_RESULT(CloseHandle(m_Semaphore));
+
                 m_Semaphore      = other.m_Semaphore;
                 m_Owner          = other.m_Owner;
                 m_RecursionCount = other.m_RecursionCount;

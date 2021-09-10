@@ -17,7 +17,7 @@ namespace REV
 {
 
 Window::Window(const Logger& logger, const ConstString& title)
-    : m_Instance(cast<HINSTANCE>(GetModuleHandleA(null))),
+    : m_Instance(cast(HINSTANCE, GetModuleHandleA(null))),
       m_Handle(null),
       m_XYWH(Settings::Get()->window_xywh),
       m_DPI(GetDpiForSystem()),
@@ -63,7 +63,7 @@ Window::Window(const Logger& logger, const ConstString& title)
     }
 
     REV_DEBUG_RESULT(m_Handle = CreateWindowExA(0, wcexa.lpszClassName, m_Title.Data(), WS_OVERLAPPEDWINDOW, m_XYWH.x, m_XYWH.y, width, height, null, null, wcexa.hInstance, 0));
-    SetWindowLongPtrA(m_Handle, GWLP_USERDATA, cast<LONG_PTR>(this));
+    SetWindowLongPtrA(m_Handle, GWLP_USERDATA, cast(LONG_PTR, this));
 
     // @NOTE(Roman): Initial DPI changes. Windows doesn't send WM_DPICHANGED message
     //               on its creation even if the window is being created on a monitor
@@ -154,7 +154,7 @@ void Window::ApplyFullscreenRequest()
 LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lparam)
 {
     LRESULT  result = 0;
-    Window  *window = cast<Window *>(GetWindowLongPtrA(handle, GWLP_USERDATA));
+    Window  *window = cast(Window *, GetWindowLongPtrA(handle, GWLP_USERDATA));
 
     switch (message)
     {
@@ -165,7 +165,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
 
         case WM_SIZE: // 0x0005
         {
-            Math::v2s new_size(cast<s32>(lparam & 0xFFFF), cast<s32>(lparam >> 16));
+            Math::v2s new_size(cast(s32, lparam & 0xFFFF), cast(s32, lparam >> 16));
 
             if ((window->m_XYWH.wh != new_size) && wparam != SIZE_MINIMIZED)
             {
@@ -184,7 +184,7 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
 
         case WM_WINDOWPOSCHANGED: // 0x0047
         {
-            WINDOWPOS *window_pos = cast<WINDOWPOS *>(lparam);
+            WINDOWPOS *window_pos = cast(WINDOWPOS *, lparam);
             Math::v2s  new_pos(window_pos->x, window_pos->y);
 
             if (window->m_XYWH.xy != new_pos)
@@ -201,12 +201,12 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
 
         case WM_INPUT: // 0x00FF
         {
-            HRAWINPUT raw_input_handle = cast<HRAWINPUT>(lparam);
+            HRAWINPUT raw_input_handle = cast(HRAWINPUT, lparam);
 
             UINT bytes = 0;
             GetRawInputData(raw_input_handle, RID_INPUT, 0, &bytes, sizeof(RAWINPUTHEADER));
 
-            RAWINPUT *raw_input = cast<RAWINPUT *>(Memory::Get()->PushToFrameArena(bytes));
+            RAWINPUT *raw_input = cast(RAWINPUT *, Memory::Get()->PushToFrameArena(bytes));
             u32       ret_bytes = GetRawInputData(raw_input_handle, RID_INPUT, raw_input, &bytes, sizeof(RAWINPUTHEADER));
             REV_CHECK(ret_bytes == bytes);
 
@@ -226,8 +226,8 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
 
         case WM_DPICHANGED: // 0x02E0
         {
-            u32   new_dpi  = cast<u32>(wparam >> 16);
-            RECT *new_size = cast<RECT *>(lparam);
+            u32   new_dpi  = cast(u32, wparam >> 16);
+            RECT *new_size = cast(RECT *, lparam);
 
             REV_DEBUG_RESULT(SetWindowPos(handle, null,
                                           new_size->left, new_size->top,

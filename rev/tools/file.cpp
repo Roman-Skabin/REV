@@ -95,7 +95,7 @@ bool File::Open(const ConstString& filename, FLAG flags)
     }
     else if (m_Flags != flags)
     {
-        REV_WARNING_M("File \"%.*s\" is already opened, it will be reopened with new flags. Old flags: 0x%x, new flags: 0x%x",
+        REV_WARNING_M("File \"%.*s\" is already opened, it will be reopened with new flags. Old flags: 0x%X, new flags: 0x%X",
                       m_Name.Length(), m_Name.Data(),
                       m_Flags,
                       flags);
@@ -124,7 +124,6 @@ void File::ReOpen(FLAG new_flags)
 
         m_Handle = ReOpenFile(m_Handle, desired_access, shared_access, attributes);
         REV_CHECK(m_Handle != INVALID_HANDLE_VALUE);
-
     }
     m_CriticalSection.Leave();
 }
@@ -192,7 +191,7 @@ void File::Write(const void *buffer, u64 bytes)
     REV_CHECK(buffer);
     REV_CHECK_M(bytes, "Buffer size must be more than 0");
 
-    u64 saved_offset = m_Offset;    
+    u64 saved_offset = m_Offset;
     LockSystemCacheFromOtherProcesses(saved_offset, bytes, false);
 
     u32 bytes_written = 0;
@@ -223,7 +222,7 @@ void File::Append(const void *buffer, u64 bytes)
 
     REV_DEBUG_RESULT(SetFilePointerEx(m_Handle, LARGE_INTEGER{0}, (LARGE_INTEGER *)&m_Offset, FILE_END));
 
-    u64 saved_offset = m_Offset;    
+    u64 saved_offset = m_Offset;
     LockSystemCacheFromOtherProcesses(saved_offset, bytes, false);
 
     u32 bytes_written = 0;
@@ -497,9 +496,9 @@ void File::GetTimings(u64& creation_time, u64& last_access_time, u64& last_write
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
     REV_DEBUG_RESULT(GetFileTime(m_Handle,
-                                 cast<FILETIME *>(&creation_time),
-                                 cast<FILETIME *>(&last_access_time),
-                                 cast<FILETIME *>(&last_write_time)));
+                                 cast(FILETIME *, &creation_time),
+                                 cast(FILETIME *, &last_access_time),
+                                 cast(FILETIME *, &last_write_time)));
 
     m_CriticalSection.Leave();
 }
@@ -514,7 +513,7 @@ u64 File::CreationTime() const
     REV_DEBUG_RESULT(GetFileTime(m_Handle, &creation_time, null, null));
 
     m_CriticalSection.Leave();
-    return *cast<u64 *>(&creation_time);
+    return *cast(u64 *, &creation_time);
 }
 
 u64 File::LastAccessTime() const
@@ -527,7 +526,7 @@ u64 File::LastAccessTime() const
     REV_DEBUG_RESULT(GetFileTime(m_Handle, null, &last_access_time, null));
 
     m_CriticalSection.Leave();
-    return *cast<u64 *>(&last_access_time);
+    return *cast(u64 *, &last_access_time);
 }
 
 u64 File::LastWriteTime() const
@@ -536,11 +535,11 @@ u64 File::LastWriteTime() const
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
 
-    FILETIME last_file_write_time = {0};
-    REV_DEBUG_RESULT(GetFileTime(m_Handle, null, null, &last_file_write_time));
+    FILETIME last_write_time = {0};
+    REV_DEBUG_RESULT(GetFileTime(m_Handle, null, null, &last_write_time));
 
     m_CriticalSection.Leave();
-    return *cast<u64 *>(&last_file_write_time);
+    return *cast(u64 *, &last_write_time);
 }
 
 void File::Find(const StaticString<REV_PATH_CAPACITY>& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback)
@@ -689,7 +688,7 @@ void File::Open()
                 path.Inspect();
 
                 REV_CHECK(m_Flags & FLAG_EXISTS);
-                path.PrintWarningIfDoesNotExist(REV_CSTRCAT(REV_CSTRCAT("File has been tried to be opened with flag ", REV_CSTR(FLAG_EXISTS)), " but it does not exist"));
+                path.PrintWarningIfDoesNotExist("File has been tried to be opened with flag FLAG_EXISTS but it does not exist");
             } break;
 
             case ERROR_PATH_NOT_FOUND:
@@ -705,7 +704,7 @@ void File::Open()
 
             case ERROR_FILE_EXISTS:
             {
-                REV_WARNING_M("File \"%.*s\" has been created with FILE_FLAG_NEW that guarantees a file creation only if it does NOT exist, but it does exist",
+                REV_WARNING_M("File \"%.*s\" has been created with FLAG_NEW that guarantees a file creation only if it does NOT exist, but it does exist",
                               m_Name.Length(), m_Name.Data());
             } break;
 
@@ -899,16 +898,16 @@ void Path::_PrintWarningIfDoesNotExist(const ConstString& warning_message)
             else                          builder.Build("Path does not exist");
             builder.Build(': "');
 
-            REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast<u16>(DEBUG_COLOR::WARNING)));
+            REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast(u16, DEBUG_COLOR::WARNING)));
             REV_DEBUG_RESULT(WriteConsoleA(console, builder.BufferData(), (DWORD)builder.BufferLength(), null, null));
             if (exists.Length())
             {
-                REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast<u16>(DEBUG_COLOR::SUCCESS)));
+                REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast(u16, DEBUG_COLOR::SUCCESS)));
                 REV_DEBUG_RESULT(WriteConsoleA(console, exists.Data(), (DWORD)exists.Length(), null, null));
             }
-            REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast<u16>(DEBUG_COLOR::ERROR)));
+            REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast(u16, DEBUG_COLOR::ERROR)));
             REV_DEBUG_RESULT(WriteConsoleA(console, does_not_exist.Data(), (DWORD)does_not_exist.Length(), null, null));
-            REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast<u16>(DEBUG_COLOR::INFO)));
+            REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast(u16, DEBUG_COLOR::INFO)));
             REV_DEBUG_RESULT(WriteConsoleA(console, REV_CSTR_ARGS("\"\n"), null, null));
         }
     }

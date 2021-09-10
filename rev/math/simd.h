@@ -26,20 +26,20 @@ namespace REV::Math
         f64 f64s[2];
 
         REV_INLINE xmm_u(__m128  xmm       ) { _mm_storeu_ps(f32s, xmm);                          }
-        REV_INLINE xmm_u(__m128i xmm       ) { _mm_storeu_si128(cast<__m128i *>(u64s), xmm);      }
+        REV_INLINE xmm_u(__m128i xmm       ) { _mm_storeu_si128(cast(__m128i *, u64s), xmm);      }
         REV_INLINE xmm_u(__m128d xmm       ) { _mm_storeu_pd(f64s, xmm);                          }
-        REV_INLINE xmm_u(const xmm_u& other) { *cast<__m128i *>(this) = *cast<__m128i *>(&other); }
-        REV_INLINE xmm_u(xmm_u&& other     ) { *cast<__m128i *>(this) = *cast<__m128i *>(&other); }
+        REV_INLINE xmm_u(const xmm_u& other) { *cast(__m128i *, this) = *cast(__m128i *, &other); }
+        REV_INLINE xmm_u(xmm_u&& other     ) { *cast(__m128i *, this) = *cast(__m128i *, &other); }
 
         REV_INLINE REV_VECTORCALL operator __m128()  const { return _mm_loadu_ps(f32s);                     }
-        REV_INLINE REV_VECTORCALL operator __m128i() const { return _mm_lddqu_si128(cast<__m128i *>(u64s)); }
+        REV_INLINE REV_VECTORCALL operator __m128i() const { return _mm_lddqu_si128(cast(__m128i *, u64s)); }
         REV_INLINE REV_VECTORCALL operator __m128d() const { return _mm_loadu_pd(f64s);                     }
 
         REV_INLINE xmm_u& REV_VECTORCALL operator=(__m128  xmm       ) { _mm_storeu_ps(f32s, xmm);                          return *this; }
-        REV_INLINE xmm_u& REV_VECTORCALL operator=(__m128i xmm       ) { _mm_storeu_si128(cast<__m128i *>(u64s), xmm);      return *this; }
+        REV_INLINE xmm_u& REV_VECTORCALL operator=(__m128i xmm       ) { _mm_storeu_si128(cast(__m128i *, u64s), xmm);      return *this; }
         REV_INLINE xmm_u& REV_VECTORCALL operator=(__m128d xmm       ) { _mm_storeu_pd(f64s, xmm);                          return *this; }
-        REV_INLINE xmm_u& REV_VECTORCALL operator=(const xmm_u& other) { *cast<__m128i *>(this) = *cast<__m128i *>(&other); return *this; }
-        REV_INLINE xmm_u& REV_VECTORCALL operator=(xmm_u&& other     ) { *cast<__m128i *>(this) = *cast<__m128i *>(&other); return *this; }
+        REV_INLINE xmm_u& REV_VECTORCALL operator=(const xmm_u& other) { *cast(__m128i *, this) = *cast(__m128i *, &other); return *this; }
+        REV_INLINE xmm_u& REV_VECTORCALL operator=(xmm_u&& other     ) { *cast(__m128i *, this) = *cast(__m128i *, &other); return *this; }
     };
 
     #if REV_ISA >= REV_ISA_AVX
@@ -59,20 +59,20 @@ namespace REV::Math
         f64 f64s[4];
 
         REV_INLINE ymm_u(__m256         ymm) { _mm256_storeu_ps(f32s, ymm);                       }
-        REV_INLINE ymm_u(__m256i        ymm) { _mm256_storeu_si256(cast<__m256i *>(u64s), ymm);   }
+        REV_INLINE ymm_u(__m256i        ymm) { _mm256_storeu_si256(cast(__m256i *, u64s), ymm);   }
         REV_INLINE ymm_u(__m256d        ymm) { _mm256_storeu_pd(f64s, ymm);                       }
-        REV_INLINE ymm_u(const ymm_u& other) { *cast<__m256i *>(this) = *cast<__m256i *>(&other); }
-        REV_INLINE ymm_u(ymm_u&& other     ) { *cast<__m256i *>(this) = *cast<__m256i *>(&other); }
+        REV_INLINE ymm_u(const ymm_u& other) { *cast(__m256i *, this) = *cast(__m256i *, &other); }
+        REV_INLINE ymm_u(ymm_u&& other     ) { *cast(__m256i *, this) = *cast(__m256i *, &other); }
 
         REV_INLINE REV_VECTORCALL operator __m256()  const { return _mm256_loadu_ps(f32s);                     }
-        REV_INLINE REV_VECTORCALL operator __m256i() const { return _mm256_lddqu_si256(cast<__m256i *>(u64s)); }
+        REV_INLINE REV_VECTORCALL operator __m256i() const { return _mm256_lddqu_si256(cast(__m256i *, u64s)); }
         REV_INLINE REV_VECTORCALL operator __m256d() const { return _mm256_loadu_pd(f64s);                     }
 
         REV_INLINE ymm_u& REV_VECTORCALL operator=(__m256  ymm) { _mm256_storeu_ps(f32s, ymm);                              return *this; }
-        REV_INLINE ymm_u& REV_VECTORCALL operator=(__m256i ymm) { _mm256_storeu_si256(cast<__m256i *>(u64s), ymm);          return *this; }
+        REV_INLINE ymm_u& REV_VECTORCALL operator=(__m256i ymm) { _mm256_storeu_si256(cast(__m256i *, u64s), ymm);          return *this; }
         REV_INLINE ymm_u& REV_VECTORCALL operator=(__m256d ymm) { _mm256_storeu_pd(f64s, ymm);                              return *this; }
-        REV_INLINE ymm_u& REV_VECTORCALL operator=(const ymm_u& other) { *cast<__m256i *>(this) = *cast<__m256i *>(&other); return *this; }
-        REV_INLINE ymm_u& REV_VECTORCALL operator=(ymm_u&& other     ) { *cast<__m256i *>(this) = *cast<__m256i *>(&other); return *this; }
+        REV_INLINE ymm_u& REV_VECTORCALL operator=(const ymm_u& other) { *cast(__m256i *, this) = *cast(__m256i *, &other); return *this; }
+        REV_INLINE ymm_u& REV_VECTORCALL operator=(ymm_u&& other     ) { *cast(__m256i *, this) = *cast(__m256i *, &other); return *this; }
     };
     #endif
 
@@ -95,8 +95,8 @@ namespace REV::Math
         REV_INLINE zmm_u(__m512  zmm       ) { _mm512_storeu_ps(f32s, zmm);                       }
         REV_INLINE zmm_u(__m512i zmm       ) { _mm512_storeu_epi64(u64s, zmm);                    }
         REV_INLINE zmm_u(__m512d zmm       ) { _mm512_storeu_pd(f64s, zmm);                       }
-        REV_INLINE zmm_u(const zmm_u& other) { *cast<__m512i *>(this) = *cast<__m512i *>(&other); }
-        REV_INLINE zmm_u(zmm_u&& other     ) { *cast<__m512i *>(this) = *cast<__m512i *>(&other); }
+        REV_INLINE zmm_u(const zmm_u& other) { *cast(__m512i *, this) = *cast(__m512i *, &other); }
+        REV_INLINE zmm_u(zmm_u&& other     ) { *cast(__m512i *, this) = *cast(__m512i *, &other); }
 
         REV_INLINE REV_VECTORCALL operator __m512()  const { return _mm512_loadu_ps(f32s);    }
         REV_INLINE REV_VECTORCALL operator __m512i() const { return _mm512_loadu_epi32(u64s); }
@@ -105,8 +105,8 @@ namespace REV::Math
         REV_INLINE zmm_u& REV_VECTORCALL operator=(__m512  zmm       ) { _mm512_storeu_ps(f32s, zmm);                       return *this; }
         REV_INLINE zmm_u& REV_VECTORCALL operator=(__m512i zmm       ) { _mm512_storeu_epi64(u64s, zmm);                    return *this; }
         REV_INLINE zmm_u& REV_VECTORCALL operator=(__m512d zmm       ) { _mm512_storeu_pd(f64s, zmm);                       return *this; }
-        REV_INLINE zmm_u& REV_VECTORCALL operator=(const zmm_u& other) { *cast<__m512i *>(this) = *cast<__m512i *>(&other); return *this; }
-        REV_INLINE zmm_u& REV_VECTORCALL operator=(zmm_u&& other     ) { *cast<__m512i *>(this) = *cast<__m512i *>(&other); return *this; }
+        REV_INLINE zmm_u& REV_VECTORCALL operator=(const zmm_u& other) { *cast(__m512i *, this) = *cast(__m512i *, &other); return *this; }
+        REV_INLINE zmm_u& REV_VECTORCALL operator=(zmm_u&& other     ) { *cast(__m512i *, this) = *cast(__m512i *, &other); return *this; }
     };
     #endif
 
@@ -207,11 +207,11 @@ namespace REV::Math
     REV_INLINE bool REV_VECTORCALL mm_equals(const void *a, const void *b)
     {
     #if REV_ISA >= REV_ISA_AVX512
-        return 0b11 == _mm_cmpeq_epi64_mask(*cast<__m128i *>(a),
-                                            *cast<__m128i *>(b));
+        return 0b11 == _mm_cmpeq_epi64_mask(*cast(__m128i *, a),
+                                            *cast(__m128i *, b));
     #else
-        return _mm_testc_si128(_mm_cmpeq_epi64(*cast<__m128i *>(a),
-                                               *cast<__m128i *>(b)),
+        return _mm_testc_si128(_mm_cmpeq_epi64(*cast(__m128i *, a),
+                                               *cast(__m128i *, b)),
                                _mm_set1_epi64x(REV_U64_MAX));
     #endif
     }
@@ -219,11 +219,11 @@ namespace REV::Math
     REV_INLINE bool REV_VECTORCALL mm_not_equals(const void *a, const void *b)
     {
     #if REV_ISA >= REV_ISA_AVX512
-        return _mm_cmpneq_epi64_mask(*cast<__m128i *>(a),
-                                     *cast<__m128i *>(b));
+        return _mm_cmpneq_epi64_mask(*cast(__m128i *, a),
+                                     *cast(__m128i *, b));
     #else
-        __m128i cmp  = _mm_cmpeq_epi64(*cast<__m128i *>(a),
-                                       *cast<__m128i *>(b));
+        __m128i cmp  = _mm_cmpeq_epi64(*cast(__m128i *, a),
+                                       *cast(__m128i *, b));
         __m128i mask = _mm_set1_epi64x(REV_U64_MAX);
         return _mm_testc_si128(_mm_andnot_si128(cmp, mask), mask);
     #endif
@@ -232,20 +232,20 @@ namespace REV::Math
     REV_INLINE bool REV_VECTORCALL mm256_equals(const void *a, const void *b)
     {
     #if REV_ISA >= REV_ISA_AVX512
-        return 0b1111 == _mm256_cmpeq_epi64_mask(*cast<__m256i *>(a),
-                                                 *cast<__m256i *>(b));
+        return 0b1111 == _mm256_cmpeq_epi64_mask(*cast(__m256i *, a),
+                                                 *cast(__m256i *, b));
     #elif REV_ISA >= REV_ISA_AVX2
-        return _mm256_testc_si256(_mm256_cmpeq_epi64(*cast<__m256i *>(a),
-                                                     *cast<__m256i *>(b)),
+        return _mm256_testc_si256(_mm256_cmpeq_epi64(*cast(__m256i *, a),
+                                                     *cast(__m256i *, b)),
                                   _mm256_set1_epi64x(REV_U64_MAX));
     #elif REV_ISA >= REV_ISA_AVX
-        return _mm256_testc_si256(_mm256_castpd_si256(_mm256_cmp_pd(*cast<__m256d *>(a),
-                                                                    *cast<__m256d *>(b),
+        return _mm256_testc_si256(_mm256_castpd_si256(_mm256_cmp_pd(*cast(__m256d *, a),
+                                                                    *cast(__m256d *, b),
                                                                     _CMP_EQ_OQ)),
                                   _mm256_set1_epi64x(REV_U64_MAX));
     #else
-        __m128i *mm_a = cast<__m128i *>(a);
-        __m128i *mm_b = cast<__m128i *>(b);
+        __m128i *mm_a = cast(__m128i *, a);
+        __m128i *mm_b = cast(__m128i *, b);
         __m128i  cmpl = _mm_cmpeq_epi64(mm_a[0], mm_b[0]);
         __m128i  cmph = _mm_cmpeq_epi64(mm_a[1], mm_b[1]);
         __m128i  mask = _mm_set1_epi64x(REV_U64_MAX);
@@ -257,21 +257,21 @@ namespace REV::Math
     REV_INLINE bool REV_VECTORCALL mm256_not_equals(const void *a, const void *b)
     {
     #if REV_ISA >= REV_ISA_AVX512
-        return _mm256_cmpneq_epi64_mask(*cast<__m256i *>(a),
-                                        *cast<__m256i *>(b));
+        return _mm256_cmpneq_epi64_mask(*cast(__m256i *, a),
+                                        *cast(__m256i *, b));
     #elif REV_ISA >= REV_ISA_AVX2
-        __m256i cmp  = _mm256_cmpeq_epi64(*cast<__m256i *>(a),
-                                          *cast<__m256i *>(b));
+        __m256i cmp  = _mm256_cmpeq_epi64(*cast(__m256i *, a),
+                                          *cast(__m256i *, b));
         __m256i mask = _mm256_set1_epi64x(REV_U64_MAX);
         return _mm256_testc_si256(_mm256_andnot_si256(cmp, mask), mask);
     #elif REV_ISA >= REV_ISA_AVX
-        return _mm256_testc_si256(_mm256_castpd_si256(_mm256_cmp_pd(*cast<__m256d *>(a),
-                                                                    *cast<__m256d *>(b),
+        return _mm256_testc_si256(_mm256_castpd_si256(_mm256_cmp_pd(*cast(__m256d *, a),
+                                                                    *cast(__m256d *, b),
                                                                     _CMP_NEQ_OQ)),
                                   _mm256_set1_epi64x(REV_U64_MAX));
     #else
-        __m128i *mm_a = cast<__m128i *>(a);
-        __m128i *mm_b = cast<__m128i *>(b);
+        __m128i *mm_a = cast(__m128i *, a);
+        __m128i *mm_b = cast(__m128i *, b);
         __m128i  cmpl = _mm_cmpeq_epi64(mm_a[0], mm_b[0]);
         __m128i  cmph = _mm_cmpeq_epi64(mm_a[1], mm_b[1]);
         __m128i  mask = _mm_set1_epi64x(REV_U64_MAX);
@@ -283,27 +283,27 @@ namespace REV::Math
     REV_INLINE bool REV_VECTORCALL mm512_equals(const void *a, const void *b)
     {
     #if REV_ISA >= REV_ISA_AVX512
-        return 0xFF == _mm512_cmpeq_epi64_mask(*cast<__m512i *>(a),
-                                               *cast<__m512i *>(b));
+        return 0xFF == _mm512_cmpeq_epi64_mask(*cast(__m512i *, a),
+                                               *cast(__m512i *, b));
     #elif REV_ISA >= REV_ISA_AVX2
-        __m256i *mm_a = cast<__m256i *>(a);
-        __m256i *mm_b = cast<__m256i *>(b);
+        __m256i *mm_a = cast(__m256i *, a);
+        __m256i *mm_b = cast(__m256i *, b);
         __m256i  cmpl = _mm256_cmpeq_epi64(mm_a[0], mm_b[0]);
         __m256i  cmph = _mm256_cmpeq_epi64(mm_a[1], mm_b[1]);
         __m256i  mask = _mm256_set1_epi64x(REV_U64_MAX);
         return _mm256_testc_si256(cmpl, mask)
             && _mm256_testc_si256(cmph, mask);
     #elif REV_ISA >= REV_ISA_AVX
-        __m256d *mm_a = cast<__m256d *>(a);
-        __m256d *mm_b = cast<__m256d *>(b);
+        __m256d *mm_a = cast(__m256d *, a);
+        __m256d *mm_b = cast(__m256d *, b);
         __m256i  cmpl = _mm256_castpd_si256(_mm256_cmp_pd(mm_a[0], mm_b[0], _CMP_EQ_OQ));
         __m256i  cmph = _mm256_castpd_si256(_mm256_cmp_pd(mm_a[1], mm_b[1], _CMP_EQ_OQ));
         __m256i  mask = _mm256_set1_epi64x(REV_U64_MAX);
         return _mm256_testc_si256(cmpl, mask)
             && _mm256_testc_si256(cmph, mask);
     #else
-        __m128i *mm_a = cast<__m128i *>(a);
-        __m128i *mm_b = cast<__m128i *>(b);
+        __m128i *mm_a = cast(__m128i *, a);
+        __m128i *mm_b = cast(__m128i *, b);
         __m128i  cmp0 = _mm_cmpeq_epi64(mm_a[0], mm_b[0]);
         __m128i  cmp1 = _mm_cmpeq_epi64(mm_a[1], mm_b[1]);
         __m128i  cmp2 = _mm_cmpeq_epi64(mm_a[2], mm_b[2]);
@@ -319,27 +319,27 @@ namespace REV::Math
     REV_INLINE bool REV_VECTORCALL mm512_not_equals(const void *a, const void *b)
     {
     #if REV_ISA >= REV_ISA_AVX512
-        return _mm512_cmpneq_epi64_mask(*cast<__m512i *>(a),
-                                        *cast<__m512i *>(b));
+        return _mm512_cmpneq_epi64_mask(*cast(__m512i *, a),
+                                        *cast(__m512i *, b));
     #elif REV_ISA >= REV_ISA_AVX2
-        __m256i *mm_a = cast<__m256i *>(a);
-        __m256i *mm_b = cast<__m256i *>(b);
+        __m256i *mm_a = cast(__m256i *, a);
+        __m256i *mm_b = cast(__m256i *, b);
         __m256i  cmpl = _mm256_cmpeq_epi64(mm_a[0], mm_b[0]);
         __m256i  cmph = _mm256_cmpeq_epi64(mm_a[1], mm_b[1]);
         __m256i  mask = _mm256_set1_epi64x(REV_U64_MAX);
         return _mm256_testc_si256(_mm256_andnot_si256(cmpl, mask), mask)
             || _mm256_testc_si256(_mm256_andnot_si256(cmph, mask), mask);
     #elif REV_ISA >= REV_ISA_AVX
-        __m256d *mm_a = cast<__m256d *>(a);
-        __m256d *mm_b = cast<__m256d *>(b);
+        __m256d *mm_a = cast(__m256d *, a);
+        __m256d *mm_b = cast(__m256d *, b);
         __m256i  cmpl = _mm256_castpd_si256(_mm256_cmp_pd(mm_a[0], mm_b[0], _CMP_NEQ_OQ));
         __m256i  cmph = _mm256_castpd_si256(_mm256_cmp_pd(mm_a[1], mm_b[1], _CMP_NEQ_OQ));
         __m256i  mask = _mm256_set1_epi64x(REV_U64_MAX);
         return _mm256_testc_si256(cmpl, mask)
             || _mm256_testc_si256(cmph, mask);
     #else
-        __m128i *mm_a = cast<__m128i *>(a);
-        __m128i *mm_b = cast<__m128i *>(b);
+        __m128i *mm_a = cast(__m128i *, a);
+        __m128i *mm_b = cast(__m128i *, b);
         __m128i  cmp0 = _mm_cmpeq_epi64(mm_a[0], mm_b[0]);
         __m128i  cmp1 = _mm_cmpeq_epi64(mm_a[1], mm_b[1]);
         __m128i  cmp2 = _mm_cmpeq_epi64(mm_a[2], mm_b[2]);
@@ -353,32 +353,32 @@ namespace REV::Math
     }
 
     #undef _MM_EXTRACT_FLOAT
-    template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m128  mm) { int i = _mm_extract_ps(mm, index); return *cast<f32 *>(&i); }
+    template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m128  mm) { int i = _mm_extract_ps(mm, index); return *cast(f32 *, &i); }
     template<u8 index> REV_INLINE s32 REV_VECTORCALL mm_extract_s32(__m128i mm) { return _mm_extract_epi32(mm, index); }
-    template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m128i mm) { return cast<u32>(_mm_extract_epi32(mm, index)); }
+    template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m128i mm) { return cast(u32, _mm_extract_epi32(mm, index)); }
 
     template<> REV_INLINE f32 REV_VECTORCALL mm_extract_f32<0>(__m128  mm) { return _mm_cvtss_f32(mm); }
     template<> REV_INLINE s32 REV_VECTORCALL mm_extract_s32<0>(__m128i mm) { return _mm_cvtsi128_si32(mm); }
-    template<> REV_INLINE u32 REV_VECTORCALL mm_extract_u32<0>(__m128i mm) { return cast<u32>(_mm_cvtsi128_si32(mm)); }
+    template<> REV_INLINE u32 REV_VECTORCALL mm_extract_u32<0>(__m128i mm) { return cast(u32, _mm_cvtsi128_si32(mm)); }
 
     #if REV_ISA >= REV_ISA_AVX
-        template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m256  mm) { int i = _mm256_extract_epi32(_mm256_castps_si256(mm), index); return *cast<f32 *>(&i); }
+        template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m256  mm) { int i = _mm256_extract_epi32(_mm256_castps_si256(mm), index); return *cast(f32 *, &i); }
         template<u8 index> REV_INLINE s32 REV_VECTORCALL mm_extract_s32(__m256i mm) { return _mm256_extract_epi32(mm, index); }
-        template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m256i mm) { return cast<u32>(_mm256_extract_epi32(mm, index)); }
+        template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m256i mm) { return cast(u32, _mm256_extract_epi32(mm, index)); }
 
         template<> REV_INLINE f32 REV_VECTORCALL mm_extract_f32<0>(__m256  mm) { return _mm_cvtss_f32(_mm256_castps256_ps128(mm)); }
         template<> REV_INLINE s32 REV_VECTORCALL mm_extract_s32<0>(__m256i mm) { return _mm_cvtsi128_si32(_mm256_castsi256_si128(mm)); }
-        template<> REV_INLINE u32 REV_VECTORCALL mm_extract_u32<0>(__m256i mm) { return cast<u32>(_mm_cvtsi128_si32(_mm256_castsi256_si128(mm))); }
+        template<> REV_INLINE u32 REV_VECTORCALL mm_extract_u32<0>(__m256i mm) { return cast(u32, _mm_cvtsi128_si32(_mm256_castsi256_si128(mm))); }
     #endif
 
     #if REV_ISA >= REV_ISA_AVX512
-        template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m512  mm) { int i = _mm_extract_ps(_mm512_extractf32x4_ps(mm, index / 4), index % 4); return *cast<f32 *>(&i); }
+        template<u8 index> REV_INLINE f32 REV_VECTORCALL mm_extract_f32(__m512  mm) { int i = _mm_extract_ps(_mm512_extractf32x4_ps(mm, index / 4), index % 4); return *cast(f32 *, &i); }
         template<u8 index> REV_INLINE s32 REV_VECTORCALL mm_extract_s32(__m512i mm) { return _mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4); }
-        template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m512i mm) { return cast<u32>(_mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4)); }
+        template<u8 index> REV_INLINE u32 REV_VECTORCALL mm_extract_u32(__m512i mm) { return cast(u32, _mm_extract_epi32(_mm512_extracti32x4_epi32(mm, index / 4), index % 4)); }
 
         template<> REV_INLINE f32 REV_VECTORCALL mm_extract_f32<0>(__m512  mm) { return _mm512_cvtss_f32(mm); }
         template<> REV_INLINE s32 REV_VECTORCALL mm_extract_s32<0>(__m512i mm) { return _mm512_cvtsi512_si32(mm); }
-        template<> REV_INLINE u32 REV_VECTORCALL mm_extract_u32<0>(__m512i mm) { return cast<u32>(_mm512_cvtsi512_si32(mm)); }
+        template<> REV_INLINE u32 REV_VECTORCALL mm_extract_u32<0>(__m512i mm) { return cast(u32, _mm512_cvtsi512_si32(mm)); }
     #endif
 
     template<u8 index> REV_INLINE __m128  REV_VECTORCALL mm_insert_f32(__m128  mm, f32 val) { return _mm_insert_ps(mm, _mm_set_ss(val), index); }

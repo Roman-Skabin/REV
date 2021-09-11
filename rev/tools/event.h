@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #pragma once
@@ -8,6 +8,7 @@
 
 namespace REV
 {
+    // @TODO(Roman): Wait for multiple events
     class REV_API Event final
     {
     public:
@@ -30,7 +31,7 @@ namespace REV
         bool Set();
         bool Reset();
 
-        void Wait(u32 milliseconds = INFINITE, bool alerable = false) const;
+        void Wait(u32 milliseconds = INFINITE) const;
 
         Event& operator=(const Event& other);
         Event& operator=(Event&& other) noexcept;

@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #pragma once
@@ -73,7 +73,11 @@ DeviceContext::~DeviceContext()
 
         WaitForGPU();
 
-        if (m_FenceEvent) REV_DEBUG_RESULT(CloseHandle(m_FenceEvent));
+        if (m_FenceEvent)
+        {
+            REV_DEBUG_RESULT(CloseHandle(m_FenceEvent));
+            m_FenceEvent = null;
+        }
         SafeRelease(m_Fence);
 
         for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
@@ -86,6 +90,13 @@ DeviceContext::~DeviceContext()
         SafeRelease(m_DSBuffer);
         SafeRelease(m_DSVHeapDesc);
         SafeRelease(m_RTVHeapDesc);
+
+        if (m_WaitableObject)
+        {
+            REV_DEBUG_RESULT(CloseHandle(m_WaitableObject));
+            m_WaitableObject = null;
+        }
+
         SafeRelease(m_SwapChain);
         SafeRelease(m_GraphicsQueue);
         SafeRelease(m_Device);
@@ -118,9 +129,8 @@ void DeviceContext::StartFrame()
 
     WaitForGPU();
 
-    while (WaitForSingleObjectEx(m_WaitableObject, INFINITE, true) != WAIT_OBJECT_0)
-    {
-    }
+    u32 wait_result = WaitForSingleObjectEx(m_WaitableObject, INFINITE, false);
+    REV_CHECK(wait_result == WAIT_OBJECT_0);
 
     HRESULT error = graphics_allocator->Reset();
     REV_CHECK(CheckResultAndPrintMessages(error, this));
@@ -262,9 +272,8 @@ void DeviceContext::WaitForGPU()
         error = m_Fence->SetEventOnCompletion(current_fence_value, m_FenceEvent);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
-        {
-        }
+        u32 wait_result = WaitForSingleObjectEx(m_FenceEvent, INFINITE, false);
+        REV_CHECK(wait_result == WAIT_OBJECT_0);
     }
 }
 

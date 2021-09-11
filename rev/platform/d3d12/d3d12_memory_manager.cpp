@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #include "core/pch.h"
@@ -18,7 +18,7 @@ MemoryManager::MemoryManager(Allocator *allocator)
       m_CommandAllocator(null),
       m_CommandList(null),
       m_Fence(null),
-      m_FenceEvent(CreateEventExA(null, "D3D12::MemoryManager Event", 0, EVENT_ALL_ACCESS)),
+      m_FenceEvent(null),
       m_StaticMemory(allocator),
       m_SceneMemory(allocator)
 {
@@ -34,7 +34,7 @@ MemoryManager::MemoryManager(Allocator *allocator)
     error = m_DeviceContext->Device()->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_Fence));
     REV_CHECK(CheckResultAndPrintMessages(error));
 
-    REV_DEBUG_RESULT(m_FenceEvent);
+    REV_DEBUG_RESULT(m_FenceEvent = CreateEventExA(null, "REV::D3D12::MemoryManager Event", 0, EVENT_ALL_ACCESS));
 }
 
 MemoryManager::~MemoryManager()
@@ -46,7 +46,11 @@ MemoryManager::~MemoryManager()
         SafeRelease(m_CommandAllocator);
         SafeRelease(m_CommandList);
         SafeRelease(m_Fence);
-        if (m_FenceEvent) REV_DEBUG_RESULT(CloseHandle(m_FenceEvent));
+        if (m_FenceEvent)
+        {
+            REV_DEBUG_RESULT(CloseHandle(m_FenceEvent));
+            m_FenceEvent = null;
+        }
     }
 }
 
@@ -491,9 +495,8 @@ void MemoryManager::EndImmediateExecution()
         error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent);
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        while (WaitForSingleObjectEx(m_FenceEvent, INFINITE, true) != WAIT_OBJECT_0)
-        {
-        }
+        u32 wait_result = WaitForSingleObjectEx(m_FenceEvent, INFINITE, false);
+        REV_CHECK(wait_result == WAIT_OBJECT_0);
     }
 }
 

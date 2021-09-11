@@ -76,7 +76,7 @@ AsyncFile::AsyncFile(AsyncFile&& other)
         entry->in_progress = other_entry->in_progress;
         CopyMemory(&entry->overlapped, &other_entry->overlapped, sizeof(OVERLAPPED));
 
-        other_entry->overlapped.hEvent = INVALID_HANDLE_VALUE;
+        other_entry->overlapped.hEvent = null;
     }
     other.m_Handle = INVALID_HANDLE_VALUE;
 
@@ -381,7 +381,7 @@ void AsyncFile::Wait(bool wait_for_all_apcs) const
 
     for (u32 i = 0; i < MAX_APCS; ++i)
     {
-        const APCEntry *entry = m_APCEntries + i;
+        APCEntry *entry = m_APCEntries + i;
         if (entry->in_progress)
         {
             events[events_count++] = entry->overlapped.hEvent;
@@ -391,7 +391,7 @@ void AsyncFile::Wait(bool wait_for_all_apcs) const
     if (events_count)
     {
         u32 wait_result = WaitForMultipleObjectsEx(events_count, events, wait_for_all_apcs, INFINITE, true);
-        REV_CHECK(wait_result != WAIT_FAILED);
+        REV_CHECK(wait_result == WAIT_IO_COMPLETION);
     }
 
     m_CriticalSection.Leave();
@@ -626,7 +626,7 @@ AsyncFile& AsyncFile::operator=(AsyncFile&& other)
             entry->in_progress = other_entry->in_progress;
             CopyMemory(&entry->overlapped, &other_entry->overlapped, sizeof(OVERLAPPED));
 
-            other_entry->overlapped.hEvent = INVALID_HANDLE_VALUE;
+            other_entry->overlapped.hEvent = null;
         }
 
         other.m_Handle = INVALID_HANDLE_VALUE;
@@ -646,6 +646,7 @@ void AsyncFile::CreateAPCEntries()
 
         entry->file              = this;
         entry->overlapped.hEvent = CreateEventExA(null, null, CREATE_EVENT_MANUAL_RESET, EVENT_ALL_ACCESS);
+        REV_CHECK(entry->overlapped.hEvent);
     }
 }
 
@@ -658,10 +659,10 @@ void AsyncFile::DestroyAPCEntries()
         entry->file        = null;
         entry->in_progress = false;
 
-        if (entry->overlapped.hEvent != INVALID_HANDLE_VALUE)
+        if (entry->overlapped.hEvent)
         {
             REV_DEBUG_RESULT(CloseHandle(entry->overlapped.hEvent));
-            entry->overlapped.hEvent = INVALID_HANDLE_VALUE;
+            entry->overlapped.hEvent = null;
         }
     }
 }

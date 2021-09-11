@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #pragma once

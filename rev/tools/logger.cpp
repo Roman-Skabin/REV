@@ -1,12 +1,11 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #include "core/pch.h"
 #include "tools/logger.h"
 #include "tools/critical_section.hpp"
 #include "tools/static_string_builder.hpp"
-#include <time.h>
 
 namespace REV
 {
@@ -36,7 +35,7 @@ Logger::Logger(const ConstString& name, const ConstString& filename, TARGET targ
     {
         m_Console = GetStdHandle(STD_OUTPUT_HANDLE);
 
-        if (m_Console == INVALID_HANDLE_VALUE)
+        if (!m_Console || m_Console == INVALID_HANDLE_VALUE)
         {
             m_Target  &= ~TARGET_CONSOLE;
             LogError("Failed to open console handle");
@@ -78,7 +77,7 @@ Logger::Logger(const Logger& other, const ConstString& name, TARGET target)
         m_Attribs = other.m_Attribs;
         m_Console = GetStdHandle(STD_OUTPUT_HANDLE);
 
-        if (m_Console == INVALID_HANDLE_VALUE)
+        if (!m_Console || m_Console == INVALID_HANDLE_VALUE)
         {
             m_Target  &= ~TARGET_CONSOLE;
             LogError("Failed to open console handle");

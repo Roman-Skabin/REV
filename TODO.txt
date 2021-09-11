@@ -13,7 +13,7 @@
     - Max view distance (max LOD & far)
 
 - Tools
-    - Fix CriticalSection (GetCurrentThread returns pseudo handle so it always = INVALID_HANDLE_VALUE)
+    - Wait for multiple events
     - Change a bit StringBuidler (example: StaticStringBuilder)
     - Create StaticString and StaticStringBuilder on arenas
     - Several simultaneous read operations under the same async file?

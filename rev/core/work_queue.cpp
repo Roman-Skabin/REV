@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #include "core/pch.h"
@@ -36,6 +36,8 @@ WorkQueue::WorkQueue(const Logger& logger)
 
 WorkQueue::~WorkQueue()
 {
+    Wait();
+    CloseHandle(m_Semaphore);
     ZeroMemory(this, sizeof(WorkQueue));
 }
 
@@ -112,9 +114,8 @@ u32 WINAPI ThreadProc(void *arg)
         }
         else
         {
-            while (WaitForSingleObjectEx(work_queue->m_Semaphore, INFINITE, false) != WAIT_OBJECT_0)
-            {
-            }
+            u32 res = WaitForSingleObjectEx(work_queue->m_Semaphore, INFINITE, false);
+            REV_CHECK(res == WAIT_OBJECT_0);
         }
     }
     return 0;

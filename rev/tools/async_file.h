@@ -1,5 +1,5 @@
 //
-// Copyright 2020 Roman Skabin
+// Copyright 2020-2021 Roman Skabin
 //
 
 #pragma once
@@ -80,8 +80,8 @@ namespace REV
             u32 events_count = events_it - events;
             if (events_count)
             {
-                u32 res = WaitForMultipleObjectsEx(events_count, events, true, INFINITE, true);
-                REV_CHECK(res != WAIT_FAILED);
+                u32 wait_result = WaitForMultipleObjectsEx(events_count, events, true, INFINITE, true);
+                REV_CHECK(wait_result == WAIT_IO_COMPLETION);
             }
         }
 

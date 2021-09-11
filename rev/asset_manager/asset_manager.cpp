@@ -34,7 +34,7 @@ AssetManager::AssetManager(Allocator *allocator, const Logger& logger)
       m_StaticAssets(allocator),
       m_SceneAssets(allocator),
       m_Logger(logger, ConstString(REV_CSTR_ARGS("AssetManager logger")), Logger::TARGET_CONSOLE | Logger::TARGET_FILE),
-      m_WorkQueue(m_Logger)
+      m_WorkQueue(m_Logger, Memory::Get()->PermanentArena())
 {
     m_Logger.LogSuccess("AssetManager has been created");
 }

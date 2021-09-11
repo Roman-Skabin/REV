@@ -7,20 +7,17 @@
 #include "memory/memlow.h"
 #include "tools/logger.h"
 #include "tools/function.hpp"
+#include "tools/const_array.hpp"
 
 namespace REV
 {
-    // @TODO(Roman): Fix the destructor: terminate threads and close semaphore.
-    //               Work entries should hold thread handles to terminate them in destructor.
     class REV_API WorkQueue final
     {
     public:
-        using Work = Function<void()>;
-
-        WorkQueue(const Logger& logger);
+        WorkQueue(const Logger& logger, Arena& arena);
         ~WorkQueue();
 
-        void AddWork(const Work& work);
+        void AddWork(const Function<void()>& callback);
         void Wait();
 
     private:
@@ -31,17 +28,30 @@ namespace REV
     private:
         enum
         {
-            MAX_THREADS = 64 - 1,
+            MIN_THREADS = 4,
+            MAX_THREADS = 128,
 
-            MAX_WORKS_BYTES = AlignUp(MAX_THREADS * sizeof(Work), CACHE_LINE_SIZE),
-            MAX_WORKS       = MAX_WORKS_BYTES / sizeof(Work),
+            MIN_WORKS   = MIN_THREADS - 1,
+            MAX_WORKS   = __max(MIN_WORKS, MAX_THREADS - 1),
         };
 
-        HANDLE       m_Semaphore;
-        volatile s32 m_CompletionGoal;
-        volatile s32 m_EntriesCompleted;
-        volatile s32 m_NextEntryToRead;
-        volatile s32 m_NextEntryToWrite;
-        Work         m_Works[MAX_WORKS];
+        struct Work
+        {
+            HANDLE           thread_handle;
+            Function<void()> callback;
+        };
+
+        struct Header
+        {
+            HANDLE       semaphore;
+            volatile s32 completion_goal;
+            volatile s32 entries_completed;
+            volatile s32 next_entry_to_read;
+            volatile s32 next_entry_to_write;
+            s32          works_count;
+            Work         works[0];
+        };
+
+        Header *m_Header;
     };
 }

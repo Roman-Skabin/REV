@@ -96,7 +96,7 @@ void *Arena::PushBytesAligned(u64 bytes, u64 alignment)
 {
     REV_CHECK_M(bytes, "0 bytes has been passed");
 
-    if (alignment < REV::DEFAULT_ALIGNMENT) alignment = REV::DEFAULT_ALIGNMENT;
+    if (alignment < DEFAULT_ALIGNMENT) alignment = DEFAULT_ALIGNMENT;
     REV_CHECK_M(IsPowOf2(alignment), "Alignment must be power of 2");
 
     u64 aligned_bytes = AlignUp(bytes, alignment);

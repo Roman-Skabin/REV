@@ -16,7 +16,7 @@ namespace REV
     {
     public:
         REV_INLINE CriticalSection()
-            : m_Semaphore(CreateSemaphoreExA(null, 1, 1, "CriticalSection Semaphore", 0, SEMAPHORE_ALL_ACCESS)),
+            : m_Semaphore(CreateSemaphoreExA(null, 1, 1, "REV::CriticalSection Semaphore", 0, SEMAPHORE_ALL_ACCESS)),
               m_RecursionCount(0),
               m_Owner(0)
         {
@@ -63,7 +63,7 @@ namespace REV
             if (_InterlockedDecrement64(&m_RecursionCount) == 0)
             {
                 _InterlockedExchange(&m_Owner, 0);
-                ReleaseSemaphore(m_Semaphore, 1, null);
+                REV_DEBUG_RESULT(ReleaseSemaphore(m_Semaphore, 1, null));
             }
         }
 

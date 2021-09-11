@@ -20,7 +20,7 @@ Application *Application::Get()
 Application::Application(const ConstString& name, const ConstString& ini_filename)
     : m_Logger(ConstString(REV_CSTR_ARGS("REV logger")), ConstString(REV_CSTR_ARGS("../log/rev.log")), Logger::TARGET_FILE),
       m_Allocator(Memory::Get()->PushToPermanentArena(GB(1)), GB(1), false, ConstString(REV_CSTR_ARGS("Default"))),
-      m_WorkQueue(m_Logger),
+      m_WorkQueue(m_Logger, Memory::Get()->PermanentArena()),
       m_Settings(Settings::Init(ini_filename)),
       m_Window(m_Logger, name),
       m_Input(Input::Create(m_Window, m_Logger)),

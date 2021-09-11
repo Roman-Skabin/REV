@@ -46,6 +46,14 @@ namespace REV
         template<typename T> REV_INLINE T *PushToPA(u64 count = 1)                     { return m_PermanentArena.Push<T>(count);             }
         template<typename T> REV_INLINE T *PushToPAA(u64 count = 1, u64 alignment = 0) { return m_PermanentArena.PushA<T>(count, alignment); }
 
+        const Arena& FrameArena()     const { return m_FrameArena;     }
+        const Arena& SceneArena()     const { return m_SceneArena;     }
+        const Arena& PermanentArena() const { return m_PermanentArena; }
+
+        Arena& FrameArena()     { return m_FrameArena;     }
+        Arena& SceneArena()     { return m_SceneArena;     }
+        Arena& PermanentArena() { return m_PermanentArena; }
+
     private:
         REV_DELETE_CONSTRS_AND_OPS(Memory);
 

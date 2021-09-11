@@ -21,7 +21,7 @@ namespace REV
         ~Arena();
 
         void *PushBytes(u64 bytes);
-        void *PushBytesAligned(u64 bytes, u64 alignment);
+        void *PushBytesAligned(u64 bytes, u64 alignment = DEFAULT_ALIGNMENT);
 
         template<typename T> REV_INLINE T *Push(u64 count = 1)                     { return cast(T *, PushBytes(count * sizeof(T)));                   }
         template<typename T> REV_INLINE T *PushA(u64 count = 1, u64 alignment = 0) { return cast(T *, PushBytesAligned(count * sizeof(T), alignment)); }

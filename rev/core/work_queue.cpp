@@ -67,7 +67,11 @@ void WorkQueue::AddWork(const Function<void()>& callback)
 
             if (old == old_next_entry_to_write)
             {
-                m_Header->works[old_next_entry_to_write].callback = callback;
+                Work *work = m_Header->works + old;
+
+                _InterlockedExchange8(&work->callback_is_changing, true);
+                work->callback = callback;
+                _InterlockedExchange8(&work->callback_is_changing, false);
 
                 _InterlockedIncrement(&m_Header->completion_goal);
                 REV_DEBUG_RESULT(ReleaseSemaphore(m_Header->semaphore, 1, null));
@@ -93,7 +97,11 @@ void WorkQueue::Wait()
 
             if (old == old_next_entry_to_read)
             {
-                m_Header->works[old].callback();
+                Work *work = m_Header->works + old;
+
+                while (work->callback_is_changing);
+                work->callback();
+
                 _InterlockedIncrement(&m_Header->entries_completed);
             }
         }
@@ -119,7 +127,11 @@ u32 WINAPI ThreadProc(void *arg)
 
             if (old == old_next_entry_to_read)
             {
-                header->works[old].callback();
+                WorkQueue::Work *work = header->works + old;
+
+                while (work->callback_is_changing);
+                work->callback();
+
                 _InterlockedIncrement(&header->entries_completed);
             }
         }

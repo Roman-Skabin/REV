@@ -354,27 +354,6 @@ namespace REV::RTTI
 
     template<typename T> constexpr remove_ref_t<T>&& declval() noexcept;
 
-    template<typename Void, typename Callable, typename ...Args>
-    struct _callable
-    {
-        static constexpr bool is_callable = false;
-    };
-
-    template<typename Callable, typename ...Args>
-    struct _callable<void_t<decltype(declval<Callable>()(declval<Args>()...))>, Callable, Args...>
-    {
-        static constexpr bool is_callable = true;
-
-        using ret_type  = decltype(declval<Callable>()(declval<Args>()...));
-        using func_type = ret_type(Args...);
-    };
-
-    template<typename Callable, typename ...Args>
-    using callable = _callable<void, Callable, Args...>;
-
-    template<typename Callable, typename ...Args>
-    inline constexpr bool is_callable_v = callable<Callable, Args...>::is_callable;
-
     template<typename T, typename U>
     struct comparable
     {

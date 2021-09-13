@@ -24,6 +24,10 @@ namespace REV
     //                    Ok, maybe the only good way to synchronize it is with some kind of condition variable
     //                    or with some flag which state you change with interlocked functions.
 
+    // @Issue(Roman): So maybe just get rid of std::function?
+    //                But then we won't be able to pass lambdas as callbacks.
+    //                Hmm...
+
     template<typename SomethingCallable>
     using Function = std::function<SomethingCallable>;
 }

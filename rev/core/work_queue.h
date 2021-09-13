@@ -7,7 +7,6 @@
 #include "memory/memlow.h"
 #include "tools/logger.h"
 #include "tools/function.hpp"
-#include "tools/const_array.hpp"
 
 namespace REV
 {

@@ -291,7 +291,7 @@ enum class DEBUG_COLOR : u16
 };
 
 REV_API void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...);
-REV_API void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, bool print_sys_error, const char *format, ...);
+REV_API void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, bool print_sys_error, bool reserved, const char *format, ...);
 
 // @NOTE(Roman):      ConstString is pushed on the frame arena, so you don't need to free anything.
 // @Important(Roman): Also keep in mind that data will be valid only for 1 frame long.
@@ -300,11 +300,11 @@ REV_API u32 GetSysErrorCode();
 
 #if (REV_DEVDEBUG || defined(_REV_CHECKS_BREAK)) && !defined(_REV_NO_CHECKS)
 
-    #define REV_INFO_M(message, ...)     { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::INFO,    false, message, __VA_ARGS__);                                 }
-    #define REV_ERROR_M(message, ...)    { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR,   true,  message, __VA_ARGS__); __debugbreak(); ExitProcess(1); }
-    #define REV_WARNING_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, false, message, __VA_ARGS__);                                 }
-    #define REV_WARNING_MS(message, ...) { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, true,  message, __VA_ARGS__);                                 }
-    #define REV_SUCCESS_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::SUCCESS, false, message, __VA_ARGS__);                                 }
+    #define REV_INFO_M(message, ...)     { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::INFO,    false, false, message, __VA_ARGS__);                                 }
+    #define REV_ERROR_M(message, ...)    { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR,   true,  true,  message, __VA_ARGS__); __debugbreak(); ExitProcess(1); }
+    #define REV_WARNING_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, false, false, message, __VA_ARGS__);                                 }
+    #define REV_WARNING_MS(message, ...) { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, true,  false, message, __VA_ARGS__);                                 }
+    #define REV_SUCCESS_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::SUCCESS, false, false, message, __VA_ARGS__);                                 }
 
     #define REV_CHECK(expr)                 { if (!(expr)) REV_ERROR_M(REV_CSTR(expr))       }
     #define REV_CHECK_M(expr, message, ...) { if (!(expr)) REV_ERROR_M(message, __VA_ARGS__) }
@@ -314,11 +314,11 @@ REV_API u32 GetSysErrorCode();
 
 #elif !defined(_REV_NO_CHECKS)
 
-    #define REV_INFO_M(message, ...)     { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::INFO,    false, message, __VA_ARGS__);                 }
-    #define REV_ERROR_M(message, ...)    { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR,   true,  message, __VA_ARGS__); ExitProcess(1); }
-    #define REV_WARNING_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, false, message, __VA_ARGS__);                 }
-    #define REV_WARNING_MS(message, ...) { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, true,  message, __VA_ARGS__);                 }
-    #define REV_SUCCESS_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::SUCCESS, false, message, __VA_ARGS__);                 }
+    #define REV_INFO_M(message, ...)     { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::INFO,    false, false, message, __VA_ARGS__);                 }
+    #define REV_ERROR_M(message, ...)    { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR,   true,  true,  message, __VA_ARGS__); ExitProcess(1); }
+    #define REV_WARNING_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, false, false, message, __VA_ARGS__);                 }
+    #define REV_WARNING_MS(message, ...) { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, true,  false, message, __VA_ARGS__);                 }
+    #define REV_SUCCESS_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::SUCCESS, false, false, message, __VA_ARGS__);                 }
 
     #define REV_CHECK(expr)                 { if (!(expr)) REV_ERROR_M(REV_CSTR(expr))       }
     #define REV_CHECK_M(expr, message, ...) { if (!(expr)) REV_ERROR_M(message, __VA_ARGS__) }
@@ -328,11 +328,11 @@ REV_API u32 GetSysErrorCode();
 
 #else
 
-    #define REV_INFO_M(message, ...)     { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::INFO,    false, message, __VA_ARGS__);                 }
-    #define REV_ERROR_M(message, ...)    { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR,   true,  message, __VA_ARGS__); ExitProcess(1); }
-    #define REV_WARNING_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, false, message, __VA_ARGS__);                 }
-    #define REV_WARNING_MS(message, ...) { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, true,  message, __VA_ARGS__);                 }
-    #define REV_SUCCESS_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::SUCCESS, false, message, __VA_ARGS__);                 }
+    #define REV_INFO_M(message, ...)     { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::INFO,    false, false, message, __VA_ARGS__);                 }
+    #define REV_ERROR_M(message, ...)    { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR,   true,  true,  message, __VA_ARGS__); ExitProcess(1); }
+    #define REV_WARNING_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, false, false, message, __VA_ARGS__);                 }
+    #define REV_WARNING_MS(message, ...) { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, true,  false, message, __VA_ARGS__);                 }
+    #define REV_SUCCESS_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::SUCCESS, false, false, message, __VA_ARGS__);                 }
 
     #define REV_CHECK(expr)                 {}
     #define REV_CHECK_M(expr, message, ...) {}

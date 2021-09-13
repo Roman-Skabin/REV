@@ -125,10 +125,11 @@
 
 #if REV_PLATFORM_WIN64
     #include <Windows.h>
-    #include <shlwapi.h>
-    #undef GetMessage
-
     #include <Xinput.h>
+    #include <shlwapi.h>
+    #include <DbgHelp.h>
+
+    #undef GetMessage
 //  #include <audiopolicy.h>
 //  #include <mmdeviceapi.h>
 //  #include <AudioClient.h>

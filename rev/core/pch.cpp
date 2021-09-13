@@ -12,6 +12,7 @@
     #pragma comment(lib, "kernel32.lib")    // Windows
     #pragma comment(lib, "user32.lib")      // Windows
     #pragma comment(lib, "shlwapi.lib")     // Windows
+    #pragma comment(lib, "DbgHelp.lib")     // Windows
     #pragma comment(lib, "d3d12.lib")       // DirectX
     #pragma comment(lib, "dxgi.lib")        // DirectX
     #pragma comment(lib, "d3dcompiler.lib") // DirectX

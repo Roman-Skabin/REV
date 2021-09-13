@@ -197,7 +197,22 @@ private:
         }
         else if constexpr (RTTI::has_to_string_v<T>)
         {
+            u64 start_length = m_StaticString.Length();
+
             m_StaticString.PushBack(arg.ToString());
+
+            u64 appended_length = m_StaticString.Length() - start_length;
+            if (appended_length < m_TextFormat.Width)
+            {
+                if (m_TextFormat.TextAlignment == SBTA::RIGHT)
+                {
+                    m_StaticString.Insert(start_length, m_TextFormat.Fill, m_TextFormat.Width - appended_length);
+                }
+                else
+                {
+                    m_StaticString.PushBack(m_TextFormat.Fill, m_TextFormat.Width - appended_length);
+                }
+            }
         }
         else
         {
@@ -280,8 +295,8 @@ private:
 
     u64 ParsePointer(char *buffer, u64 val)
     {
-        u64 buffer_start = buffer;
-        u64 buffer_end   = buffer;
+        char *buffer_start = buffer;
+        char *buffer_end   = buffer;
 
         if (val > 0)
         {
@@ -798,7 +813,7 @@ private:
             }
             else
             {
-                m_StaticString.Insert(start_length + appended_length, fill, width - appended_length);
+                m_StaticString.PushBack(fill, width - appended_length);
             }
         }
     }

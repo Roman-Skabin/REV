@@ -1,6 +1,10 @@
 .vscode/
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.*
 bin/
-build/*.time
+build/ctime/*.ctm
 ideas/
 log/
 nsight/

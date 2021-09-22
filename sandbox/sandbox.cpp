@@ -3,9 +3,9 @@
 
 Sandbox::Sandbox()
     : Application(REV::ConstString(REV_CSTR_ARGS("Sandbox")),
-                  REV::ConstString(REV_CSTR_ARGS("../sandbox/sandbox.ini"))),
+                  REV::ConstString(REV_CSTR_ARGS("../../sandbox/sandbox.ini"))),
       m_Logger(REV::ConstString(REV_CSTR_ARGS("Sandbox logger")),
-               REV::ConstString(REV_CSTR_ARGS("../log/sandbox.log")),
+               REV::ConstString(REV_CSTR_ARGS("../../log/sandbox.log")),
                REV::Logger::TARGET_FILE | REV::Logger::TARGET_CONSOLE),
       m_DemoScene(&m_Allocator)
 {

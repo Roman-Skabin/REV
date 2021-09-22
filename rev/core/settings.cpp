@@ -65,7 +65,7 @@ REV_INTERNAL void REV_CDECL SyntaxError(Lexer *lexer, const char *format, ...)
     
     va_end(args);
 
-    lexer->token.pos.c = cast(u32, lexer->stream - lexer->line_start);
+    lexer->token.pos.c = cast(u32, lexer->stream - lexer->line_start + 1);
 
     PrintDebugMessage(DEBUG_COLOR::ERROR, "%s(%I32u:%I32u): INI syntax error: %s.", lexer->filename, lexer->token.pos.r, lexer->token.pos.c, buffer);
     // @TODO(Roman): #CrossPlatform

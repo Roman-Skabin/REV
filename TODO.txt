@@ -20,10 +20,6 @@
     - Hash table
     - UTF-8 strings?
 
-- Build
-    - [Pre?]build system. Build only edited files
-      (source file change time > .obj file change time)? // @Optimization
-
 - Git
     - Custom commit/push scripts with tags checks like Jon's nocheckin
 

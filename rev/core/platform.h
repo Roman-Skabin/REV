@@ -197,6 +197,7 @@
     #define REV_VECTORCALL    __vectorcall
     #define REV_THISCALL      __thiscall
     #define REV_STDCALL       __stdcall
+    #define REV_DEBUG_BREAK() __debugbreak()
 #elif REV_COMPILER_GCC || REV_COMPILER_CLANG || REV_COMPILER_MINGW
     #define REV_EXPORT        __attribute__((dllexport))
     #define REV_IMPORT        __attribute__((dllimport))
@@ -212,6 +213,13 @@
     #define REV_VECTORCALL    // Only x86 builds
     #define REV_THISCALL      // Only x86 builds
     #define REV_STDCALL       // Only x86 builds
+    #if __has_builtin(__builtin_debugtrap)
+        #define REV_DEBUG_BREAK() __builtin_debugtrap()
+    #else
+        #define REV_DEBUG_BREAK() raise(SIGTRAP)
+    #endif
+#else
+    #define REV_DEBUG_BREAK() raise(SIGTRAP)
 #endif
 
 //

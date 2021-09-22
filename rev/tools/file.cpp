@@ -479,11 +479,6 @@ void File::Delete(const ConstString& filename)
     }
 }
 
-bool File::Exists(const StaticString<REV_PATH_CAPACITY>& filename)
-{
-    return PathFileExistsA(filename.Data());
-}
-
 bool File::Exists(const ConstString& filename)
 {
     REV_CHECK_M(filename.Length() < REV_PATH_CAPACITY, "Fileanme is to long, max available length is: %I32u", REV_PATH_CAPACITY);
@@ -542,8 +537,10 @@ u64 File::LastWriteTime() const
     return *cast(u64 *, &last_write_time);
 }
 
-void File::Find(const StaticString<REV_PATH_CAPACITY>& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback)
+void File::Find(const ConstString& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback)
 {
+    REV_CHECK_M(filename.Length() < REV_PATH_CAPACITY, "Fileanme is to long, max available length is: %I32u", REV_PATH_CAPACITY);
+
     WIN32_FIND_DATAA win32_find_data = {};
     HANDLE           find_handle     = FindFirstFileExA(filename.Data(),
                                                         FindExInfoBasic, &win32_find_data,
@@ -876,11 +873,6 @@ Path& Path::Create()
 bool Path::Exists(const ConstString& path)
 {
     REV_CHECK_M(path.Length() < REV_PATH_CAPACITY, "Path is to long, max available length is: %I32u", REV_PATH_CAPACITY);
-    return PathFileExistsA(path.Data());
-}
-
-bool Path::Exists(const StaticString<REV_PATH_CAPACITY>& path)
-{
     return PathFileExistsA(path.Data());
 }
 

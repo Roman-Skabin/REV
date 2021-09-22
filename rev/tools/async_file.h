@@ -41,18 +41,18 @@ namespace REV
         };
 
     public:
-        REV_NOINLINE AsyncFile(nullptr_t = null);
-        REV_NOINLINE AsyncFile(const ConstString& filename, FLAG flags);
-        REV_INLINE   AsyncFile(const StaticString<REV_PATH_CAPACITY>& filename, FLAG flags) : AsyncFile(filename.ToConstString(), flags) {}
-        REV_NOINLINE AsyncFile(const AsyncFile& other);
-        REV_NOINLINE AsyncFile(AsyncFile&& other);
+        AsyncFile(nullptr_t = null);
+        AsyncFile(const ConstString& filename, FLAG flags);
+        template<u64 capacity> REV_INLINE AsyncFile(const StaticString<capacity>& filename, FLAG flags) : AsyncFile(filename.ToConstString(), flags) {}
+        AsyncFile(const AsyncFile& other);
+        AsyncFile(AsyncFile&& other);
 
         ~AsyncFile();
 
-        REV_NOINLINE bool Open(const ConstString& filename, FLAG flags);
-        REV_INLINE   bool Open(const StaticString<REV_PATH_CAPACITY>& filename, FLAG flags) { return Open(filename.ToConstString(), flags); }
-        REV_NOINLINE void ReOpen(FLAG new_flags);
-        REV_NOINLINE void Close();
+        bool Open(const ConstString& filename, FLAG flags);
+        template<u64 capacity> REV_INLINE bool Open(const StaticString<capacity>& filename, FLAG flags) { return Open(filename.ToConstString(), flags); }
+        void ReOpen(FLAG new_flags);
+        void Close();
 
         void Clear();
 

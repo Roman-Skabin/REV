@@ -12,7 +12,7 @@
 
 // REV predefined macros:
 //     _REV_DEV            - for engine developers, is used to build DLL.
-//     _REV_CHECKS_BREAK   - __debugbreak in checks before ExitProcess.
+//     _REV_CHECKS_BREAK   - REV_DEBUG_BREAK in checks before ExitProcess.
 //     _REV_NO_CHECKS      - turns off all checks except REV_ERROR_M
 //     _REV_GLOBAL_TYPES   - can use types without REV:: prefix
 //     _REV_GLOBAL_HELPERS - can use helpers without REV:: prefix
@@ -69,7 +69,7 @@ enum
 
 #define REV_CSTRLEN(cstr) (sizeof(cstr) - sizeof(*(cstr)))
 
-#define REV_CSTR_ARGS(cstr)   cstr,  REV_CSTRLEN(cstr)
+#define REV_CSTR_ARGS(cstr)    cstr,  REV_CSTRLEN(cstr)
 #define REV_CARRAY_ARGS(array) array, ::REV::ArrayCount(array)
 
 #define null nullptr
@@ -300,11 +300,11 @@ REV_API u32 GetSysErrorCode();
 
 #if (REV_DEVDEBUG || defined(_REV_CHECKS_BREAK)) && !defined(_REV_NO_CHECKS)
 
-    #define REV_INFO_M(message, ...)     { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::INFO,    false, false, message, __VA_ARGS__);                                 }
-    #define REV_ERROR_M(message, ...)    { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR,   true,  true,  message, __VA_ARGS__); __debugbreak(); ExitProcess(1); }
-    #define REV_WARNING_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, false, false, message, __VA_ARGS__);                                 }
-    #define REV_WARNING_MS(message, ...) { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, true,  false, message, __VA_ARGS__);                                 }
-    #define REV_SUCCESS_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::SUCCESS, false, false, message, __VA_ARGS__);                                 }
+    #define REV_INFO_M(message, ...)     { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::INFO,    false, false, message, __VA_ARGS__);                                    }
+    #define REV_ERROR_M(message, ...)    { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR,   true,  true,  message, __VA_ARGS__); REV_DEBUG_BREAK(); ExitProcess(1); }
+    #define REV_WARNING_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, false, false, message, __VA_ARGS__);                                    }
+    #define REV_WARNING_MS(message, ...) { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::WARNING, true,  false, message, __VA_ARGS__);                                    }
+    #define REV_SUCCESS_M(message, ...)  { ::REV::PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::SUCCESS, false, false, message, __VA_ARGS__);                                    }
 
     #define REV_CHECK(expr)                 { if (!(expr)) REV_ERROR_M(REV_CSTR(expr))       }
     #define REV_CHECK_M(expr, message, ...) { if (!(expr)) REV_ERROR_M(message, __VA_ARGS__) }

@@ -40,10 +40,11 @@
 #
 # image files are treated as binary by default.
 ###############################################################################
- *.jpg   binary
- *.png   binary
- *.bmp   binary
+#*.jpg   binary
+#*.png   binary
+#*.bmp   binary
 #*.gif   binary
+ *.dds   binary
 
 ###############################################################################
 # diff behavior for common document formats
@@ -62,3 +63,8 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+#
+###############################################################################
+*.cso   binary

@@ -48,18 +48,18 @@ namespace REV
         };
 
     public:
-        REV_NOINLINE File(nullptr_t = null);
-        REV_NOINLINE File(const ConstString& filename, FLAG flags);
-        REV_INLINE   File(const StaticString<REV_PATH_CAPACITY>& filename, FLAG flags) : File(filename.ToConstString(), flags) {}
-        REV_NOINLINE File(const File& other);
-        REV_NOINLINE File(File&& other);
+        File(nullptr_t = null);
+        File(const ConstString& filename, FLAG flags);
+        template<u64 capacity> REV_INLINE File(const StaticString<capacity>& filename, FLAG flags) : File(filename.ToConstString(), flags) {}
+        File(const File& other);
+        File(File&& other);
 
         ~File();
 
-        REV_NOINLINE bool Open(const ConstString& filename, FLAG flags);
-        REV_INLINE   bool Open(const StaticString<REV_PATH_CAPACITY>& filename, FLAG flags) { return Open(filename.ToConstString(), flags); }
-        REV_NOINLINE void ReOpen(FLAG new_flags);
-        REV_NOINLINE void Close();
+        bool Open(const ConstString& filename, FLAG flags);
+        template<u64 capacity> REV_INLINE bool Open(const StaticString<capacity>& filename, FLAG flags) { return Open(filename.ToConstString(), flags); }
+        void ReOpen(FLAG new_flags);
+        void Close();
 
         void Clear();
 
@@ -81,15 +81,16 @@ namespace REV
         static REV_INLINE void Rename(const ConstString& filename, const ConstString& new_filename) { Move(filename, new_filename, true); }
         static            void Delete(const ConstString& filename);
 
-        static bool Exists(const StaticString<REV_PATH_CAPACITY>& filename);
         static bool Exists(const ConstString& filename);
+        template<u64 capacity> static REV_INLINE bool Exists(const StaticString<capacity>& filename) { return Exists(filename.ToConstString()); }
 
         void GetTimings(u64& creation_time, u64& last_access_time, u64& last_write_time) const;
         u64  CreationTime() const;
         u64  LastAccessTime() const;
         u64  LastWriteTime() const;
 
-        static void Find(const StaticString<REV_PATH_CAPACITY>& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback);
+        static void Find(const ConstString& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback);
+        template<u64 capacity> static REV_INLINE void Find(const StaticString<capacity>& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback) { Find(filename.ToConstString(), FindFileCallback); }
 
         void SetOffset(s64 offset);
 
@@ -132,7 +133,7 @@ namespace REV
         ConstString does_not_exist = null;
 
         REV_INLINE Path(const ConstString& path)                     : path(path) { REV_CHECK_M(path.Length() < REV_PATH_CAPACITY, "Path is to long, max available length is: %I32u", REV_PATH_CAPACITY); }
-        REV_INLINE Path(const StaticString<REV_PATH_CAPACITY>& path) : path(path.ToConstString()) {}
+        template<u64 capacity> REV_INLINE Path(const StaticString<capacity>& path) : Path(path.ToConstString()) {}
         REV_INLINE Path(const Path& other)                           : path(other.path),             exists(other.exists),             does_not_exist(other.does_not_exist)             {}
         REV_INLINE Path(Path&& other)                                : path(RTTI::move(other.path)), exists(RTTI::move(other.exists)), does_not_exist(RTTI::move(other.does_not_exist)) {}
 
@@ -143,7 +144,7 @@ namespace REV
         Path& Create();
 
         template<typename ...T>
-        Path& PrintWarningIfDoesNotExist(const T... args)
+        Path& PrintWarningIfDoesNotExist(const T&... args)
         {
             if constexpr (sizeof...(args) > 0)
             {
@@ -159,7 +160,7 @@ namespace REV
         }
 
         static bool Exists(const ConstString& path);
-        static bool Exists(const StaticString<REV_PATH_CAPACITY>& path);
+        template<u64 capacity> static REV_INLINE bool Exists(const StaticString<capacity>& path) { return Exists(path.ToConstString()); }
 
     private:
         void _PrintWarningIfDoesNotExist(const ConstString& warning_message = null);

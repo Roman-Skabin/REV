@@ -16,7 +16,7 @@ REV_GLOBAL CriticalSection<false> g_CriticalSection;
 
 // @NOTE(Roman): For ComposeStackTraceMessage
 #if (REV_DEVDEBUG || defined(_REV_CHECKS_BREAK)) && !defined(_REV_NO_CHECKS)
-    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); __debugbreak(); ExitProcess(1); }
+    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); REV_DEBUG_BREAK(); ExitProcess(1); }
     #define REV_CSTM_CHECK_M(expr, message, ...) { if (!(expr)) REV_CSTM_ERROR_M(message, __VA_ARGS__) }
     #define REV_CSTM_CHECK(expr)                 { if (!(expr)) REV_CSTM_ERROR_M(REV_CSTR(expr)) }
 #elif !defined(_REV_NO_CHECKS)
@@ -31,7 +31,12 @@ REV_GLOBAL CriticalSection<false> g_CriticalSection;
 
 REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
 {
-    // @NOTE(Roman): [frame_index] module: module_name function: function_name
+    // @NOTE(Roman): Stack trace:
+    //                   +-------------+---------------+------------------+
+    //                   |    module   |    function   |      address     |
+    //                   +-------------+---------------+------------------+
+    //                   | module_name | function_name | function_address |
+    //                   +-------------+---------------+------------------+
 
 #if REV_PLATFORM_WIN64
     void **stack_trace     = Memory::Get()->PushToFA<void *>(REV_U16_MAX);
@@ -83,7 +88,6 @@ REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
             builder.m_TextFormat.TextAlignment = SBTA::LEFT;
 
             builder.Build(cast(char *, module_info.ModuleName));
-
         }
         builder.m_TextFormat = saved_text_format;
 
@@ -129,7 +133,7 @@ void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...)
     {
     #if REV_PLATFORM_WIN64
         REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast(u16, color)));
-        REV_DEBUG_RESULT(WriteConsoleA(g_Console, builder.BufferData(), (u32)builder.BufferLength(), null, null));
+        REV_DEBUG_RESULT(WriteConsoleA(g_Console, builder.BufferData(), cast(u32, builder.BufferLength()), null, null));
         REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast(u16, DEBUG_COLOR::INFO)));
         OutputDebugStringA(builder.BufferData());
     #else
@@ -141,13 +145,10 @@ void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...)
 
 void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, bool print_sys_error, bool reserved, const char *format, ...)
 {
-    // @NOTE(Roman): file(line): type: message. System error [sys_error_code]: sys_error_message.
-    //               Stack trace:
-    //                   [i] function name
-
-    // @NOTE(Roman): file(line): type: message.
-    //               Stack trace:
-    //                   [i] function name
+    // @NOTE(Roman): 1. file(line): type: message. System error [sys_error_code]: sys_error_message.
+    //                  stack trace
+    //               2. file(line): type: message.
+    //                  stack trace
 
     StaticStringBuilder<2048> builder;
 
@@ -194,7 +195,7 @@ void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, 
     {
     #if REV_PLATFORM_WIN64
         REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast(u16, color)));
-        REV_DEBUG_RESULT(WriteConsoleA(g_Console, builder.BufferData(), (u32)builder.BufferLength(), null, null));
+        REV_DEBUG_RESULT(WriteConsoleA(g_Console, builder.BufferData(), cast(u32, builder.BufferLength()), null, null));
         REV_DEBUG_RESULT(SetConsoleTextAttribute(g_Console, cast(u16, DEBUG_COLOR::INFO)));
         OutputDebugStringA(builder.BufferData());
     #else
@@ -204,7 +205,7 @@ void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, 
     g_CriticalSection.Leave();
 }
 
-REV_API ConstString GetSysErrorMessage(u32 error_code)
+ConstString GetSysErrorMessage(u32 error_code)
 {
 #if REV_PLATFORM_WIN64
     REV_CHECK(error_code != ERROR_SUCCESS);
@@ -221,7 +222,7 @@ REV_API ConstString GetSysErrorMessage(u32 error_code)
 #endif
 }
 
-REV_API u32 GetSysErrorCode()
+u32 GetSysErrorCode()
 {
 #if REV_PLATFORM_WIN64
     return GetLastError();

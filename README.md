@@ -11,6 +11,7 @@
 * [see here](TODO.txt)
 
 ## How to build:
-1. Open console in the build directory
-2. Run compiler.bat
-3. Run build.bat (see usage in [file](build/build.bat))
+1. Open console in the build directory.
+2. Run [generate.bat](build/generate.bat).
+3. Open generated solution in MSVS.
+4. Press Build button.

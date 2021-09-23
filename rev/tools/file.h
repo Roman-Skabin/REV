@@ -13,6 +13,7 @@
 
 namespace REV
 {
+    // @NOTE(Roman): Must return true if you want to break find loop. For example if the file you were searching for has been found.
     #define REV_FIND_FILE_CALLBACK(name) bool name(const ConstString& found_filename)
     typedef REV_FIND_FILE_CALLBACK(FindFileCallback);
 

@@ -539,55 +539,61 @@ u64 File::LastWriteTime() const
     return *cast(u64 *, &last_write_time);
 }
 
-void File::Find(const ConstString& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback)
+bool File::Find(const ConstString& filename_wildcard, const Function<FindFileCallback>& Callback, bool case_sensitive_search)
 {
-    REV_CHECK_M(filename.Length() < REV_PATH_CAPACITY, "Fileanme is to long, max available length is: %I32u", REV_PATH_CAPACITY);
+    REV_CHECK_M(filename_wildcard.Length() < REV_PATH_CAPACITY, "Fileanme is to long, max available length is: %I32u", REV_PATH_CAPACITY);
 
-    WIN32_FIND_DATAA win32_find_data = {};
-    HANDLE           find_handle     = FindFirstFileExA(filename.Data(),
-                                                        FindExInfoBasic, &win32_find_data,
-                                                        FindExSearchNameMatch, null,
-                                                        FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
-    u32              sys_error       = GetSysErrorCode();
-    FIND_RESULT      find_result     = FIND_RESULT_CONTINUE;
-    bool             file_not_found  = false;
+    DWORD find_flags = FIND_FIRST_EX_LARGE_FETCH;
+    if (case_sensitive_search) find_flags |= FIND_FIRST_EX_CASE_SENSITIVE;
 
-    do
+    WIN32_FIND_DATAA find_data{};
+    HANDLE           find_handle = FindFirstFileExA(filename_wildcard.Data(),
+                                                    FindExInfoBasic, &find_data,
+                                                    FindExSearchNameMatch, null,
+                                                    find_flags);
+    u32 sys_error = GetSysErrorCode();
+
+    while (find_handle != INVALID_HANDLE_VALUE && sys_error == ERROR_SUCCESS)
     {
-        ConstString found_filename(win32_find_data.cFileName, strlen(win32_find_data.cFileName));
-        file_not_found = sys_error == ERROR_FILE_NOT_FOUND || sys_error == ERROR_PATH_NOT_FOUND;
+        if (Callback(ConstString(find_data.cFileName, strlen(find_data.cFileName))))
+        {
+            break;
+        }
 
-        find_result = FindFileCallback(found_filename, file_not_found);
-        if (find_result != FIND_RESULT_CONTINUE) break;
-
-        FindNextFileA(find_handle, &win32_find_data);
+        // @NOTE(Roman): We do not need to check return of FindNextFileA because it returns false
+        //               in case of ERROR_NO_MORE_FILES that we process after the loop.
+        FindNextFileA(find_handle, &find_data);
         sys_error = GetSysErrorCode();
-
-    } while (sys_error != ERROR_NO_MORE_FILES && !file_not_found);
+    }
 
     if (find_handle != INVALID_HANDLE_VALUE)
     {
         REV_DEBUG_RESULT(FindClose(find_handle));
     }
 
-    if (file_not_found)
+    switch (sys_error)
     {
-        Path path(filename);
-        path.Inspect();
-        path.PrintWarningIfDoesNotExist("There are no files matching following wildcard");
-    }
-    else if (find_result != FIND_RESULT_FOUND)
-    {
-        if (sys_error == ERROR_NO_MORE_FILES)
+        case ERROR_FILE_NOT_FOUND:
+        case ERROR_PATH_NOT_FOUND:
         {
-            REV_WARNING_M("There are no more files matching following wildcard: \"%.*s\"",
-                          filename.Length(), filename.Data());
-        }
-        else
+            Path path(filename_wildcard);
+            path.Inspect();
+            path.PrintWarningIfDoesNotExist("There are no files matching following wildcard");
+            return false;
+        } break;
+
+        case ERROR_NO_MORE_FILES:
+        {
+            REV_WARNING_M("There are no more files matching following wildcard: \"%.*s\"", filename_wildcard.Length(), filename_wildcard.Data());
+        } break;
+
+        default:
         {
             REV_CHECK(sys_error == ERROR_SUCCESS);
-        }
+        } break;
     }
+
+    return true;
 }
 
 void File::SetOffset(s64 offset)

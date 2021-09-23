@@ -550,44 +550,35 @@ void AssetManager::MakeFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET
         case GraphicsAPI::API::VULKAN: expected_extension.AssignCSTR(REV_CSTR_ARGS(".glsl")); break;
     }
 
-    File::Find(filename, [this, &filename, kind, &asset_name, &expected_extension](const ConstString& found_filename, bool file_not_found)
+    bool file_found = File::Find(filename, [&filename, kind, &expected_extension](const ConstString& found_filename)
     {
-        if (file_not_found)
+        ChangeExtension(filename, found_filename);
+
+        if (kind == ASSET_KIND_SHADER)
         {
-            filename.Clear();
-            switch (kind)
-            {
-                case ASSET_KIND_TEXTURE: m_Logger.LogError("Texture \"", asset_name, "\" is not found"); break;
-                case ASSET_KIND_SHADER:  m_Logger.LogError("Shader \"", asset_name, "\" is not found");  break;
-            }
+            u64 dot_index = filename.RFind('.');
+            REV_CHECK(dot_index != filename.npos);
 
-            return File::FIND_RESULT_BREAK;
+            ConstString got_extension(filename.Data() + dot_index, filename.Length() - dot_index);
+            if (got_extension != expected_extension)
+            {
+                filename.Replace(dot_index + 1, filename.Length(), '*');
+                return false;
+            }
         }
-        else
+
+        return true;
+    }, true);
+
+    if (!file_found)
+    {
+        filename.Clear();
+        switch (kind)
         {
-            ChangeExtension(filename, found_filename);
-
-            if (kind == ASSET_KIND_SHADER)
-            {
-                u64 dot_index = filename.RFind('.');
-                REV_CHECK(dot_index != filename.npos);
-
-                ConstString got_extension(filename.Data() + dot_index, filename.Length() - dot_index);
-
-                if (got_extension == expected_extension)
-                {
-                    return File::FIND_RESULT_FOUND;
-                }
-                else
-                {
-                    filename.Replace(dot_index + 1, filename.Length(), '*');
-                    return File::FIND_RESULT_CONTINUE;
-                }
-            }
-
-            return File::FIND_RESULT_FOUND;
+            case ASSET_KIND_TEXTURE: m_Logger.LogError("Texture \"", asset_name, "\" is not found"); break;
+            case ASSET_KIND_SHADER:  m_Logger.LogError("Shader \"", asset_name, "\" is not found");  break;
         }
-    });
+    }
 }
 
 void AssetManager::MakeCacheFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET_KIND kind, const ConstString& asset_name)

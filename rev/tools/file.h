@@ -13,6 +13,9 @@
 
 namespace REV
 {
+    #define REV_FIND_FILE_CALLBACK(name) bool name(const ConstString& found_filename)
+    typedef REV_FIND_FILE_CALLBACK(FindFileCallback);
+
     // @TODO(Roman): 1. if ERROR_PATH_NOT_FOUND
     //               2. #CrossPlatform
     class REV_API File final
@@ -40,13 +43,6 @@ namespace REV
             // Default combinations
             FLAG_RW       = FLAG_READ | FLAG_WRITE,
             FLAG_RES      = FLAG_READ | FLAG_EXISTS | FLAG_SEQ,
-        };
-
-        enum FIND_RESULT : u32
-        {
-            FIND_RESULT_FOUND = 1,
-            FIND_RESULT_CONTINUE,
-            FIND_RESULT_BREAK,
         };
 
     public:
@@ -91,8 +87,9 @@ namespace REV
         u64  LastAccessTime() const;
         u64  LastWriteTime() const;
 
-        static void Find(const ConstString& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback);
-        template<u64 capacity> static REV_INLINE void Find(const StaticString<capacity>& filename, const Function<FIND_RESULT(const ConstString& found_filename, bool file_not_found)>& FindFileCallback) { Find(filename.ToConstString(), FindFileCallback); }
+        // @NOTE(Roman): Returns false if there are no files matching following wildcard. Otherwise returns true.
+        static bool Find(const ConstString& filename_wildcard, const Function<FindFileCallback>& Callback, bool case_sensitive_search = false);
+        template<u64 capacity> static REV_INLINE bool Find(const StaticString<capacity>& filename_wildcard, const Function<FindFileCallback>& Callback, bool case_sensitive_search = false) { return Find(filename_wildcard.ToConstString(), Callback, case_sensitive_search); }
 
         void SetOffset(s64 offset);
 

@@ -17,7 +17,7 @@
 4. Press Build button.
 
 ## How to use:
-1. Create your own project like [sandbox](sandbox) ([premake](build/premake/sandbox.lua) generation file example)
+1. Create your own project like [sandbox](sandbox) ([premake](build/premake/premake_sandbox.lua) generation file example)
 2. Link it with [rev](rev)
 3. Build it!
 

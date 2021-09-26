@@ -7,7 +7,6 @@
 #pragma once
 
 #include "core/pch.h"
-#include "core/rtti.hpp"
 
 #pragma warning(disable: 4251) // class 'type1' needs to have dll-interface to be used by clients of class 'type2'
 #pragma warning(disable: 4200) // nonstandard extension used: zero-sized array in struct/union
@@ -171,10 +170,10 @@ namespace REV
 // Helpers
 //
 
-#define KB(x) (  (x) * 1024)
-#define MB(x) (KB(x) * 1024)
-#define GB(x) (MB(x) * 1024)
-#define TB(x) (GB(x) * 1024)
+#define KB(x) ((x) << 10)
+#define MB(x) ((x) << 20)
+#define GB(x) ((x) << 30)
+#define TB(x) ((x) << 40)
 
 #define cast(Type, expr) ((Type)(expr))
 

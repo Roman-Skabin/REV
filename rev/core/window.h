@@ -6,10 +6,7 @@
 
 #pragma once
 
-#include "core/common.h"
-#include "math/vec.h"
 #include "tools/logger.h"
-#include "tools/static_string.hpp"
 
 namespace REV
 {

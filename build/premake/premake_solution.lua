@@ -5,5 +5,5 @@ workspace "REV"
     location       "../.."
     startproject   "sandbox"
 
-include "rev.lua"
-include "sandbox.lua"
+include "premake_rev.lua"
+include "premake_sandbox.lua"

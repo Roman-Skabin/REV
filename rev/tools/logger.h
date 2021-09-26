@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "core/common.h"
 #include "tools/const_string.h"
 #include "tools/static_string_builder.hpp"
 #include "tools/file.h"
@@ -69,22 +68,20 @@ namespace REV
         {
             // [dd.mm.yyyy hh:mm:ss]<LoggerName>(MessageKind): Message.
 
-            time_t raw_time;
-            time(&raw_time);
-            tm *timeinfo = localtime(&raw_time);
-            REV_CHECK(timeinfo);
+            SYSTEMTIME time{0};
+            GetLocalTime(&time);
 
             StaticStringBuilder<1024> builder;
 
             builder.m_IntFormat.Fill  = '0';
             builder.m_IntFormat.Width = 2;
-            builder.Build('[', timeinfo->tm_mday, '.', timeinfo->tm_mon + 1, '.');
+            builder.Build('[', time.wDay, '.', time.wMonth, '.');
 
             builder.m_IntFormat.Width = 4;
-            builder.Build(timeinfo->tm_year + 1900, ' ');
+            builder.Build(time.wYear, ' ');
 
             builder.m_IntFormat.Width = 2;
-            builder.Build(timeinfo->tm_hour, ':', timeinfo->tm_min, ':', timeinfo->tm_sec, ']');
+            builder.Build(time.wHour, ':', time.wMinute, ':', time.wSecond, ']');
 
             builder.m_IntFormat.Fill  = ' ';
             builder.m_IntFormat.Width = 0;

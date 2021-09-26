@@ -551,9 +551,10 @@ bool File::Find(const ConstString& filename_wildcard, const Function<FindFileCal
                                                     FindExInfoBasic, &find_data,
                                                     FindExSearchNameMatch, null,
                                                     find_flags);
-    u32 sys_error = GetSysErrorCode();
+    u32  sys_error               = GetSysErrorCode();
+    bool next_file_result        = true;
 
-    while (find_handle != INVALID_HANDLE_VALUE && sys_error == ERROR_SUCCESS)
+    while (find_handle != INVALID_HANDLE_VALUE && next_file_result)
     {
         if (Callback(ConstString(find_data.cFileName, strlen(find_data.cFileName))))
         {
@@ -562,7 +563,7 @@ bool File::Find(const ConstString& filename_wildcard, const Function<FindFileCal
 
         // @NOTE(Roman): We do not need to check return of FindNextFileA because it returns false
         //               in case of ERROR_NO_MORE_FILES that we process after the loop.
-        FindNextFileA(find_handle, &find_data);
+        next_file_result = FindNextFileA(find_handle, &find_data);
         sys_error = GetSysErrorCode();
     }
 
@@ -589,7 +590,7 @@ bool File::Find(const ConstString& filename_wildcard, const Function<FindFileCal
 
         default:
         {
-            REV_CHECK(sys_error == ERROR_SUCCESS);
+            REV_CHECK(next_file_result || (!next_file_result && sys_error == ERROR_NO_MORE_FILES));
         } break;
     }
 

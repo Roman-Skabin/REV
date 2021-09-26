@@ -7,7 +7,6 @@
 #pragma once
 
 #include "core/common.h"
-#include <functional>
 
 namespace REV
 {

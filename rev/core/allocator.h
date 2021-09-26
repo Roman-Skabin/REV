@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "core/common.h"
 #include "tools/critical_section.hpp"
 #include "tools/const_string.h"
 

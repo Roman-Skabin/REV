@@ -6,191 +6,52 @@
 
 #pragma once
 
-#include "tools/static_string.hpp"
-#include "math/mat.h"
-#include "math/quat.h"
-#include "memory/memory.h"
+#include "tools/string.h"
+#include "tools/static_string_builder.hpp"
 
 namespace REV
 {
 
-namespace RTTI
-{
-    template<typename T> inline constexpr bool is_vec_v = is_any_of_v<remove_cv_t<T>, Math::v2, Math::v2s, Math::v2u,
-                                                                                      Math::v3, Math::v3s, Math::v3u,
-                                                                                      Math::v4, Math::v4s, Math::v4u>;
-
-    template<typename T> inline constexpr bool is_quat_v = is_any_of_v<remove_cv_t<T>, Math::quat>;
-
-    template<typename T> inline constexpr bool is_mat_v = is_any_of_v<remove_cv_t<T>, Math::m2, Math::m3, Math::m4>;
-
-    template<typename T>
-    inline constexpr bool is_trivially_buildable_v  = is_integral_v<T>
-                                                   || is_floating_point_v<T>
-                                                   || is_vec_v<T>
-                                                   || is_quat_v<T>
-                                                   || is_mat_v<T>
-                                                   || is_pointer_v<T>
-                                                   || is_wcstring_array_v<T>
-                                                   || is_wcstring_v<T>
-                                                   || is_cstring_array_v<T>
-                                                   || is_cstring_v<T>
-                                                   || is_nullptr_t_v<T>;
-
-    template<typename T>
-    using is_trivially_buildable = bool_type<is_trivially_buildable_v<T>>;
-}
-
-enum class SBTA
-{
-    RIGHT,
-    LEFT,
-};
-
-enum class BASE
-{
-    BIN = 2,
-    OCT = 8,
-    DEC = 10,
-    HEX = 16
-};
-
-struct IntFormat final
-{
-    BASE Base          = BASE::DEC;
-    u32  Width         = 0;
-    SBTA TextAlignment = SBTA::RIGHT;
-    char Fill          = ' ';
-    bool DecorateBase  = true;
-    bool ForceSign     = false;
-};
-
-struct FloatFormat final
-{
-    u32  Width         = 0;
-    u32  Precision     = 0;
-    SBTA TextAlignment = SBTA::RIGHT;
-    char Fill          = ' ';
-    bool ForceSign     = false;
-};
-
-struct TextFormat final
-{
-    u32  Width         = 0;
-    SBTA TextAlignment = SBTA::RIGHT;
-    char Fill          = ' ';
-};
-
-struct PointerFormat final
-{
-    bool Decorate = true;
-};
-
-template<u64 capacity, u64 aligned_capacity = AlignUp(capacity, CACHE_LINE_SIZE)>
-class StaticStringBuilder final
+class REV_API StringBuilder final
 {
 public:
-    REV_INLINE StaticStringBuilder()
-        : m_IntFormat(),
-          m_FloatFormat(),
-          m_TextFormat(),
-          m_PointerFormat(),
-          m_StaticString()
-    {
-    }
+    explicit StringBuilder(Allocator *allocator, u64 initial_capacity = 16, u64 alignment_in_bytes = REV::DEFAULT_ALIGNMENT);
+    StringBuilder(const String& string);
+    StringBuilder(String&& string);
+    StringBuilder(const StringBuilder& other);
+    StringBuilder(StringBuilder&& other);
 
-    REV_INLINE StaticStringBuilder(const StaticStringBuilder& other)
-        : m_IntFormat(other.m_IntFormat),
-          m_FloatFormat(other.m_FloatFormat),
-          m_TextFormat(other.m_TextFormat),
-          m_PointerFormat(other.m_PointerFormat),
-          m_StaticString(other.m_StaticString)
-    {
-    }
+    ~StringBuilder();
 
-    REV_INLINE ~StaticStringBuilder()
-    {
-    }
-
-    REV_INLINE const StaticString<capacity, aligned_capacity>& ToString() const { return m_StaticString; }
-    REV_INLINE       StaticString<capacity, aligned_capacity>& ToString()       { return m_StaticString; }
-
-    REV_INLINE const StaticString<capacity, aligned_capacity>& Buffer() const { return m_StaticString; }
-    REV_INLINE       StaticString<capacity, aligned_capacity>& Buffer()       { return m_StaticString; }
-
-    REV_INLINE const char *BufferData() const { return m_StaticString.Data(); }
-    REV_INLINE       char *BufferData()       { return m_StaticString.Data(); }
-
-    REV_INLINE u64 BufferLength() const { return m_StaticString.Length(); }
+    REV_INLINE const String& ToString() const { return m_String; }
+    REV_INLINE       String& ToString()       { return m_String; }
 
     template<typename ...Args>
-    REV_INLINE StaticStringBuilder& Build(const Args&... args)
+    StringBuilder& Build(const Args&... args)
     {
         (..., BuildOne(args));
         return *this;
     }
 
     template<typename ...Args>
-    REV_INLINE StaticStringBuilder& BuildLn(const Args&... args)
+    StringBuilder& BuildLn(const Args&... args)
     {
         (..., BuildOne(args));
         BuildOne('\n');
         return *this;
     }
 
-    REV_INLINE StaticStringBuilder& REV_CDECL BuildF(const char *format, ...)
-    {
-        va_list args;
-        va_start(args, format);
-        m_StaticString.m_Length += vsnprintf(m_StaticString.m_Data + m_StaticString.m_Length,
-                                             m_StaticString.Capacity() - m_StaticString.m_Length,
-                                             format,
-                                             args);
-        va_end(args);
-        return *this;
-    }
+    StringBuilder& REV_CDECL BuildF(const char *format, ...);
+    StringBuilder& REV_CDECL BuildVA(const char *format, va_list args);
 
-    REV_INLINE StaticStringBuilder& REV_CDECL BuildVA(const char *format, va_list args)
-    {
-        m_StaticString.m_Length += vsnprintf(m_StaticString.m_Data + m_StaticString.m_Length,
-                                             m_StaticString.Capacity() - m_StaticString.m_Length,
-                                             format,
-                                             args);
-        return *this;
-    }
+    StringBuilder& ResetFormats();
 
-    REV_INLINE StaticStringBuilder& ResetSpecs()
-    {
-        m_IntFormat     = IntFormat();
-        m_FloatFormat   = FloatFormat();
-        m_TextFormat    = TextFormat();
-        m_PointerFormat = PointerFormat();
-        return *this;
-    }
+    StringBuilder& Clear();
 
-    REV_INLINE StaticStringBuilder& Clear()
-    {
-        m_StaticString.Clear();
-        return *this;
-    }
-
-    StaticStringBuilder& operator=(const StaticStringBuilder& other)
-    {
-        if (this != &other)
-        {
-            m_IntFormat     = other.m_IntFormat;
-            m_FloatFormat   = other.m_FloatFormat;
-            m_TextFormat    = other.m_TextFormat;
-            m_PointerFormat = other.m_PointerFormat;
-            m_StaticString  = other.m_StaticString;
-        }
-        return *this;
-    }
+    StringBuilder& operator=(const StringBuilder& other);
+    StringBuilder& operator=(StringBuilder&& other);
 
 private:
-    StaticStringBuilder(StaticStringBuilder&&)            = delete;
-    StaticStringBuilder& operator=(StaticStringBuilder&&) = delete;
-
     template<typename T>
     REV_INLINE void BuildOne(const T& arg)
     {
@@ -200,28 +61,28 @@ private:
         }
         else if constexpr (RTTI::has_to_string_v<T>)
         {
-            u64 start_length = m_StaticString.Length();
+            u64 start_length = m_String.Length();
 
-            m_StaticString.PushBack(arg.ToString());
+            m_String.PushBack(arg.ToString());
 
-            u64 appended_length = m_StaticString.Length() - start_length;
+            u64 appended_length = m_String.Length() - start_length;
             if (appended_length < m_TextFormat.Width)
             {
                 if (m_TextFormat.TextAlignment == SBTA::RIGHT)
                 {
-                    m_StaticString.Insert(start_length, m_TextFormat.Fill, m_TextFormat.Width - appended_length);
+                    m_String.Insert(start_length, m_TextFormat.Fill, m_TextFormat.Width - appended_length);
                 }
                 else
                 {
-                    m_StaticString.PushBack(m_TextFormat.Fill, m_TextFormat.Width - appended_length);
+                    m_String.PushBack(m_TextFormat.Fill, m_TextFormat.Width - appended_length);
                 }
             }
         }
         else
         {
-            m_StaticString.PushBack('<');
-            m_StaticString.PushBack(typeid(T).name());
-            m_StaticString.PushBack(REV_CSTR_ARGS(" has no method ToString>"));
+            m_String.PushBack('<');
+            m_String.PushBack(typeid(T).name());
+            m_String.PushBack(REV_CSTR_ARGS(" has no method ToString>"));
         }
     }
 
@@ -725,7 +586,7 @@ private:
     template<typename T, typename = RTTI::enable_if_t<RTTI::is_trivially_buildable_v<T>>>
     void AppendTrivial(const T& val)
     {
-        u64 start_length = m_StaticString.Length();
+        u64 start_length = m_String.Length();
 
         char buffer[1024] = {'\0'};
 
@@ -735,29 +596,29 @@ private:
 
         if constexpr (RTTI::is_bool_v<T>)
         {
-            if (val) m_StaticString.PushBack(REV_CSTR_ARGS("true"));
-            else     m_StaticString.PushBack(REV_CSTR_ARGS("false"));
+            if (val) m_String.PushBack(REV_CSTR_ARGS("true"));
+            else     m_String.PushBack(REV_CSTR_ARGS("false"));
         }
         else if constexpr (RTTI::is_char_v<T>)
         {
             width          = m_TextFormat.Width;
             fill           = m_TextFormat.Fill;
             text_alignment = m_TextFormat.TextAlignment;
-            m_StaticString.PushBack(val);
+            m_String.PushBack(val);
         }
         else if constexpr (RTTI::is_cstring_array_v<T>)
         {
             width          = m_TextFormat.Width;
             fill           = m_TextFormat.Fill;
             text_alignment = m_TextFormat.TextAlignment;
-            m_StaticString.PushBack(REV_CSTR_ARGS(val));
+            m_String.PushBack(REV_CSTR_ARGS(val));
         }
         else if constexpr (RTTI::is_cstring_v<T>)
         {
             width          = m_TextFormat.Width;
             fill           = m_TextFormat.Fill;
             text_alignment = m_TextFormat.TextAlignment;
-            m_StaticString.PushBack(val, strlen(val));
+            m_String.PushBack(val, strlen(val));
         }
         else if constexpr (RTTI::is_wcstring_array_v<T>)
         {
@@ -770,7 +631,7 @@ private:
             // @TODO(Roman): #CrossPlatform
             WideCharToMultiByte(CP_ACP, 0, val, sizeof(val) - sizeof(wchar_t), REV_CSTR_ARGS(buffer), null, null);
 
-            m_StaticString.PushBack(REV_CSTR_ARGS(buffer));
+            m_String.PushBack(REV_CSTR_ARGS(buffer));
         }
         else if constexpr (RTTI::is_wcstring_v<T>)
         {
@@ -786,16 +647,16 @@ private:
 
             WideCharToMultiByte(CP_ACP, 0, val, wlength, buffer, length, null, null);
 
-            m_StaticString.PushBack(buffer, length);
+            m_String.PushBack(buffer, length);
         }
         else if constexpr (RTTI::is_pointer_v<T>)
         {
             u64 length = ParsePointer(buffer, cast(u64, val));
-            m_StaticString.PushBack(buffer, length);
+            m_String.PushBack(buffer, length);
         }
         else if constexpr (RTTI::is_nullptr_t_v<T>)
         {
-            m_StaticString.PushBack(REV_CSTR_ARGS("null"));
+            m_String.PushBack(REV_CSTR_ARGS("null"));
         }
         else if constexpr (RTTI::is_arithmetic_v<T> && !RTTI::is_floating_point_v<T>)
         {
@@ -803,7 +664,7 @@ private:
             fill           = m_IntFormat.Fill;
             text_alignment = m_IntFormat.TextAlignment;
             u64 length     = ParseInt(buffer, val);
-            m_StaticString.PushBack(buffer, length);
+            m_String.PushBack(buffer, length);
         }
         else if constexpr (RTTI::is_floating_point_v<T>)
         {
@@ -811,34 +672,34 @@ private:
             fill           = m_FloatFormat.Fill;
             text_alignment = m_FloatFormat.TextAlignment;
             u64 length     = ParseFloatingPoint(buffer, val);
-            m_StaticString.PushBack(buffer, length);
+            m_String.PushBack(buffer, length);
         }
         else if constexpr (RTTI::is_vec_v<T>)
         {
             u64 length = ParseVec(buffer, val);
-            m_StaticString.PushBack(buffer, length);
+            m_String.PushBack(buffer, length);
         }
         else if constexpr (RTTI::is_quat_v<T>)
         {
             u64 length = ParseQuat(buffer, val);
-            m_StaticString.PushBack(buffer, length);
+            m_String.PushBack(buffer, length);
         }
         else if constexpr (RTTI::is_mat_v<T>)
         {
             u64 length = ParseMat(buffer, val);
-            m_StaticString.PushBack(buffer, length);
+            m_String.PushBack(buffer, length);
         }
 
-        u64 appended_length = m_StaticString.Length() - start_length;
+        u64 appended_length = m_String.Length() - start_length;
         if (appended_length < width)
         {
             if (text_alignment == SBTA::RIGHT)
             {
-                m_StaticString.Insert(start_length, fill, width - appended_length);
+                m_String.Insert(start_length, fill, width - appended_length);
             }
             else
             {
-                m_StaticString.PushBack(fill, width - appended_length);
+                m_String.PushBack(fill, width - appended_length);
             }
         }
     }
@@ -850,10 +711,7 @@ public:
     PointerFormat m_PointerFormat;
 
 private:
-    StaticString<capacity, aligned_capacity> m_StaticString;
+    String m_String;
 };
-
-template<u64 capacity, u64 aligned_capacity> StaticStringBuilder(const StaticString<capacity, aligned_capacity>&)        -> StaticStringBuilder<capacity, aligned_capacity>;
-template<u64 capacity, u64 aligned_capacity> StaticStringBuilder(const StaticStringBuilder<capacity, aligned_capacity>&) -> StaticStringBuilder<capacity, aligned_capacity>;
 
 }

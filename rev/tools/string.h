@@ -269,6 +269,8 @@ private:
     };
 
     Header *m_Header;
+
+    friend class StringBuilder;
 };
 
 REV_INLINE bool operator==(const String&      left, const ConstString& right) { return !left.Compare(right);      }

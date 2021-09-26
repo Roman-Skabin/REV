@@ -7,13 +7,13 @@
 #pragma once
 
 //
-// Platform-identifying headers
+// Platform header with all the necessary predefines
 //
 
 #include "core/platform.h"
 
 //
-// Platform independent includes
+// STD includes
 //
 
 #include <stdio.h>
@@ -23,7 +23,14 @@
 #include <corecrt_math.h>
 #include <vcruntime_typeinfo.h>
 #include <vcruntime_new.h>
-#include <time.h>
+#include <functional>
+
+//
+// Stable headers
+//
+
+#include "core/rtti.hpp"
+#include "core/key_codes.h"
 
 //
 // Platform independent intrinsics activation

@@ -14,7 +14,7 @@ project "rev"
     compileas  "C++"
 
     pchheader "core/pch.h"
-    pchsource "%{prj.location}/core/pch.cpp"
+    pchsource "../../rev/core/pch.cpp" -- @NOTE(Roman): ${prj.location}/core/pch.cpp does not work for some reason.
     files
     {
         "%{prj.location}/**.h",

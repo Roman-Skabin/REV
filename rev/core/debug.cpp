@@ -5,7 +5,6 @@
 // LICENSE.md file in the root directory of this source tree. 
 
 #include "core/pch.h"
-#include "core/common.h"
 #include "memory/memory.h"
 #include "tools/const_string.h"
 #include "tools/static_string_builder.hpp"
@@ -34,11 +33,9 @@ REV_GLOBAL CriticalSection<false> g_CriticalSection;
 REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
 {
     // @NOTE(Roman): Stack trace:
-    //                   +-------------+---------------+------------------+
-    //                   |    module   |    function   |      address     |
-    //                   +-------------+---------------+------------------+
-    //                   | module_name | function_name | function_address |
-    //                   +-------------+---------------+------------------+
+    //                   module_filename(line): symbol_name
+    //                   or
+    //                   module_filename(address): symbol_name
 
 #if REV_PLATFORM_WIN64
     void **stack_trace     = Memory::Get()->PushToFA<void *>(REV_U16_MAX);
@@ -46,70 +43,73 @@ REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
     u16    frames_captured = RtlCaptureStackBackTrace(2, REV_U16_MAX, stack_trace, &hash_value);
     REV_CSTM_CHECK(frames_captured);
 
-    HANDLE pseudo_handle = GetCurrentProcess();
-    HANDLE real_handle   = null;
-    bool   result        = DuplicateHandle(pseudo_handle, pseudo_handle, pseudo_handle, &real_handle, 0, false, DUPLICATE_SAME_ACCESS);
+    HANDLE pseudo_process_handle = GetCurrentProcess();
+    HANDLE real_process_handle   = null;
+    bool   result                = DuplicateHandle(pseudo_process_handle, pseudo_process_handle, pseudo_process_handle, &real_process_handle, 0, false, DUPLICATE_SAME_ACCESS);
+    REV_CSTM_CHECK(result);
 
-    result = SymInitialize(real_handle, null, true);
+    result = SymInitialize(real_process_handle, null, true);
     REV_CSTM_CHECK(result);
 
     builder.BuildLn("\nStack trace:");
-    builder.BuildLn("    +------------------+--------------------------------------------------+--------------------+");
-    builder.BuildLn("    |      module      |                     function                     |       address      |");
-    builder.BuildLn("    +------------------+--------------------------------------------------+--------------------+");
-
     for (u16 frame = 0; frame < frames_captured; ++frame)
     {
         void *stack_frame = stack_trace[frame];
 
-        IMAGEHLP_MODULE64 module_info = {};
+        IMAGEHLP_MODULE64 module_info{};
         module_info.SizeOfStruct = sizeof(IMAGEHLP_MODULE64);
 
-        result = SymGetModuleInfo64(real_handle, SymGetModuleBase64(real_handle, cast(u64, stack_frame)), &module_info);
+        result = SymGetModuleInfo64(real_process_handle, SymGetModuleBase64(real_process_handle, cast(u64, stack_frame)), &module_info);
         REV_CSTM_CHECK(result);
 
-        SYMBOL_INFO_PACKAGE symbol_package = {};
-        symbol_package.si.SizeOfStruct = sizeof(SYMBOL_INFO);
-        symbol_package.si.MaxNameLen   = sizeof(symbol_package.name);
+        SYMBOL_INFO *symbol_info  = cast(SYMBOL_INFO *, Memory::Get()->PushToFrameArena(sizeof(SYMBOL_INFO) + MAX_SYM_NAME));
+        symbol_info->SizeOfStruct = sizeof(SYMBOL_INFO);
+        symbol_info->MaxNameLen   = MAX_SYM_NAME;
 
-        u64 displacement = 0;
-        result = SymFromAddr(real_handle, cast(u64, stack_frame), &displacement, &symbol_package.si);
+        result = SymFromAddr(real_process_handle, cast(u64, stack_frame), null, symbol_info);
 
-        ConstString function_name(symbol_package.si.Name, symbol_package.si.NameLen);
+        ConstString function_name(symbol_info->Name, symbol_info->NameLen);
         if (!result)
         {
             REV_CSTM_CHECK_M(GetLastError() == ERROR_MOD_NOT_FOUND, "Unhandled sys error for SymFromAddr");
             function_name.AssignCSTR(REV_CSTR_ARGS("<unknown>"));
         }
 
-        builder.Build("    | ");
+        IMAGEHLP_LINE64 line_info{};
+        line_info.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
 
-        TextFormat saved_text_format = builder.m_TextFormat;
+        u32 displacement = 0;
+        if (result = SymGetLineFromAddr64(real_process_handle, cast(u64, stack_frame), &displacement , &line_info))
         {
-            builder.m_TextFormat.Width         = 16;
-            builder.m_TextFormat.TextAlignment = SBTA::LEFT;
+            // @TODO(Roman): Replace with the full file.
+            ConstString filename_with_path(line_info.FileName, strlen(line_info.FileName));
+            u64         slash_index   = filename_with_path.RFind('\\');
+            ConstString just_filename = filename_with_path.SubString(slash_index + 1);
 
-            builder.Build(cast(char *, module_info.ModuleName));
+            builder.BuildLn("    ", just_filename, '(', line_info.LineNumber, "): ", function_name);
         }
-        builder.m_TextFormat = saved_text_format;
-
-        builder.Build(" | ");
-
-        saved_text_format = builder.m_TextFormat;
+        else
         {
-            builder.m_TextFormat.Width         = 48;
-            builder.m_TextFormat.TextAlignment = SBTA::LEFT;
+            builder.Build("    ", ConstString(module_info.ModuleName, strlen(module_info.ModuleName)));
+            switch (module_info.SymType)
+            {
+                case SymCoff:   builder.Build(".coff"); break;
+                case SymPdb:    builder.Build(".pdb");  break;
+                case SymExport: builder.Build(".dll");  break;
+                case SymSym:    builder.Build(".sym");  break;
+                case SymDia:    builder.Build(".dia");  break;
+            }
 
-            builder.Build(function_name);
+            PointerFormat saved_pointer_format = builder.m_PointerFormat;
+            {
+                builder.m_PointerFormat.Decorate = false;
+                builder.BuildLn('(', stack_frame, "): ", function_name);
+            }
+            builder.m_PointerFormat = saved_pointer_format;
         }
-        builder.m_TextFormat = saved_text_format;
-
-        builder.BuildLn(" | ", cast(void *, cast(u64, stack_frame) - displacement), " |");
     }
 
-    builder.BuildLn("    +------------------+--------------------------------------------------+--------------------+");
-
-    REV_CSTM_CHECK(CloseHandle(real_handle));
+    REV_CSTM_CHECK(CloseHandle(real_process_handle));
 #else
     REV_CSTM_ERROR_M("Unhandled platform dependent code!");
 #endif

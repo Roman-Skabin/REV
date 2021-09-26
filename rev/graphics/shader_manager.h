@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include "core/common.h"
 #include "graphics/memory_manager.h"
 #include "tools/static_string.hpp"
 #include "math/vec.h"

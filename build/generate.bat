@@ -8,6 +8,6 @@ if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2019" (
     set MSVS_VERSION=vs2017
 )
 
-call "premake/premake5.exe" %MSVS_VERSION% --file="premake/premake5.lua"
+call "premake/premake5.exe" %MSVS_VERSION% --file="premake/premake_solution.lua"
 
 set MSVS_VERSION=

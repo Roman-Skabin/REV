@@ -1,20 +1,17 @@
 - Core
     - Complete core\platform.h
-    - Move all STD includes from platform.h to pch.h?
     - Scene serialization
     - ISA wide CopyMemory, MoveMemory, ZeroMemory, CompareMemory // @Optimization
     - Single namespace for everything? (get rid of Math and GPU namespaces)
     - Minimize number of system calls // @Optimization
     - Vertex buffer/index files (some custom formats for various types of meshes)?
-    - Stack trace in PrintDebugMessage on error.
 
 - Settings
-    - Logs folder, ini folder
+    - Logs folder
     - Max view distance (max LOD & far)
 
 - Tools
     - Wait for multiple events
-    - Change a bit StringBuidler (example: StaticStringBuilder)
     - Create StaticString and StaticStringBuilder on arenas
     - Replace std::function in REV::Function
     - Hash table

@@ -17,8 +17,7 @@ namespace REV
     #define REV_FIND_FILE_CALLBACK(name) bool name(const ConstString& found_filename)
     typedef REV_FIND_FILE_CALLBACK(FindFileCallback);
 
-    // @TODO(Roman): 1. if ERROR_PATH_NOT_FOUND
-    //               2. #CrossPlatform
+    // @TODO(Roman): #CrossPlatform
     class REV_API File final
     {
     public:

@@ -173,9 +173,6 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             {
                 window->m_Minimized = false;
                 window->m_Resized   = true;
-
-                window->m_Logger.LogDebug("Window: old size: ", window->m_XYWH.wh, ", new size: ", new_size);
-
                 window->m_XYWH.wh = new_size;
             }
             else if (wparam == SIZE_MINIMIZED)
@@ -192,9 +189,6 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
             if (window->m_XYWH.xy != new_pos)
             {
                 window->m_Moved = true;
-
-                window->m_Logger.LogDebug("Window: old position: ", window->m_XYWH.xy, ", new position: ", new_pos);
-
                 window->m_XYWH.xy = new_pos;
             }
 

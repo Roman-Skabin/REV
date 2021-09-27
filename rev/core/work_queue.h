@@ -39,7 +39,7 @@ namespace REV
         struct Work
         {
             HANDLE           thread_handle;
-            volatile char    callback_is_changing;
+            volatile char    callback_is_changing; // @NOTE(Roman): Atomic flag for callback change synchronization
             Function<void()> callback;
         };
 

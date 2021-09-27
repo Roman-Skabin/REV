@@ -70,15 +70,16 @@ void WorkQueue::AddWork(const Function<void()>& callback)
             if (old == old_next_entry_to_write)
             {
                 Work *work = m_Header->works + old;
+                if (!_InterlockedCompareExchange8(&work->callback_is_changing, true, false))
+                {
+                    work->callback = callback;
+                    _InterlockedExchange8(&work->callback_is_changing, false);
 
-                _InterlockedExchange8(&work->callback_is_changing, true);
-                work->callback = callback;
-                _InterlockedExchange8(&work->callback_is_changing, false);
+                    _InterlockedIncrement(&m_Header->completion_goal);
+                    REV_DEBUG_RESULT(ReleaseSemaphore(m_Header->semaphore, 1, null));
 
-                _InterlockedIncrement(&m_Header->completion_goal);
-                REV_DEBUG_RESULT(ReleaseSemaphore(m_Header->semaphore, 1, null));
-
-                break;
+                    break;
+                }
             }
         }
     }

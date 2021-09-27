@@ -16,18 +16,22 @@ REV_GLOBAL HANDLE                 g_Console         = GetStdHandle(STD_OUTPUT_HA
 REV_GLOBAL CriticalSection<false> g_CriticalSection;
 
 // @NOTE(Roman): For ComposeStackTraceMessage
-#if (REV_DEVDEBUG || defined(_REV_CHECKS_BREAK)) && !defined(_REV_NO_CHECKS)
-    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); REV_DEBUG_BREAK(); ExitProcess(1); }
+#ifndef _REV_NO_CHECKS
+    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); return; }
+
     #define REV_CSTM_CHECK_M(expr, message, ...) { if (!(expr)) REV_CSTM_ERROR_M(message, __VA_ARGS__) }
     #define REV_CSTM_CHECK(expr)                 { if (!(expr)) REV_CSTM_ERROR_M(REV_CSTR(expr)) }
-#elif !defined(_REV_NO_CHECKS)
-    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); ExitProcess(1); }
-    #define REV_CSTM_CHECK_M(expr, message, ...) { if (!(expr)) REV_CSTM_ERROR_M(message, __VA_ARGS__) }
-    #define REV_CSTM_CHECK(expr)                 { if (!(expr)) REV_CSTM_ERROR_M(REV_CSTR(expr)) }
+    
+    #define REV_CSTM_DEBUG_RESULT(expr)                 REV_CSTM_CHECK(expr)
+    #define REV_CSTM_DEBUG_RESULT_M(expr, message, ...) REV_CSTM_CHECK_M(expr, message, __VA_ARGS__)
 #else
-    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); ExitProcess(1); }
+    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); return; }
+
     #define REV_CSTM_CHECK_M(expr, message, ...) {}
     #define REV_CSTM_CHECK(expr)                 {}
+
+    #define REV_CSTM_DEBUG_RESULT(expr)                 { expr; }
+    #define REV_CSTM_DEBUG_RESULT_M(expr, message, ...) { expr; }
 #endif
 
 REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
@@ -45,41 +49,45 @@ REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
 
     HANDLE pseudo_process_handle = GetCurrentProcess();
     HANDLE real_process_handle   = null;
-    bool   result                = DuplicateHandle(pseudo_process_handle, pseudo_process_handle, pseudo_process_handle, &real_process_handle, 0, false, DUPLICATE_SAME_ACCESS);
-    REV_CSTM_CHECK(result);
+    REV_CSTM_DEBUG_RESULT(DuplicateHandle(pseudo_process_handle, pseudo_process_handle, pseudo_process_handle, &real_process_handle, 0, false, DUPLICATE_SAME_ACCESS));
 
-    result = SymInitialize(real_process_handle, null, true);
-    REV_CSTM_CHECK(result);
+    REV_CSTM_DEBUG_RESULT(SymInitialize(real_process_handle, null, true));
 
     builder.BuildLn("\nStack trace:");
     for (u16 frame = 0; frame < frames_captured; ++frame)
     {
         void *stack_frame = stack_trace[frame];
 
+        // @NOTE(Roman): It just fails randomly so sometimes we won't have stack trace.
+        //               Ok, maybe not that randomly: it fails mostly when we're trying
+        //               to print stack trace for a worker thread (not Main Thread).
+        DWORD64 module_base = 0;
+        REV_CSTM_CHECK_M(module_base = SymGetModuleBase64(real_process_handle, cast(u64, stack_frame)), "SymGetModuleBase64 has failed randomly again");
+
         IMAGEHLP_MODULE64 module_info{};
         module_info.SizeOfStruct = sizeof(IMAGEHLP_MODULE64);
 
-        result = SymGetModuleInfo64(real_process_handle, SymGetModuleBase64(real_process_handle, cast(u64, stack_frame)), &module_info);
-        REV_CSTM_CHECK(result);
+        REV_CSTM_DEBUG_RESULT(SymGetModuleInfo64(real_process_handle, module_base, &module_info));
 
         SYMBOL_INFO *symbol_info  = cast(SYMBOL_INFO *, Memory::Get()->PushToFrameArena(sizeof(SYMBOL_INFO) + MAX_SYM_NAME));
         symbol_info->SizeOfStruct = sizeof(SYMBOL_INFO);
         symbol_info->MaxNameLen   = MAX_SYM_NAME;
 
-        result = SymFromAddr(real_process_handle, cast(u64, stack_frame), null, symbol_info);
-
-        ConstString function_name(symbol_info->Name, symbol_info->NameLen);
-        if (!result)
+        ConstString function_name(REV_CSTR_ARGS("<unknown>"));
+        if (SymFromAddr(real_process_handle, cast(u64, stack_frame), null, symbol_info))
+        {
+            function_name.AssignCSTR(symbol_info->Name, symbol_info->NameLen);
+        }
+        else
         {
             REV_CSTM_CHECK_M(GetLastError() == ERROR_MOD_NOT_FOUND, "Unhandled sys error for SymFromAddr");
-            function_name.AssignCSTR(REV_CSTR_ARGS("<unknown>"));
         }
 
         IMAGEHLP_LINE64 line_info{};
         line_info.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
 
         u32 displacement = 0;
-        if (result = SymGetLineFromAddr64(real_process_handle, cast(u64, stack_frame), &displacement , &line_info))
+        if (SymGetLineFromAddr64(real_process_handle, cast(u64, stack_frame), &displacement , &line_info))
         {
             // @TODO(Roman): Replace with the full file.
             ConstString filename_with_path(line_info.FileName, strlen(line_info.FileName));
@@ -145,7 +153,7 @@ void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...)
     g_CriticalSection.Leave();
 }
 
-void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, bool print_sys_error, bool reserved, const char *format, ...)
+void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, bool print_sys_error, bool print_stack_trace, const char *format, ...)
 {
     // @NOTE(Roman): 1. file(line): type: message. System error [sys_error_code]: sys_error_message.
     //                  stack trace
@@ -188,9 +196,11 @@ void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, 
 
     builder.BuildLn('.');
 
-    if (reserved)
+    if (print_stack_trace)
     {
+        u64 builder_buffer_save_point = builder.BufferLength();
         ComposeStackTraceMessage(builder);
+        builder.Buffer().Erase(builder_buffer_save_point, builder.BufferLength());
     }
 
     g_CriticalSection.Enter();

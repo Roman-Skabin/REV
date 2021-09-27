@@ -25,7 +25,7 @@ Logger::Logger(const ConstString& name, const ConstString& filename, TARGET targ
     {
         REV_CHECK_M(filename.Data(), "filename is null. It is illegal if you want to log to a file.");
 
-        if (!m_File.Open(filename, File::FLAG_WRITE | File::FLAG_TRUNCATE | File::FLAG_SEQ | File::FLAG_FLUSH))
+        if (!m_File.Open(filename, FILE_FLAG_WRITE | FILE_FLAG_TRUNCATE | FILE_FLAG_SEQ | FILE_FLAG_FLUSH))
         {
             m_File    = null;
             m_Target &= ~TARGET_FILE;

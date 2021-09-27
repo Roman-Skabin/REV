@@ -360,7 +360,7 @@ ID3DBlob *ShaderManager::CompileShader(const ConstString& hlsl_code, const char 
 
 void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const ConstString& shader_cache_filename)
 {
-    File file(shader_cache_filename, File::FLAG_READ | File::FLAG_EXISTS | File::FLAG_SEQ);
+    File file(shader_cache_filename, FILE_FLAG_RES);
     
     GPU::SHADER_KIND shader_kind = GPU::SHADER_KIND_UNKNOWN;
     file.Read(&shader_kind, sizeof(GPU::SHADER_KIND));

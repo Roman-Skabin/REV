@@ -77,7 +77,7 @@ AssetHandle AssetManager::LoadTexture(const LoadTextureDesc& desc, bool _static)
 
     ConstArray<byte> data;
     {
-        File texture_file(filename, File::FLAG_READ | File::FLAG_EXISTS);
+        File texture_file(filename, FILE_FLAG_RES);
 
         u64   filedata_size = texture_file.Size();
         byte *filedata      = Memory::Get()->PushToFA<byte>(filedata_size + 1);
@@ -135,8 +135,8 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
 
     bool cache_exists = File::Exists(cache_filename);
 
-    File file(filename, File::FLAG_READ | File::FLAG_EXISTS | File::FLAG_SEQ);
-    File cache_file(cache_filename, File::FLAG_RW | File::FLAG_SEQ | (cache_exists ? File::FLAG_EXISTS : File::FLAG_NEW));
+    File file(filename, FILE_FLAG_RES);
+    File cache_file(cache_filename, FILE_FLAG_RW | FILE_FLAG_SEQ | (cache_exists ? FILE_FLAG_EXISTS : FILE_FLAG_NEW));
 
     GPU::CompileShaderResult vs_cache;
     GPU::CompileShaderResult hs_cache;
@@ -287,7 +287,7 @@ ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureD
 
             ConstArray<byte> data;
             {
-                File texture_file(filename, File::FLAG_READ | File::FLAG_EXISTS);
+                File texture_file(filename, FILE_FLAG_RES);
 
                 u64   filedata_size = texture_file.Size();
                 byte *filedata      = Memory::Get()->PushToFA<byte>(filedata_size + 1);
@@ -364,8 +364,8 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
 
             bool cache_exists = File::Exists(cache_filename);
 
-            File file(filename, File::FLAG_READ | File::FLAG_EXISTS | File::FLAG_SEQ);
-            File cache_file(cache_filename, File::FLAG_RW | File::FLAG_SEQ | (cache_exists ? File::FLAG_EXISTS : File::FLAG_NEW));
+            File file(filename, FILE_FLAG_RES);
+            File cache_file(cache_filename, FILE_FLAG_RW | FILE_FLAG_SEQ | (cache_exists ? FILE_FLAG_EXISTS : FILE_FLAG_NEW));
 
             GPU::CompileShaderResult vs_cache;
             GPU::CompileShaderResult hs_cache;

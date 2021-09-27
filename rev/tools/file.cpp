@@ -17,12 +17,12 @@ File::File(nullptr_t)
       m_Offset(0),
       m_Size(0),
       m_CriticalSection(),
-      m_Flags(FLAG_NONE),
+      m_Flags(FILE_FLAG_NONE),
       m_Name(null)
 {
 }
 
-File::File(const ConstString& filename, FLAG flags)
+File::File(const ConstString& filename, FILE_FLAG flags)
     : m_Handle(INVALID_HANDLE_VALUE),
       m_Offset(0),
       m_Size(0),
@@ -69,12 +69,12 @@ File::~File()
     Close();
     m_Offset = 0;
     m_Size   = 0;
-    m_Flags  = FLAG_NONE;
+    m_Flags  = FILE_FLAG_NONE;
 
     m_CriticalSection.Leave();
 }
 
-bool File::Open(const ConstString& filename, FLAG flags)
+bool File::Open(const ConstString& filename, FILE_FLAG flags)
 {
     m_CriticalSection.Enter();
     if (m_Handle == INVALID_HANDLE_VALUE)
@@ -110,7 +110,7 @@ bool File::Open(const ConstString& filename, FLAG flags)
     return result;
 }
 
-void File::ReOpen(FLAG new_flags)
+void File::ReOpen(FILE_FLAG new_flags)
 {
     m_CriticalSection.Enter();
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
@@ -146,7 +146,7 @@ void File::Clear()
     m_CriticalSection.Enter();
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
-    REV_CHECK_M(m_Flags & FLAG_WRITE, "You have no rights to clear file \"%.*s\". You must have write rights", m_Name.Length(), m_Name.Data());
+    REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to clear file \"%.*s\". You must have write rights", m_Name.Length(), m_Name.Data());
 
     m_Offset = SetFilePointer(m_Handle, 0, null, FILE_BEGIN);
     REV_CHECK(m_Offset == 0);
@@ -162,7 +162,7 @@ void File::Read(void *buffer, u64 bytes)
     m_CriticalSection.Enter();
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
-    REV_CHECK_M(m_Flags & FLAG_READ, "You have no rights to read file \"%.*s\"", m_Name.Length(), m_Name.Data());
+    REV_CHECK_M(m_Flags & FILE_FLAG_READ, "You have no rights to read file \"%.*s\"", m_Name.Length(), m_Name.Data());
     REV_CHECK(buffer);
     REV_CHECK_M(bytes, "Buffer size must be more than 0");
 
@@ -189,7 +189,7 @@ void File::Write(const void *buffer, u64 bytes)
     m_CriticalSection.Enter();
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
-    REV_CHECK_M(m_Flags & FLAG_WRITE, "You have no rights to write to file \"%.*s\"", m_Name.Length(), m_Name.Data());
+    REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to write to file \"%.*s\"", m_Name.Length(), m_Name.Data());
     REV_CHECK(buffer);
     REV_CHECK_M(bytes, "Buffer size must be more than 0");
 
@@ -218,7 +218,7 @@ void File::Append(const void *buffer, u64 bytes)
     m_CriticalSection.Enter();
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
-    REV_CHECK_M(m_Flags & FLAG_WRITE, "You have no rights to write to file \"%.*s\"", m_Name.Length(), m_Name.Data());
+    REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to write to file \"%.*s\"", m_Name.Length(), m_Name.Data());
     REV_CHECK(buffer);
     REV_CHECK_M(bytes, "Buffer size must be more than 0");
 
@@ -249,11 +249,11 @@ void File::Flush()
     m_CriticalSection.Enter();
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
-    REV_CHECK_M(m_Flags & FLAG_WRITE, "You have no rights to flush file \"%.*s\". You must have write rights", m_Name.Length(), m_Name.Data());
+    REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to flush file \"%.*s\". You must have write rights", m_Name.Length(), m_Name.Data());
 
-    if (m_Flags & FLAG_FLUSH)
+    if (m_Flags & FILE_FLAG_FLUSH)
     {
-        REV_WARNING_M("There is no sense of using Flush function with FLAG_FLUSH set, file: %.*s", m_Name.Length(), m_Name.Data());
+        REV_WARNING_M("There is no sense of using Flush function with FILE_FLAG_FLUSH set, file: %.*s", m_Name.Length(), m_Name.Data());
     }
     else
     {
@@ -693,8 +693,8 @@ void File::Open()
                 Path path(m_Name.SubString(0, m_Name.RFind('/', 1)));
                 path.Inspect();
 
-                REV_CHECK(m_Flags & FLAG_EXISTS);
-                path.PrintWarningIfDoesNotExist("File has been tried to be opened with flag FLAG_EXISTS but it does not exist");
+                REV_CHECK(m_Flags & FILE_FLAG_EXISTS);
+                path.PrintWarningIfDoesNotExist("File has been tried to be opened with flag FILE_FLAG_EXISTS but it does not exist");
             } break;
 
             case ERROR_PATH_NOT_FOUND:
@@ -710,7 +710,7 @@ void File::Open()
 
             case ERROR_FILE_EXISTS:
             {
-                REV_WARNING_M("File \"%.*s\" has been created with FLAG_NEW that guarantees a file creation only if it does NOT exist, but it does exist",
+                REV_WARNING_M("File \"%.*s\" has been created with FILE_FLAG_NEW that guarantees a file creation only if it does NOT exist, but it does exist",
                               m_Name.Length(), m_Name.Data());
             } break;
 
@@ -732,31 +732,31 @@ void File::Open()
 
 void File::SplitFlagsToWin32Flags(u32& desired_access, u32& shared_access, u32& disposition, u32& attributes)
 {
-    if (m_Flags & FLAG_READ)
+    if (m_Flags & FILE_FLAG_READ)
     {
         desired_access  = GENERIC_READ;
         shared_access   = FILE_SHARE_READ;
         attributes     |= FILE_ATTRIBUTE_READONLY;
     }
-    if (m_Flags & FLAG_WRITE)
+    if (m_Flags & FILE_FLAG_WRITE)
     {
         desired_access |=  GENERIC_WRITE;
         shared_access  |=  FILE_SHARE_WRITE;
         attributes     &= ~FILE_ATTRIBUTE_READONLY;
         attributes     |=  FILE_ATTRIBUTE_NORMAL;
     }
-    REV_DEBUG_RESULT_M(m_Flags & FLAG_RW, "A file must have FLAG_READ and/or FILE_WRITE flags");
+    REV_DEBUG_RESULT_M(m_Flags & FILE_FLAG_RW, "A file must have FILE_FLAG_READ and/or FILE_WRITE flags");
 
     // @NOTE(Roman): CREATE_NEW        - if (exists) fails ,    ERROR_FILE_EXISTS    else creates
     //               CREATE_ALWAYS     - if (exists) truncates, ERROR_ALREADY_EXISTS else creates
     //               OPEN_EXISTING     - if (exists) succeeds                        else fails,  ERROR_FILE_NOT_FOUND
     //               OPEN_ALWAYS       - if (exists) succeeds,  ERROR_ALREADY_EXISTS else creates
     //               TRUNCATE_EXISTING - if (exists) truncates                       else fails,  ERROR_FILE_NOT_FOUND. Must have GENERIC_WRITE.
-    if (m_Flags & FLAG_EXISTS)
+    if (m_Flags & FILE_FLAG_EXISTS)
     {
-        if (m_Flags & FLAG_TRUNCATE)
+        if (m_Flags & FILE_FLAG_TRUNCATE)
         {
-            REV_DEBUG_RESULT_M(m_Flags & FLAG_WRITE, "For truncating an existing file, you have to open it with the write access");
+            REV_DEBUG_RESULT_M(m_Flags & FILE_FLAG_WRITE, "For truncating an existing file, you have to open it with the write access");
             disposition = TRUNCATE_EXISTING;
         }
         else
@@ -764,26 +764,26 @@ void File::SplitFlagsToWin32Flags(u32& desired_access, u32& shared_access, u32& 
             disposition = OPEN_EXISTING;
         }
     }
-    else if (m_Flags & FLAG_NEW)
+    else if (m_Flags & FILE_FLAG_NEW)
     {
         disposition = CREATE_NEW;
     }
     else
     {
-        if (m_Flags & FLAG_TRUNCATE) disposition = CREATE_ALWAYS;
-        else                         disposition = OPEN_ALWAYS;
+        if (m_Flags & FILE_FLAG_TRUNCATE) disposition = CREATE_ALWAYS;
+        else                              disposition = OPEN_ALWAYS;
     }
 
-    /**/ if (m_Flags & FLAG_RAND) attributes |= FILE_FLAG_RANDOM_ACCESS;
-    else if (m_Flags & FLAG_SEQ)  attributes |= FILE_FLAG_SEQUENTIAL_SCAN;
+    /**/ if (m_Flags & FILE_FLAG_RAND) attributes |= FILE_FLAG_RANDOM_ACCESS;
+    else if (m_Flags & FILE_FLAG_SEQ)  attributes |= FILE_FLAG_SEQUENTIAL_SCAN;
 
-    if (m_Flags & FLAG_TEMP)
+    if (m_Flags & FILE_FLAG_TEMP)
     {
         shared_access |= FILE_SHARE_DELETE;
         attributes    |= FILE_ATTRIBUTE_TEMPORARY
                       |  FILE_FLAG_DELETE_ON_CLOSE;
     }
-    if (m_Flags & FLAG_FLUSH)
+    if (m_Flags & FILE_FLAG_FLUSH)
     {
         attributes |= FILE_FLAG_WRITE_THROUGH;
     }
@@ -897,7 +897,7 @@ void Path::_PrintWarningIfDoesNotExist(const ConstString& warning_message)
 
             if (warning_message.Length()) builder.Build(warning_message);
             else                          builder.Build("Path does not exist");
-            builder.Build(': "');
+            builder.Build(": ");
 
             REV_DEBUG_RESULT(SetConsoleTextAttribute(console, cast(u16, DEBUG_COLOR::WARNING)));
             REV_DEBUG_RESULT(WriteConsoleA(console, builder.BufferData(), (DWORD)builder.BufferLength(), null, null));

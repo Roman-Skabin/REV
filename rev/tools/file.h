@@ -7,12 +7,36 @@
 #pragma once
 
 #include "tools/static_string.hpp"
-#include "tools/const_array.hpp"
-#include "tools/function.hpp"
 #include "tools/critical_section.hpp"
+#include "tools/function.hpp"
 
 namespace REV
 {
+    enum FILE_FLAG : u32
+    {
+        FILE_FLAG_NONE     = 0,
+
+        // General flags (required)
+        FILE_FLAG_READ     = 0x1,
+        FILE_FLAG_WRITE    = 0x2,
+
+        // Open flags (optional)
+        FILE_FLAG_EXISTS   = 0x10, // A file will be opened only if it exists.   (There is no sense to combine it with FILE_FLAG_NEW)
+        FILE_FLAG_NEW      = 0x20, // Creates a file only if it does not exists. (There is no sense to open a file with this flag, but without FILE_FLAG_WRITE).
+        FILE_FLAG_TRUNCATE = 0x40, // Truncate a file on open. Must have FILE_FLAG_WRITE.
+
+        // Other flags (optional)
+        FILE_FLAG_RAND     = 0x100, // Optimized for a random access (prefetch 2 times less data than without). There is no sence to combine it with FILE_FLAG_SEQ.
+        FILE_FLAG_SEQ      = 0x200, // Optimized for a sequential access (prefetch 2 times more data than without). There is no sence to combine it with FILE_FLAG_RAND.
+        FILE_FLAG_TEMP     = 0x400, // File will be deleted on close.
+        FILE_FLAG_FLUSH    = 0x800, // Flush data immediatly after write.
+
+        // Default combinations
+        FILE_FLAG_RW       = FILE_FLAG_READ | FILE_FLAG_WRITE,
+        FILE_FLAG_RES      = FILE_FLAG_READ | FILE_FLAG_EXISTS | FILE_FLAG_SEQ,
+    };
+    REV_ENUM_OPERATORS(FILE_FLAG)
+
     // @NOTE(Roman): Must return true if you want to break find loop. For example if the file you were searching for has been found.
     #define REV_FIND_FILE_CALLBACK(name) bool name(const ConstString& found_filename)
     typedef REV_FIND_FILE_CALLBACK(FindFileCallback);
@@ -21,42 +45,17 @@ namespace REV
     class REV_API File final
     {
     public:
-        enum FLAG : u32
-        {
-            FLAG_NONE     = 0,
-
-            // General flags (required)
-            FLAG_READ     = 0x1,
-            FLAG_WRITE    = 0x2,
-
-            // Open flags (optional)
-            FLAG_EXISTS   = 0x10, // A file will be opened only if it exists.   (There is no sense to combine it with FILE_FLAG_NEW)
-            FLAG_NEW      = 0x20, // Creates a file only if it does not exists. (There is no sense to open a file with this flag, but without FILE_FLAG_WRITE).
-            FLAG_TRUNCATE = 0x40, // Truncate a file on open. Must have FILE_FLAG_WRITE.
-
-            // Other flags (optional)
-            FLAG_RAND     = 0x100, // Optimized for a random access. There is no sence to combine it with FILE_FLAG_SEQ.
-            FLAG_SEQ      = 0x200, // Optimized for a sequential access. There is no sence to combine it with FILE_FLAG_RAND.
-            FLAG_TEMP     = 0x400, // File will be deleted on close.
-            FLAG_FLUSH    = 0x800, // Flush data immediatly after write.
-
-            // Default combinations
-            FLAG_RW       = FLAG_READ | FLAG_WRITE,
-            FLAG_RES      = FLAG_READ | FLAG_EXISTS | FLAG_SEQ,
-        };
-
-    public:
         File(nullptr_t = null);
-        File(const ConstString& filename, FLAG flags);
-        template<u64 capacity> REV_INLINE File(const StaticString<capacity>& filename, FLAG flags) : File(filename.ToConstString(), flags) {}
+        File(const ConstString& filename, FILE_FLAG flags);
+        template<u64 capacity> REV_INLINE File(const StaticString<capacity>& filename, FILE_FLAG flags) : File(filename.ToConstString(), flags) {}
         File(const File& other);
         File(File&& other);
 
         ~File();
 
-        bool Open(const ConstString& filename, FLAG flags);
-        template<u64 capacity> REV_INLINE bool Open(const StaticString<capacity>& filename, FLAG flags) { return Open(filename.ToConstString(), flags); }
-        void ReOpen(FLAG new_flags);
+        bool Open(const ConstString& filename, FILE_FLAG flags);
+        template<u64 capacity> REV_INLINE bool Open(const StaticString<capacity>& filename, FILE_FLAG flags) { return Open(filename.ToConstString(), flags); }
+        void ReOpen(FILE_FLAG new_flags);
         void Close();
 
         void Clear();
@@ -99,9 +98,9 @@ namespace REV
         REV_INLINE bool Opened() const { return m_Handle != INVALID_HANDLE_VALUE; }
         REV_INLINE bool Closed() const { return m_Handle == INVALID_HANDLE_VALUE; }
 
-        REV_INLINE s64  Offset() const { return m_Offset; }
-        REV_INLINE u64  Size()   const { return m_Size;   }
-        REV_INLINE FLAG Flags()  const { return m_Flags;  }
+        REV_INLINE s64       Offset() const { return m_Offset; }
+        REV_INLINE u64       Size()   const { return m_Size;   }
+        REV_INLINE FILE_FLAG Flags()  const { return m_Flags;  }
 
         REV_INLINE const StaticString<REV_PATH_CAPACITY>& Name() const { return m_Name; }
 
@@ -120,10 +119,9 @@ namespace REV
         u64                             m_Offset;
         u64                             m_Size;
         mutable CriticalSection<true>   m_CriticalSection;
-        FLAG                            m_Flags;
+        FILE_FLAG                       m_Flags;
         StaticString<REV_PATH_CAPACITY> m_Name;
     };
-    REV_ENUM_OPERATORS(File::FLAG)
 
     struct REV_API Path final
     {

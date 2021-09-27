@@ -204,7 +204,7 @@ Settings *Settings::Init(const ConstString& ini_filename)
     g_Settings->vsync            = false;
     g_Settings->assets_folder    = ConstString(REV_CSTR_ARGS("assets"));
 
-    File file(ini_filename, File::FLAG_RW | File::FLAG_SEQ);
+    File file(ini_filename, FILE_FLAG_RW | FILE_FLAG_SEQ);
     if (file.Size())
     {
         char *stream = Memory::Get()->PushToFA<char>(file.Size() + 1);

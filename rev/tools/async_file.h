@@ -6,9 +6,7 @@
 
 #pragma once
 
-#include "tools/const_string.h"
-#include "tools/static_string.hpp"
-#include "tools/critical_section.hpp"
+#include "tools/file.h"
 #include "tools/tuple.hpp"
 
 namespace REV
@@ -17,42 +15,17 @@ namespace REV
     class REV_API AsyncFile final
     {
     public:
-        enum FLAG : u32
-        {
-            FLAG_NONE     = 0,
-
-            // General flags (required)
-            FLAG_READ     = 0x1,
-            FLAG_WRITE    = 0x2,
-
-            // Open flags (optional)
-            FLAG_EXISTS   = 0x10, // A file will be opened only if it exists.   (There is no sense to combine it with FILE_FLAG_NEW)
-            FLAG_NEW      = 0x20, // Creates a file only if it does not exists. (There is no sense to open a file with this flag, but without FILE_FLAG_WRITE).
-            FLAG_TRUNCATE = 0x40, // Truncate a file on open. Must have FILE_FLAG_WRITE.
-
-            // Other flags (optional)
-            FLAG_RAND     = 0x100, // Optimized for a random access. There is no sence to combine it with FILE_FLAG_SEQ.
-            FLAG_SEQ      = 0x200, // Optimized for a sequential access. There is no sence to combine it with FILE_FLAG_RAND.
-            FLAG_TEMP     = 0x400, // File will be deleted on close.
-            FLAG_FLUSH    = 0x800, // Flush data immediatly after write.
-
-            // Default combinations
-            FLAG_RW       = FLAG_READ | FLAG_WRITE,
-            FLAG_RES      = FLAG_READ | FLAG_EXISTS | FLAG_SEQ,
-        };
-
-    public:
         AsyncFile(nullptr_t = null);
-        AsyncFile(const ConstString& filename, FLAG flags);
-        template<u64 capacity> REV_INLINE AsyncFile(const StaticString<capacity>& filename, FLAG flags) : AsyncFile(filename.ToConstString(), flags) {}
+        AsyncFile(const ConstString& filename, FILE_FLAG flags);
+        template<u64 capacity> REV_INLINE AsyncFile(const StaticString<capacity>& filename, FILE_FLAG flags) : AsyncFile(filename.ToConstString(), flags) {}
         AsyncFile(const AsyncFile& other);
         AsyncFile(AsyncFile&& other);
 
         ~AsyncFile();
 
-        bool Open(const ConstString& filename, FLAG flags);
-        template<u64 capacity> REV_INLINE bool Open(const StaticString<capacity>& filename, FLAG flags) { return Open(filename.ToConstString(), flags); }
-        void ReOpen(FLAG new_flags);
+        bool Open(const ConstString& filename, FILE_FLAG flags);
+        template<u64 capacity> REV_INLINE bool Open(const StaticString<capacity>& filename, FILE_FLAG flags) { return Open(filename.ToConstString(), flags); }
+        void ReOpen(FILE_FLAG new_flags);
         void Close();
 
         void Clear();
@@ -103,8 +76,8 @@ namespace REV
         REV_INLINE bool Opened() const { return m_Handle != INVALID_HANDLE_VALUE; }
         REV_INLINE bool Closed() const { return m_Handle == INVALID_HANDLE_VALUE; }
 
-        REV_INLINE u64  Size()  const { return m_Size;  }
-        REV_INLINE FLAG Flags() const { return m_Flags; }
+        REV_INLINE u64       Size()  const { return m_Size;  }
+        REV_INLINE FILE_FLAG Flags() const { return m_Flags; }
 
         REV_INLINE const StaticString<REV_PATH_CAPACITY>& Name() const { return m_Name; }
 
@@ -144,11 +117,9 @@ namespace REV
 
         HANDLE                          m_Handle;
         u64                             m_Size;
-        FLAG                            m_Flags;
+        FILE_FLAG                       m_Flags;
         mutable CriticalSection<false>  m_CriticalSection;
         mutable APCEntry                m_APCEntries[MAX_APCS];
         StaticString<REV_PATH_CAPACITY> m_Name;
     };
-
-    REV_ENUM_OPERATORS(AsyncFile::FLAG)
 }

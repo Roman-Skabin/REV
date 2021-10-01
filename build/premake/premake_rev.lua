@@ -4,6 +4,7 @@ project "rev"
     location    "%{wks.location}/%{prj.name}"
     targetdir   "%{wks.location}/bin/%{wks.system}/%{wks.configuration}"
     objdir      "%{prj.targetdir}/obj/%{prj.name}"
+    debugdir    "%{prj.targetdir}"
     symbolspath "%{prj.targetdir}/%{prj.name}.pdb"
     includedirs "%{prj.location}"
 

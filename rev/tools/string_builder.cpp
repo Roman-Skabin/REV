@@ -77,7 +77,7 @@ StringBuilder& REV_CDECL StringBuilder::BuildVA(const char *format, va_list args
     m_String.m_Header->length += vsnprintf(null, 0, format, args);
     m_String.Expand();
 
-    vsnprintf(m_String.m_Header->data + old_length,
+    vsnprintf(m_String.m_Header->data     + old_length,
               m_String.m_Header->capacity - old_length,
               format,
               args);

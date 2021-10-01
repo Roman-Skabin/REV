@@ -202,7 +202,8 @@ Settings *Settings::Init(const ConstString& ini_filename)
     g_Settings->anisotropy       = 1;
     g_Settings->fullscreen       = false;
     g_Settings->vsync            = false;
-    g_Settings->assets_folder    = ConstString(REV_CSTR_ARGS("assets"));
+    g_Settings->assets_folder    = ConstString(REV_CSTR_ARGS("../../assets"));
+    g_Settings->logs_folder      = ConstString(REV_CSTR_ARGS("../../log"));
 
     File file(ini_filename, FILE_FLAG_RW | FILE_FLAG_SEQ);
     if (file.Size())
@@ -365,6 +366,16 @@ Settings *Settings::Init(const ConstString& ini_filename)
 
                     g_Settings->assets_folder = ConstString(lexer.token.start + 1, lexer.token.end - lexer.token.start - 2);
                 }
+                else if (TokenEquals(&lexer, REV_CSTR_ARGS("logs_folder")))
+                {
+                    NextToken(&lexer);
+                    CheckToken(&lexer, TOKEN_KIND_ASSIGN);
+
+                    NextToken(&lexer);
+                    CheckToken(&lexer, TOKEN_KIND_STRING);
+
+                    g_Settings->logs_folder = ConstString(lexer.token.start + 1, lexer.token.end - lexer.token.start - 2);
+                }
                 else
                 {
                     SyntaxError(&lexer, "unexpected setting: %.*s", cast(int, lexer.stream - lexer.token.start), lexer.token.start);
@@ -386,7 +397,8 @@ Settings *Settings::Init(const ConstString& ini_filename)
         "filtering            = TRILINEAR\n"
         "anisotropy           = 1\n"
         "vsync                = false\n"
-        "assets_folder        = \"assets\"\n";
+        "assets_folder        = \"../../assets\"\n"
+        "logs_folder          = \"../../log\"\n";
 
         file.Write(REV_CSTR_ARGS(default_settings));
     }

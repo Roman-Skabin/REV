@@ -8,24 +8,31 @@
 #include "tools/logger.h"
 #include "tools/critical_section.hpp"
 #include "tools/static_string_builder.hpp"
+#include "core/settings.h"
 
 namespace REV
 {
 
 REV_GLOBAL CriticalSection<false> g_CriticalSection;
 
-Logger::Logger(const ConstString& name, const ConstString& filename, TARGET target)
+Logger::Logger(const ConstString& name, TARGET target)
     : m_File(),
       m_Console(INVALID_HANDLE_VALUE),
       m_Target(target),
       m_Attribs(),
       m_Name(name)
 {
+    REV_CHECK_M(name.Data(), "Name is null. It is illegal to have a null name");
+
     if (m_Target & TARGET_FILE)
     {
-        REV_CHECK_M(filename.Data(), "filename is null. It is illegal if you want to log to a file.");
+        StaticString<REV_PATH_CAPACITY> full_filename;
+        full_filename += Settings::Get()->logs_folder;
+        if (full_filename.Last() != '/' || full_filename.Last() != '\\') full_filename += '/';
+        full_filename += name;
+        full_filename.PushBack(REV_CSTR_ARGS(".log"));
 
-        if (!m_File.Open(filename, FILE_FLAG_WRITE | FILE_FLAG_TRUNCATE | FILE_FLAG_SEQ | FILE_FLAG_FLUSH))
+        if (!m_File.Open(full_filename, FILE_FLAG_WRITE | FILE_FLAG_TRUNCATE | FILE_FLAG_SEQ | FILE_FLAG_FLUSH))
         {
             m_File    = null;
             m_Target &= ~TARGET_FILE;
@@ -50,7 +57,7 @@ Logger::Logger(const ConstString& name, const ConstString& filename, TARGET targ
         }
     }
 
-    LogSuccess(m_Name, " has been created");
+    LogSuccess(m_Name, " logger has been created");
 }
 
 Logger::Logger(const Logger& other, const ConstString& name, TARGET target)
@@ -92,7 +99,7 @@ Logger::Logger(const Logger& other, const ConstString& name, TARGET target)
         }
     }
 
-    LogSuccess(m_Name, " has been duplicated from ", other.m_Name);
+    LogSuccess(m_Name, " logger has been duplicated from ", other.m_Name);
 }
 
 Logger::Logger(Logger&& other) noexcept
@@ -110,7 +117,7 @@ Logger::Logger(Logger&& other) noexcept
 
 Logger::~Logger()
 {
-    LogInfo(m_Name, " has been destroyed");
+    LogInfo(m_Name, " logger has been destroyed");
     m_Console      = INVALID_HANDLE_VALUE;
     m_Target       = TARGET_NONE;
     m_Attribs.full = 0;

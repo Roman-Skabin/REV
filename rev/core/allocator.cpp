@@ -28,20 +28,21 @@ struct BlockHeader
     byte         data[0];
 };
 
-Allocator::Allocator(void *base_address, u64 capacity, bool clear_memory, const ConstString& name)
+Allocator::Allocator(void *base_address, u64 capacity, bool clear_memory, const ConstString& name, bool print_stats_in_debug_build)
     : m_FreeList(null),
       m_First(null),
       m_LastAllocated(null),
       m_Used(0),
       m_Capacity(AlignUp(capacity, PAGE_SIZE)),
+      m_CriticalSection(),
+      m_Name(name),
 #if REV_DEBUG
       m_AllocationsCount(0),
       m_ReAllocationsCount(0),
       m_DeAllocationsCount(0),
       m_MaxMemoryUsed(0),
+      m_PrintStats(print_stats_in_debug_build),
 #endif
-      m_CriticalSection(),
-      m_Name(name),
       m_VallocUsed(false)
 {
     REV_CHECK_M(m_Capacity, "Allocator \"%s\", Allocator's capacity can't be 0", m_Name.Data());
@@ -66,21 +67,27 @@ Allocator::Allocator(void *base_address, u64 capacity, bool clear_memory, const 
     m_LastAllocated = m_First;
 }
 
-Allocator::Allocator(Allocator&& other) noexcept
+Allocator::Allocator(Allocator&& other)
     : m_FreeList(other.m_FreeList),
       m_First(other.m_First),
       m_LastAllocated(other.m_LastAllocated),
       m_Used(other.m_Used),
       m_Capacity(other.m_Capacity),
+      m_CriticalSection(RTTI::move(other.m_CriticalSection)),
+      m_Name(RTTI::move(other.m_Name)),
 #if REV_DEBUG
       m_AllocationsCount(other.m_AllocationsCount),
       m_ReAllocationsCount(other.m_ReAllocationsCount),
       m_DeAllocationsCount(other.m_DeAllocationsCount),
+      m_MaxMemoryUsed(other.m_MaxMemoryUsed),
+      m_PrintStats(other.m_PrintStats),
 #endif
-      m_VallocUsed(other.m_VallocUsed),
-      m_CriticalSection(RTTI::move(other.m_CriticalSection))
+      m_VallocUsed(other.m_VallocUsed)
 {
-    ZeroMemory(&other, sizeof(Allocator));
+#if REV_DEBUG
+    other.m_PrintStats = false;
+#endif
+    other.m_VallocUsed = false;
 }
 
 Allocator::~Allocator()
@@ -97,30 +104,45 @@ Allocator::~Allocator()
         }
     }
 #if REV_DEBUG
-    if (m_AllocationsCount > m_DeAllocationsCount)
+    if (m_PrintStats)
     {
-        PrintDebugMessage(DEBUG_COLOR::ERROR, "Allocator \"%s\": Memory leak detected:", m_Name.Data());
-        PrintDebugMessage(DEBUG_COLOR::ERROR, "    Allocations overall: %I64u", m_AllocationsCount);
-        PrintDebugMessage(DEBUG_COLOR::ERROR, "    Reallocations overall: %I64u", m_ReAllocationsCount);
-        PrintDebugMessage(DEBUG_COLOR::ERROR, "    Deallocations overall: %I64u", m_DeAllocationsCount);
+        if (m_AllocationsCount > m_DeAllocationsCount)
+        {
+            PrintDebugMessage(DEBUG_COLOR::ERROR, "Allocator \"%s\": Memory leak detected:", m_Name.Data());
+            PrintDebugMessage(DEBUG_COLOR::ERROR, "    Allocations overall: %I64u", m_AllocationsCount);
+            PrintDebugMessage(DEBUG_COLOR::ERROR, "    Reallocations overall: %I64u", m_ReAllocationsCount);
+            PrintDebugMessage(DEBUG_COLOR::ERROR, "    Deallocations overall: %I64u", m_DeAllocationsCount);
+        }
+        else
+        {
+            PrintDebugMessage(DEBUG_COLOR::INFO, "Allocator \"%s\" stats:", m_Name.Data());
+            PrintDebugMessage(DEBUG_COLOR::INFO, "    Allocations overall: %I64u", m_AllocationsCount);
+            PrintDebugMessage(DEBUG_COLOR::INFO, "    Reallocations overall: %I64u", m_ReAllocationsCount);
+            PrintDebugMessage(DEBUG_COLOR::INFO, "    Deallocations overall: %I64u", m_DeAllocationsCount);
+        }
+        PrintDebugMessage(DEBUG_COLOR::INFO, "    Max memory used: %I64u B = %f KB = %f MB = %f GB", m_MaxMemoryUsed,
+                                                                                                     m_MaxMemoryUsed / 1024.0f,
+                                                                                                     m_MaxMemoryUsed / 1048576.0f,
+                                                                                                     m_MaxMemoryUsed / 1073741824.0f);
+        PrintDebugMessage(DEBUG_COLOR::INFO, "    Capacity: %I64u B = %f KB = %f MB = %f GB", m_Capacity,
+                                                                                              m_Capacity / 1024.0f,
+                                                                                              m_Capacity / 1048576.0f,
+                                                                                              m_Capacity / 1073741824.0f);
     }
-    else
-    {
-        PrintDebugMessage(DEBUG_COLOR::INFO, "Allocator \"%s\": Stats:", m_Name.Data());
-        PrintDebugMessage(DEBUG_COLOR::INFO, "    Allocations overall: %I64u", m_AllocationsCount);
-        PrintDebugMessage(DEBUG_COLOR::INFO, "    Reallocations overall: %I64u", m_ReAllocationsCount);
-        PrintDebugMessage(DEBUG_COLOR::INFO, "    Deallocations overall: %I64u", m_DeAllocationsCount);
-    }
-    PrintDebugMessage(DEBUG_COLOR::INFO, "    Max memory used: %I64u B = %f KB = %f MB = %f GB", m_MaxMemoryUsed,
-                                                                                                 m_MaxMemoryUsed / 1024.0f,
-                                                                                                 m_MaxMemoryUsed / 1048576.0f,
-                                                                                                 m_MaxMemoryUsed / 1073741824.0f);
-    PrintDebugMessage(DEBUG_COLOR::INFO, "    Capacity: %I64u B = %f KB = %f MB = %f GB", m_Capacity,
-                                                                                          m_Capacity / 1024.0f,
-                                                                                          m_Capacity / 1048576.0f,
-                                                                                          m_Capacity / 1073741824.0f);
 #endif
-    ZeroMemory(this, REV_StructFieldOffset(Allocator, m_CriticalSection));
+    m_FreeList           = null;
+    m_First              = null;
+    m_LastAllocated      = null;
+    m_Used               = 0;
+    m_Capacity           = 0;
+#if REV_DEBUG
+    m_AllocationsCount   = 0;
+    m_ReAllocationsCount = 0;
+    m_DeAllocationsCount = 0;
+    m_MaxMemoryUsed      = 0;
+    m_PrintStats         = false;
+#endif
+    m_VallocUsed         = false;
 }
 
 BlockHeader *Allocator::FindBestMatch(u64 bytes)
@@ -627,10 +649,35 @@ Allocator& Allocator::operator=(Allocator&& other) noexcept
 {
     if (this != &other)
     {
-        CopyMemory(this, &other, REV_StructFieldOffset(Allocator, m_CriticalSection));
-        m_CriticalSection = RTTI::move(other.m_CriticalSection);
+        m_FreeList           = other.m_FreeList;
+        m_First              = other.m_First;
+        m_LastAllocated      = other.m_LastAllocated;
+        m_Used               = other.m_Used;
+        m_Capacity           = other.m_Capacity;
+        m_CriticalSection    = RTTI::move(other.m_CriticalSection);
+        m_Name               = RTTI::move(other.m_Name);
+    #if REV_DEBUG
+        m_AllocationsCount   = other.m_AllocationsCount;
+        m_ReAllocationsCount = other.m_ReAllocationsCount;
+        m_DeAllocationsCount = other.m_DeAllocationsCount;
+        m_MaxMemoryUsed      = other.m_MaxMemoryUsed;
+        m_PrintStats         = other.m_PrintStats;
+    #endif
+        m_VallocUsed         = other.m_VallocUsed;
 
-        ZeroMemory(&other, REV_StructFieldOffset(Allocator, m_CriticalSection));
+        other.m_FreeList           = null;
+        other.m_First              = null;
+        other.m_LastAllocated      = null;
+        other.m_Used               = 0;
+        other.m_Capacity           = 0;
+    #if REV_DEBUG
+        other.m_AllocationsCount   = 0;
+        other.m_ReAllocationsCount = 0;
+        other.m_DeAllocationsCount = 0;
+        other.m_MaxMemoryUsed      = 0;
+        other.m_PrintStats         = false;
+    #endif
+        other.m_VallocUsed         = false;
     }
     return *this;
 }

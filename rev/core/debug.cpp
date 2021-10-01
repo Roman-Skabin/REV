@@ -7,7 +7,7 @@
 #include "core/pch.h"
 #include "memory/memory.h"
 #include "tools/const_string.h"
-#include "tools/static_string_builder.hpp"
+#include "tools/string_builder.h"
 
 namespace REV
 {
@@ -17,7 +17,7 @@ REV_GLOBAL CriticalSection<false> g_CriticalSection;
 
 // @NOTE(Roman): For ComposeStackTraceMessage
 #ifndef _REV_NO_CHECKS
-    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); return; }
+    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); return false; }
 
     #define REV_CSTM_CHECK_M(expr, message, ...) { if (!(expr)) REV_CSTM_ERROR_M(message, __VA_ARGS__) }
     #define REV_CSTM_CHECK(expr)                 { if (!(expr)) REV_CSTM_ERROR_M(REV_CSTR(expr)) }
@@ -25,7 +25,7 @@ REV_GLOBAL CriticalSection<false> g_CriticalSection;
     #define REV_CSTM_DEBUG_RESULT(expr)                 REV_CSTM_CHECK(expr)
     #define REV_CSTM_DEBUG_RESULT_M(expr, message, ...) REV_CSTM_CHECK_M(expr, message, __VA_ARGS__)
 #else
-    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); return; }
+    #define REV_CSTM_ERROR_M(message, ...)       { PrintDebugMessage(__FILE__, __LINE__, DEBUG_COLOR::ERROR, true, false, message, __VA_ARGS__); return false; }
 
     #define REV_CSTM_CHECK_M(expr, message, ...) {}
     #define REV_CSTM_CHECK(expr)                 {}
@@ -34,7 +34,7 @@ REV_GLOBAL CriticalSection<false> g_CriticalSection;
     #define REV_CSTM_DEBUG_RESULT_M(expr, message, ...) { expr; }
 #endif
 
-REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
+REV_INTERNAL bool ComposeStackTraceMessage(StringBuilder& builder)
 {
     // @NOTE(Roman): Stack trace:
     //                   module_filename(line): symbol_name
@@ -44,8 +44,8 @@ REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
 #if REV_PLATFORM_WIN64
     void **stack_trace     = Memory::Get()->PushToFA<void *>(REV_U16_MAX);
     u32    hash_value      = 0;
-    u16    frames_captured = RtlCaptureStackBackTrace(2, REV_U16_MAX, stack_trace, &hash_value);
-    REV_CSTM_CHECK(frames_captured);
+    u16    frames_captured = 0;
+    REV_CSTM_DEBUG_RESULT(frames_captured = RtlCaptureStackBackTrace(2, REV_U16_MAX, stack_trace, &hash_value));
 
     HANDLE pseudo_process_handle = GetCurrentProcess();
     HANDLE real_process_handle   = null;
@@ -62,11 +62,10 @@ REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
         //               Ok, maybe not that randomly: it fails mostly when we're trying
         //               to print stack trace for a worker thread (not Main Thread).
         DWORD64 module_base = 0;
-        REV_CSTM_CHECK_M(module_base = SymGetModuleBase64(real_process_handle, cast(u64, stack_frame)), "SymGetModuleBase64 has failed randomly again");
+        REV_CSTM_DEBUG_RESULT_M(module_base = SymGetModuleBase64(real_process_handle, cast(u64, stack_frame)), "SymGetModuleBase64 has failed randomly again");
 
         IMAGEHLP_MODULE64 module_info{};
         module_info.SizeOfStruct = sizeof(IMAGEHLP_MODULE64);
-
         REV_CSTM_DEBUG_RESULT(SymGetModuleInfo64(real_process_handle, module_base, &module_info));
 
         SYMBOL_INFO *symbol_info  = cast(SYMBOL_INFO *, Memory::Get()->PushToFrameArena(sizeof(SYMBOL_INFO) + MAX_SYM_NAME));
@@ -89,7 +88,6 @@ REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
         u32 displacement = 0;
         if (SymGetLineFromAddr64(real_process_handle, cast(u64, stack_frame), &displacement , &line_info))
         {
-            // @TODO(Roman): Replace with the full file.
             ConstString filename_with_path(line_info.FileName, strlen(line_info.FileName));
             u64         slash_index   = filename_with_path.RFind('\\');
             ConstString just_filename = filename_with_path.SubString(slash_index + 1);
@@ -121,13 +119,18 @@ REV_INTERNAL void ComposeStackTraceMessage(StaticStringBuilder<2048>& builder)
 #else
     REV_CSTM_ERROR_M("Unhandled platform dependent code!");
 #endif
+
+    return true;
 }
 
 void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...)
 {
     REV_CHECK(format);
 
-    StaticStringBuilder<2048> builder;
+    // @TODO(Roman): #Explain why do we need separate allocator
+    //               and why should we use arenas or any other existing allocators.
+    Allocator     allocator(null, MB(1), true, ConstString(REV_CSTR_ARGS(__FUNCTION__)), false);
+    StringBuilder builder(&allocator, 1024);
 
     va_list args;
     va_start(args, format);
@@ -137,7 +140,7 @@ void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...)
 
     va_end(args);
 
-    builder.BuildLn('.');
+    builder.BuildLn();
 
     g_CriticalSection.Enter();
     {
@@ -160,7 +163,10 @@ void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, 
     //               2. file(line): type: message.
     //                  stack trace
 
-    StaticStringBuilder<2048> builder;
+    // @TODO(Roman): #Explain why do we need separate allocator
+    //               and why should we use arenas or any other existing allocators.
+    Allocator     allocator(null, MB(1), true, ConstString(REV_CSTR_ARGS(__FUNCTION__)), false);
+    StringBuilder builder(&allocator, 1024);
 
     builder.Build(file, '(', line, "): ");
 
@@ -196,10 +202,9 @@ void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, 
 
     builder.BuildLn('.');
 
-    if (print_stack_trace)
+    u64 builder_buffer_save_point = builder.BufferLength();
+    if (print_stack_trace && !ComposeStackTraceMessage(builder))
     {
-        u64 builder_buffer_save_point = builder.BufferLength();
-        ComposeStackTraceMessage(builder);
         builder.Buffer().Erase(builder_buffer_save_point, builder.BufferLength());
     }
 

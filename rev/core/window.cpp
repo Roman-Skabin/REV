@@ -30,7 +30,7 @@ Window::Window(const Logger& logger, const ConstString& title)
       m_Minimized(false),
       m_FullscreenSetRequested(Settings::Get()->fullscreen),
       m_FullscreenUnsetRequested(false),
-      m_Logger(logger, null, Logger::TARGET_FILE),
+      m_Logger(logger, ConstString(REV_CSTR_ARGS("Window")), Logger::TARGET_FILE),
       m_Title(title),
       m_ClassName(title)
 {
@@ -45,10 +45,12 @@ Window::Window(const Logger& logger, const ConstString& title)
 
     REV_DEBUG_RESULT(SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2));
     REV_DEBUG_RESULT(SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2));
-    REV_DEBUG_RESULT(GetAwarenessFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) == DPI_AWARENESS_PER_MONITOR_AWARE);
+    DPI_AWARENESS dpi_awareness = GetAwarenessFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    REV_CHECK(dpi_awareness == DPI_AWARENESS_PER_MONITOR_AWARE);
 
 #if WINVER >= 0x0606
-    REV_DEBUG_RESULT(SetThreadDpiHostingBehavior(DPI_HOSTING_BEHAVIOR_MIXED) != DPI_HOSTING_BEHAVIOR_INVALID);
+    DPI_HOSTING_BEHAVIOR thread_dpi_hosting_behavior = SetThreadDpiHostingBehavior(DPI_HOSTING_BEHAVIOR_MIXED);
+    REV_CHECK(thread_dpi_hosting_behavior != DPI_HOSTING_BEHAVIOR_INVALID);
 #endif
 
     s32 width  = m_XYWH.z;

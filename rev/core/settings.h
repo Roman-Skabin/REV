@@ -30,6 +30,7 @@ namespace REV
         u8                              fullscreen : 1;
         u8                              vsync      : 1;
         StaticString<REV_PATH_CAPACITY> assets_folder;
+        StaticString<REV_PATH_CAPACITY> logs_folder;
 
         static Settings *Get();
 

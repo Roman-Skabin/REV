@@ -142,20 +142,23 @@ public:
     {
         va_list args;
         va_start(args, format);
-        m_StaticString.m_Length += vsnprintf(m_StaticString.m_Data + m_StaticString.m_Length,
-                                             m_StaticString.Capacity() - m_StaticString.m_Length,
-                                             format,
-                                             args);
+        BuildVA(format, args);
         va_end(args);
         return *this;
     }
 
     REV_INLINE StaticStringBuilder& REV_CDECL BuildVA(const char *format, va_list args)
     {
-        m_StaticString.m_Length += vsnprintf(m_StaticString.m_Data + m_StaticString.m_Length,
-                                             m_StaticString.Capacity() - m_StaticString.m_Length,
-                                             format,
-                                             args);
+        u64 old_length = m_StaticString.Length();
+
+        m_StaticString.m_Length += vsnprintf(null, 0, format, args);
+        REV_CHECK_M(m_StaticString.Length() <= m_StaticString.Capacity(), "Final length (%I64u) is too big for current static string capacity (%I64u)", m_StaticString.Length(), m_StaticString.Capacity());
+
+        vsnprintf(m_StaticString.Data()     + old_length,
+                  m_StaticString.Capacity() - old_length,
+                  format,
+                  args);
+
         return *this;
     }
 

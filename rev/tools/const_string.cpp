@@ -88,7 +88,7 @@ u64 ConstString::RFind(char symbol, u64 offset) const
 {
     REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
 
-    const char *last = m_Data + m_Length - 1;
+    const char *last = pLast();
 
     for (const char *it = last - offset; it >= m_Data; --it)
     {

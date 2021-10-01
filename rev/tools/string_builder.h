@@ -26,6 +26,14 @@ public:
     REV_INLINE const String& ToString() const { return m_String; }
     REV_INLINE       String& ToString()       { return m_String; }
 
+    REV_INLINE const String& Buffer() const { return m_String; }
+    REV_INLINE       String& Buffer()       { return m_String; }
+
+    REV_INLINE const char *BufferData() const { return m_String.Data(); }
+    REV_INLINE       char *BufferData()       { return m_String.Data(); }
+
+    REV_INLINE u64 BufferLength() const { return m_String.Length(); }
+
     template<typename ...Args>
     StringBuilder& Build(const Args&... args)
     {

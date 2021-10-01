@@ -81,14 +81,10 @@ void Mouse::Update(const RAWMOUSE& raw_mouse, const Window& window)
     REV_DEBUG_RESULT(ScreenToClient(window.Handle(), &point));
     m_Pos = Math::v2s::clamp(Math::v2s(point.x, point.y), Math::v2s(), window.Size());
 
-    window.GetLogger().LogDebug("Mouse: ", m_Pos, ", delta: ", m_DeltaPos);
-
     if (raw_mouse.ulButtons & RI_MOUSE_WHEEL)
     {
         m_DeltaWheel  = cast(s16, raw_mouse.usButtonData) / WHEEL_DELTA;
         m_Wheel      += m_DeltaWheel;
-
-        window.GetLogger().LogDebug("Wheel: ", m_Wheel, ", delta: ", m_DeltaWheel);
     }
 
     bool down = m_LeftButton.Down();

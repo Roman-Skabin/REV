@@ -7,7 +7,6 @@
     - Vertex buffer/index files (some custom formats for various types of meshes)?
 
 - Settings
-    - Logs folder
     - Max view distance (max LOD & far)
 
 - Tools

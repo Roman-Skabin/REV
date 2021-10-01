@@ -20,9 +20,10 @@ namespace REV
             void              *base_address,
             u64                capacity,
             bool               clear_memory, // @NOTE(Roman): There is a sence to use it only if base_address != null.
-            const ConstString& name
+            const ConstString& name,
+            bool               print_stats_in_debug_build = true
         );
-        Allocator(Allocator&& other) noexcept;
+        Allocator(Allocator&& other);
         ~Allocator();
 
         void *Allocate(u64 bytes);
@@ -69,14 +70,15 @@ namespace REV
         BlockHeader            *m_LastAllocated;
         u64                     m_Used;
         u64                     m_Capacity;
+        CriticalSection<false>  m_CriticalSection;
+        ConstString             m_Name;
     #if REV_DEBUG
         u64                     m_AllocationsCount;
         u64                     m_ReAllocationsCount;
         u64                     m_DeAllocationsCount;
         u64                     m_MaxMemoryUsed;
+        bool                    m_PrintStats;
     #endif
-        CriticalSection<false>  m_CriticalSection;
-        ConstString             m_Name;
         bool                    m_VallocUsed;
     };
 }

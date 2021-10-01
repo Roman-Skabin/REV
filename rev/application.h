@@ -63,13 +63,11 @@ namespace REV
 
         REV_DELETE_CONSTRS_AND_OPS(Application);
 
-    private:
-        Logger        m_Logger;
-
     protected:
         Allocator     m_Allocator;
-        WorkQueue     m_WorkQueue;
         Settings     *m_Settings;
+        Logger        m_Logger;
+        WorkQueue     m_WorkQueue;
         Window        m_Window;
         Input        *m_Input;
         Timer         m_Timer;

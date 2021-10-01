@@ -28,7 +28,7 @@ ShaderManager::ShaderManager(Allocator *allocator, const Logger& logger)
       m_StaticComputeShaders(allocator),
       m_SceneGraphicsShaders(allocator),
       m_SceneComputeShaders(allocator),
-      m_Logger(logger, ConstString(REV_CSTR_ARGS("ShaderManager logger")), Logger::TARGET_FILE | Logger::TARGET_CONSOLE)
+      m_Logger(logger, ConstString(REV_CSTR_ARGS("ShaderManager")), Logger::TARGET_FILE | Logger::TARGET_CONSOLE)
 {
 }
 

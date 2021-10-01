@@ -292,7 +292,7 @@ enum class DEBUG_COLOR : u16
 };
 
 REV_API void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...);
-REV_API void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, bool print_sys_error, bool reserved, const char *format, ...);
+REV_API void REV_CDECL PrintDebugMessage(const char *file, u64 line, DEBUG_COLOR color, bool print_sys_error, bool print_stack_trace, const char *format, ...);
 
 // @NOTE(Roman):      ConstString is pushed on the frame arena, so you don't need to free anything.
 // @Important(Roman): Also keep in mind that data will be valid only for 1 frame long.

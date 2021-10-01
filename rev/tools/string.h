@@ -165,6 +165,7 @@ public:
     REV_INLINE bool Empty() const { return !m_Header->length; }
 
     REV_INLINE const Allocator *GetAllocator() const { return m_Header->allocator; }
+    REV_INLINE       Allocator *GetAllocator()       { return m_Header->allocator; }
 
     REV_INLINE const char *begin()   const { return m_Header->data;                    }
     REV_INLINE const char *cbegin()  const { return m_Header->data;                    }

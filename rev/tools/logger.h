@@ -12,7 +12,6 @@
 
 namespace REV
 {
-    // @TODO(Roman): Singleton?
     class REV_API Logger final
     {
     public:
@@ -34,11 +33,7 @@ namespace REV
         };
 
     public:
-        Logger(
-            const ConstString& name,
-            const ConstString& filename, // @NOTE(Roman): Required if you are logging to the file
-            TARGET             target
-        );
+        Logger(const ConstString& name, TARGET target);
         Logger(const Logger& other, const ConstString& name = null, TARGET target = TARGET_NONE);
         Logger(Logger&& other) noexcept;
 

@@ -15,45 +15,51 @@ namespace REV
     class REV_API WorkQueue final
     {
     public:
-        WorkQueue(const Logger& logger, Arena& arena);
+        WorkQueue(const Logger& logger, Arena& arena, u64 max_simultaneous_works = 16);
         ~WorkQueue();
 
-        void AddWork(const Function<void()>& callback);
+        void AddWork(const Function<void()>& proc);
         void Wait();
 
     private:
-        friend u32 WINAPI ThreadProc(void *arg);
+        friend u32 REV_STDCALL ThreadProc(void *arg);
 
         REV_DELETE_CONSTRS_AND_OPS(WorkQueue);
 
     private:
-        enum
+        enum : u64
         {
-            MIN_THREADS = 4,
-            MAX_THREADS = 128,
+            MIN_THREADS =   4 - 1,
+            MAX_THREADS = 128 - 1,
 
-            MIN_WORKS   = MIN_THREADS - 1,
-            MAX_WORKS   = __max(MIN_WORKS, MAX_THREADS - 1),
+            MIN_WORKS   = MIN_THREADS + 1,
         };
 
+    public:
+        enum WORK_FLAG : s32
+        {
+            WORK_FLAG_NONE         = 0,
+            WORK_FLAG_IS_CHANGING  = 1 << 0,
+        };
+
+    private:
         struct Work
         {
-            HANDLE           thread_handle;
-            volatile char    callback_is_changing; // @NOTE(Roman): Atomic flag for callback change synchronization
-            Function<void()> callback;
+            volatile WORK_FLAG flags;
+            Function<void()>   proc;
         };
 
-        struct Header
-        {
-            HANDLE       semaphore;
-            volatile s32 completion_goal;
-            volatile s32 entries_completed;
-            volatile s32 next_entry_to_read;
-            volatile s32 next_entry_to_write;
-            s32          works_count;
-            Work         works[0];
-        };
+        void            *m_Semaphore;
 
-        Header *m_Header;
+        Work            *m_Works;
+        u64              m_WorksCount;
+        volatile s64     m_WorksToDo;
+        Work *volatile   m_WorksExecuteIterator;
+        Work *volatile   m_WorksAddIterator;
+
+        void           **m_Threads;
+        u64              m_ThreadsCount;
+        volatile u64     m_ThreadsCountWaiting;
     };
+    REV_ENUM_OPERATORS(WorkQueue::WORK_FLAG);
 }

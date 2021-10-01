@@ -55,7 +55,7 @@ namespace REV
                 u32 wait_result = WaitForSingleObjectEx(m_Semaphore, INFINITE, false);
                 REV_CHECK(wait_result == WAIT_OBJECT_0);
 
-                _InterlockedExchange(&m_Owner, new_owner);
+                _InterlockedExchange(cast(volatile s32 *, &m_Owner), cast(s32, new_owner));
             }
             _InterlockedIncrement64(&m_RecursionCount);
         }
@@ -64,7 +64,7 @@ namespace REV
         {
             if (_InterlockedDecrement64(&m_RecursionCount) == 0)
             {
-                _InterlockedExchange(&m_Owner, 0);
+                _InterlockedExchange(cast(volatile s32 *, &m_Owner), 0);
                 REV_DEBUG_RESULT(ReleaseSemaphore(m_Semaphore, 1, null));
             }
         }
@@ -135,7 +135,7 @@ namespace REV
                 while (current != m_NextThreadID)
                 {
                 }
-                _InterlockedExchange(&m_Owner, new_owner);
+                _InterlockedExchange(cast(volatile s32 *, &m_Owner), cast(s32, new_owner));
             }
             _InterlockedIncrement64(&m_RecursionCount);
         }
@@ -144,7 +144,7 @@ namespace REV
         {
             if (_InterlockedDecrement64(&m_RecursionCount) == 0)
             {
-                _InterlockedExchange(&m_Owner, 0);
+                _InterlockedExchange(cast(volatile s32 *, &m_Owner), 0);
                 _InterlockedIncrement64(&m_NextThreadID);
             }
         }

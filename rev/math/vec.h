@@ -21,13 +21,14 @@ union REV_INTRIN_TYPE v2 final
 {
     struct { f32 x, y; };
     struct { f32 w, h; };
+    f32 e[2];
 
-    REV_INLINE v2(f32 val = 0 ) : x(val),                   y(val)                   {}
-    REV_INLINE v2(f32 x, f32 y) : x(x),                     y(y)                     {}
-    REV_INLINE v2(f32 arr[2]  ) : x(*arr),                  y(arr[1])                {}
-    REV_INLINE v2(const v2& v ) : x(v.x),                   y(v.y)                   {}
-    REV_INLINE v2(v2&& v      ) : x(v.x),                   y(v.y)                   {}
-    REV_INLINE v2(__m128 mm   ) : x(mm_extract_f32<0>(mm)), y(mm_extract_f32<1>(mm)) {}
+    REV_INLINE v2(f32 val = 0 ) : x(val),  y(val)    {}
+    REV_INLINE v2(f32 x, f32 y) : x(x),    y(y)      {}
+    REV_INLINE v2(f32 arr[2]  ) : x(*arr), y(arr[1]) {}
+    REV_INLINE v2(const v2& v ) : x(v.x),  y(v.y)    {}
+    REV_INLINE v2(v2&& v      ) : x(v.x),  y(v.y)    {}
+    REV_INLINE v2(__m128 mm   ) { store(mm); }
 
     REV_INLINE v2& REV_VECTORCALL operator=(f32 val    ) { x = val;  y = val;    return *this; }
     REV_INLINE v2& REV_VECTORCALL operator=(f32 arr[2] ) { x = *arr; y = arr[1]; return *this; }
@@ -41,44 +42,47 @@ union REV_INTRIN_TYPE v2 final
 
     REV_INLINE v2 REV_VECTORCALL normalize() const
     {
-        __m128 vec = _mm_setr_ps(x, y, 0.0f, 0.0f);
+        __m128 vec = load();
         __m128 len = _mm_sqrt_ps(_mm_dp_ps(vec, vec, 0x33));
         return v2(_mm_div_ps(vec, len));
     }
 
     REV_INLINE v2 REV_VECTORCALL project(v2 on_normal) const
     {
-        f32 dp = x * on_normal.x + y * on_normal.y;
-        return v2(dp * on_normal.x, dp * on_normal.y);
+        __m128 vect = load();
+        __m128 norm = on_normal.load();
+        return v2(_mm_mul_ps(_mm_dp_ps(vect, norm, 0x33), norm));
     }
 
     REV_INLINE v2 REV_VECTORCALL reflect(v2 normal) const
     {
-        __m128 vect = _mm_setr_ps(x, y, 0.0f, 0.0f);
-        __m128 norm = _mm_setr_ps(normal.x, normal.y, 0.0f, 0.0f);
+        __m128 vect = load();
+        __m128 norm = normal.load();
         __m128 two  = _mm_set1_ps(2.0f);
         return v2(_mm_sub_ps(vect, _mm_mul_ps(_mm_mul_ps(two, _mm_dp_ps(norm, norm, 0x33)), norm)));
     }
 
     static REV_INLINE v2 REV_VECTORCALL lerp(v2 start, v2 end, v2 percent)
     {
-        return v2((end.x - start.x) * percent.x + start.x,
-                  (end.y - start.y) * percent.y + start.y);
+        __m128 mm_start   = start.load();
+        __m128 mm_end     = end.load();
+        __m128 mm_percent = percent.load();
+        return v2(_mm_add_ps(_mm_mul_ps(_mm_sub_ps(mm_end, mm_start), mm_percent), mm_start));
     }
 
     static REV_INLINE v2 REV_VECTORCALL invlerp(v2 start, v2 end, v2 value) // ret = [0, 1]
     {
-        __m128 mm_val   = _mm_setr_ps(value.x, value.y, 0.0f, 0.0f);
-        __m128 mm_start = _mm_setr_ps(start.x, start.y, 0.0f, 0.0f);
-        __m128 mm_end   = _mm_setr_ps(end.x,   end.y,   0.0f, 0.0f);
+        __m128 mm_val   = value.load();
+        __m128 mm_start = start.load();
+        __m128 mm_end   = end.load();
         return v2(_mm_div_ps(_mm_sub_ps(mm_val, mm_start), _mm_sub_ps(mm_end, mm_start)));
     }
 
     static REV_INLINE v2 REV_VECTORCALL invlerp_n(v2 start, v2 end, v2 value) // ret = [-1, 1]
     {
-        __m128 mm_val   = _mm_setr_ps(value.x, value.y, 0.0f, 0.0f);
-        __m128 mm_start = _mm_setr_ps(start.x, start.y, 0.0f, 0.0f);
-        __m128 mm_end   = _mm_setr_ps(end.x,   end.y,   0.0f, 0.0f);
+        __m128 mm_val   = value.load();
+        __m128 mm_start = start.load();
+        __m128 mm_end   = end.load();
         __m128 mm_0_5   = _mm_set1_ps(0.5f);
         __m128 mm_2_0   = _mm_set1_ps(2.0f);
         return v2(_mm_mul_ps(_mm_sub_ps(_mm_div_ps(_mm_sub_ps(mm_val, mm_start), _mm_sub_ps(mm_end, mm_start)), mm_0_5), mm_2_0));
@@ -86,10 +90,40 @@ union REV_INTRIN_TYPE v2 final
 
     static REV_INLINE v2 REV_VECTORCALL clamp(v2 val, v2 min, v2 max)
     {
-        __m128 mm_val = _mm_setr_ps(val.x, val.y, 0.0f, 0.0f);
-        __m128 mm_min = _mm_setr_ps(min.x, min.y, 0.0f, 0.0f);
-        __m128 mm_max = _mm_setr_ps(max.x, max.y, 0.0f, 0.0f);
+        __m128 mm_val = val.load();
+        __m128 mm_min = min.load();
+        __m128 mm_max = max.load();
         return v2(_mm_max_ps(mm_min, _mm_min_ps(mm_val, mm_max)));
+    }
+
+    static REV_INLINE v2 REV_VECTORCALL muldiv(v2 val, v2 numerator, v2 denominator)
+    {
+        __m128 mm_val = val.load();
+        __m128 mm_num = numerator.load();
+        __m128 mm_den = denominator.load();
+        return v2(_mm_div_ps(_mm_mul_ps(mm_val, mm_num), mm_den));
+    }
+
+    REV_INLINE __m128 REV_VECTORCALL load() const
+    {
+    #if REV_ISA >= REV_ISA_AVX512
+        return _mm_mask_load_ps(e, 0b0011);
+    #elif REV_ISA >= REV_ISA_AVX2
+        return _mm_maskload_ps(e, _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0));
+    #else
+        return _mm_setr_ps(s.x, s.y, 0, 0);
+    #endif
+    }
+
+    REV_INLINE void REV_VECTORCALL store(__m128 xmm)
+    {
+    #if REV_ISA >= REV_ISA_AVX512
+        _mm_mask_store_ps(e, 0b0011, xmm);
+    #elif REV_ISA >= REV_ISA_AVX2
+        _mm_maskstore_ps(e, _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0), xmm);
+    #else
+        _mm_maskmoveu_si128(_mm_castps_si128(xmm), _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0), cast(char *, e));
+    #endif
     }
 
     REV_INLINE v2& REV_VECTORCALL operator+=(v2 r)  { x += r.x; y += r.y; return *this; }
@@ -134,13 +168,14 @@ union REV_INTRIN_TYPE v2s final
 {
     struct { s32 x, y; };
     struct { s32 w, h; };
+    s32 e[2];
 
-    REV_INLINE v2s(s32 val = 0 ) : x(val),                   y(val)                   {}
-    REV_INLINE v2s(s32 x, s32 y) : x(x),                     y(y)                     {}
-    REV_INLINE v2s(s32 arr[2]  ) : x(*arr),                  y(arr[1])                {}
-    REV_INLINE v2s(const v2s& v) : x(v.x),                   y(v.y)                   {}
-    REV_INLINE v2s(v2s&& v     ) : x(v.x),                   y(v.y)                   {}
-    REV_INLINE v2s(__m128i mm  ) : x(mm_extract_s32<0>(mm)), y(mm_extract_s32<1>(mm)) {}
+    REV_INLINE v2s(s32 val = 0 ) : x(val),  y(val)    {}
+    REV_INLINE v2s(s32 x, s32 y) : x(x),    y(y)      {}
+    REV_INLINE v2s(s32 arr[2]  ) : x(*arr), y(arr[1]) {}
+    REV_INLINE v2s(const v2s& v) : x(v.x),  y(v.y)    {}
+    REV_INLINE v2s(v2s&& v     ) : x(v.x),  y(v.y)    {}
+    REV_INLINE v2s(__m128i mm  ) { store(mm); }
 
     REV_INLINE v2s& REV_VECTORCALL operator=(s32 val     ) { x = val;  y = val;    return *this; }
     REV_INLINE v2s& REV_VECTORCALL operator=(s32 arr[2]  ) { x = *arr; y = arr[1]; return *this; }
@@ -154,10 +189,40 @@ union REV_INTRIN_TYPE v2s final
 
     static REV_INLINE v2s REV_VECTORCALL clamp(v2s val, v2s min, v2s max)
     {
-        __m128i mm_val = _mm_setr_epi32(val.x, val.y, 0, 0);
-        __m128i mm_min = _mm_setr_epi32(min.x, min.y, 0, 0);
-        __m128i mm_max = _mm_setr_epi32(max.x, max.y, 0, 0);
+        __m128i mm_val = val.load();
+        __m128i mm_min = min.load();
+        __m128i mm_max = max.load();
         return v2s(_mm_max_epi32(mm_min, _mm_min_epi32(mm_val, mm_max)));
+    }
+
+    static REV_INLINE v2s REV_VECTORCALL muldiv(v2s val, v2s numerator, v2s denominator)
+    {
+        __m128i mm_val = val.load();
+        __m128i mm_num = numerator.load();
+        __m128i mm_den = denominator.load();
+        return v2s(_mm_div_epi32(_mm_mullo_epi32(mm_val, mm_num), mm_den));
+    }
+
+    REV_INLINE __m128i REV_VECTORCALL load() const
+    {
+    #if REV_ISA >= REV_ISA_AVX512
+        return _mm_mask_load_epi32(e, 0b0011);
+    #elif REV_ISA >= REV_ISA_AVX2
+        return _mm_maskload_epi32(cast(const int *, e), _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0));
+    #else
+        return _mm_setr_epi32(s.x, s.y, 0, 0);
+    #endif
+    }
+
+    REV_INLINE void REV_VECTORCALL store(__m128i xmm)
+    {
+    #if REV_ISA >= REV_ISA_AVX512
+        _mm_mask_store_epi32(e, 0b0011, xmm);
+    #elif REV_ISA >= REV_ISA_AVX2
+        _mm_maskstore_epi32(cast(int *, e), _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0), xmm);
+    #else
+        _mm_maskmoveu_si128(xmm, _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0), cast(char *, e));
+    #endif
     }
 
     REV_INLINE v2s& REV_VECTORCALL operator+=(v2s r) { x += r.x; y += r.y; return *this; }
@@ -203,13 +268,14 @@ union REV_INTRIN_TYPE v2u final
     struct { u32 x, y; };
     struct { u32 w, h; };
     struct { u32 r, c; }; // row, col
+    u32 e[2];
 
-    REV_INLINE v2u(u32 val = 0 ) : x(val),                   y(val)                   {}
-    REV_INLINE v2u(u32 x, u32 y) : x(x),                     y(y)                     {}
-    REV_INLINE v2u(u32 arr[2]  ) : x(*arr),                  y(arr[1])                {}
-    REV_INLINE v2u(const v2u& v) : x(v.x),                   y(v.y)                   {}
-    REV_INLINE v2u(v2u&& v     ) : x(v.x),                   y(v.y)                   {}
-    REV_INLINE v2u(__m128i mm  ) : x(mm_extract_u32<0>(mm)), y(mm_extract_u32<1>(mm)) {}
+    REV_INLINE v2u(u32 val = 0 ) : x(val),  y(val)    {}
+    REV_INLINE v2u(u32 x, u32 y) : x(x),    y(y)      {}
+    REV_INLINE v2u(u32 arr[2]  ) : x(*arr), y(arr[1]) {}
+    REV_INLINE v2u(const v2u& v) : x(v.x),  y(v.y)    {}
+    REV_INLINE v2u(v2u&& v     ) : x(v.x),  y(v.y)    {}
+    REV_INLINE v2u(__m128i mm  ) { store(mm); }
 
     REV_INLINE v2u& REV_VECTORCALL operator=(u32 val     ) { x = val;  y = val;    return *this; }
     REV_INLINE v2u& REV_VECTORCALL operator=(u32 arr[2]  ) { x = *arr; y = arr[1]; return *this; }
@@ -223,10 +289,40 @@ union REV_INTRIN_TYPE v2u final
 
     static REV_INLINE v2u REV_VECTORCALL clamp(v2u val, v2u min, v2u max)
     {
-        __m128i mm_val = _mm_setr_epi32(val.x, val.y, 0, 0);
-        __m128i mm_min = _mm_setr_epi32(min.x, min.y, 0, 0);
-        __m128i mm_max = _mm_setr_epi32(max.x, max.y, 0, 0);
+        __m128i mm_val = val.load();
+        __m128i mm_min = min.load();
+        __m128i mm_max = max.load();
         return v2u(_mm_max_epu32(mm_min, _mm_min_epu32(mm_val, mm_max)));
+    }
+
+    static REV_INLINE v2u REV_VECTORCALL muldiv(v2u val, v2u numerator, v2u denominator)
+    {
+        __m128i mm_val = val.load();
+        __m128i mm_num = numerator.load();
+        __m128i mm_den = denominator.load();
+        return v2u(_mm_div_epu32(_mm_mullo_epi32(mm_val, mm_num), mm_den));
+    }
+
+    REV_INLINE __m128i REV_VECTORCALL load() const
+    {
+    #if REV_ISA >= REV_ISA_AVX512
+        return _mm_mask_load_epi32(e, 0b0011);
+    #elif REV_ISA >= REV_ISA_AVX2
+        return _mm_maskload_epi32(cast(const int *, e), _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0));
+    #else
+        return _mm_setr_epi32(s.x, s.y, 0, 0);
+    #endif
+    }
+
+    REV_INLINE void REV_VECTORCALL store(__m128i xmm)
+    {
+    #if REV_ISA >= REV_ISA_AVX512
+        _mm_mask_store_epi32(e, 0b0011, xmm);
+    #elif REV_ISA >= REV_ISA_AVX2
+        _mm_maskstore_epi32(cast(int *, e), _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0), xmm);
+    #else
+        _mm_maskmoveu_si128(xmm, _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0), cast(char *, e));
+    #endif
     }
 
     REV_INLINE v2u& REV_VECTORCALL operator+=(v2u r) { x += r.x; y += r.y; return *this; }
@@ -238,6 +334,9 @@ union REV_INTRIN_TYPE v2u final
     REV_INLINE v2u& REV_VECTORCALL operator-=(u32 r) { x -= r;   y -= r;   return *this; }
     REV_INLINE v2u& REV_VECTORCALL operator*=(u32 r) { x *= r;   y *= r;   return *this; }
     REV_INLINE v2u& REV_VECTORCALL operator/=(u32 r) { x /= r;   y /= r;   return *this; }
+
+    REV_INLINE u32  REV_VECTORCALL operator[](u8 i) const { REV_CHECK(i < 2); return e[i]; }
+    REV_INLINE u32& REV_VECTORCALL operator[](u8 i)       { REV_CHECK(i < 2); return e[i]; }
 };
 
 REV_INLINE v2u REV_VECTORCALL operator+(v2u l, v2u r) { return v2u(l.x + r.x, l.y + r.y); }
@@ -268,12 +367,12 @@ REV_INLINE bool REV_VECTORCALL operator< (v2u l, v2u r) { return l.length_sq() <
 REV_INLINE bool REV_VECTORCALL operator> (v2u l, v2u r) { return l.length_sq() >  r.length_sq(); }
 
 
-REV_INLINE v2s REV_VECTORCALL v2_to_v2s (v2  v) { return v2s(cast(s32, roundf(v.x)), cast(s32, roundf(v.y))); }
-REV_INLINE v2u REV_VECTORCALL v2_to_v2u (v2  v) { return v2u(cast(u32, roundf(v.x)), cast(u32, roundf(v.y))); }
-REV_INLINE v2  REV_VECTORCALL v2s_to_v2 (v2s v) { return v2 (cast(f32,        v.x ), cast(f32,        v.y )); }
-REV_INLINE v2u REV_VECTORCALL v2s_to_v2u(v2s v) { return v2u(cast(u32,        v.x ), cast(u32,        v.y )); }
-REV_INLINE v2  REV_VECTORCALL v2u_to_v2 (v2u v) { return v2 (cast(f32,        v.x ), cast(f32,        v.y )); }
-REV_INLINE v2s REV_VECTORCALL v2u_to_v2s(v2u v) { return v2s(cast(s32,        v.x ), cast(s32,        v.y )); }
+REV_INLINE v2s REV_VECTORCALL v2_to_v2s (v2  v) { return v2s(_mm_cvtps_epi32(v.load()));        }
+REV_INLINE v2u REV_VECTORCALL v2_to_v2u (v2  v) { return v2u(_mm_cvtps_epi32(v.load()));        }
+REV_INLINE v2  REV_VECTORCALL v2s_to_v2 (v2s v) { return v2 (cast(f32, v.x ), cast(f32, v.y )); }
+REV_INLINE v2u REV_VECTORCALL v2s_to_v2u(v2s v) { return v2u(cast(u32, v.x ), cast(u32, v.y )); }
+REV_INLINE v2  REV_VECTORCALL v2u_to_v2 (v2u v) { return v2 (cast(f32, v.x ), cast(f32, v.y )); }
+REV_INLINE v2s REV_VECTORCALL v2u_to_v2s(v2u v) { return v2s(cast(s32, v.x ), cast(s32, v.y )); }
 
 //
 // v3
@@ -378,6 +477,14 @@ union REV_INTRIN_TYPE v3 final
     static REV_INLINE v3 REV_VECTORCALL clamp(v3 val, v3 min, v3 max)
     {
         return v3(_mm_max_ps(min.load(), _mm_min_ps(max.load(), val.load())));
+    }
+
+    static REV_INLINE v3 REV_VECTORCALL muldiv(v3 val, v3 numerator, v3 denominator)
+    {
+        __m128 mm_val = val.load();
+        __m128 mm_num = numerator.load();
+        __m128 mm_den = denominator.load();
+        return v3(_mm_div_ps(_mm_mul_ps(mm_val, mm_num), mm_den));
     }
 
     REV_INLINE __m128 REV_VECTORCALL load() const
@@ -527,6 +634,14 @@ union REV_INTRIN_TYPE v3s final
         return v3s(_mm_max_epi32(min.load(), _mm_min_epi32(max.load(), val.load())));
     }
 
+    static REV_INLINE v3u REV_VECTORCALL muldiv(v3u val, v3u numerator, v3u denominator)
+    {
+        __m128i mm_val = val.load();
+        __m128i mm_num = numerator.load();
+        __m128i mm_den = denominator.load();
+        return v3u(_mm_div_epi32(_mm_mullo_epi32(mm_val, mm_num), mm_den));
+    }
+
     REV_INLINE __m128i REV_VECTORCALL load() const
     {
     #if REV_ISA >= REV_ISA_AVX512
@@ -671,6 +786,14 @@ union REV_INTRIN_TYPE v3u final
     static REV_INLINE v3u REV_VECTORCALL clamp(v3u val, v3u min, v3u max)
     {
         return v3u(_mm_max_epu32(min.load(), _mm_min_epu32(max.load(), val.load())));
+    }
+
+    static REV_INLINE v3u REV_VECTORCALL muldiv(v3u val, v3u numerator, v3u denominator)
+    {
+        __m128i mm_val = val.load();
+        __m128i mm_num = numerator.load();
+        __m128i mm_den = denominator.load();
+        return v3u(_mm_div_epu32(_mm_mullo_epi32(mm_val, mm_num), mm_den));
     }
 
     REV_INLINE __m128i REV_VECTORCALL load() const
@@ -872,6 +995,14 @@ union REV_INTRIN_TYPE v4 final
         return v4(_mm_max_ps(min.mm, _mm_min_ps(max.mm, val.mm)));
     }
 
+    static REV_INLINE v4 REV_VECTORCALL muldiv(v4 val, v4 numerator, v4 denominator)
+    {
+        __m128 mm_val = _mm_loadu_ps(val.e);
+        __m128 mm_num = _mm_loadu_ps(numerator.e);
+        __m128 mm_den = _mm_loadu_ps(denominator.e);
+        return v4(_mm_div_ps(_mm_mul_ps(mm_val, mm_num), mm_den));
+    }
+
     REV_INLINE v4& REV_VECTORCALL operator+=(v4 r) { mm = _mm_add_ps(mm, r.mm); return *this; }
     REV_INLINE v4& REV_VECTORCALL operator-=(v4 r) { mm = _mm_sub_ps(mm, r.mm); return *this; }
     REV_INLINE v4& REV_VECTORCALL operator*=(v4 r) { mm = _mm_mul_ps(mm, r.mm); return *this; }
@@ -997,6 +1128,14 @@ union REV_INTRIN_TYPE v4s final
         return v4s(_mm_max_epi32(min.mm, _mm_min_epi32(max.mm, val.mm)));
     }
 
+    static REV_INLINE v4s REV_VECTORCALL muldiv(v4s val, v4s numerator, v4s denominator)
+    {
+        __m128i mm_val = _mm_lddqu_si128(cast(__m128i *, val.e));
+        __m128i mm_num = _mm_lddqu_si128(cast(__m128i *, numerator.e));
+        __m128i mm_den = _mm_lddqu_si128(cast(__m128i *, denominator.e));
+        return v4s(_mm_div_epi32(_mm_mullo_epi32(mm_val, mm_num), mm_den));
+    }
+
     REV_INLINE v4s& REV_VECTORCALL operator+=(v4s r) { mm = _mm_add_epi32(mm,   r.mm); return *this; }
     REV_INLINE v4s& REV_VECTORCALL operator-=(v4s r) { mm = _mm_sub_epi32(mm,   r.mm); return *this; }
     REV_INLINE v4s& REV_VECTORCALL operator*=(v4s r) { mm = _mm_mullo_epi32(mm, r.mm); return *this; }
@@ -1118,6 +1257,14 @@ union REV_INTRIN_TYPE v4u final
     static REV_INLINE v4u REV_VECTORCALL clamp(v4u val, v4u min, v4u max)
     {
         return v4u(_mm_max_epu32(min.mm, _mm_min_epu32(max.mm, val.mm)));
+    }
+
+    static REV_INLINE v4u REV_VECTORCALL muldiv(v4u val, v4u numerator, v4u denominator)
+    {
+        __m128i mm_val = _mm_lddqu_si128(cast(__m128i *, val.e));
+        __m128i mm_num = _mm_lddqu_si128(cast(__m128i *, numerator.e));
+        __m128i mm_den = _mm_lddqu_si128(cast(__m128i *, denominator.e));
+        return v4u(_mm_div_epu32(_mm_mullo_epi32(mm_val, mm_num), mm_den));
     }
 
     REV_INLINE v4u& REV_VECTORCALL operator+=(v4u r) { mm = _mm_add_epi32(mm,   r.mm); return *this; }

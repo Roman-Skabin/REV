@@ -23,7 +23,8 @@ namespace REV
 
         void Show();
 
-        void SetTitle(const StaticString<128>& new_title);
+        void SetTitle(const ConstString& title);
+        REV_INLINE void SetTitle(const StaticString<128>& title) { SetTitle(title.ToConstString()); }
 
         REV_INLINE const HWND               Handle()    const { return m_Handle;  }
         REV_INLINE Math::v4s REV_VECTORCALL XYWH()      const { return m_XYWH;    }
@@ -51,7 +52,6 @@ namespace REV
         Window& operator=(Window&&)      = delete;
 
     private:
-        HINSTANCE         m_Instance;
         HWND              m_Handle;
         Math::v4s         m_XYWH;
         u32               m_DPI;

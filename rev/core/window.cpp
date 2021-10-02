@@ -19,8 +19,7 @@ namespace REV
 {
 
 Window::Window(const Logger& logger, const ConstString& title)
-    : m_Instance(cast(HINSTANCE, GetModuleHandleA(null))),
-      m_Handle(null),
+    : m_Handle(null),
       m_XYWH(Settings::Get()->window_xywh),
       m_DPI(GetDpiForSystem()),
       m_Closed(true),
@@ -38,7 +37,7 @@ Window::Window(const Logger& logger, const ConstString& title)
     wcexa.cbSize        = sizeof(WNDCLASSEXA);
     wcexa.style         = CS_VREDRAW | CS_HREDRAW | CS_OWNDC;
     wcexa.lpfnWndProc   = WindowProc;
-    wcexa.hInstance     = m_Instance;
+    wcexa.hInstance     = cast(HINSTANCE, GetModuleHandleA(null));
     wcexa.hCursor       = LoadCursorA(0, IDC_ARROW);
     wcexa.lpszClassName = m_ClassName.Data();
     REV_DEBUG_RESULT(RegisterClassExA(&wcexa));
@@ -73,17 +72,17 @@ Window::Window(const Logger& logger, const ConstString& title)
     //               on its creation even if the window is being created on a monitor
     //               DPI > system DPI (96)
     {
-        u32 monitor_dpi = GetDpiForWindow(m_Handle);
+        Math::v4s monitor_dpi(GetDpiForWindow(m_Handle));
+        Math::v4s window_rect(m_XYWH.xy, width, height);
 
-        width  = MulDiv(width,  monitor_dpi, m_DPI);
-        height = MulDiv(height, monitor_dpi, m_DPI);
+        window_rect = Math::v4s::muldiv(window_rect, monitor_dpi, m_DPI);
 
         REV_DEBUG_RESULT(SetWindowPos(m_Handle, null,
-                                    0, 0,
-                                    width, height,
-                                    SWP_ASYNCWINDOWPOS | SWP_NOREPOSITION | SWP_NOZORDER | SWP_NOACTIVATE));
-        
-        m_DPI = monitor_dpi;
+                                      window_rect.x, window_rect.y,
+                                      window_rect.z, window_rect.w,
+                                      SWP_ASYNCWINDOWPOS | SWP_NOZORDER | SWP_NOACTIVATE));
+
+        m_DPI = monitor_dpi.x;
     }
 
     m_Logger.LogSuccess("Window \"", m_Title, "\" has been created");
@@ -91,12 +90,8 @@ Window::Window(const Logger& logger, const ConstString& title)
 
 Window::~Window()
 {
-    if (m_Instance)
-    {
-        REV_DEBUG_RESULT(UnregisterClassA(m_ClassName.Data(), m_Instance));
-        m_Instance = null;
-        m_Logger.LogInfo("Window \"", m_Title, "\" has been destroyed");
-    }
+    REV_DEBUG_RESULT(UnregisterClassA(m_ClassName.Data(), cast(HINSTANCE, GetModuleHandleA(null))));
+    m_Logger.LogInfo("Window \"", m_Title, "\" has been destroyed");
 }
 
 void Window::RequstFullscreen(bool set)
@@ -131,10 +126,10 @@ void Window::Show()
     m_Moved  = false;
 }
 
-void Window::SetTitle(const StaticString<128>& new_title)
+void Window::SetTitle(const ConstString& title)
 {
-    REV_DEBUG_RESULT(SetWindowTextA(m_Handle, new_title.Data()));
-    m_Title = new_title;
+    REV_DEBUG_RESULT(SetWindowTextA(m_Handle, title.Data()));
+    m_Title = title;
 }
 
 void Window::ApplyFullscreenRequest()
@@ -176,6 +171,10 @@ LRESULT WINAPI WindowProc(HWND handle, UINT message, WPARAM wparam, LPARAM lpara
                 window->m_Minimized = false;
                 window->m_Resized   = true;
                 window->m_XYWH.wh = new_size;
+            }
+            else if (wparam != SIZE_MINIMIZED)
+            {
+                window->m_Minimized = false;
             }
             else if (wparam == SIZE_MINIMIZED)
             {

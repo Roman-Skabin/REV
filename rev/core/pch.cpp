@@ -11,6 +11,7 @@
 //
 
 #if REV_PLATFORM_WIN64
+    #pragma comment(lib, "ntdll.lib")       // Windows
     #pragma comment(lib, "kernel32.lib")    // Windows
     #pragma comment(lib, "user32.lib")      // Windows
     #pragma comment(lib, "shlwapi.lib")     // Windows

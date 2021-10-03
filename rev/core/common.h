@@ -53,9 +53,13 @@ enum
 #endif
 
 #ifdef __cplusplus
-    #define REV_EXTERN extern "C"
+    #define REV_EXTERN       extern "C"
+    #define REV_EXTERN_START extern "C" {
+    #define REV_EXTERN_END   }
 #else
     #define REV_EXTERN extern
+    #define REV_EXTERN_START
+    #define REV_EXTERN_END
 #endif
 
 #define REV_GLOBAL   static

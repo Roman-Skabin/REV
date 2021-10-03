@@ -117,7 +117,7 @@ CompileShaderResult ShaderManager::CompileShader(const ConstString& code, const 
                 case SHADER_KIND_VERTEX:
                 {
                     blob = shader_manager->CompileShader(code, name.Data(), "VSMain", "vs_5_1");
-                    logger->LogSuccess("Vertex shader has been compiled.");
+                    logger->LogSuccess("Vertex shader has been compiled");
                 } break;
 
                 case SHADER_KIND_HULL:
@@ -125,11 +125,11 @@ CompileShaderResult ShaderManager::CompileShader(const ConstString& code, const 
                     if (code.Find(REV_CSTR_ARGS("HSMain"), 0) != ConstString::npos)
                     {
                         blob = shader_manager->CompileShader(code, name.Data(), "HSMain", "hs_5_1");
-                        logger->LogSuccess("Hull shader has been compiled.");
+                        logger->LogSuccess("Hull shader has been compiled");
                     }
                     else
                     {
-                        logger->LogWarning("Hull shader has not been compiled: Entry point 'HSMain' is not found.");
+                        logger->LogWarning("Hull shader has not been compiled: Entry point 'HSMain' is not found");
                     }
                 } break;
 
@@ -138,11 +138,11 @@ CompileShaderResult ShaderManager::CompileShader(const ConstString& code, const 
                     if (code.Find(REV_CSTR_ARGS("DSMain"), 0) != ConstString::npos)
                     {
                         blob = shader_manager->CompileShader(code, name.Data(), "DSMain", "ds_5_1");
-                        logger->LogSuccess("Domain shader has been compiled.");
+                        logger->LogSuccess("Domain shader has been compiled");
                     }
                     else
                     {
-                        logger->LogWarning("Domain shader has not been compiled: Entry point 'DSMain' is not found.");
+                        logger->LogWarning("Domain shader has not been compiled: Entry point 'DSMain' is not found");
                     }
                 } break;
 
@@ -151,23 +151,23 @@ CompileShaderResult ShaderManager::CompileShader(const ConstString& code, const 
                     if (code.Find(REV_CSTR_ARGS("GSMain"), 0) != ConstString::npos)
                     {
                         blob = shader_manager->CompileShader(code, name.Data(), "GSMain", "gs_5_1");
-                        logger->LogSuccess("Geometry shader has been compiled.");
+                        logger->LogSuccess("Geometry shader has been compiled");
                     }
                     else
                     {
-                        logger->LogWarning("Geometry shader has not been compiled: Entry point 'GSMain' is not found.");
+                        logger->LogWarning("Geometry shader has not been compiled: Entry point 'GSMain' is not found");
                     }
                 } break;
 
                 case SHADER_KIND_PIXEL:
                 {
                     blob = shader_manager->CompileShader(code, name.Data(), "PSMain", "ps_5_1");
-                    logger->LogSuccess("Pixel shader has been compiled.");
+                    logger->LogSuccess("Pixel shader has been compiled");
                 } break;
 
                 case SHADER_KIND_COMPUTE:
                 {
-                    REV_ERROR_M("Compute shaders are not supported yet.");
+                    REV_ERROR_M("Compute shaders are not supported yet");
                 } break;
 
                 default:

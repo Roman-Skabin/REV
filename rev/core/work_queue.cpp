@@ -8,19 +8,7 @@
 #include "core/work_queue.h"
 #include "math/math.h"
 
-enum { SemaphoreBasicInformation = 0 };
-
-typedef struct _SEMAPHORE_BASIC_INFORMATION {
-    ULONG CurrentCount;
-    ULONG MaximumCount;
-} SEMAPHORE_BASIC_INFORMATION;
-
-typedef LONG NTSTATUS;
-
-#define NT_QUERY_SEMAPHORE(name) NTSTATUS NTAPI name(HANDLE SemaphoreHandle, DWORD SemaphoreInformationClass, PVOID SemaphoreInformation, ULONG SemaphoreInformationLength, PULONG ReturnLength)
-typedef NT_QUERY_SEMAPHORE(NtQuerySemaphoreFunc);
-
-REV_GLOBAL NtQuerySemaphoreFunc *g_NtQuerySemaphore = null;
+#include "platform/windows/syscalls.h"
 
 namespace REV
 {
@@ -49,18 +37,13 @@ WorkQueue::WorkQueue(const Logger& logger, Arena& arena, u64 max_simultaneous_wo
     m_WorksExecuteIterator = m_Works;
     m_WorksAddIterator     = m_Works;
 
-    REV_DEBUG_RESULT(m_Semaphore = CreateSemaphoreExA(null, 0, cast(s32, m_ThreadsCount), null, 0, SEMAPHORE_ALL_ACCESS));
+    Windows::NTSTATUS status = Windows::NtCreateSemaphore(&m_Semaphore, SEMAPHORE_ALL_ACCESS, null, 0, cast(u32, m_ThreadsCount));
+    REV_CHECK(status == STATUS_SUCCESS);
 
     void **end = m_Threads + m_ThreadsCount;
     for (void **thread = m_Threads; thread < end; ++thread)
     {
-        *thread = CreateThread(null, 0, ThreadProc, this, 0, null);
-    }
-
-    if (!g_NtQuerySemaphore)
-    {
-        g_NtQuerySemaphore = cast(NtQuerySemaphoreFunc *, GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQuerySemaphore"));
-        REV_CHECK(g_NtQuerySemaphore);
+        REV_DEBUG_RESULT(*thread = CreateThread(null, 0, ThreadProc, this, 0, null));
     }
 
     logger.LogSuccess("Work queue has been created. Additional threads count: ", m_ThreadsCount);
@@ -78,11 +61,13 @@ WorkQueue::~WorkQueue()
     }
     m_Threads = null;
 
-    REV_DEBUG_RESULT(CloseHandle(m_Semaphore));
+    Windows::NTSTATUS status = Windows::NtClose(m_Semaphore);
+    REV_CHECK(status == STATUS_SUCCESS);
     m_Semaphore = null;
 
     m_Works = null;
 }
+
 
 void WorkQueue::AddWork(const Function<void()>& proc)
 {
@@ -101,13 +86,14 @@ void WorkQueue::AddWork(const Function<void()>& proc)
 
                 _InterlockedIncrement64(&m_WorksToDo);
 
-                SEMAPHORE_BASIC_INFORMATION semaphore_basic_info{};
-                NTSTATUS status = g_NtQuerySemaphore(m_Semaphore, SemaphoreBasicInformation, &semaphore_basic_info, sizeof(SEMAPHORE_BASIC_INFORMATION), null);
-                REV_CHECK(status == ERROR_SUCCESS);
+                Windows::SEMAPHORE_BASIC_INFORMATION semaphore_basic_info{};
+                Windows::NTSTATUS status = Windows::NtQuerySemaphore(m_Semaphore, Windows::SemaphoreBasicInformation, &semaphore_basic_info, sizeof(Windows::SEMAPHORE_BASIC_INFORMATION), null);
+                REV_CHECK(status == STATUS_SUCCESS);
 
                 if (semaphore_basic_info.CurrentCount < semaphore_basic_info.MaximumCount)
                 {
-                    REV_DEBUG_RESULT(ReleaseSemaphore(m_Semaphore, 1, null));
+                    Windows::NTSTATUS status = Windows::NtReleaseSemaphore(m_Semaphore, 1, null);
+                    REV_CHECK(status == STATUS_SUCCESS);
                 }
 
                 break;
@@ -142,9 +128,6 @@ u32 REV_STDCALL ThreadProc(void *arg)
     WorkQueue *work_queue = cast(WorkQueue *, arg);
     while (true)
     {
-        u32 res = WaitForSingleObjectEx(work_queue->m_Semaphore, INFINITE, false);
-        REV_CHECK(res == WAIT_OBJECT_0);
-
         WorkQueue::Work *current_works_exec_it = work_queue->m_WorksExecuteIterator;
         WorkQueue::Work *next_works_exec_it    = work_queue->m_Works + ((current_works_exec_it - work_queue->m_Works + 1) % work_queue->m_WorksCount);
 
@@ -158,6 +141,11 @@ u32 REV_STDCALL ThreadProc(void *arg)
 
                 _InterlockedDecrement64(&work_queue->m_WorksToDo);
             }
+        }
+        else
+        {
+            Windows::NTSTATUS status = Windows::NtWaitForSingleObject(work_queue->m_Semaphore, false, null);
+            REV_CHECK(status == STATUS_WAIT_0);
         }
     }
     return 0;

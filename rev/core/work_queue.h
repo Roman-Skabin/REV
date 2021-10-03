@@ -59,7 +59,6 @@ namespace REV
 
         void           **m_Threads;
         u64              m_ThreadsCount;
-        volatile u64     m_ThreadsCountWaiting;
     };
     REV_ENUM_OPERATORS(WorkQueue::WORK_FLAG);
 }

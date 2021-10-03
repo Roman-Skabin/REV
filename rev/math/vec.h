@@ -634,12 +634,12 @@ union REV_INTRIN_TYPE v3s final
         return v3s(_mm_max_epi32(min.load(), _mm_min_epi32(max.load(), val.load())));
     }
 
-    static REV_INLINE v3u REV_VECTORCALL muldiv(v3u val, v3u numerator, v3u denominator)
+    static REV_INLINE v3s REV_VECTORCALL muldiv(v3s val, v3s numerator, v3s denominator)
     {
         __m128i mm_val = val.load();
         __m128i mm_num = numerator.load();
         __m128i mm_den = denominator.load();
-        return v3u(_mm_div_epi32(_mm_mullo_epi32(mm_val, mm_num), mm_den));
+        return v3s(_mm_div_epi32(_mm_mullo_epi32(mm_val, mm_num), mm_den));
     }
 
     REV_INLINE __m128i REV_VECTORCALL load() const

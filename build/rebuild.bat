@@ -1,11 +1,9 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-REM use: build project config platform
-
-set PROJECT=%1
-set CONFIG=%2
-set PLATFORM=%3
+set CONFIG=%1
+set PLATFORM=%2
+set PROJECT=%3
 
 if /I "!CONFIG!"   EQU "" set CONFIG=debug
 if /I "!PLATFORM!" EQU "" set PLATFORM=x64
@@ -40,7 +38,7 @@ pushd ..
 popd
 
 :error
-echo use: build.bat project config platform
+echo use: build.bat config platform project
 
 :done
 

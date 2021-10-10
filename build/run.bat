@@ -16,8 +16,8 @@ if /I "!PLATFORM!" NEQ "windows" (
     goto error
 )
 
-pushd ..
-    call bin\%PLATFORM%\%CONFIG%\sandbox.exe
+pushd ..\bin\!PLATFORM!\!CONFIG!
+    call sandbox.exe
     goto done
 popd
 

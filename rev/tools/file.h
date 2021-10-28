@@ -41,7 +41,7 @@ namespace REV
     #define REV_FIND_FILE_CALLBACK(name) bool name(const ConstString& found_filename)
     typedef REV_FIND_FILE_CALLBACK(FindFileCallback);
 
-    // @TODO(Roman): #CrossPlatform
+    // @TODO(Roman): Rewrite with file views and WorkQueue
     class REV_API File final
     {
     public:

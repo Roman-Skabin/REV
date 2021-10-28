@@ -1,6 +1,8 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+cls
+
 set CONFIG=%1
 set PLATFORM=%2
 set PROJECT=%3

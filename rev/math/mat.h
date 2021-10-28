@@ -1654,6 +1654,14 @@ union REV_INTRIN_TYPE m4 final
                   0.0f, 0.0f, 0.0f, 1.0f);
     }
 
+    static REV_INLINE m4 REV_VECTORCALL translation(v3 dv)
+    {
+        return m4(1.0f, 0.0f, 0.0f, dv.x,
+                  0.0f, 1.0f, 0.0f, dv.y,
+                  0.0f, 0.0f, 1.0f, dv.z,
+                  0.0f, 0.0f, 0.0f, 1.0f);
+    }
+
     static REV_INLINE m4 REV_VECTORCALL translation(v4 dv)
     {
         return m4(1.0f, 0.0f, 0.0f, dv.x,

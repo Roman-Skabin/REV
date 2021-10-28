@@ -17,6 +17,8 @@ namespace REV
 // Entity
 //
 
+u32 Entity::s_LastID = 0;
+
 void Entity::Create(u64 vcount, u64 icount)
 {
     Vertex *vertex_memory = cast(Vertex *, Memory::Get()->PushToSceneArena(vcount * sizeof(Vertex) + icount * sizeof(Index)));
@@ -54,7 +56,6 @@ SceneBase::SceneBase(Allocator *allocator, const ConstString& name, u64 max_vert
 
 void SceneBase::OnSetCurrentEx()
 {
-    // @Optimize(Roman): use upload pointers?
     m_Vertices = cast(Vertex *, Memory::Get()->PushToSceneArena(m_VerticesCapacity * sizeof(Vertex) + m_IndicesCapacity * sizeof(Index))),
     m_Indices  = cast(Index *, m_Vertices + m_VerticesCapacity);
 
@@ -66,8 +67,8 @@ void SceneBase::OnSetCurrentEx()
 
     GPU::MemoryManager *gpu_memory_manager = GraphicsAPI::GetMemoryManager();
 
-    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast(u32, m_VerticesCapacity), false, ConstString(vb_name.Data(), vb_name.Length()));
-    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast(u32, m_IndicesCapacity), false, ConstString(ib_name.Data(), ib_name.Length()));
+    m_VertexBuffer = gpu_memory_manager->AllocateVertexBuffer(cast(u32, m_VerticesCapacity), false, vb_name.ToConstString());
+    m_IndexBuffer  = gpu_memory_manager->AllocateIndexBuffer(cast(u32, m_IndicesCapacity),   false, ib_name.ToConstString());
 
     OnSetCurrent();
 }
@@ -81,9 +82,16 @@ void SceneBase::OnUnsetCurrentEx()
     Memory::Get()->ResetSceneArena();
 }
 
+// @TODO(Roman): Choose somehow only those resources we changed.
+void SceneBase::OnCopyDefaultResourcesToReadBackResources()
+{
+    GPU::MemoryManager *manager = GraphicsAPI::GetMemoryManager();
+    manager->CopyDefaultResourcesToReadBackResources(manager->GetReadWriteResources());
+}
+
 void SceneBase::SetCurrentGraphicsShader(AssetHandle shader_asset)
 {
-    REV_CHECK_M(AssetManager::Get()->GetAsset(shader_asset)->kind == ASSET_KIND_SHADER, "Asset handle passed to the SetCurrentGraphicsShader is not a handle to a shader asset");
+    REV_CHECK_M(AssetManager::Get()->GetAsset(shader_asset)->kind == ASSET_KIND_SHADER, "Asset is not a shader");
     m_CurrentGraphicsShader = shader_asset;
 }
 
@@ -137,12 +145,12 @@ void SceneBase::FlushBatch()
 
         Asset *graphics_shader_asset = asset_manager->GetAsset(m_CurrentGraphicsShader);
 
-        shader_manager->SetCurrentGraphicsShader(graphics_shader_asset->shader_handle);
+        shader_manager->SetCurrentGraphicsShader(graphics_shader_asset->shader);
 
-        shader_manager->BindVertexBuffer(graphics_shader_asset->shader_handle, m_VertexBuffer);
-        shader_manager->BindIndexBuffer(graphics_shader_asset->shader_handle, m_IndexBuffer);
+        shader_manager->BindVertexBuffer(graphics_shader_asset->shader, m_VertexBuffer);
+        shader_manager->BindIndexBuffer(graphics_shader_asset->shader, m_IndexBuffer);
 
-        shader_manager->Draw(graphics_shader_asset->shader_handle);
+        shader_manager->Draw(graphics_shader_asset->shader);
 
         ZeroMemory(m_Vertices, m_VerticesCount * sizeof(Vertex));
         ZeroMemory(m_Indices,  m_IndicesCount  * sizeof(Index));

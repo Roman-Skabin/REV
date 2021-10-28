@@ -13,22 +13,17 @@ namespace REV
 {
 
 // @TODO(Roman): Create static string on Arena.
+// @TODO(Roman): ISA-wide aligned copy, zero, compare memory
 
-template<u64 capacity, u64 aligned_capacity = AlignUp(capacity, CACHE_LINE_SIZE)>
+template<u64 capacity, u64 aligned_capacity = AlignUp(capacity, DEFAULT_ALIGNMENT)>
 class StaticString final
 {
 public:
-    static_assert(aligned_capacity && aligned_capacity % 16 == 0, "StaticString capacity must be multiple of 16");
+    static_assert(aligned_capacity && aligned_capacity % DEFAULT_ALIGNMENT == 0);
 
     static constexpr u64 npos = REV_U64_MAX;
 
-    REV_INLINE StaticString()
-        : m_Length(0)
-    {
-        ZeroMemory(m_Data, aligned_capacity);
-    }
-
-    REV_INLINE StaticString(nullptr_t)
+    REV_INLINE StaticString(nullptr_t = null)
         : m_Length(0)
     {
         ZeroMemory(m_Data, aligned_capacity);

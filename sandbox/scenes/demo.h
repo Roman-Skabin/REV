@@ -23,6 +23,7 @@ private:
         REV::Math::m4 mvp;
         REV::Math::v4 sun_color;
         REV::Math::v3 center;
+        u32           entity_id;
     };
     #pragma pack(pop)
 

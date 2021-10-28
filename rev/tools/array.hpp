@@ -184,6 +184,8 @@ namespace REV
     
             return *first == what ? 0 : npos;
         }
+
+        REV_INLINE ConstArray<T> ToConstArray() { return ConstArray<T>(m_Header->data, m_Header->count); }
     
         REV_INLINE u64 Count()     const { return m_Header->count;             }
         REV_INLINE u64 Capacity()  const { return m_Header->capacity;          }

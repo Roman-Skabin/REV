@@ -14,25 +14,25 @@ namespace REV::GPU
 {
 
 ShaderHandle ShaderManager::CreateGraphicsShader(
-    const ConstString&             shader_cache_filename,
-    const ConstArray<AssetHandle>& textures,
-    const ConstArray<CBufferDesc>& cbuffers,
-    const ConstArray<SamplerDesc>& samplers,
-    bool                           _static)
+    const ConstString&                    shader_cache_filename,
+    const ConstArray<ShaderResourceDesc>& resources,
+    bool                                  _static)
 {
     ShaderHandle handle;
+    handle._static = _static;
+
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
-            handle.index   = cast(D3D12::ShaderManager *, platform)->CreateGraphicsShader(shader_cache_filename, textures, cbuffers, samplers, _static);
-            handle._static = _static;
+            handle.index = cast(D3D12::ShaderManager *, platform)->CreateGraphicsShader(shader_cache_filename, resources, _static);
         } break;
 
         case GraphicsAPI::API::VULKAN:
         {
         } break;
     }
+
     return handle;
 }
 

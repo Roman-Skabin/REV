@@ -134,11 +134,17 @@
 
 #if REV_PLATFORM_WIN64
     #include <Windows.h>
-    #include <Xinput.h>
     #include <shlwapi.h>
     #include <DbgHelp.h>
+    #include <Xinput.h>
 
     #undef GetMessage
+    #include <d3d12.h>
+    #include <dxgi1_6.h>
+    #include <dxgidebug.h>
+    #include <dxgiformat.h>
+    #include <d3dcompiler.h>
+
 //  #include <audiopolicy.h>
 //  #include <mmdeviceapi.h>
 //  #include <AudioClient.h>
@@ -188,47 +194,49 @@
 //
 
 #if REV_COMPILER_MSVC
-    #define REV_EXPORT        __declspec(dllexport)
-    #define REV_IMPORT        __declspec(dllimport)
-    #define REV_NOINLINE      __declspec(noinline)
-    #define REV_INLINE        __forceinline
-    #define REV_ALIGN(_bytes) __declspec(align(_bytes))
-    #define REV_INTRIN_TYPE   __declspec(intrin_type)
-    #define REV_SELECTANY     __declspec(selectany)
-    #define REV_NOVTABLE      __declspec(novtable)
+    #define REV_EXPORT           __declspec(dllexport)
+    #define REV_IMPORT           __declspec(dllimport)
+    #define REV_NOINLINE         __declspec(noinline)
+    #define REV_INLINE           __forceinline
+    #define REV_ALIGN(_bytes)    __declspec(align(_bytes))
+    #define REV_INTRIN_TYPE      __declspec(intrin_type)
+    #define REV_SELECTANY        __declspec(selectany)
+    #define REV_NOVTABLE         __declspec(novtable)
     #if 0 // @NOTE(Roman): We can't use naked on x64 builds
-        #define REV_NAKED     __declspec(naked)
+        #define REV_NAKED        __declspec(naked)
     #else
         #define REV_NAKED
     #endif
-    #define REV_CDECL         __cdecl
-    #define REV_FASTCALL      __fastcall
-    #define REV_VECTORCALL    __vectorcall
-    #define REV_THISCALL      __thiscall
-    #define REV_STDCALL       __stdcall
-    #define REV_DEBUG_BREAK() __debugbreak()
+    #define REV_CDECL            __cdecl
+    #define REV_FASTCALL         __fastcall
+    #define REV_VECTORCALL       __vectorcall
+    #define REV_THISCALL         __thiscall
+    #define REV_STDCALL          __stdcall
+    #define REV_DEBUG_BREAK()    __debugbreak()
+    #define REV_DEPRECATED(text) __declspec(deprecated(text))
 #elif REV_COMPILER_GCC || REV_COMPILER_CLANG || REV_COMPILER_MINGW
-    #define REV_EXPORT        __attribute__((dllexport))
-    #define REV_IMPORT        __attribute__((dllimport))
-    #define REV_NOINLINE      __attribute__((noinline))
-    #define REV_INLINE        inline  __attribute__((always_inline))
-    #define REV_ALIGN(_bytes) __attribute__((aligned(_bytes)))
+    #define REV_EXPORT           __attribute__((dllexport))
+    #define REV_IMPORT           __attribute__((dllimport))
+    #define REV_NOINLINE         __attribute__((noinline))
+    #define REV_INLINE           inline  __attribute__((always_inline))
+    #define REV_ALIGN(_bytes)    __attribute__((aligned(_bytes)))
     #define REV_INTRIN_TYPE
-    #define REV_SELECTANY     __attribute__((selectany))
+    #define REV_SELECTANY        __attribute__((selectany))
     #define REV_NOVTABLE
-    #define REV_NAKED         __attribute__((naked))
-    #define REV_CDECL         // Only x86 builds
-    #define REV_FASTCALL      // Only x86 builds
-    #define REV_VECTORCALL    // Only x86 builds
-    #define REV_THISCALL      // Only x86 builds
-    #define REV_STDCALL       // Only x86 builds
+    #define REV_NAKED            __attribute__((naked))
+    #define REV_CDECL            // Only x86 builds
+    #define REV_FASTCALL         // Only x86 builds
+    #define REV_VECTORCALL       // Only x86 builds
+    #define REV_THISCALL         // Only x86 builds
+    #define REV_STDCALL          // Only x86 builds
     #if __has_builtin(__builtin_debugtrap)
         #define REV_DEBUG_BREAK() __builtin_debugtrap()
     #else
         #define REV_DEBUG_BREAK() raise(SIGTRAP)
     #endif
+    #define REV_DEPRECATED(text) __attribute__((deprecated(text)))
 #else
-    #define REV_DEBUG_BREAK() raise(SIGTRAP)
+    #define REV_DEBUG_BREAK()    raise(SIGTRAP)
 #endif
 
 //

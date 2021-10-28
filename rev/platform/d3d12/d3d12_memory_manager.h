@@ -24,85 +24,130 @@ namespace REV
 
 namespace REV::D3D12
 {
-    enum BUFFER_KIND : u32
+    enum CPU_RESOURCE_ACCESS : u32
     {
-        BUFFER_KIND_UNKNOWN,
-        BUFFER_KIND_VERTEX_BUFFER,
-        BUFFER_KIND_INDEX_BUFFER,
-        BUFFER_KIND_CONSTANT_BUFFER,
-        BUFFER_KIND_RW_BUFFER,        // @TODO(Roman): ...
-
-        BUFFER_KIND_STATIC = 1ui32 << 31
+        CPU_RESOURCE_ACCESS_NONE  = 0,
+        CPU_RESOURCE_ACCESS_READ  = 1 << 0,
+        CPU_RESOURCE_ACCESS_WRITE = 1 << 1,
     };
-    REV_ENUM_OPERATORS(BUFFER_KIND)
+    REV_ENUM_OPERATORS(CPU_RESOURCE_ACCESS)
+
+    enum RO_RW_BUFFER_TYPE : u32
+    {
+        RO_RW_BUFFER_TYPE_NONE,         // @NOTE(Roman): For not RO/RW buffer type
+        RO_RW_BUFFER_TYPE_STRUCTURED,   // @NOTE(Roman): HLSL StructuredBuffer type
+        RO_RW_BUFFER_TYPE_BYTE_ADDRESS, // @NOTE(Roman): HLSL ByteAddressBuffer type
+        RO_RW_BUFFER_TYPE_BUFFER,       // @NOTE(Roman): HLSL Buffer type
+    };
 
     struct Buffer final
     {
-        u64              page_index;
-        u64              offset;
-        BUFFER_KIND      kind;
-        union
-        {
-            struct { u32 vcount, vstride; };
-            struct { u32 icount, istride; };
-        };
-        u64              actual_size;
-        u64              aligned_size;
+        u64 default_page_index  = REV_INVALID_U64_INDEX;
+        u64 upload_page_index   = REV_INVALID_U64_INDEX;
+        u64 readback_page_index = REV_INVALID_U64_INDEX;
+
+        u64 default_page_offset  = REV_INVALID_U64_OFFSET;
+        u64 upload_page_offset   = REV_INVALID_U64_OFFSET;
+        u64 readback_page_offset = REV_INVALID_U64_OFFSET;
+
+        CPU_RESOURCE_ACCESS cpu_access = CPU_RESOURCE_ACCESS_NONE;
+        RO_RW_BUFFER_TYPE   ro_rw_type = RO_RW_BUFFER_TYPE_NONE;
+        DXGI_FORMAT         format     = DXGI_FORMAT_UNKNOWN;
+        u32                 stride     = 0;
+
+        u64 actual_size  = 0;
+        u64 aligned_size = 0;
+
         StaticString<64> name;
     };
 
     enum
     {
-        BUFFER_MEMORY_PAGE_SIZE = MB(512),
+        DEFAULT_BUFFER_MEMORY_PAGE_SIZE  = MB(512),
+        UPLOAD_BUFFER_MEMORY_PAGE_SIZE   = MB(512),
+        READBACK_BUFFER_MEMORY_PAGE_SIZE = MB(512),
     };
 
-    struct BufferMemoryPage final
+    struct DefaultBufferMemoryPage final
     {
-        ID3D12Resource        *def_mem;
-        ID3D12Resource        *upl_mem[SWAP_CHAIN_BUFFERS_COUNT];
-        byte                  *upl_ptrs[SWAP_CHAIN_BUFFERS_COUNT];
+        ID3D12Resource        *gpu_mem;
         u64                    occupied_bytes;
         D3D12_RESOURCE_STATES  initial_state;
+        DXGI_FORMAT            format;
+    };
+
+    struct UploadBufferMemoryPage final
+    {
+        ID3D12Resource *gpu_mem[SWAP_CHAIN_BUFFERS_COUNT];
+        byte           *cpu_mem[SWAP_CHAIN_BUFFERS_COUNT];
+        u64             occupied_bytes;
+    };
+
+    struct ReadBackBufferMemoryPage final
+    {
+        ID3D12Resource *gpu_mem[SWAP_CHAIN_BUFFERS_COUNT];
+        byte           *cpu_mem[SWAP_CHAIN_BUFFERS_COUNT];
+        u64             occupied_bytes;
     };
 
     struct BufferMemory final
     {
-        Array<Buffer>           buffers;
-        Array<BufferMemoryPage> pages;
+        Array<Buffer>                   buffers;
+        Array<DefaultBufferMemoryPage>  default_pages;
+        Array<UploadBufferMemoryPage>   upload_pages;
+        Array<ReadBackBufferMemoryPage> readback_pages;
 
-        REV_INLINE BufferMemory(Allocator *allocator) : buffers(allocator), pages(allocator) {}
-        REV_INLINE ~BufferMemory() {}
-
-        REV_INLINE BufferMemory& operator=(BufferMemory&& other) noexcept
+        REV_INLINE BufferMemory(Allocator *allocator)
+            : buffers(allocator),
+              default_pages(allocator),
+              upload_pages(allocator),
+              readback_pages(allocator)
         {
-            buffers = RTTI::move(other.buffers);
-            pages   = RTTI::move(other.pages);
+        }
+
+        REV_INLINE ~BufferMemory()
+        {
+        }
+
+        REV_INLINE BufferMemory& operator=(BufferMemory&& other)
+        {
+            buffers        = RTTI::move(other.buffers);
+            default_pages  = RTTI::move(other.default_pages);
+            upload_pages   = RTTI::move(other.upload_pages);
+            readback_pages = RTTI::move(other.readback_pages);
             return *this;
         }
+
+        BufferMemory(const BufferMemory&)      = delete;
+        BufferMemory& operator=(BufferMemory&) = delete;
     };
 
-    enum TEXTURE_KIND
+    enum TEXTURE_DIMENSION : u32
     {
-        TEXTURE_KIND_UNKNOWN = 0,
-        TEXTURE_KIND_1D,
-        TEXTURE_KIND_2D,
-        TEXTURE_KIND_3D,
-        TEXTURE_KIND_CUBE,
-        TEXTURE_KIND_1D_ARRAY,
-        TEXTURE_KIND_2D_ARRAY,
-        TEXTURE_KIND_CUBE_ARRAY,
+        TEXTURE_DIMENSION_UNKNOWN = 0,
+        TEXTURE_DIMENSION_1D,
+        TEXTURE_DIMENSION_2D,
+        TEXTURE_DIMENSION_3D,
+        TEXTURE_DIMENSION_CUBE,
+        TEXTURE_DIMENSION_1D_ARRAY,
+        TEXTURE_DIMENSION_2D_ARRAY,
+        TEXTURE_DIMENSION_CUBE_ARRAY,
     };
 
     struct Texture final
     {
-        ID3D12Resource      *def_resource;
-        ID3D12Resource      *upl_resources[SWAP_CHAIN_BUFFERS_COUNT];
-        byte                *upl_pointers[SWAP_CHAIN_BUFFERS_COUNT];
-        TEXTURE_KIND         kind;
+        ID3D12Resource      *default_gpu_mem;
+        ID3D12Resource      *upload_gpu_mem[SWAP_CHAIN_BUFFERS_COUNT];
+        byte                *upload_cpu_mem[SWAP_CHAIN_BUFFERS_COUNT];
+        ID3D12Resource      *readback_gpu_mem[SWAP_CHAIN_BUFFERS_COUNT];
+        byte                *readback_cpu_mem[SWAP_CHAIN_BUFFERS_COUNT];
+        TEXTURE_DIMENSION    dimension;
+        CPU_RESOURCE_ACCESS  cpu_access;
+        u64                  first_subresource_offset;
+        u64                  upload_and_readback_total_bytes;
         D3D12_RESOURCE_DESC  desc; // @Cleanup(Roman): choose data that we really need to store
-        u8                   cube    : 1;
-        u8                   array   : 1;
-        u8                   _static : 1;
+        u8                   planes_count;
+        StaticString<64>     name;
     };
 
     struct TextureMemory final
@@ -147,12 +192,16 @@ namespace REV::D3D12
 
         REV_INLINE ResourceMemory& operator=(ResourceMemory&& other) noexcept
         {
-            buffer_memory    = RTTI::move(other.buffer_memory);
-            texture_memory   = RTTI::move(other.texture_memory);
-            sampler_memory   = RTTI::move(other.sampler_memory);
+            buffer_memory  = RTTI::move(other.buffer_memory);
+            texture_memory = RTTI::move(other.texture_memory);
+            sampler_memory = RTTI::move(other.sampler_memory);
             return *this;
         }
     };
+
+    // @Continue(Roman): 1. Formatize default buffer pages.
+    //                   2. Process GPU::BUFFER_FORMAT on buffer creation.
+    //                   3. Complete views' creation.
 
     class MemoryManager final
     {
@@ -160,26 +209,37 @@ namespace REV::D3D12
         MemoryManager(Allocator *allocator);
         ~MemoryManager();
 
-        u64 AllocateVertexBuffer(u32 vertex_count, bool _static, const ConstString& name = null);
-        u64 AllocateIndexBuffer(u32 index_count, bool _static, const ConstString& name = null);
+        // @NOTE(Roman): if (BUFFER_FORMAT == UNKNOWN)
+        //                   if (stride) buffer_type = StructuredBuffer;
+        //                   else        buffer_type = ByteAddressBuffer;
+        //               else
+        //                   buffer_type = Buffer;
+        u64 AllocateVertexBuffer(u32 count, bool _static, const ConstString& name = null);
+        u64 AllocateIndexBuffer(u32 count, bool _static, const ConstString& name = null);
         u64 AllocateConstantBuffer(u32 bytes, bool _static, const ConstString& name = null);
+        u64 AllocateBuffer(u32 bytes, GPU::BUFFER_FORMAT format, bool cpu_read_access, bool _static, const ConstString& name = null);
+        u64 AllocateStructuredBuffer(u32 count, u32 stride, bool cpu_read_access, bool _static, const ConstString& name = null);
+        u64 AllocateByteAddressBuffer(u32 bytes, bool cpu_read_access, bool _static, const ConstString& name = null);
 
-        u64 AllocateTexture1D(  u16 width,                                        DXGI_FORMAT texture_format, const ConstString& name, bool _static);
-        u64 AllocateTexture2D(  u16 width, u16 height,            u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
-        u64 AllocateTexture3D(  u16 width, u16 height, u16 depth, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
-        u64 AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
-
-        u64 AllocateTexture1DArray(  u16 width,             u16 count,                 DXGI_FORMAT texture_format, const ConstString& name, bool _static);
-        u64 AllocateTexture2DArray(  u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
-        u64 AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, DXGI_FORMAT texture_format, const ConstString& name, bool _static);
+        u64 AllocateTexture(u16 width, u16 height, u16 depth, u16 mip_levels, GPU::RESOURCE_KIND resource_kind, GPU::TEXTURE_FORMAT texture_format, const ConstString& name);
+        u64 AllocateTextureArray(u16 width, u16 height, u16 count, u16 mip_levels, GPU::RESOURCE_KIND resource_kind, GPU::TEXTURE_FORMAT texture_format, const ConstString& name);
+        u64 AllocateTextureCube(u16 width, u16 height, u16 mip_levels, GPU::RESOURCE_KIND resource_kind, GPU::TEXTURE_FORMAT texture_format, const ConstString& name);
+        u64 AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, GPU::RESOURCE_KIND resource_kind, GPU::TEXTURE_FORMAT texture_format, const ConstString& name);
 
         u64 AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static);
 
-        void SetBufferData(const Buffer& buffer, const void *data);
-        void SetBufferDataImmediately(const Buffer& buffer, const void *data);
+        void SetBufferData(const GPU::ResourceHandle& resource, const void *data);
+        void SetBufferDataImmediately(const GPU::ResourceHandle& resource, const void *data);
 
-        void SetTextureData(Texture *texture, GPU::TextureDesc *texture_desc);
-        void SetTextureDataImmediately(Texture *texture, GPU::TextureDesc *texture_desc);
+        void SetTextureData(const GPU::ResourceHandle& resource, const GPU::TextureData *data);
+        void SetTextureDataImmediately(const GPU::ResourceHandle& resource, const GPU::TextureData *data);
+
+        void CopyDefaultResourcesToReadBackResources(const ConstArray<GPU::ResourceHandle>& read_write_resources);
+
+        // @NOTE(Roman): Zero copy return. Just a readback pointer.
+        const void *GetBufferData(const GPU::ResourceHandle& resource) const;
+        // @NOTE(Roman): Is pushed onto frame arena.
+        GPU::TextureData *GetTextureData(const GPU::ResourceHandle& resource) const;
 
         void StartImmediateExecution();
         void EndImmediateExecution();
@@ -187,91 +247,118 @@ namespace REV::D3D12
         void FreeSceneMemory();
         void FreeStaticMemory();
 
-        REV_INLINE D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUVirtualAddress(const GPU::ResourceHandle& resource_handle) const
+        // @NOTE(Roman): Are pushed onto frame arena.
+        ConstArray<GPU::ResourceHandle> GetReadWriteResources() const;
+
+        #pragma region inline_getters
+        REV_INLINE Allocator *GetAllocator() { return m_Allocator; }
+
+        REV_INLINE D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUVirtualAddress(const GPU::ResourceHandle& resource) const
         {
-            REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_BUFFER, "Resource handle is not handling a buffer");
-            if (resource_handle.kind & GPU::RESOURCE_KIND_STATIC)
+            REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
+            if (GPU::MemoryManager::IsStatic(resource))
             {
-                const Buffer *buffer = m_StaticMemory.buffer_memory.buffers + resource_handle.index;
-                return m_StaticMemory.buffer_memory.pages[buffer->page_index].def_mem->GetGPUVirtualAddress() + buffer->offset;
+                const Buffer *buffer = m_StaticMemory.buffer_memory.buffers.GetPointer(resource.index);
+                return m_StaticMemory.buffer_memory.default_pages[buffer->default_page_index].gpu_mem->GetGPUVirtualAddress() + buffer->default_page_offset;
             }
             else
             {
-                const Buffer *buffer = m_SceneMemory.buffer_memory.buffers + resource_handle.index;
-                return m_SceneMemory.buffer_memory.pages[buffer->page_index].def_mem->GetGPUVirtualAddress() + buffer->offset;
+                const Buffer *buffer = m_SceneMemory.buffer_memory.buffers.GetPointer(resource.index);
+                return m_SceneMemory.buffer_memory.default_pages[buffer->default_page_index].gpu_mem->GetGPUVirtualAddress() + buffer->default_page_offset;
             }
         }
 
-        REV_INLINE D3D12_GPU_VIRTUAL_ADDRESS GetTextureGPUVirtualAddress(const GPU::ResourceHandle& resource_handle) const
+        REV_INLINE D3D12_GPU_VIRTUAL_ADDRESS GetTextureGPUVirtualAddress(const GPU::ResourceHandle& resource) const
         {
-            REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_SR, "Resource handle is not handling a texture");
-            return resource_handle.kind & GPU::RESOURCE_KIND_STATIC
-                 ? m_StaticMemory.texture_memory.textures[resource_handle.index].def_resource->GetGPUVirtualAddress()
-                 : m_SceneMemory.texture_memory.textures[resource_handle.index].def_resource->GetGPUVirtualAddress();
+            REV_CHECK_M(GPU::MemoryManager::IsTexture(resource), "Resource is not a texture");
+            return GPU::MemoryManager::IsStatic(resource)
+                 ? m_StaticMemory.texture_memory.textures[resource.index].default_gpu_mem->GetGPUVirtualAddress()
+                 : m_SceneMemory.texture_memory.textures[resource.index].default_gpu_mem->GetGPUVirtualAddress();
         }
 
-        REV_INLINE const Buffer& GetBuffer(const GPU::ResourceHandle& resource_handle)   const
+        REV_INLINE ID3D12Resource *GetBufferDefaultGPUMem(const GPU::ResourceHandle& resource) const
         {
-            REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_BUFFER, "Resource handle is not handling a buffer");
-            return resource_handle.kind & GPU::RESOURCE_KIND_STATIC
-                 ? m_StaticMemory.buffer_memory.buffers[resource_handle.index]
-                 : m_SceneMemory.buffer_memory.buffers[resource_handle.index];
+            REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
+            if (GPU::MemoryManager::IsStatic(resource))
+            {
+                const Buffer *buffer = m_StaticMemory.buffer_memory.buffers.GetPointer(resource.index);
+                return m_StaticMemory.buffer_memory.default_pages[buffer->default_page_index].gpu_mem;
+            }
+            else
+            {
+                const Buffer *buffer = m_SceneMemory.buffer_memory.buffers.GetPointer(resource.index);
+                return m_SceneMemory.buffer_memory.default_pages[buffer->default_page_index].gpu_mem;
+            }
         }
 
-        REV_INLINE const Texture& GetTexture(const GPU::ResourceHandle& resource_handle)  const
+        REV_INLINE const Buffer& GetBuffer(const GPU::ResourceHandle& resource) const
         {
-            REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_SR, "Resource handle is not handling a texture");
-            return resource_handle.kind & GPU::RESOURCE_KIND_STATIC
-                 ? m_StaticMemory.texture_memory.textures[resource_handle.index]
-                 : m_SceneMemory.texture_memory.textures[resource_handle.index];
+            REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
+            return GPU::MemoryManager::IsStatic(resource)
+                 ? m_StaticMemory.buffer_memory.buffers[resource.index]
+                 : m_SceneMemory.buffer_memory.buffers[resource.index];
         }
 
-        REV_INLINE const Sampler& GetSampler(const GPU::ResourceHandle& resource_handle) const
+        REV_INLINE const Texture& GetTexture(const GPU::ResourceHandle& resource)  const
         {
-            REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_SAMPLER, "Resource handle is not handling a sampler");
-            return resource_handle.kind & GPU::RESOURCE_KIND_STATIC
-                 ? m_StaticMemory.sampler_memory.samplers[resource_handle.index]
-                 : m_SceneMemory.sampler_memory.samplers[resource_handle.index];
+            REV_CHECK_M(GPU::MemoryManager::IsTexture(resource), "Resource is not a texture");
+            return GPU::MemoryManager::IsStatic(resource)
+                 ? m_StaticMemory.texture_memory.textures[resource.index]
+                 : m_SceneMemory.texture_memory.textures[resource.index];
         }
 
-        REV_INLINE Buffer& GetBuffer(const GPU::ResourceHandle& resource_handle)
+        REV_INLINE const Sampler& GetSampler(const GPU::ResourceHandle& resource) const
         {
-            REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_BUFFER, "Resource handle is not handling a buffer");
-            return resource_handle.kind & GPU::RESOURCE_KIND_STATIC
-                 ? m_StaticMemory.buffer_memory.buffers[resource_handle.index]
-                 : m_SceneMemory.buffer_memory.buffers[resource_handle.index];
+            REV_CHECK_M(GPU::MemoryManager::IsSampler(resource), "Resource is not a sampler");
+            return GPU::MemoryManager::IsStatic(resource)
+                 ? m_StaticMemory.sampler_memory.samplers[resource.index]
+                 : m_SceneMemory.sampler_memory.samplers[resource.index];
         }
 
-        REV_INLINE Texture& GetTexture(const GPU::ResourceHandle& resource_handle)
+        REV_INLINE Buffer& GetBuffer(const GPU::ResourceHandle& resource)
         {
-            REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_SR, "Resource handle is not handling a texture");
-            return resource_handle.kind & GPU::RESOURCE_KIND_STATIC
-                 ? m_StaticMemory.texture_memory.textures[resource_handle.index]
-                 : m_SceneMemory.texture_memory.textures[resource_handle.index];
+            REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
+            return GPU::MemoryManager::IsStatic(resource)
+                 ? m_StaticMemory.buffer_memory.buffers[resource.index]
+                 : m_SceneMemory.buffer_memory.buffers[resource.index];
         }
 
-        REV_INLINE Sampler& GetSampler(const GPU::ResourceHandle& resource_handle)
+        REV_INLINE Texture& GetTexture(const GPU::ResourceHandle& resource)
         {
-            REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_SAMPLER, "Resource handle is not handling a sampler");
-            return resource_handle.kind & GPU::RESOURCE_KIND_STATIC
-                 ? m_StaticMemory.sampler_memory.samplers[resource_handle.index]
-                 : m_SceneMemory.sampler_memory.samplers[resource_handle.index];
+            REV_CHECK_M(GPU::MemoryManager::IsTexture(resource), "Resource is not a texture");
+            return GPU::MemoryManager::IsStatic(resource)
+                 ? m_StaticMemory.texture_memory.textures[resource.index]
+                 : m_SceneMemory.texture_memory.textures[resource.index];
         }
+
+        REV_INLINE Sampler& GetSampler(const GPU::ResourceHandle& resource)
+        {
+            REV_CHECK_M(GPU::MemoryManager::IsSampler(resource), "Resource is not a sampler");
+            return GPU::MemoryManager::IsStatic(resource)
+                 ? m_StaticMemory.sampler_memory.samplers[resource.index]
+                 : m_SceneMemory.sampler_memory.samplers[resource.index];
+        }
+        #pragma endregion inline_getters
 
     private:
-        void CreateNewPage(BufferMemory *buffer_memory, D3D12_RESOURCE_STATES initial_state);
+        Buffer *AllocateBuffer(BufferMemory *buffer_memory, CPU_RESOURCE_ACCESS cpu_access, DXGI_FORMAT format, u64 size, D3D12_RESOURCE_STATES initial_state, u64& index, const ConstString& name);
+        u64 AllocateTexture(TextureMemory *texture_memory, TEXTURE_DIMENSION dimension, CPU_RESOURCE_ACCESS cpu_access, const D3D12_RESOURCE_DESC& desc, u8 planes_count, const ConstString& name);
 
-        Buffer *AllocateBuffer(BufferMemory *buffer_memory, u64 size, D3D12_RESOURCE_STATES initial_state, u64& index, const ConstString& name);
-        Texture *AllocateTexture(TextureMemory *texture_memory, const D3D12_RESOURCE_DESC& desc, u64& index, const ConstString& name);
+        void UploadBufferData(ID3D12GraphicsCommandList *command_list, Buffer *buffer, bool _static, const void *data);
+        void UploadTextureData(ID3D12GraphicsCommandList *command_list, Texture *texture, const GPU::TextureData *data);
 
-        void UploadBufferData(ID3D12GraphicsCommandList *command_list, const Buffer& buffer, const void *data);
-        void UploadTextureData(ID3D12GraphicsCommandList *command_list, Texture *texture, u32 subres_count, D3D12_SUBRESOURCE_DATA *subresources);
+        void CopyDefaultBufferResourceToReadBackResource(ID3D12GraphicsCommandList *command_list, Buffer *buffer, bool _static);
+        void CopyDefaultTextureResourceToReadBackResource(ID3D12GraphicsCommandList *command_list, Texture *texture);
 
         void SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, const ConstString& name);
+        void SetTextureName(TextureMemory *texture_memory, Texture *texture, const ConstString& name);
+
+        void FreeMemory(ResourceMemory *memory);
 
         REV_DELETE_CONSTRS_AND_OPS(MemoryManager);
 
     private:
+        Allocator                 *m_Allocator;
         DeviceContext             *m_DeviceContext;
         ID3D12CommandAllocator    *m_CommandAllocator;
         ID3D12GraphicsCommandList *m_CommandList;

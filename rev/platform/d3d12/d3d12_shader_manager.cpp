@@ -7,13 +7,10 @@
 #include "core/pch.h"
 #include "graphics/graphics_api.h"
 #include "memory/memory.h"
-#include "asset_manager/asset_manager.h"
 #include "tools/file.h"
 
 #include "platform/d3d12/d3d12_shader_manager.h"
 #include "platform/d3d12/d3d12_common.h"
-
-#include <d3dcompiler.h>
 
 namespace REV::D3D12
 {
@@ -23,8 +20,7 @@ namespace REV::D3D12
 //
 
 ShaderManager::ShaderManager(Allocator *allocator, const Logger& logger)
-    : m_Allocator(allocator),
-      m_StaticGraphicsShaders(allocator),
+    : m_StaticGraphicsShaders(allocator),
       m_StaticComputeShaders(allocator),
       m_SceneGraphicsShaders(allocator),
       m_SceneComputeShaders(allocator),
@@ -34,40 +30,33 @@ ShaderManager::ShaderManager(Allocator *allocator, const Logger& logger)
 
 ShaderManager::~ShaderManager()
 {
-    if (m_Allocator)
+    FreeSceneShaders();
+
+    for (GraphicsShader& graphics_shader : m_StaticGraphicsShaders)
     {
-        FreeSceneShaders();
-
-        for (GraphicsShader& graphics_shader : m_StaticGraphicsShaders)
-        {
-            SafeRelease(graphics_shader.signature);
-            SafeRelease(graphics_shader.root_signature);
-            SafeRelease(graphics_shader.pipeline_state);
-            SafeRelease(graphics_shader.vertex_shader);
-            SafeRelease(graphics_shader.pixel_shader);
-            SafeRelease(graphics_shader.hull_shader);
-            SafeRelease(graphics_shader.domain_shader);
-            SafeRelease(graphics_shader.geometry_shader);
-            SafeRelease(graphics_shader.cbv_srv_uav_desc_heap);
-            SafeRelease(graphics_shader.sampler_desc_heap);
-
-            graphics_shader.bound_resources.Clear();
-        }
-
-        for (ComputeShader& compute_shader : m_StaticComputeShaders)
-        {
-            SafeRelease(compute_shader.signature);
-            SafeRelease(compute_shader.root_signature);
-            SafeRelease(compute_shader.pipeline_state);
-            SafeRelease(compute_shader.shader);
-            SafeRelease(compute_shader.cbv_srv_uav_desc_heap);
-            SafeRelease(compute_shader.sampler_desc_heap);
-
-            compute_shader.bound_resources.Clear();
-        }
-
-        m_Logger.LogInfo("ShaderManager has been destroyed");
+        SafeRelease(graphics_shader.signature);
+        SafeRelease(graphics_shader.root_signature);
+        SafeRelease(graphics_shader.pipeline_state);
+        SafeRelease(graphics_shader.vertex_shader);
+        SafeRelease(graphics_shader.pixel_shader);
+        SafeRelease(graphics_shader.hull_shader);
+        SafeRelease(graphics_shader.domain_shader);
+        SafeRelease(graphics_shader.geometry_shader);
+        SafeRelease(graphics_shader.cbv_srv_uav_desc_heap);
+        SafeRelease(graphics_shader.sampler_desc_heap);
     }
+
+    for (ComputeShader& compute_shader : m_StaticComputeShaders)
+    {
+        SafeRelease(compute_shader.signature);
+        SafeRelease(compute_shader.root_signature);
+        SafeRelease(compute_shader.pipeline_state);
+        SafeRelease(compute_shader.shader);
+        SafeRelease(compute_shader.cbv_srv_uav_desc_heap);
+        SafeRelease(compute_shader.sampler_desc_heap);
+    }
+
+    m_Logger.LogInfo("ShaderManager has been destroyed");
 }
 
 void ShaderManager::FreeSceneShaders()
@@ -84,8 +73,6 @@ void ShaderManager::FreeSceneShaders()
         SafeRelease(graphics_shader.geometry_shader);
         SafeRelease(graphics_shader.cbv_srv_uav_desc_heap);
         SafeRelease(graphics_shader.sampler_desc_heap);
-
-        graphics_shader.bound_resources.Clear();
     }
 
     for (ComputeShader& compute_shader : m_SceneComputeShaders)
@@ -96,96 +83,33 @@ void ShaderManager::FreeSceneShaders()
         SafeRelease(compute_shader.shader);
         SafeRelease(compute_shader.cbv_srv_uav_desc_heap);
         SafeRelease(compute_shader.sampler_desc_heap);
-
-        compute_shader.bound_resources.Clear();
     }
 }
 
-u64 ShaderManager::CreateGraphicsShader(
-    const ConstString&                  shader_cache_filename,
-    const ConstArray<AssetHandle>&      textures,
-    const ConstArray<GPU::CBufferDesc>& cbuffers,
-    const ConstArray<GPU::SamplerDesc>& samplers,
-    bool                                _static)
+u64 ShaderManager::CreateGraphicsShader(const ConstString& shader_cache_filename, const ConstArray<GPU::ShaderResourceDesc>& resources, bool _static)
 {
     Memory                *memory           = Memory::Get();
     Array<GraphicsShader> *graphics_shaders = _static ? &m_StaticGraphicsShaders : &m_SceneGraphicsShaders;
-    AssetManager          *asset_manager    = AssetManager::Get();
+    GPU::MemoryManager    *memory_manager   = GraphicsAPI::GetMemoryManager();
 
-    GraphicsShader *graphics_shader = new (graphics_shaders->PushBack()) GraphicsShader(m_Allocator);
+    GraphicsShader *graphics_shader = graphics_shaders->PushBack();
+    graphics_shader->_static = _static;
     LoadShaderCache(graphics_shader, shader_cache_filename);
-    CreateDescHeapsAndViews(graphics_shader, textures, cbuffers, samplers);
-
-    u64 resources_count = cbuffers.Count() + textures.Count() + samplers.Count();
-
-    GPU::ResourceHandle  *shader_resoucres     = new (graphics_shader->bound_resources.PushBack(resources_count)) GPU::ResourceHandle();
-    D3D12_ROOT_PARAMETER *root_parameters      = memory->PushToFA<D3D12_ROOT_PARAMETER>(resources_count);
-    u64                   root_parameter_index = 0;
-
-    for (u64 i = 0; i < cbuffers.Count(); ++i)
-    {
-        const GPU::CBufferDesc *cbuffer = cbuffers.GetPointer(i);
-
-        *shader_resoucres++ = cbuffer->resource;
-
-        D3D12_ROOT_PARAMETER *it      = root_parameters + root_parameter_index++;
-        it->ParameterType             = D3D12_ROOT_PARAMETER_TYPE_CBV;
-        it->Descriptor.ShaderRegister = cbuffer->shader_register;
-        it->Descriptor.RegisterSpace  = cbuffer->register_space;
-        it->ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
-    }
-
-    for (u64 i = 0; i < textures.Count(); ++i)
-    {
-        Asset *asset = asset_manager->GetAsset(textures[i]);
-
-        *shader_resoucres++ = asset->texture.resource;
-
-        D3D12_DESCRIPTOR_RANGE desc_range;
-        desc_range.RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        desc_range.NumDescriptors                    = 1;
-        desc_range.BaseShaderRegister                = asset->texture.shader_register;
-        desc_range.RegisterSpace                     = asset->texture.register_space;
-        desc_range.OffsetInDescriptorsFromTableStart = 0;
-
-        D3D12_ROOT_PARAMETER *it                = root_parameters + root_parameter_index++;
-        it->ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        it->DescriptorTable.NumDescriptorRanges = 1;
-        it->DescriptorTable.pDescriptorRanges   = &desc_range;
-        it->ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
-    }
-
-    for (u64 i = 0; i < samplers.Count(); ++i)
-    {
-        const GPU::SamplerDesc *sampler = samplers.GetPointer(i);
-
-        *shader_resoucres++ = sampler->resource;
-
-        D3D12_DESCRIPTOR_RANGE desc_range;
-        desc_range.RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        desc_range.NumDescriptors                    = 1;
-        desc_range.BaseShaderRegister                = sampler->shader_register;
-        desc_range.RegisterSpace                     = sampler->register_space;
-        desc_range.OffsetInDescriptorsFromTableStart = 0;
-
-        D3D12_ROOT_PARAMETER *it                = root_parameters + root_parameter_index++;
-        it->ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        it->DescriptorTable.NumDescriptorRanges = 1;
-        it->DescriptorTable.pDescriptorRanges   = &desc_range;
-        it->ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
-    }
+    InitBoundResources(graphics_shader, resources);
+    CreateDescHeapsAndViews(graphics_shader);
+    ConstArray root_parameters = CreateRootSignatureParameters(graphics_shader);
 
     // @TODO(Roman): Static samplers
     D3D12_ROOT_SIGNATURE_DESC root_signature_desc;
-    root_signature_desc.NumParameters     = cast(u32, resources_count);
-    root_signature_desc.pParameters       = root_parameters;
+    root_signature_desc.NumParameters     = cast(u32, root_parameters.Count());
+    root_signature_desc.pParameters       = root_parameters.Data();
     root_signature_desc.NumStaticSamplers = 0;
     root_signature_desc.pStaticSamplers   = null;
-    root_signature_desc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT; // @TODO(Roman): D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT
+    root_signature_desc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+                         // @TODO(Roman): | D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT
 
     CreateRootSignature(graphics_shader, root_signature_desc);
 
-#if 1
     D3D12_INPUT_ELEMENT_DESC elements[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,  0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -195,7 +119,6 @@ u64 ShaderManager::CreateGraphicsShader(
     D3D12_INPUT_LAYOUT_DESC input_layout;
     input_layout.pInputElementDescs = elements;
     input_layout.NumElements        = cast(u32, ArrayCount(elements));
-#endif
 
     CreatePipelineState(graphics_shader, input_layout, false, D3D12_CULL_MODE_NONE, true);
 
@@ -206,15 +129,18 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
 {
     DeviceContext *device_context = cast(DeviceContext *, GraphicsAPI::GetDeviceContext());
     MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
-    AssetManager  *asset_manager = AssetManager::Get();
 
     ID3D12GraphicsCommandList *graphics_list = device_context->CurrentGraphicsList();
 
+    // @TODO(Roman): Support triangle strips
     graphics_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     graphics_list->SetGraphicsRootSignature(graphics_shader.root_signature);
     graphics_list->SetPipelineState(graphics_shader.pipeline_state);
 
-    if (graphics_shader.bound_resources.Count())
+    if (graphics_shader.bound_resources.CBV_count
+    ||  graphics_shader.bound_resources.SRV_count
+    ||  graphics_shader.bound_resources.UAV_count
+    ||  graphics_shader.bound_resources.sampler_count)
     {
         if (graphics_shader.cbv_srv_uav_desc_heap && graphics_shader.sampler_desc_heap)
         {
@@ -229,94 +155,79 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
         {
             graphics_list->SetDescriptorHeaps(1, &graphics_shader.cbv_srv_uav_desc_heap);
         }
-        else
+        else if (graphics_shader.sampler_desc_heap)
         {
             graphics_list->SetDescriptorHeaps(1, &graphics_shader.sampler_desc_heap);
         }
-
-        u32 cbv_srv_uav_descriptor_size = device_context->Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        u32 sampler_descriptor_size     = device_context->Device()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
-        D3D12_GPU_DESCRIPTOR_HANDLE cbv_srv_uav_gpu_descriptor_handle = graphics_shader.cbv_srv_uav_desc_heap->GetGPUDescriptorHandleForHeapStart();
-        D3D12_GPU_DESCRIPTOR_HANDLE sampler_gpu_descriptor_handle     = graphics_shader.sampler_desc_heap->GetGPUDescriptorHandleForHeapStart();
-
-        u32 resource_index = 0;
-        for (const GPU::ResourceHandle& resource : graphics_shader.bound_resources)
+        else
         {
-            switch (resource.kind)
-            {
-                case GPU::RESOURCE_KIND_CB:
-                case GPU::RESOURCE_KIND_STATIC_CB:
-                {
-                    graphics_list->SetGraphicsRootConstantBufferView(resource_index, memory_manager->GetBufferGPUVirtualAddress(resource));
-                    cbv_srv_uav_gpu_descriptor_handle.ptr += cbv_srv_uav_descriptor_size;
-                } break;
+            REV_ERROR_M("Resources has been bound but descriptor heaps has not been created");
+        }
 
-                case GPU::RESOURCE_KIND_SR:
-                case GPU::RESOURCE_KIND_STATIC_SR:
-                {
-                    Texture& texture = memory_manager->GetTexture(resource);
+        D3D12_GPU_DESCRIPTOR_HANDLE cbv_srv_uav_gpu_descriptor_handle_it = graphics_shader.cbv_srv_uav_gpu_desc_handle;
 
-                    graphics_list->SetGraphicsRootDescriptorTable(resource_index, cbv_srv_uav_gpu_descriptor_handle);
-                    cbv_srv_uav_gpu_descriptor_handle.ptr += cbv_srv_uav_descriptor_size;
-                } break;
+        u32 root_parameter_index = 0;
+        if (graphics_shader.bound_resources.CBV_count)
+        {
+            graphics_list->SetGraphicsRootDescriptorTable(root_parameter_index++, cbv_srv_uav_gpu_descriptor_handle_it);
+            cbv_srv_uav_gpu_descriptor_handle_it.ptr += graphics_shader.cbv_srv_uav_desc_size;
+        }
 
-                case GPU::RESOURCE_KIND_SAMPLER:
-                case GPU::RESOURCE_KIND_STATIC_SAMPLER:
-                {
-                    Sampler& sampler = memory_manager->GetSampler(resource);
+        if (graphics_shader.bound_resources.SRV_count)
+        {
+            graphics_list->SetGraphicsRootDescriptorTable(root_parameter_index++, cbv_srv_uav_gpu_descriptor_handle_it);
+            cbv_srv_uav_gpu_descriptor_handle_it.ptr += graphics_shader.cbv_srv_uav_desc_size;
+        }
 
-                    graphics_list->SetGraphicsRootDescriptorTable(resource_index, sampler_gpu_descriptor_handle);
-                    sampler_gpu_descriptor_handle.ptr += sampler_descriptor_size;
-                } break;
+        if (graphics_shader.bound_resources.UAV_count)
+        {
+            graphics_list->SetGraphicsRootDescriptorTable(root_parameter_index++, cbv_srv_uav_gpu_descriptor_handle_it);
+            cbv_srv_uav_gpu_descriptor_handle_it.ptr += graphics_shader.cbv_srv_uav_desc_size;
+        }
 
-                default:
-                {
-                    REV_ERROR_M("Invalid or unsupported resource kind: %I64u", resource.kind);
-                } break;
-            }
-
-            ++resource_index;
+        if (graphics_shader.bound_resources.sampler_count)
+        {
+            graphics_list->SetGraphicsRootDescriptorTable(root_parameter_index, graphics_shader.sampler_gpu_desc_handle);
         }
     }
 }
 
-void ShaderManager::BindVertexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource_handle)
+void ShaderManager::BindVertexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource)
 {
-    REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_VB, "Resource #%I64u is not a vertex buffer", resource_handle.index);
+    REV_CHECK_M((resource.kind & ~GPU::RESOURCE_KIND_STATIC) == GPU::RESOURCE_KIND_VERTEX_BUFFER, "Resource #%I64u is not a vertex buffer", resource.index);
 
     MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
-    Buffer&        buffer         = memory_manager->GetBuffer(resource_handle);
+    Buffer&        buffer         = memory_manager->GetBuffer(resource);
 
     D3D12_VERTEX_BUFFER_VIEW vbv;
-    vbv.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(resource_handle);
+    vbv.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(resource);
     vbv.SizeInBytes    = cast(u32, buffer.actual_size);
-    vbv.StrideInBytes  = buffer.vstride;
+    vbv.StrideInBytes  = buffer.stride;
 
     cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->IASetVertexBuffers(0, 1, &vbv);
 }
 
-void ShaderManager::BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource_handle)
+void ShaderManager::BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource)
 {
-    REV_CHECK_M(resource_handle.kind & GPU::RESOURCE_KIND_IB, "Resource #%I64u is not an index buffer", resource_handle.index);
+    REV_CHECK_M((resource.kind & ~GPU::RESOURCE_KIND_STATIC) == GPU::RESOURCE_KIND_INDEX_BUFFER, "Resource #%I64u is not an index buffer", resource.index);
 
     MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
-    Buffer&        buffer         = memory_manager->GetBuffer(resource_handle);
+    Buffer&        buffer         = memory_manager->GetBuffer(resource);
 
     D3D12_INDEX_BUFFER_VIEW ibv;
-    ibv.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(resource_handle);
+    ibv.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(resource);
     ibv.SizeInBytes    = cast(u32, buffer.actual_size);
-    ibv.Format         = DXGI_FORMAT_R32_UINT;
+    ibv.Format         = buffer.format;
 
     cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->IASetIndexBuffer(&ibv);
 
-    graphics_shader.index_buffer = resource_handle;
+    graphics_shader.index_buffer = resource;
 }
 
 void ShaderManager::Draw(const GraphicsShader& graphics_shader)
 {
     Buffer& buffer = cast(MemoryManager *, GraphicsAPI::GetMemoryManager())->GetBuffer(graphics_shader.index_buffer);
-    cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->DrawIndexedInstanced(buffer.icount, 1, 0, 0, 0);
+    cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->DrawIndexedInstanced(cast(u32, buffer.actual_size / buffer.stride), 1, 0, 0, 0);
 }
 
 ID3DBlob *ShaderManager::CompileShader(const ConstString& hlsl_code, const char *name, const char *entry_point, const char *target)
@@ -417,150 +328,482 @@ void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const Const
     }
 }
 
-void ShaderManager::CreateDescHeapsAndViews(
-    GraphicsShader                      *graphics_shader,
-    const ConstArray<AssetHandle>&       textures,
-    const ConstArray<GPU::CBufferDesc>&  cbuffers,
-    const ConstArray<GPU::SamplerDesc>&  samplers)
+void ShaderManager::InitBoundResources(GraphicsShader *graphics_shader, const ConstArray<GPU::ShaderResourceDesc>& resources)
+{
+    Memory *memory = Memory::Get();
+    Arena  *arena  = graphics_shader->_static ? &memory->PermanentArena() : &memory->SceneArena();
+
+    for (const GPU::ShaderResourceDesc& resource_desc : resources)
+    {
+        CBV_SRV_UAV_Sampler_TableNode *node = arena->Push<CBV_SRV_UAV_Sampler_TableNode>();
+        node->resoucre_desc = resource_desc;
+
+        switch (resource_desc.resource.kind & ~GPU::RESOURCE_KIND_STATIC)
+        {
+            case GPU::RESOURCE_KIND_CONSTANT_BUFFER:
+            {
+                if (graphics_shader->bound_resources.CBV_first)
+                {
+                    node->prev = graphics_shader->bound_resources.CBV_last;
+
+                    graphics_shader->bound_resources.CBV_last->next = node;
+                    graphics_shader->bound_resources.CBV_last       = node;
+                }
+                else
+                {
+                    graphics_shader->bound_resources.CBV_first = node;
+                    graphics_shader->bound_resources.CBV_last  = graphics_shader->bound_resources.CBV_first;
+                }
+                ++graphics_shader->bound_resources.CBV_count;
+            } break;
+
+            case GPU::RESOURCE_KIND_READ_ONLY_BUFFER:
+            case GPU::RESOURCE_KIND_READ_ONLY_TEXTURE:
+            {
+                if (graphics_shader->bound_resources.SRV_first)
+                {
+                    node->prev = graphics_shader->bound_resources.SRV_first;
+
+                    graphics_shader->bound_resources.SRV_last->next = node;
+                    graphics_shader->bound_resources.SRV_last       = node;
+                }
+                else
+                {
+                    graphics_shader->bound_resources.SRV_first = node;
+                    graphics_shader->bound_resources.SRV_last  = graphics_shader->bound_resources.SRV_first;
+                }
+                ++graphics_shader->bound_resources.SRV_count;
+            } break;
+
+            case GPU::RESOURCE_KIND_READ_WRITE_BUFFER:
+            case GPU::RESOURCE_KIND_READ_WRITE_TEXTURE:
+            {
+                if (graphics_shader->bound_resources.UAV_first)
+                {
+                    node->prev = graphics_shader->bound_resources.UAV_first;
+
+                    graphics_shader->bound_resources.UAV_last->next = node;
+                    graphics_shader->bound_resources.UAV_last       = node;
+                }
+                else
+                {
+                    graphics_shader->bound_resources.UAV_first = node;
+                    graphics_shader->bound_resources.UAV_last  = graphics_shader->bound_resources.UAV_first;
+                }
+                ++graphics_shader->bound_resources.UAV_count;
+            } break;
+
+            case GPU::RESOURCE_KIND_SAMPLER:
+            {
+                if (graphics_shader->bound_resources.sampler_first)
+                {
+                    node->prev = graphics_shader->bound_resources.sampler_first;
+
+                    graphics_shader->bound_resources.sampler_last->next = node;
+                    graphics_shader->bound_resources.sampler_last       = node;
+                }
+                else
+                {
+                    graphics_shader->bound_resources.sampler_first = node;
+                    graphics_shader->bound_resources.sampler_last  = graphics_shader->bound_resources.sampler_first;
+                }
+                ++graphics_shader->bound_resources.sampler_count;
+            } break;
+
+            default:
+            {
+                REV_ERROR_M("Invalid GPU::RESOUCRE_KIND: %I32u", resource_desc.resource.kind & ~GPU::RESOURCE_KIND_STATIC);
+            } break;
+        };
+    }
+};
+
+void ShaderManager::CreateDescHeapsAndViews(GraphicsShader *graphics_shader)
 {
     ID3D12Device  *device         = cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->Device();
     MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
-    AssetManager  *asset_manager  = AssetManager::Get();
 
-    if (cbuffers.Count() || textures.Count())
+    u64 cbv_srv_uav_count = graphics_shader->bound_resources.CBV_count + graphics_shader->bound_resources.SRV_count + graphics_shader->bound_resources.UAV_count;
+
+    if (cbv_srv_uav_count)
     {
         D3D12_DESCRIPTOR_HEAP_DESC cbv_srv_uav_desc_heap_desc;
         cbv_srv_uav_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        cbv_srv_uav_desc_heap_desc.NumDescriptors = cast(u32, textures.Count() + cbuffers.Count());
+        cbv_srv_uav_desc_heap_desc.NumDescriptors = cast(u32, cbv_srv_uav_count);
         cbv_srv_uav_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         cbv_srv_uav_desc_heap_desc.NodeMask       = 0;
 
         HRESULT error = device->CreateDescriptorHeap(&cbv_srv_uav_desc_heap_desc, IID_PPV_ARGS(&graphics_shader->cbv_srv_uav_desc_heap));
         REV_CHECK(CheckResultAndPrintMessages(error));
 
-        u32                         cbv_srv_uav_descriptor_size       = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        D3D12_CPU_DESCRIPTOR_HANDLE cbv_srv_uav_cpu_descriptor_handle = graphics_shader->cbv_srv_uav_desc_heap->GetCPUDescriptorHandleForHeapStart();
+        graphics_shader->cbv_srv_uav_desc_size                  = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        D3D12_CPU_DESCRIPTOR_HANDLE cbv_srv_uav_cpu_desc_handle = graphics_shader->cbv_srv_uav_desc_heap->GetCPUDescriptorHandleForHeapStart();
+        graphics_shader->cbv_srv_uav_gpu_desc_handle            = graphics_shader->cbv_srv_uav_desc_heap->GetGPUDescriptorHandleForHeapStart();
 
-        for (const GPU::CBufferDesc& cbuffer_desc : cbuffers)
+        for (CBV_SRV_UAV_Sampler_TableNode *CBV = graphics_shader->bound_resources.CBV_first; CBV; CBV = CBV->next)
         {
-            Buffer& cbuffer = memory_manager->GetBuffer(cbuffer_desc.resource);
+            D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc{};
+            cbv_desc.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(CBV->resoucre_desc.resource);
+            cbv_desc.SizeInBytes    = cast(u32, memory_manager->GetBuffer(CBV->resoucre_desc.resource).aligned_size);
 
-            D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc = {};
-            cbv_desc.BufferLocation = memory_manager->GetBufferGPUVirtualAddress(cbuffer_desc.resource);
-            cbv_desc.SizeInBytes    = cast(u32, cbuffer.aligned_size);
-
-            device->CreateConstantBufferView(&cbv_desc, cbv_srv_uav_cpu_descriptor_handle);
-            cbv_srv_uav_cpu_descriptor_handle.ptr += cbv_srv_uav_descriptor_size;
+            device->CreateConstantBufferView(&cbv_desc, cbv_srv_uav_cpu_desc_handle);
+            cbv_srv_uav_cpu_desc_handle.ptr += graphics_shader->cbv_srv_uav_desc_size;
         }
 
-        for (const AssetHandle& texture_asset_handle : textures)
+        for (CBV_SRV_UAV_Sampler_TableNode *SRV = graphics_shader->bound_resources.SRV_first; SRV; SRV = SRV->next)
         {
-            Asset   *texture_asset = asset_manager->GetAsset(texture_asset_handle);
-            Texture& texture       = memory_manager->GetTexture(texture_asset->texture.resource);
-
-            D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-            srv_desc.Format                  = texture.desc.Format;
-            srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-            switch (texture.kind)
+            switch (SRV->resoucre_desc.resource.kind & ~GPU::RESOURCE_KIND_STATIC)
             {
-                case TEXTURE_KIND_1D:
+                case GPU::RESOURCE_KIND_READ_ONLY_BUFFER:
                 {
-                    srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE1D;
-                    srv_desc.Texture1D.MostDetailedMip     = 0;    // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
-                    srv_desc.Texture1D.MipLevels           = 1;    // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
-                    srv_desc.Texture1D.ResourceMinLODClamp = 0.5f; // scale bound
+                    Buffer& buffer = memory_manager->GetBuffer(SRV->resoucre_desc.resource);
+
+                    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+                    srv_desc.Format                     = buffer.format;
+                    srv_desc.ViewDimension              = D3D12_SRV_DIMENSION_BUFFER;
+                    srv_desc.Shader4ComponentMapping    = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+                    srv_desc.Buffer.FirstElement        = buffer.default_page_offset / buffer.stride;
+                    srv_desc.Buffer.NumElements         = cast(u32, buffer.actual_size / buffer.stride);
+                    srv_desc.Buffer.StructureByteStride = buffer.stride;
+                    srv_desc.Buffer.Flags               = buffer.ro_rw_type == RO_RW_BUFFER_TYPE_BYTE_ADDRESS
+                                                        ? D3D12_BUFFER_SRV_FLAG_RAW
+                                                        : D3D12_BUFFER_SRV_FLAG_NONE;
+
+                    device->CreateShaderResourceView(memory_manager->GetBufferDefaultGPUMem(SRV->resoucre_desc.resource), &srv_desc, cbv_srv_uav_cpu_desc_handle);
+                    cbv_srv_uav_cpu_desc_handle.ptr += graphics_shader->cbv_srv_uav_desc_size;
                 } break;
 
-                case TEXTURE_KIND_2D:
+                case GPU::RESOURCE_KIND_READ_ONLY_TEXTURE:
                 {
-                    srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
-                    srv_desc.Texture2D.MostDetailedMip     = 0;                      // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
-                    srv_desc.Texture2D.MipLevels           = texture.desc.MipLevels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
-                    srv_desc.Texture2D.PlaneSlice          = 0;                      // The index (plane slice number) of the plane to use in the texture.
-                    srv_desc.Texture2D.ResourceMinLODClamp = 0.5f;                   // scale bound
-                } break;
+                    Texture& texture = memory_manager->GetTexture(SRV->resoucre_desc.resource);
 
-                case TEXTURE_KIND_3D:
-                {
-                    srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE3D;
-                    srv_desc.Texture3D.MostDetailedMip     = 0;                      // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
-                    srv_desc.Texture3D.MipLevels           = texture.desc.MipLevels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
-                    srv_desc.Texture3D.ResourceMinLODClamp = 0.5f;                   // scale bound
-                } break;
+                    D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+                    srv_desc.Format                  = texture.desc.Format;
+                    srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-                case TEXTURE_KIND_CUBE:
-                {
-                    srv_desc.ViewDimension                   = D3D12_SRV_DIMENSION_TEXTURECUBE;
-                    srv_desc.TextureCube.MostDetailedMip     = 0;                      // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
-                    srv_desc.TextureCube.MipLevels           = texture.desc.MipLevels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
-                    srv_desc.TextureCube.ResourceMinLODClamp = 0.5f;                   // scale bound
-                } break;
+                    switch (texture.dimension)
+                    {
+                        case TEXTURE_DIMENSION_1D:
+                        {
+                            srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE1D;
+                            srv_desc.Texture1D.MostDetailedMip     = 0;    // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+                            srv_desc.Texture1D.MipLevels           = 1;    // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+                            srv_desc.Texture1D.ResourceMinLODClamp = 0.5f; // scale bound
+                        } break;
 
-                case TEXTURE_KIND_1D_ARRAY:
-                {
-                    srv_desc.ViewDimension                      = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
-                    srv_desc.Texture1DArray.MostDetailedMip     = 0;                             // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
-                    srv_desc.Texture1DArray.MipLevels           = 1;                             // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
-                    srv_desc.Texture1DArray.FirstArraySlice     = 0;                             // First texture in an array to access [0, desc.DepthOrArraySize)
-                    srv_desc.Texture1DArray.ArraySize           = texture.desc.DepthOrArraySize; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
-                    srv_desc.Texture1DArray.ResourceMinLODClamp = 0.5f;                          // scale bound
-                } break;
+                        // @TODO(Roman): What about planar formats (YCbCr for example)?
+                        //               Should we specify somehow what plane we want to use?
+                        case TEXTURE_DIMENSION_2D:
+                        {
+                            srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE2D;
+                            srv_desc.Texture2D.MostDetailedMip     = 0;                      // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+                            srv_desc.Texture2D.MipLevels           = texture.desc.MipLevels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+                            srv_desc.Texture2D.PlaneSlice          = 0;                      // The index (plane slice number) of the plane to use in the texture.
+                            srv_desc.Texture2D.ResourceMinLODClamp = 0.5f;                   // scale bound
+                        } break;
 
-                case TEXTURE_KIND_2D_ARRAY:
-                {
-                    srv_desc.ViewDimension                      = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-                    srv_desc.Texture2DArray.MostDetailedMip     = 0;                             // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
-                    srv_desc.Texture2DArray.MipLevels           = texture.desc.MipLevels;        // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
-                    srv_desc.Texture2DArray.FirstArraySlice     = 0;                             // First texture in an array to access [0, desc.DepthOrArraySize)
-                    srv_desc.Texture2DArray.ArraySize           = texture.desc.DepthOrArraySize; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
-                    srv_desc.Texture2DArray.PlaneSlice          = 0;                             // The index (plane slice number) of the plane to use in the texture.
-                    srv_desc.Texture2DArray.ResourceMinLODClamp = 0.5f;                          // scale bound
-                } break;
+                        case TEXTURE_DIMENSION_3D:
+                        {
+                            srv_desc.ViewDimension                 = D3D12_SRV_DIMENSION_TEXTURE3D;
+                            srv_desc.Texture3D.MostDetailedMip     = 0;                      // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+                            srv_desc.Texture3D.MipLevels           = texture.desc.MipLevels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+                            srv_desc.Texture3D.ResourceMinLODClamp = 0.5f;                   // scale bound
+                        } break;
 
-                case TEXTURE_KIND_CUBE_ARRAY:
-                {
-                    srv_desc.ViewDimension                        = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
-                    srv_desc.TextureCubeArray.MostDetailedMip     = 0;                             // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
-                    srv_desc.TextureCubeArray.MipLevels           = texture.desc.MipLevels;        // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
-                    srv_desc.TextureCubeArray.First2DArrayFace    = 0;                             // First texture in an array to access [0, desc.DepthOrArraySize)
-                    srv_desc.TextureCubeArray.NumCubes            = texture.desc.DepthOrArraySize; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
-                    srv_desc.TextureCubeArray.ResourceMinLODClamp = 0.5f;                          // scale bound
+                        case TEXTURE_DIMENSION_CUBE:
+                        {
+                            srv_desc.ViewDimension                   = D3D12_SRV_DIMENSION_TEXTURECUBE;
+                            srv_desc.TextureCube.MostDetailedMip     = 0;                      // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+                            srv_desc.TextureCube.MipLevels           = texture.desc.MipLevels; // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+                            srv_desc.TextureCube.ResourceMinLODClamp = 0.5f;                   // scale bound
+                        } break;
+
+                        case TEXTURE_DIMENSION_1D_ARRAY:
+                        {
+                            srv_desc.ViewDimension                      = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
+                            srv_desc.Texture1DArray.MostDetailedMip     = 0;                             // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+                            srv_desc.Texture1DArray.MipLevels           = 1;                             // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+                            srv_desc.Texture1DArray.FirstArraySlice     = 0;                             // First texture in an array to access [0, desc.DepthOrArraySize)
+                            srv_desc.Texture1DArray.ArraySize           = texture.desc.DepthOrArraySize; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
+                            srv_desc.Texture1DArray.ResourceMinLODClamp = 0.5f;                          // scale bound
+                        } break;
+
+                        // @TODO(Roman): What about planar formats (YCbCr for example)?
+                        //               Should we specify somehow what plane we want to use?
+                        case TEXTURE_DIMENSION_2D_ARRAY:
+                        {
+                            srv_desc.ViewDimension                      = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+                            srv_desc.Texture2DArray.MostDetailedMip     = 0;                             // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+                            srv_desc.Texture2DArray.MipLevels           = texture.desc.MipLevels;        // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+                            srv_desc.Texture2DArray.FirstArraySlice     = 0;                             // First texture in an array to access [0, desc.DepthOrArraySize)
+                            srv_desc.Texture2DArray.ArraySize           = texture.desc.DepthOrArraySize; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
+                            srv_desc.Texture2DArray.PlaneSlice          = 0;                             // The index (plane slice number) of the plane to use in the texture.
+                            srv_desc.Texture2DArray.ResourceMinLODClamp = 0.5f;                          // scale bound
+                        } break;
+
+                        case TEXTURE_DIMENSION_CUBE_ARRAY:
+                        {
+                            srv_desc.ViewDimension                        = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+                            srv_desc.TextureCubeArray.MostDetailedMip     = 0;                             // Most detailed mip level index. We'are starting to filter a texture from this one. [0, desc.MipLevels)
+                            srv_desc.TextureCubeArray.MipLevels           = texture.desc.MipLevels;        // Number of mip levels to use in a filter. [1, desc.MipLevels - MostDetailedMip]
+                            srv_desc.TextureCubeArray.First2DArrayFace    = 0;                             // First texture in an array to access [0, desc.DepthOrArraySize)
+                            srv_desc.TextureCubeArray.NumCubes            = texture.desc.DepthOrArraySize; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
+                            srv_desc.TextureCubeArray.ResourceMinLODClamp = 0.5f;                          // scale bound
+                        } break;
+
+                        default:
+                        {
+                            REV_ERROR_M("Invalid D3D12::TEXTURE_DIMENSION: %I32u", texture.dimension);
+                        } break;
+                    }
+
+                    device->CreateShaderResourceView(texture.default_gpu_mem, &srv_desc, cbv_srv_uav_cpu_desc_handle);
+                    cbv_srv_uav_cpu_desc_handle.ptr += graphics_shader->cbv_srv_uav_desc_size;
                 } break;
 
                 default:
                 {
-                    REV_ERROR_M("Invalid TEXTURE_KIND: %I32u", texture.kind);
+                    REV_ERROR_M("Invalid GPU::RESOUCRE_KIND: %I32u", SRV->resoucre_desc.resource.kind & ~GPU::RESOURCE_KIND_STATIC);
                 } break;
             }
+        }
 
-            device->CreateShaderResourceView(texture.def_resource, &srv_desc, cbv_srv_uav_cpu_descriptor_handle);
-            cbv_srv_uav_cpu_descriptor_handle.ptr += cbv_srv_uav_descriptor_size;
+        for (CBV_SRV_UAV_Sampler_TableNode *UAV = graphics_shader->bound_resources.UAV_first; UAV; UAV = UAV->next)
+        {
+            switch (UAV->resoucre_desc.resource.kind & ~GPU::RESOURCE_KIND_STATIC)
+            {
+                case GPU::RESOURCE_KIND_READ_WRITE_BUFFER:
+                {
+                    Buffer& buffer = memory_manager->GetBuffer(UAV->resoucre_desc.resource);
+
+                    D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc{};
+                    uav_desc.Format                      = buffer.format;
+                    uav_desc.ViewDimension               = D3D12_UAV_DIMENSION_BUFFER;
+                    uav_desc.Buffer.FirstElement         = buffer.default_page_offset / buffer.stride;
+                    uav_desc.Buffer.NumElements          = cast(u32, buffer.actual_size / buffer.stride);
+                    uav_desc.Buffer.StructureByteStride  = buffer.stride;
+                    uav_desc.Buffer.CounterOffsetInBytes = 0;
+                    uav_desc.Buffer.Flags                = buffer.ro_rw_type == RO_RW_BUFFER_TYPE_BYTE_ADDRESS
+                                                         ? D3D12_BUFFER_UAV_FLAG_RAW
+                                                         : D3D12_BUFFER_UAV_FLAG_NONE;
+
+                    device->CreateUnorderedAccessView(memory_manager->GetBufferDefaultGPUMem(UAV->resoucre_desc.resource), null, &uav_desc, cbv_srv_uav_cpu_desc_handle);
+                    cbv_srv_uav_cpu_desc_handle.ptr += graphics_shader->cbv_srv_uav_desc_size;
+                } break;
+
+                case GPU::RESOURCE_KIND_READ_WRITE_TEXTURE:
+                {
+                    Texture& texture = memory_manager->GetTexture(UAV->resoucre_desc.resource);
+
+                    D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc{};
+                    uav_desc.Format = texture.desc.Format;
+
+                    switch (texture.dimension)
+                    {
+                        case TEXTURE_DIMENSION_1D:
+                        {
+                            uav_desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE1D;
+                            uav_desc.Texture1D.MipSlice = 0; // A mip slice includes one mipmap level for EVERY texture in an array.
+                                                             // So we choose wich one to use in view.
+                        } break;
+
+                        // @TODO(Roman): What about planar formats (YCbCr for example)?
+                        //               Should we specify somehow what plane we want to use?
+                        case TEXTURE_DIMENSION_2D:
+                        {
+                            uav_desc.ViewDimension        = D3D12_UAV_DIMENSION_TEXTURE2D;
+                            uav_desc.Texture2D.MipSlice   = 0; // A mip slice includes one mipmap level for EVERY texture in an array.
+                                                               // So we choose wich one to use in view.
+                            uav_desc.Texture2D.PlaneSlice = 0; // The index (plane slice number) of the plane to use in the view.
+                        } break;
+
+                        case TEXTURE_DIMENSION_3D:
+                        {
+                            uav_desc.ViewDimension         = D3D12_UAV_DIMENSION_TEXTURE3D;
+                            uav_desc.Texture3D.MipSlice    = 0;                             // A mip slice includes one mipmap level for EVERY texture in an array.
+                                                                                            // So we choose wich one to use in view.
+                            uav_desc.Texture3D.FirstWSlice = 0;                             // The zero-based index of the first depth slice to be accessed.
+                            uav_desc.Texture3D.WSize       = texture.desc.DepthOrArraySize; // The number of depth slices.
+                        } break;
+
+                        case TEXTURE_DIMENSION_1D_ARRAY:
+                        {
+                            uav_desc.ViewDimension                  = D3D12_UAV_DIMENSION_TEXTURE1DARRAY;
+                            uav_desc.Texture1DArray.MipSlice        = 0;                             // A mip slice includes one mipmap level for EVERY texture
+                                                                                                     // in an array. So we choose wich one to use in view.
+                            uav_desc.Texture1DArray.FirstArraySlice = 0;                             // First texture in an array to access [0, desc.DepthOrArraySize)
+                            uav_desc.Texture1DArray.ArraySize       = texture.desc.DepthOrArraySize; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
+                        } break;
+
+                        // @TODO(Roman): What about planar formats (YCbCr for example)?
+                        //               Should we specify somehow what plane we want to use?
+                        case TEXTURE_DIMENSION_2D_ARRAY:
+                        {
+                            uav_desc.ViewDimension                  = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+                            uav_desc.Texture1DArray.MipSlice        = 0;                             // A mip slice includes one mipmap level for EVERY texture in an array.
+                                                                                                     // So we choose wich one to use in view.
+                            uav_desc.Texture2DArray.FirstArraySlice = 0;                             // First texture in an array to access [0, desc.DepthOrArraySize)
+                            uav_desc.Texture2DArray.ArraySize       = texture.desc.DepthOrArraySize; // Numbre of textrues in array. [1, desc.DepthOrArraySize]
+                            uav_desc.Texture2DArray.PlaneSlice      = 0;                             // The index (plane slice number) of the plane to use in the texture.
+                        } break;
+
+                        default:
+                        {
+                            REV_ERROR_M("Invalid TEXTURE_DIMENSION: %I32u", texture.dimension);
+                        } break;
+                    }
+
+                    device->CreateUnorderedAccessView(texture.default_gpu_mem, null, &uav_desc, cbv_srv_uav_cpu_desc_handle);
+                    cbv_srv_uav_cpu_desc_handle.ptr += graphics_shader->cbv_srv_uav_desc_size;
+                } break;
+
+                default:
+                {
+                    REV_ERROR_M("Invalid GPU::RESOUCRE_KIND: %I32u", UAV->resoucre_desc.resource.kind & ~GPU::RESOURCE_KIND_STATIC);
+                } break;
+            }
         }
     }
 
-    if (samplers.Count())
+    if (graphics_shader->bound_resources.sampler_count)
     {
         D3D12_DESCRIPTOR_HEAP_DESC sampler_desc_heap_desc = {};
         sampler_desc_heap_desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-        sampler_desc_heap_desc.NumDescriptors = cast(u32, samplers.Count());
+        sampler_desc_heap_desc.NumDescriptors = cast(u32, graphics_shader->bound_resources.sampler_count);
         sampler_desc_heap_desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         sampler_desc_heap_desc.NodeMask       = 0;
 
         HRESULT error = device->CreateDescriptorHeap(&sampler_desc_heap_desc, IID_PPV_ARGS(&graphics_shader->sampler_desc_heap));
         REV_CHECK(CheckResultAndPrintMessages(error));
-
+        
         u32                         sampler_descriptor_size       = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
         D3D12_CPU_DESCRIPTOR_HANDLE sampler_cpu_descriptor_handle = graphics_shader->sampler_desc_heap->GetCPUDescriptorHandleForHeapStart();
+        graphics_shader->sampler_gpu_desc_handle                  = graphics_shader->sampler_desc_heap->GetGPUDescriptorHandleForHeapStart();
 
-        for (const GPU::SamplerDesc& sampler_desc : samplers)
+        for (CBV_SRV_UAV_Sampler_TableNode *it = graphics_shader->bound_resources.sampler_first; it; it = it->next)
         {
-            Sampler& sampler = memory_manager->GetSampler(sampler_desc.resource);
+            Sampler& sampler = memory_manager->GetSampler(it->resoucre_desc.resource);
 
             device->CreateSampler(&sampler.desc, sampler_cpu_descriptor_handle);
             sampler_cpu_descriptor_handle.ptr += sampler_descriptor_size;
         }
     }
+}
+
+ConstArray<D3D12_ROOT_PARAMETER> ShaderManager::CreateRootSignatureParameters(GraphicsShader *graphics_shader)
+{
+    Memory *memory = Memory::Get();
+
+    u32 num_root_parameters = 0;
+    if (graphics_shader->bound_resources.CBV_count)     ++num_root_parameters;
+    if (graphics_shader->bound_resources.SRV_count)     ++num_root_parameters;
+    if (graphics_shader->bound_resources.UAV_count)     ++num_root_parameters;
+    if (graphics_shader->bound_resources.sampler_count) ++num_root_parameters;
+
+    D3D12_ROOT_PARAMETER *root_parameters    = memory->PushToFA<D3D12_ROOT_PARAMETER>(num_root_parameters);
+    D3D12_ROOT_PARAMETER *root_parameters_it = root_parameters;
+
+    if (graphics_shader->bound_resources.CBV_count)
+    {
+        root_parameters_it->ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        root_parameters_it->DescriptorTable.NumDescriptorRanges = cast(u32, graphics_shader->bound_resources.CBV_count);
+        root_parameters_it->ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        D3D12_DESCRIPTOR_RANGE *ranges    = memory->PushToFA<D3D12_DESCRIPTOR_RANGE>(graphics_shader->bound_resources.CBV_count);
+        D3D12_DESCRIPTOR_RANGE *ranges_it = ranges;
+
+        for (CBV_SRV_UAV_Sampler_TableNode *CBV = graphics_shader->bound_resources.CBV_first; CBV; CBV = CBV->next)
+        {
+            ranges_it->RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+            ranges_it->NumDescriptors                    = 1;
+            ranges_it->BaseShaderRegister                = CBV->resoucre_desc.shader_register;
+            ranges_it->RegisterSpace                     = CBV->resoucre_desc.register_space;
+            ranges_it->OffsetInDescriptorsFromTableStart = cast(u32, ranges_it - ranges);
+
+            ++ranges_it;
+        }
+
+        root_parameters_it->DescriptorTable.pDescriptorRanges = ranges;
+
+        ++root_parameters_it;
+    }
+
+    if (graphics_shader->bound_resources.SRV_count)
+    {
+        root_parameters_it->ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        root_parameters_it->DescriptorTable.NumDescriptorRanges = cast(u32, graphics_shader->bound_resources.SRV_count);
+        root_parameters_it->ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        D3D12_DESCRIPTOR_RANGE *ranges    = memory->PushToFA<D3D12_DESCRIPTOR_RANGE>(graphics_shader->bound_resources.SRV_count);
+        D3D12_DESCRIPTOR_RANGE *ranges_it = ranges;
+
+        for (CBV_SRV_UAV_Sampler_TableNode *SRV = graphics_shader->bound_resources.SRV_first; SRV; SRV = SRV->next)
+        {
+            ranges_it->RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+            ranges_it->NumDescriptors                    = 1;
+            ranges_it->BaseShaderRegister                = SRV->resoucre_desc.shader_register;
+            ranges_it->RegisterSpace                     = SRV->resoucre_desc.register_space;
+            ranges_it->OffsetInDescriptorsFromTableStart = cast(u32, ranges_it - ranges);
+
+            ++ranges_it;
+        }
+
+        root_parameters_it->DescriptorTable.pDescriptorRanges = ranges;
+
+        ++root_parameters_it;
+    }
+
+    if (graphics_shader->bound_resources.UAV_count)
+    {
+        root_parameters_it->ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        root_parameters_it->DescriptorTable.NumDescriptorRanges = cast(u32, graphics_shader->bound_resources.UAV_count);
+        root_parameters_it->ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        D3D12_DESCRIPTOR_RANGE *ranges    = memory->PushToFA<D3D12_DESCRIPTOR_RANGE>(graphics_shader->bound_resources.UAV_count);
+        D3D12_DESCRIPTOR_RANGE *ranges_it = ranges;
+
+        for (CBV_SRV_UAV_Sampler_TableNode *UAV = graphics_shader->bound_resources.UAV_first; UAV; UAV = UAV->next)
+        {
+            ranges_it->RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+            ranges_it->NumDescriptors                    = 1;
+            ranges_it->BaseShaderRegister                = UAV->resoucre_desc.shader_register;
+            ranges_it->RegisterSpace                     = UAV->resoucre_desc.register_space;
+            ranges_it->OffsetInDescriptorsFromTableStart = cast(u32, ranges_it - ranges);
+
+            ++ranges_it;
+        }
+
+        root_parameters_it->DescriptorTable.pDescriptorRanges = ranges;
+
+        ++root_parameters_it;
+    }
+
+    if (graphics_shader->bound_resources.sampler_count)
+    {
+        root_parameters_it->ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        root_parameters_it->DescriptorTable.NumDescriptorRanges = cast(u32, graphics_shader->bound_resources.sampler_count);
+        root_parameters_it->ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
+
+        D3D12_DESCRIPTOR_RANGE *ranges    = memory->PushToFA<D3D12_DESCRIPTOR_RANGE>(graphics_shader->bound_resources.sampler_count);
+        D3D12_DESCRIPTOR_RANGE *ranges_it = ranges;
+
+        for (CBV_SRV_UAV_Sampler_TableNode *sampler = graphics_shader->bound_resources.sampler_first; sampler; sampler = sampler->next)
+        {
+            ranges_it->RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+            ranges_it->NumDescriptors                    = 1;
+            ranges_it->BaseShaderRegister                = sampler->resoucre_desc.shader_register;
+            ranges_it->RegisterSpace                     = sampler->resoucre_desc.register_space;
+            ranges_it->OffsetInDescriptorsFromTableStart = cast(u32, ranges_it - ranges);
+
+            ++ranges_it;
+        }
+
+        root_parameters_it->DescriptorTable.pDescriptorRanges = ranges;
+
+        ++root_parameters_it;
+    }
+
+    return ConstArray(root_parameters, num_root_parameters);
 }
 
 void ShaderManager::CreateRootSignature(GraphicsShader *graphics_shader, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc)
@@ -733,7 +976,7 @@ void ShaderManager::CreatePipelineState(GraphicsShader *graphics_shader, const D
     gpsd.RasterizerState       = rasterizer_desc;
     gpsd.DepthStencilState     = depth_desc;
     gpsd.InputLayout           = input_layout;
-    gpsd.IBStripCutValue       = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED; // @TODO(Roman): support triangle strips
+    gpsd.IBStripCutValue       = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED; // @TODO(Roman): Support triangle strips
     gpsd.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     if (blending_enabled)
     {
@@ -762,7 +1005,9 @@ void ShaderManager::CreatePipelineState(GraphicsShader *graphics_shader, const D
     gpsd.CachedPSO             = cached_pipeline_state;
     gpsd.Flags                 = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-    HRESULT error = cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->Device()->CreateGraphicsPipelineState(&gpsd, IID_PPV_ARGS(&graphics_shader->pipeline_state));
+    ID3D12Device *device = cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->Device();
+
+    HRESULT error = device->CreateGraphicsPipelineState(&gpsd, IID_PPV_ARGS(&graphics_shader->pipeline_state));
     REV_CHECK(CheckResultAndPrintMessages(error));
 }
 

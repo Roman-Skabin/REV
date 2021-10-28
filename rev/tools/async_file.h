@@ -7,19 +7,20 @@
 #pragma once
 
 #include "tools/file.h"
-#include "tools/tuple.hpp"
 
 namespace REV
 {
-    // @TODO(Roman): #CrossPlatform
+    #define REV_AFD REV_DEPRECATED("Don't use REV::AsyncFile. Wait is not working properly. Also REV::AsyncFile will be rewritten soon. As well as REV::File probably")
+
+    // @TODO(Roman): Rewrite with file views and WorkQueue
     class REV_API AsyncFile final
     {
     public:
-        AsyncFile(nullptr_t = null);
-        AsyncFile(const ConstString& filename, FILE_FLAG flags);
+        REV_AFD AsyncFile(nullptr_t = null);
+        REV_AFD AsyncFile(const ConstString& filename, FILE_FLAG flags);
         template<u64 capacity> REV_INLINE AsyncFile(const StaticString<capacity>& filename, FILE_FLAG flags) : AsyncFile(filename.ToConstString(), flags) {}
-        AsyncFile(const AsyncFile& other);
-        AsyncFile(AsyncFile&& other);
+        REV_AFD AsyncFile(const AsyncFile& other);
+        REV_AFD AsyncFile(AsyncFile&& other);
 
         ~AsyncFile();
 
@@ -30,31 +31,31 @@ namespace REV
 
         void Clear();
 
-        void Read(void *buffer, u64 buffer_bytes, u64 file_offset);
+        void Read(void *buffer, u64 buffer_bytes, u64 file_offset) const;
         void Write(const void *buffer, u64 buffer_bytes, u64 file_offset);
-        void Append(const void *buffer, u64 buffer_bytes);
+        REV_INLINE void Append(const void *buffer, u64 buffer_bytes) { Write(buffer, buffer_bytes, m_Size); }
 
         void Wait(bool wait_for_all_apcs = true) const;
 
-        template<typename ...AF, typename = RTTI::enable_if_t<RTTI::are_same_v<AsyncFile, AF...>>>
-        static void WaitForAll(const AF& ...async_files)
+        template<typename ...AFs, typename = RTTI::enable_if_t<RTTI::are_same_v<AsyncFile, AFs...>>>
+        static void WaitForAll(const AFs& ...async_files)
         {
             HANDLE  events[MAX_APCS * sizeof...(async_files)] = {null};
             HANDLE *events_it = events;
 
-            Tuple<const AF&...>(async_files...).ForEach([&events_it](u64 index, const AF& async_file)
+            auto& AddEntry = [](const AsyncFile& async_file, HANDLE **events_it)
             {
                 for (u32 i = 0; i < MAX_APCS; ++i)
                 {
-                    APCEntry *entry = async_file.m_APCEntries + i;
-                    if (entry->in_progress) *events_it++ = entry->overlapped.hEvent;
+                    *(*events_it)++ = async_file.m_APCEntries[i].overlapped.hEvent;
                 }
-            });
+            };
 
-            u32 events_count = events_it - events;
-            if (events_count)
+            (..., AddEntry(async_files, &events_it));
+
+            if (events_it > events)
             {
-                u32 wait_result = WaitForMultipleObjectsEx(events_count, events, true, INFINITE, true);
+                u32 wait_result = WaitForMultipleObjectsEx(cast(u32, events_it - events), events, true, INFINITE, true);
                 REV_CHECK(wait_result == WAIT_IO_COMPLETION);
             }
         }
@@ -93,13 +94,13 @@ namespace REV
         void LockSystemCacheFromOtherProcesses(u64 offset, u64 bytes, bool shared) const;
         void UnlockSystemCacheFromOtherProcesses(u64 offset, u64 bytes) const;
 
-        friend void WINAPI OverlappedReadCompletionRoutine(
+        friend void REV_STDCALL OverlappedReadCompletionRoutine(
             u32         error_code,
             u32         bytes_transfered,
             OVERLAPPED *overlapped
         );
 
-        friend void WINAPI OverlappedWriteCompletionRoutine(
+        friend void REV_STDCALL OverlappedWriteCompletionRoutine(
             u32         error_code,
             u32         bytes_transfered,
             OVERLAPPED *overlapped
@@ -110,13 +111,17 @@ namespace REV
 
         struct APCEntry
         {
-            AsyncFile  *file        = null;
-            bool        in_progress = false;
-            OVERLAPPED  overlapped  = {0};
+            AsyncFile           *file;
+            APCEntry   *volatile next_free;
+            u32         volatile bytes_locked;
+            OVERLAPPED           overlapped;
         };
+        void PushFreeEntry(APCEntry *entry) const;
+        APCEntry *PopFreeEntry() const;
 
         HANDLE                          m_Handle;
         u64                             m_Size;
+        mutable APCEntry      *volatile m_FreeAPCEntries;
         FILE_FLAG                       m_Flags;
         mutable CriticalSection<false>  m_CriticalSection;
         mutable APCEntry                m_APCEntries[MAX_APCS];

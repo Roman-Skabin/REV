@@ -30,8 +30,10 @@ namespace REV
 #define ASSET_HANDLE_DEFINED
     struct AssetHandle
     {
-        u64  index   = REV_U64_MAX;
+        u64  index   = REV_INVALID_U64_INDEX;
         bool _static = false;
+
+        REV_INLINE operator bool() const { return index != REV_INVALID_U64_INDEX; }
     };
 #endif
 
@@ -53,22 +55,20 @@ namespace REV
 
         struct ShaderHandle
         {
-            u64  index   = REV_U64_MAX;
+            u64  index   = REV_INVALID_U64_INDEX;
             bool _static = false;
+
+            REV_INLINE operator bool() const { return index != REV_INVALID_U64_INDEX; }
         };
 
-        struct CBufferDesc
+        // @NOTE(Roman): This is NOT a descriptor for a SRV.
+        //               It's just a descriptor for all the resoucres used in a shader.
+        //               e.g. constant buffers, read(-write) buffers, read(-write) textures, samplers.
+        struct ShaderResourceDesc
         {
             GPU::ResourceHandle resource;
-            u32                 shader_register;
-            u32                 register_space;
-        };
-
-        struct SamplerDesc
-        {
-            GPU::ResourceHandle resource;
-            u32                 shader_register;
-            u32                 register_space;
+            u32                 shader_register = 0;
+            u32                 register_space  = 0;
         };
 
         struct CompileShaderResult
@@ -77,17 +77,13 @@ namespace REV
             ConstArray<byte>  bytecode;
         };
 
-        // @TODO, @Optimize(Roman): Make some hash table or something that will store texture-shader mapping:
-        //                          key = shader, data = array of AssetIDs (or some "AssetDescs").
         class REV_API ShaderManager final
         {
         public:
             ShaderHandle CreateGraphicsShader(
-                const ConstString&              shader_cache_filename,
-                const ConstArray<AssetHandle>&  textures,
-                const ConstArray<CBufferDesc>&  cbuffers,
-                const ConstArray<SamplerDesc>&  samplers,
-                bool                            _static
+                const ConstString&                    shader_cache_filename,
+                const ConstArray<ShaderResourceDesc>& resources,
+                bool                                  _static
             );
 
             void SetCurrentGraphicsShader(ShaderHandle graphics_shader);

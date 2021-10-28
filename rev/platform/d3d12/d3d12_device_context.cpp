@@ -279,6 +279,17 @@ void DeviceContext::WaitForGPU()
     }
 }
 
+u8 DeviceContext::GetFormatPlanesCount(GPU::TEXTURE_FORMAT format)
+{
+    D3D12_FEATURE_DATA_FORMAT_INFO data = {};
+    data.Format = REVToDXGITextureFormat(format);
+
+    HRESULT error = m_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_INFO, &data, sizeof(D3D12_FEATURE_DATA_FORMAT_INFO));
+    REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+    return data.PlaneCount;
+}
+
 void DeviceContext::CreateDebugLayer()
 {
 #if REV_DEBUG

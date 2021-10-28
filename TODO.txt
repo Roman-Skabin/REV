@@ -1,16 +1,20 @@
 - Core
     - Complete core\platform.h
     - Scene serialization
-    - ISA wide CopyMemory, MoveMemory, ZeroMemory, CompareMemory // @Optimization
+    - ISA wide CompareMemory // @Optimization
     - Single namespace for everything? (get rid of Math and GPU namespaces)
     - Minimize number of system calls // @Optimization
-    - Vertex buffer/index files (some custom formats for various types of meshes)?
-
-- Settings
-    - Max view distance (max LOD & far)
+    - Mesh files
+    - Max view distance in settings? (max LOD & far)
 
 - Tools
     - Wait for multiple events
+    - Replace overlapped I/O with memory mapped files and work queu.
+      That will be a lot more asynchronous since APC completion routines are called synchronously.
+      Also there are a lot of "OS will do what it will suppose to do and you can not control that".
+      Also I feel like system cache fetches will ruin our asynchronous stuff a lot.
+      I want it be like "Hey read me this region of a file to this buffer, I will wait for completion later".
+      So overlapped I/O is not that overlapped as it should be.
     - Create StaticString and StaticStringBuilder on arenas
     - Replace std::function in REV::Function
     - Hash table
@@ -24,11 +28,10 @@
     - Cross platform shaders?
 
 - Graphics
-    - UAVs (rwbuffers, rwtextures), static samplers, (constants?)
+    - static samplers, (constants?)
     - Forward Rendering
     - Multisampling
     - Add Root Signature v1.1 specific settings.
-    - Stream output
     - Switch from 1 to 3 Render Targets for OIT
     - Weighted Blended OIT
     - Support triangle strips (define topology in shaders?). Probably needs for batch rendering.
@@ -40,7 +43,7 @@
     - Particle system
     - TextRenderer (DirectWrite + D2D)
     - Maya animation
-    - Parse Blender's output files to custom format
+    - Parse Blender's output files to custom format (static meshes)
 
 - Sound
     - Mixer
@@ -49,6 +52,9 @@
 
 - Editor
     - UI (ImGUI or Nuklear or write my own?)
+    - Picking and moving object with a mouse.
+    - Selecting many entities and moving them as a group.
+    - Uniting many "connected/overlapped" entities in one single mesh.
 
 - Other
     - Rewrite sound in C++

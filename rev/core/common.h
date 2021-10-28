@@ -72,7 +72,7 @@ enum
 #define REV__CSTRCAT(a, b) a ## b
 #define REV_CSTRCAT(a, b)  REV__CSTRCAT(a, b)
 
-#define REV_CSTRLEN(cstr) (sizeof(cstr) - sizeof(*(cstr)))
+#define REV_CSTRLEN(cstr) ((sizeof(cstr) - sizeof(*(cstr))) / sizeof(*(cstr)))
 
 #define REV_CSTR_ARGS(cstr)    cstr,  REV_CSTRLEN(cstr)
 #define REV_CARRAY_ARGS(array) array, ::REV::ArrayCount(array)
@@ -180,6 +180,16 @@ namespace REV
 #define TB(x) ((x) << 40)
 
 #define cast(Type, expr) ((Type)(expr))
+
+#define REV_INVALID_U8_INDEX  REV_U8_MAX
+#define REV_INVALID_U16_INDEX REV_U16_MAX
+#define REV_INVALID_U32_INDEX REV_U32_MAX
+#define REV_INVALID_U64_INDEX REV_U64_MAX
+
+#define REV_INVALID_U8_OFFSET  REV_U8_MAX
+#define REV_INVALID_U16_OFFSET REV_U16_MAX
+#define REV_INVALID_U32_OFFSET REV_U32_MAX
+#define REV_INVALID_U64_OFFSET REV_U64_MAX
 
 namespace Helpers
 {

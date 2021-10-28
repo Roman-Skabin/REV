@@ -19,12 +19,21 @@ namespace REV
     {
         ConstArray<Vertex>  vertices;
         ConstArray<Index>   indices;
+        u32                 ID;
 
-        REV_INLINE  Entity() : vertices(null), indices(null) {}
+        REV_INLINE  Entity() : vertices(null), indices(null), ID(++s_LastID) {}
         REV_INLINE ~Entity() {}
+        REV_INLINE  Entity(const Entity& other) : vertices(other.vertices), indices(other.indices), ID(++s_LastID) {}
+        REV_INLINE  Entity(Entity&& other)      : vertices(other.vertices), indices(other.indices), ID(other.ID)   {}
 
         void Create(u64 vcount, u64 icount);
         void SetData(const ConstArray<Vertex>& vertices, const ConstArray<Index>& indices);
+
+        REV_INLINE Entity& operator=(const Entity& other) { if (this != &other) { vertices = other.vertices; indices = other.indices; ID = ++s_LastID; } return *this; }
+        REV_INLINE Entity& operator=(Entity&& other)      { if (this != &other) { vertices = other.vertices; indices = other.indices; ID = other.ID;   } return *this; }
+    
+    private:
+        static u32 s_LastID;
     };
 
     class REV_API SceneBase
@@ -44,6 +53,7 @@ namespace REV
 
         void OnSetCurrentEx();
         void OnUnsetCurrentEx();
+        void OnCopyDefaultResourcesToReadBackResources();
 
         void SetCurrentGraphicsShader(AssetHandle shader_asset);
 

@@ -88,6 +88,22 @@ void DeviceContext::WaitForGPU()
     }
 }
 
+u8 DeviceContext::GetFormatPlanesCount(TEXTURE_FORMAT format)
+{
+    switch (GraphicsAPI::GetAPI())
+    {
+        case GraphicsAPI::API::D3D12:
+        {
+            return cast(D3D12::DeviceContext *, platform)->GetFormatPlanesCount(format);
+        } break;
+
+        case GraphicsAPI::API::VULKAN:
+        {
+        } break;
+    }
+    return 0;
+}
+
 bool DeviceContext::FrameStarted()
 {
     switch (GraphicsAPI::GetAPI())

@@ -8,6 +8,11 @@
 
 #include "core/common.h"
 
+namespace REV::GPU
+{
+    enum TEXTURE_FORMAT : u32;
+}
+
 namespace REV::D3D12
 {
     class DeviceContext;
@@ -29,4 +34,7 @@ namespace REV::D3D12
 
     bool CheckResultAndPrintMessages(HRESULT hr, DeviceContext *device_context);
     bool CheckResultAndPrintMessages(HRESULT hr);
+
+    DXGI_FORMAT REVToDXGITextureFormat(GPU::TEXTURE_FORMAT format);
+    GPU::TEXTURE_FORMAT DXGIToREVTextureFormat(DXGI_FORMAT format);
 }

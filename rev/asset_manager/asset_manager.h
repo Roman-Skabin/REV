@@ -25,8 +25,10 @@ namespace REV
     #define ASSET_HANDLE_DEFINED
         struct AssetHandle
         {
-            u64  index;
-            bool _static;
+            u64  index   = REV_INVALID_U64_INDEX;
+            bool _static = false;
+
+            REV_INLINE operator bool() const { return index != REV_INVALID_U64_INDEX; }
         };
     #endif
 
@@ -36,13 +38,8 @@ namespace REV
         ASSET_KIND kind;
         union
         {
-            struct
-            {
-                GPU::ResourceHandle resource;
-                u32                 shader_register;
-                u32                 register_space;
-            } texture;
-            GPU::ShaderHandle shader_handle;
+            GPU::ResourceHandle texture;
+            GPU::ShaderHandle   shader;
             struct
             {
                 GPU::ResourceHandle vbuffer;
@@ -52,34 +49,16 @@ namespace REV
         StaticString<64> name;
     };
 
-    struct LoadTextureDesc final
-    {
-        const ConstString& name;
-        u32                shader_register;
-        u32                register_space;
-
-        REV_INLINE LoadTextureDesc(const ConstString& name, u32 shader_register, u32 register_space)
-            : name(name), shader_register(shader_register), register_space(register_space)
-        {}
-    };
-
     struct LoadShaderDesc final
     {
-        const ConstString&                  name;
-        const ConstArray<AssetHandle>&      textures;
-        const ConstArray<GPU::CBufferDesc>& cbuffers;
-        const ConstArray<GPU::SamplerDesc>& samplers;
+        const ConstString&                         name;
+        const ConstArray<GPU::ShaderResourceDesc>& resources;
 
-        REV_INLINE LoadShaderDesc(
-            const ConstString&                  name,
-            const ConstArray<AssetHandle>&      textures,
-            const ConstArray<GPU::CBufferDesc>& cbuffers,
-            const ConstArray<GPU::SamplerDesc>& samplers)
+        REV_INLINE LoadShaderDesc(const ConstString& name, const ConstArray<GPU::ShaderResourceDesc>& resources)
             : name(name),
-              textures(textures),
-              cbuffers(cbuffers),
-              samplers(samplers)
-        {}
+              resources(resources)
+        {
+        }
     };
 
     class REV_API AssetManager final
@@ -92,11 +71,11 @@ namespace REV
 
         void FreeSceneAssets();
 
-        AssetHandle LoadTexture(const LoadTextureDesc& desc, bool _static);
+        AssetHandle LoadTexture(const ConstString& name, bool _static);
         AssetHandle LoadShader(const LoadShaderDesc& desc, bool _static);
 
         // @NOTE(Roman): Batch loaders
-        ConstArray<AssetHandle> LoadTextures(const ConstArray<LoadTextureDesc>& descs, bool _static);
+        ConstArray<AssetHandle> LoadTextures(const ConstArray<ConstString>& names, bool _static);
         ConstArray<AssetHandle> LoadShaders(const ConstArray<LoadShaderDesc>& descs, bool _static);
 
         REV_INLINE const Array<Asset>& GetStaticAssets() const { return m_StaticAssets; }
@@ -112,6 +91,9 @@ namespace REV
 
         REV_INLINE const Asset *GetAsset(AssetHandle handle)  const { return handle._static ? m_StaticAssets.GetPointer(handle.index) : m_SceneAssets.GetPointer(handle.index);  }
         REV_INLINE       Asset *GetAsset(AssetHandle handle)        { return handle._static ? m_StaticAssets.GetPointer(handle.index) : m_SceneAssets.GetPointer(handle.index);  }
+
+        const Asset *GetAsset(const GPU::ResourceHandle& resource) const;
+              Asset *GetAsset(const GPU::ResourceHandle& resource);
 
         void MakeFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET_KIND kind, const ConstString& asset_name);
         void MakeCacheFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET_KIND kind, const ConstString& asset_name);

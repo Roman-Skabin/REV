@@ -16,6 +16,8 @@ namespace REV
 
 namespace REV::GPU
 {
+    enum TEXTURE_FORMAT : u32;
+
     class REV_API DeviceContext final
     {
     public:
@@ -26,6 +28,8 @@ namespace REV::GPU
         void SetVSync(bool enable);
 
         void WaitForGPU();
+
+        u8 GetFormatPlanesCount(TEXTURE_FORMAT format);
 
         bool FrameStarted();
 

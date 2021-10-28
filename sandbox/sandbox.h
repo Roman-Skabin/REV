@@ -19,6 +19,8 @@ public:
     REV_INLINE const DemoScene& GetDemoScene() const { return m_DemoScene; }
     REV_INLINE       DemoScene& GetDemoScene()       { return m_DemoScene; }
 
+    REV_INLINE const REV::GPU::ResourceHandle& GetMousePickTexture() const { return m_StaticMousePickTexture; }
+
 private:
     Sandbox(const Sandbox&) = delete;
     Sandbox(Sandbox&&)      = delete;
@@ -27,7 +29,8 @@ private:
     Sandbox& operator=(Sandbox&&)      = delete;
 
 private:
-    REV::Logger m_Logger;
+    REV::Logger              m_Logger;
+    REV::GPU::ResourceHandle m_StaticMousePickTexture;
 
     DemoScene m_DemoScene;
 };

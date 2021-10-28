@@ -86,7 +86,7 @@ void Application::Run(SceneBase *scene)
             }
             m_CurrentScene->OnUpdate();
             m_CurrentScene->FlushBatch();
-            
+            m_CurrentScene->OnCopyDefaultResourcesToReadBackResources();
             device_context->EndFrame();
         }
     }

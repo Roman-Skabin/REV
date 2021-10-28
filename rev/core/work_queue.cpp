@@ -68,7 +68,6 @@ WorkQueue::~WorkQueue()
     m_Works = null;
 }
 
-
 void WorkQueue::AddWork(const Function<void()>& proc)
 {
     while (true)

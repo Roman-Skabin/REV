@@ -61,12 +61,12 @@ void AssetManager::FreeSceneAssets()
     }
 }
 
-AssetHandle AssetManager::LoadTexture(const LoadTextureDesc& desc, bool _static)
+AssetHandle AssetManager::LoadTexture(const ConstString& name, bool _static)
 {
     Array<Asset> *assets = _static ? &m_StaticAssets : &m_SceneAssets;
 
     StaticString<REV_PATH_CAPACITY> filename;
-    MakeFilename(filename, ASSET_KIND_TEXTURE, desc.name);
+    MakeFilename(filename, ASSET_KIND_TEXTURE, name);
 
     if (filename.Empty())
     {
@@ -88,10 +88,8 @@ AssetHandle AssetManager::LoadTexture(const LoadTextureDesc& desc, bool _static)
     }
 
     Asset *asset = assets->PushBack();
-    asset->kind                    = ASSET_KIND_TEXTURE;
-    asset->texture.shader_register = desc.shader_register;
-    asset->texture.register_space  = desc.register_space;
-    asset->name                    = desc.name;
+    asset->kind = ASSET_KIND_TEXTURE;
+    asset->name = name;
 
     u64 dot_index = filename.RFind('.');
     REV_CHECK(dot_index != filename.npos);
@@ -100,7 +98,7 @@ AssetHandle AssetManager::LoadTexture(const LoadTextureDesc& desc, bool _static)
 
     if (extension == ConstString(REV_CSTR_ARGS(".dds")))
     {
-        LoadDDSTexture(asset, data, desc.name, _static);
+        LoadDDSTexture(asset, data, name, _static);
     }
     // @TODO(Roman): Other texture file formats
     else
@@ -247,9 +245,9 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
     Array<Asset> *assets = _static ? &m_StaticAssets : &m_SceneAssets;
 
     Asset *asset = assets->PushBack();
-    asset->kind          = ASSET_KIND_SHADER;
-    asset->shader_handle = shader_manager->CreateGraphicsShader(ConstString(cache_filename.Data(), cache_filename.Length()), desc.textures, desc.cbuffers, desc.samplers, _static);
-    asset->name          = desc.name;
+    asset->kind   = ASSET_KIND_SHADER;
+    asset->shader = shader_manager->CreateGraphicsShader(cache_filename.ToConstString(), desc.resources, _static);
+    asset->name   = desc.name;
 
     AssetHandle handle;
     handle.index   = assets->Count() - 1;
@@ -258,25 +256,25 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
     return handle;
 }
 
-ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureDesc>& descs, bool _static)
+ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<ConstString>& names, bool _static)
 {
-    Array<Asset>        *assets             = _static ? &m_StaticAssets : &m_SceneAssets;
-    u64                  new_assets_index   = assets->Count();
-    Asset               *new_assets         = assets->PushBack(descs.Count());
-    AssetHandle         *asset_handles      = Memory::Get()->PushToFA<AssetHandle>(descs.Count());
+    Array<Asset> *assets           = _static ? &m_StaticAssets : &m_SceneAssets;
+    u64           new_assets_index = assets->Count();
+    Asset        *new_assets       = assets->PushBack(names.Count());
+    AssetHandle  *asset_handles    = Memory::Get()->PushToFA<AssetHandle>(names.Count());
 
     u64 index = 0;
-    for (const LoadTextureDesc& desc : descs)
+    for (const ConstString& name : names)
     {
         m_WorkQueue.AddWork([this,
-                             desc,
+                             name,
                              _static,
                              asset        = new_assets       + index,
                              asset_handle = asset_handles    + index,
                              asset_index  = new_assets_index + index]
         {
             StaticString<REV_PATH_CAPACITY> filename;
-            MakeFilename(filename, ASSET_KIND_TEXTURE, desc.name);
+            MakeFilename(filename, ASSET_KIND_TEXTURE, name);
 
             if (filename.Empty())
             {
@@ -297,10 +295,8 @@ ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureD
                 data = ConstArray(filedata, filedata_size);
             }
 
-            asset->kind                    = ASSET_KIND_TEXTURE;
-            asset->texture.shader_register = desc.shader_register;
-            asset->texture.register_space  = desc.register_space;
-            asset->name                    = desc.name;
+            asset->kind = ASSET_KIND_TEXTURE;
+            asset->name = name;
 
             u64 dot_index = filename.RFind('.');
             REV_CHECK(dot_index != filename.npos);
@@ -309,7 +305,7 @@ ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureD
 
             if (extension == ConstString(REV_CSTR_ARGS(".dds")))
             {
-                LoadDDSTexture(asset, data, desc.name, _static);
+                LoadDDSTexture(asset, data, name, _static);
             }
             // @TODO(Roman): Other texture file formats
             else
@@ -327,7 +323,7 @@ ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<LoadTextureD
 
     m_WorkQueue.Wait();
 
-    return ConstArray(asset_handles, descs.Count());
+    return ConstArray(asset_handles, names.Count());
 }
 
 ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDesc>& descs, bool _static)
@@ -450,9 +446,9 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
             shader_manager->ReleaseCompiledShader(gs_cache);
             shader_manager->ReleaseCompiledShader(ps_cache);
 
-            asset->kind          = ASSET_KIND_SHADER;
-            asset->shader_handle = shader_manager->CreateGraphicsShader(ConstString(cache_filename.Data(), cache_filename.Length()), desc.textures, desc.cbuffers, desc.samplers, _static);
-            asset->name          = desc.name;
+            asset->kind   = ASSET_KIND_SHADER;
+            asset->shader = shader_manager->CreateGraphicsShader(cache_filename.ToConstString(), desc.resources, _static);
+            asset->name   = desc.name;
 
             asset_handle->index   = asset_index;
             asset_handle->_static = _static;
@@ -512,6 +508,38 @@ Asset *AssetManager::GetAsset(const ConstString& name, bool _static)
         }
     }
 
+    return null;
+}
+
+const Asset *AssetManager::GetAsset(const GPU::ResourceHandle& resource) const
+{
+    if (GPU::MemoryManager::IsTexture(resource))
+    {
+        const Array<Asset>& assets = GPU::MemoryManager::IsStatic(resource) ? m_StaticAssets : m_SceneAssets;
+        for (const Asset& asset : assets)
+        {
+            if (asset.texture == resource)
+            {
+                return &asset;
+            }
+        }
+    }
+    return null;
+}
+
+Asset *AssetManager::GetAsset(const GPU::ResourceHandle& resource)
+{
+    if (GPU::MemoryManager::IsTexture(resource))
+    {
+        Array<Asset>& assets = GPU::MemoryManager::IsStatic(resource) ? m_StaticAssets : m_SceneAssets;
+        for (Asset& asset : assets)
+        {
+            if (asset.texture == resource)
+            {
+                return &asset;
+            }
+        }
+    }
     return null;
 }
 

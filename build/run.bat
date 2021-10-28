@@ -12,7 +12,7 @@ if /I "!CONFIG!" NEQ "nsight" (
 )))
 
 if /I "!PLATFORM!" NEQ "windows" (
-    echo Syntax error: Invalid platform name: expected x64, got !PLATFORM!
+    echo Syntax error: Invalid platform name: expected windows, got !PLATFORM!
     goto error
 )
 

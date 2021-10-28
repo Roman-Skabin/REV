@@ -44,7 +44,6 @@ AsyncFile::AsyncFile(const AsyncFile& other)
       m_APCEntries{},
       m_Name(other.m_Name)
 {
-    // @TODO(Roman): Duplicate events instead of creating them?
     CreateAPCEntries();
 
     other.m_CriticalSection.Enter();
@@ -68,14 +67,14 @@ AsyncFile::AsyncFile(AsyncFile&& other)
       m_Name(RTTI::move(other.m_Name))
 {
     other.m_CriticalSection.Enter();
+    other.Wait();
 
     for (u32 i = 0; i < MAX_APCS; ++i)
     {
         APCEntry *entry       = m_APCEntries       + i;
         APCEntry *other_entry = other.m_APCEntries + i;
 
-        entry->file        = this;
-        entry->in_progress = other_entry->in_progress;
+        entry->file = this;
         CopyMemory(&entry->overlapped, &other_entry->overlapped, sizeof(OVERLAPPED));
 
         other_entry->overlapped.hEvent = null;
@@ -87,9 +86,7 @@ AsyncFile::AsyncFile(AsyncFile&& other)
 
 AsyncFile::~AsyncFile()
 {
-    // @Issue(Roman): Do we really need enter critical section in destructor?
-    //                Theoretically it will be destroyed in a thread a file was created,
-    //                btw destructor can be called explicitly in several threads.
+    // @NOTE(Roman): Theoretically a file can be destroyed explicitly in several threads.
     m_CriticalSection.Enter();
 
     Close();
@@ -189,7 +186,7 @@ void AsyncFile::Clear()
     m_CriticalSection.Leave();
 }
 
-void AsyncFile::Read(void *buffer, u64 buffer_bytes, u64 file_offset)
+void AsyncFile::Read(void *buffer, u64 buffer_bytes, u64 file_offset) const
 {
     m_CriticalSection.Enter();
 
@@ -206,43 +203,28 @@ void AsyncFile::Read(void *buffer, u64 buffer_bytes, u64 file_offset)
         u64 rest_bytes = buffer_bytes - buffer_offset;
         bytes_to_read  = rest_bytes < REV_U32_MAX ? (u32)rest_bytes : REV_U32_MAX;
 
-        while (true)
+        APCEntry *entry = PopFreeEntry();
+        entry->overlapped.Internal     = 0;
+        entry->overlapped.InternalHigh = 0;
+        entry->overlapped.Pointer      = cast(void *, saved_file_offset);
+
+        LockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_read, true);
+
+        REV_DEBUG_RESULT(ReadFileEx(m_Handle,
+                                    cast(byte *, buffer) + buffer_offset,
+                                    bytes_to_read,
+                                    &entry->overlapped,
+                                    OverlappedReadCompletionRoutine));
+
+        u32 bytes_transfered = 0;
+        if (GetOverlappedResult(m_Handle, &entry->overlapped, &bytes_transfered, false))
         {
-            bool entry_found = false;
-
-            for (u64 i = 0; i < MAX_APCS; ++i)
-            {
-                APCEntry *entry = m_APCEntries + i;
-                if (!entry->in_progress)
-                {
-                    entry_found = true;
-
-                    entry->in_progress              = true;
-                    entry->overlapped.Internal      = 0;
-                    entry->overlapped.InternalHigh  = 0;
-                    entry->overlapped.Pointer       = cast(void *, saved_file_offset);
-
-                    LockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_read, true);
-
-                    REV_DEBUG_RESULT(ReadFileEx(m_Handle,
-                                                cast(byte *, buffer) + buffer_offset,
-                                                bytes_to_read,
-                                                &entry->overlapped,
-                                                OverlappedWriteCompletionRoutine));
-
-                    u32 bytes_transfered = 0;
-                    if (GetOverlappedResult(m_Handle, &entry->overlapped, &bytes_transfered, false))
-                    {
-                        entry->in_progress = false;
-                    }
-
-                    saved_file_offset += bytes_to_read;
-                }
-            }
-
-            if (entry_found) break;
-            else             Wait(false);
+            PushFreeEntry(entry);
+            REV_CHECK(bytes_transfered == bytes_to_read);
+            UnlockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_read);
         }
+
+        saved_file_offset += bytes_to_read;
     }
 
     m_CriticalSection.Leave();
@@ -265,110 +247,45 @@ void AsyncFile::Write(const void *buffer, u64 buffer_bytes, u64 file_offset)
         u64 rest_bytes = buffer_bytes - buffer_offset;
         bytes_to_write = rest_bytes < REV_U32_MAX ? (u32)rest_bytes : REV_U32_MAX;
 
-        while (true)
+        APCEntry *entry = PopFreeEntry();
+        entry->bytes_locked             = bytes_to_write;
+        entry->overlapped.Internal      = 0;
+        entry->overlapped.InternalHigh  = 0;
+        entry->overlapped.Pointer       = cast(void *, saved_file_offset);
+
+        LockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_write, false);
+
+        REV_DEBUG_RESULT(WriteFileEx(m_Handle,
+                                     cast(byte *, buffer) + buffer_offset,
+                                     bytes_to_write,
+                                     &entry->overlapped,
+                                     OverlappedWriteCompletionRoutine));
+
+        // @NOTE(Roman): "The system sets the state of the event object to nonsignaled
+        //               when a call to the I/O function returns before the operation
+        //               has been completed. The system sets the state of the event
+        //               object to signaled when the operation has been completed.
+        //               When operation completed before the function returns,
+        //               the results are handled as if the operation had been performed
+        //               synchronously.
+
+        u32 bytes_transfered = 0;
+        if (GetOverlappedResult(m_Handle, &entry->overlapped, &bytes_transfered, false))
         {
-            bool entry_found = false;
+            PushFreeEntry(entry);
 
-            for (u64 i = 0; i < MAX_APCS; ++i)
+            REV_CHECK(bytes_transfered == bytes_to_write);
+
+            u64 new_offset = saved_file_offset + bytes_transfered;
+            if (new_offset > m_Size)
             {
-                APCEntry *entry = m_APCEntries + i;
-                if (!entry->in_progress)
-                {
-                    entry_found = true;
-
-                    entry->in_progress              = true;
-                    entry->overlapped.Internal      = 0;
-                    entry->overlapped.InternalHigh  = 0;
-                    entry->overlapped.Pointer       = cast(void *, saved_file_offset);
-
-                    LockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_write, false);
-
-                    REV_DEBUG_RESULT(WriteFileEx(m_Handle,
-                                                 cast(byte *, buffer) + buffer_offset,
-                                                 bytes_to_write,
-                                                 &entry->overlapped,
-                                                 OverlappedWriteCompletionRoutine));
-
-                    // @NOTE(Roman): "The system sets the state of the event object to nonsignaled
-                    //               when a call to the I/O function returns before the operation
-                    //               has been completed. The system sets the state of the event
-                    //               object to signaled when the operation has been completed.
-                    //               When operation completed before the function returns,
-                    //               the results are handled as if the operation had been performed
-                    //               synchronously.
-
-                    u32 bytes_transfered = 0;
-                    if (GetOverlappedResult(m_Handle, &entry->overlapped, &bytes_transfered, false))
-                    {
-                        entry->in_progress = false;
-                    }
-
-                    saved_file_offset += bytes_to_write;
-                }
+                m_Size = new_offset;
             }
 
-            if (entry_found) break;
-            else             Wait(false);
+            UnlockSystemCacheFromOtherProcesses(saved_file_offset, bytes_transfered);
         }
-    }
 
-    m_CriticalSection.Leave();
-}
-
-void AsyncFile::Append(const void *buffer, u64 buffer_bytes)
-{
-    m_CriticalSection.Enter();
-
-    REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "AsyncFile \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
-    REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to write to this file");
-    REV_CHECK(buffer);
-    REV_CHECK_M(buffer_bytes, "Buffer size must be more than 0");
-
-    u64 saved_file_offset = m_Size;
-
-    u32 bytes_to_write = 0;
-    for (u64 buffer_offset = 0; buffer_offset < buffer_bytes; buffer_offset += bytes_to_write)
-    {
-        u64 rest_bytes = buffer_bytes - buffer_offset;
-        bytes_to_write = rest_bytes < REV_U32_MAX ? (u32)rest_bytes : REV_U32_MAX;
-
-        while (true)
-        {
-            bool entry_found = false;
-
-            for (u64 i = 0; i < MAX_APCS; ++i)
-            {
-                APCEntry *entry = m_APCEntries + i;
-                if (!entry->in_progress)
-                {
-                    entry_found = true;
-
-                    entry->in_progress             = true;
-                    entry->overlapped.Internal     = 0;
-                    entry->overlapped.InternalHigh = 0;
-                    entry->overlapped.Pointer      = cast(void *, saved_file_offset);
-
-                    LockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_write, false);
-
-                    REV_DEBUG_RESULT(WriteFileEx(m_Handle,
-                                                 cast(byte *, buffer) + buffer_offset,
-                                                 bytes_to_write,
-                                                 &entry->overlapped,
-                                                 OverlappedWriteCompletionRoutine));
-
-                    u32 bytes_transfered = 0;
-                    if (GetOverlappedResult(m_Handle, &entry->overlapped, &bytes_transfered, false))
-                    {
-                        entry->in_progress = false;
-                    }
-
-                    saved_file_offset += bytes_to_write;
-                }
-            }
-
-            if (entry_found) break;
-            else             Wait(false);
-        }
+        saved_file_offset += bytes_to_write;
     }
 
     m_CriticalSection.Leave();
@@ -381,10 +298,11 @@ void AsyncFile::Wait(bool wait_for_all_apcs) const
     HANDLE events[MAX_APCS] = {null};
     u32    events_count     = 0;
 
+    // @TODO(Roman): continue
     for (u32 i = 0; i < MAX_APCS; ++i)
     {
         APCEntry *entry = m_APCEntries + i;
-        if (entry->in_progress)
+        // if (entry->in_progress)
         {
             events[events_count++] = entry->overlapped.hEvent;
         }
@@ -625,7 +543,6 @@ AsyncFile& AsyncFile::operator=(AsyncFile&& other)
 
             REV_DEBUG_RESULT(CloseHandle(entry->overlapped.hEvent));
 
-            entry->in_progress = other_entry->in_progress;
             CopyMemory(&entry->overlapped, &other_entry->overlapped, sizeof(OVERLAPPED));
 
             other_entry->overlapped.hEvent = null;
@@ -649,17 +566,25 @@ void AsyncFile::CreateAPCEntries()
         entry->file              = this;
         entry->overlapped.hEvent = CreateEventExA(null, null, CREATE_EVENT_MANUAL_RESET, EVENT_ALL_ACCESS);
         REV_CHECK(entry->overlapped.hEvent);
+
+        if (i < MAX_APCS - 2)
+        {
+            entry->next_free = entry + 1;
+        }
     }
+
+    m_FreeAPCEntries = m_APCEntries;
 }
 
 void AsyncFile::DestroyAPCEntries()
 {
+    m_FreeAPCEntries = null;
+
     for (u32 i = 0; i < MAX_APCS; ++i)
     {
         APCEntry *entry = m_APCEntries + i;
 
-        entry->file        = null;
-        entry->in_progress = false;
+        entry->file = null;
 
         if (entry->overlapped.hEvent)
         {
@@ -813,36 +738,59 @@ void AsyncFile::UnlockSystemCacheFromOtherProcesses(u64 offset, u64 bytes) const
                                   &overlapped));
 }
 
-void WINAPI OverlappedReadCompletionRoutine(u32 error_code, u32 bytes_transfered, OVERLAPPED *overlapped)
+void AsyncFile::PushFreeEntry(APCEntry *entry) const
 {
-    AsyncFile::APCEntry *entry = cast(AsyncFile::APCEntry *, cast(byte *, overlapped) - REV_StructFieldOffset(AsyncFile::APCEntry, overlapped));
-
-    entry->file->m_CriticalSection.Enter();
-
-    entry->file->UnlockSystemCacheFromOtherProcesses(cast(u64, overlapped->Pointer), bytes_transfered);
-    entry->in_progress = false;
-
-    entry->file->m_CriticalSection.Leave();
+    _InterlockedExchange(cast(volatile s32 *, &entry->bytes_locked), 0);
+    _InterlockedExchangePointer(cast(void *volatile *, &entry->next_free), m_FreeAPCEntries);
+    _InterlockedExchangePointer(cast(void *volatile *, &m_FreeAPCEntries), entry);
 }
 
-void WINAPI OverlappedWriteCompletionRoutine(u32 error_code, u32 bytes_transfered, OVERLAPPED *overlapped)
+AsyncFile::APCEntry *AsyncFile::PopFreeEntry() const
 {
+    if (!m_FreeAPCEntries)
+    {
+        Wait(false);
+    }
+
+    APCEntry *entry = m_FreeAPCEntries;
+    _InterlockedExchangePointer(cast(void *volatile *, &m_FreeAPCEntries), entry->next_free);
+    _InterlockedExchangePointer(cast(void *volatile *, &entry->next_free), null);
+
+    return entry;
+}
+
+void REV_STDCALL OverlappedReadCompletionRoutine(u32 error_code, u32 bytes_transfered, OVERLAPPED *overlapped)
+{
+    REV_CHECK(error_code == ERROR_SUCCESS);
+
     AsyncFile::APCEntry *entry = cast(AsyncFile::APCEntry *, cast(byte *, overlapped) - REV_StructFieldOffset(AsyncFile::APCEntry, overlapped));
 
-    entry->file->m_CriticalSection.Enter();
+    REV_CHECK(bytes_transfered == entry->bytes_locked);
 
-    u64 old_offset = cast(u64, overlapped->Pointer);
-    u64 new_offset = old_offset + bytes_transfered;
+    u64 saved_offset = cast(u64, overlapped->Pointer);
+    entry->file->PushFreeEntry(entry);
 
+    entry->file->UnlockSystemCacheFromOtherProcesses(saved_offset, bytes_transfered);
+}
+
+void REV_STDCALL OverlappedWriteCompletionRoutine(u32 error_code, u32 bytes_transfered, OVERLAPPED *overlapped)
+{
+    REV_CHECK(error_code == ERROR_SUCCESS);
+
+    AsyncFile::APCEntry *entry = cast(AsyncFile::APCEntry *, cast(byte *, overlapped) - REV_StructFieldOffset(AsyncFile::APCEntry, overlapped));
+
+    REV_CHECK(bytes_transfered == entry->bytes_locked);
+
+    u64 saved_offset = cast(u64, overlapped->Pointer);
+    entry->file->PushFreeEntry(entry);
+
+    u64 new_offset = saved_offset + bytes_transfered;
     if (new_offset > entry->file->m_Size)
     {
         entry->file->m_Size = new_offset;
     }
 
-    entry->file->UnlockSystemCacheFromOtherProcesses(old_offset, bytes_transfered);
-    entry->in_progress = false;
-
-    entry->file->m_CriticalSection.Leave();
+    entry->file->UnlockSystemCacheFromOtherProcesses(saved_offset, bytes_transfered);
 }
 
 }

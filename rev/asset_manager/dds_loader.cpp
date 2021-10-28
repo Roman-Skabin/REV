@@ -13,8 +13,7 @@
 
 // @TODO(Roman): #CrossPlatform
 #include "platform/d3d12/d3d12_memory_manager.h"
-#include <dxgiformat.h>
-#include <d3d12.h>
+#include "platform/d3d12/d3d12_common.h"
 
 #pragma pack(push, 1)
 namespace REV
@@ -340,149 +339,6 @@ struct DX10Header
     MISC_FLAG2               misc_flags2;
 };
 
-REV_INTERNAL u64 BitsPerPixel(GPU::TEXTURE_FORMAT format)
-{
-    if (cast(bool, format & GPU::TEXTURE_FORMAT::_DDS_DX10))
-    {
-        switch (cast(u32, format & ~GPU::TEXTURE_FORMAT::_DDS_DX10))
-        {
-            /*   1 */ case DXGI_FORMAT_R32G32B32A32_TYPELESS:      return 128;
-            /*   2 */ case DXGI_FORMAT_R32G32B32A32_FLOAT:         return 128;
-            /*   3 */ case DXGI_FORMAT_R32G32B32A32_UINT:          return 128;
-            /*   4 */ case DXGI_FORMAT_R32G32B32A32_SINT:          return 128;
-            /*   5 */ case DXGI_FORMAT_R32G32B32_TYPELESS:         return 96;
-            /*   6 */ case DXGI_FORMAT_R32G32B32_FLOAT:            return 96;
-            /*   7 */ case DXGI_FORMAT_R32G32B32_UINT:             return 96;
-            /*   8 */ case DXGI_FORMAT_R32G32B32_SINT:             return 96;
-            /*   9 */ case DXGI_FORMAT_R16G16B16A16_TYPELESS:      return 64;
-            /*  10 */ case DXGI_FORMAT_R16G16B16A16_FLOAT:         return 64;
-            /*  11 */ case DXGI_FORMAT_R16G16B16A16_UNORM:         return 64;
-            /*  12 */ case DXGI_FORMAT_R16G16B16A16_UINT:          return 64;
-            /*  13 */ case DXGI_FORMAT_R16G16B16A16_SNORM:         return 64;
-            /*  14 */ case DXGI_FORMAT_R16G16B16A16_SINT:          return 64;
-            /*  15 */ case DXGI_FORMAT_R32G32_TYPELESS:            return 64;
-            /*  16 */ case DXGI_FORMAT_R32G32_FLOAT:               return 64;
-            /*  17 */ case DXGI_FORMAT_R32G32_UINT:                return 64;
-            /*  18 */ case DXGI_FORMAT_R32G32_SINT:                return 64;
-            /*  19 */ case DXGI_FORMAT_R32G8X24_TYPELESS:          return 64;
-            /*  20 */ case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:       return 64;
-            /*  21 */ case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:   return 64;
-            /*  22 */ case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:    return 64;
-            /*  23 */ case DXGI_FORMAT_R10G10B10A2_TYPELESS:       return 32;
-            /*  24 */ case DXGI_FORMAT_R10G10B10A2_UNORM:          return 32;
-            /*  25 */ case DXGI_FORMAT_R10G10B10A2_UINT:           return 32;
-            /*  26 */ case DXGI_FORMAT_R11G11B10_FLOAT:            return 32;
-            /*  27 */ case DXGI_FORMAT_R8G8B8A8_TYPELESS:          return 32;
-            /*  28 */ case DXGI_FORMAT_R8G8B8A8_UNORM:             return 32;
-            /*  29 */ case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:        return 32;
-            /*  30 */ case DXGI_FORMAT_R8G8B8A8_UINT:              return 32;
-            /*  31 */ case DXGI_FORMAT_R8G8B8A8_SNORM:             return 32;
-            /*  32 */ case DXGI_FORMAT_R8G8B8A8_SINT:              return 32;
-            /*  33 */ case DXGI_FORMAT_R16G16_TYPELESS:            return 32;
-            /*  34 */ case DXGI_FORMAT_R16G16_FLOAT:               return 32;
-            /*  35 */ case DXGI_FORMAT_R16G16_UNORM:               return 32;
-            /*  36 */ case DXGI_FORMAT_R16G16_UINT:                return 32;
-            /*  37 */ case DXGI_FORMAT_R16G16_SNORM:               return 32;
-            /*  38 */ case DXGI_FORMAT_R16G16_SINT:                return 32;
-            /*  39 */ case DXGI_FORMAT_R32_TYPELESS:               return 32;
-            /*  40 */ case DXGI_FORMAT_D32_FLOAT:                  return 32;
-            /*  41 */ case DXGI_FORMAT_R32_FLOAT:                  return 32;
-            /*  42 */ case DXGI_FORMAT_R32_UINT:                   return 32;
-            /*  43 */ case DXGI_FORMAT_R32_SINT:                   return 32;
-            /*  44 */ case DXGI_FORMAT_R24G8_TYPELESS:             return 32;
-            /*  45 */ case DXGI_FORMAT_D24_UNORM_S8_UINT:          return 32;
-            /*  46 */ case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:      return 32;
-            /*  47 */ case DXGI_FORMAT_X24_TYPELESS_G8_UINT:       return 32;
-            /*  48 */ case DXGI_FORMAT_R8G8_TYPELESS:              return 16;
-            /*  49 */ case DXGI_FORMAT_R8G8_UNORM:                 return 16;
-            /*  50 */ case DXGI_FORMAT_R8G8_UINT:                  return 16;
-            /*  51 */ case DXGI_FORMAT_R8G8_SNORM:                 return 16;
-            /*  52 */ case DXGI_FORMAT_R8G8_SINT:                  return 16;
-            /*  53 */ case DXGI_FORMAT_R16_TYPELESS:               return 16;
-            /*  54 */ case DXGI_FORMAT_R16_FLOAT:                  return 16;
-            /*  55 */ case DXGI_FORMAT_D16_UNORM:                  return 16;
-            /*  56 */ case DXGI_FORMAT_R16_UNORM:                  return 16;
-            /*  57 */ case DXGI_FORMAT_R16_UINT:                   return 16;
-            /*  58 */ case DXGI_FORMAT_R16_SNORM:                  return 16;
-            /*  59 */ case DXGI_FORMAT_R16_SINT:                   return 16;
-            /*  60 */ case DXGI_FORMAT_R8_TYPELESS:                return 8;
-            /*  61 */ case DXGI_FORMAT_R8_UNORM:                   return 8;
-            /*  62 */ case DXGI_FORMAT_R8_UINT:                    return 8;
-            /*  63 */ case DXGI_FORMAT_R8_SNORM:                   return 8;
-            /*  64 */ case DXGI_FORMAT_R8_SINT:                    return 8;
-            /*  65 */ case DXGI_FORMAT_A8_UNORM:                   return 8;
-            /*  66 */ case DXGI_FORMAT_R1_UNORM:                   return 1;
-            /*  67 */ case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:         return 32;
-            /*  68 */ case DXGI_FORMAT_R8G8_B8G8_UNORM:            return 32;
-            /*  69 */ case DXGI_FORMAT_G8R8_G8B8_UNORM:            return 32;
-            /*  70 */ case DXGI_FORMAT_BC1_TYPELESS:               return 4;
-            /*  71 */ case DXGI_FORMAT_BC1_UNORM:                  return 4;
-            /*  72 */ case DXGI_FORMAT_BC1_UNORM_SRGB:             return 4;
-            /*  73 */ case DXGI_FORMAT_BC2_TYPELESS:               return 8;
-            /*  74 */ case DXGI_FORMAT_BC2_UNORM:                  return 8;
-            /*  75 */ case DXGI_FORMAT_BC2_UNORM_SRGB:             return 8;
-            /*  76 */ case DXGI_FORMAT_BC3_TYPELESS:               return 8;
-            /*  77 */ case DXGI_FORMAT_BC3_UNORM:                  return 8;
-            /*  78 */ case DXGI_FORMAT_BC3_UNORM_SRGB:             return 8;
-            /*  79 */ case DXGI_FORMAT_BC4_TYPELESS:               return 4;
-            /*  80 */ case DXGI_FORMAT_BC4_UNORM:                  return 4;
-            /*  81 */ case DXGI_FORMAT_BC4_SNORM:                  return 4;
-            /*  82 */ case DXGI_FORMAT_BC5_TYPELESS:               return 8;
-            /*  83 */ case DXGI_FORMAT_BC5_UNORM:                  return 8;
-            /*  84 */ case DXGI_FORMAT_BC5_SNORM:                  return 8;
-            /*  85 */ case DXGI_FORMAT_B5G6R5_UNORM:               return 16;
-            /*  86 */ case DXGI_FORMAT_B5G5R5A1_UNORM:             return 16;
-            /*  87 */ case DXGI_FORMAT_B8G8R8A8_UNORM:             return 32;
-            /*  88 */ case DXGI_FORMAT_B8G8R8X8_UNORM:             return 32;
-            /*  89 */ case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM: return 32;
-            /*  90 */ case DXGI_FORMAT_B8G8R8A8_TYPELESS:          return 32;
-            /*  91 */ case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:        return 32;
-            /*  92 */ case DXGI_FORMAT_B8G8R8X8_TYPELESS:          return 32;
-            /*  93 */ case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:        return 32;
-            /*  94 */ case DXGI_FORMAT_BC6H_TYPELESS:              return 8;
-            /*  95 */ case DXGI_FORMAT_BC6H_UF16:                  return 8;
-            /*  96 */ case DXGI_FORMAT_BC6H_SF16:                  return 8;
-            /*  97 */ case DXGI_FORMAT_BC7_TYPELESS:               return 8;
-            /*  98 */ case DXGI_FORMAT_BC7_UNORM:                  return 8;
-            /*  99 */ case DXGI_FORMAT_BC7_UNORM_SRGB:             return 8;
-            /* 100 */ case DXGI_FORMAT_AYUV:                       return 32;
-            /* 101 */ case DXGI_FORMAT_Y410:                       return 32;
-            /* 102 */ case DXGI_FORMAT_Y416:                       return 64;
-            /* 103 */ case DXGI_FORMAT_NV12:                       return 12;
-            /* 104 */ case DXGI_FORMAT_P010:                       return 24;
-            /* 105 */ case DXGI_FORMAT_P016:                       return 24;
-            /* 106 */ case DXGI_FORMAT_420_OPAQUE:                 return 12;
-            /* 107 */ case DXGI_FORMAT_YUY2:                       return 32;
-            /* 108 */ case DXGI_FORMAT_Y210:                       return 64;
-            /* 109 */ case DXGI_FORMAT_Y216:                       return 64;
-            /* 110 */ case DXGI_FORMAT_NV11:                       return 12;
-            /* 111 */ case DXGI_FORMAT_AI44:                       return 8;
-            /* 112 */ case DXGI_FORMAT_IA44:                       return 8;
-            /* 113 */ case DXGI_FORMAT_P8:                         return 8;
-            /* 114 */ case DXGI_FORMAT_A8P8:                       return 16;
-            /* 115 */ case DXGI_FORMAT_B4G4R4A4_UNORM:             return 16;
-            /* 130 */ case DXGI_FORMAT_P208:                       return 16;
-            /* 131 */ case DXGI_FORMAT_V208:                       return 16;
-            /* 132 */ case DXGI_FORMAT_V408:                       return 24;
-            default:                                               return 0;
-        }
-    }
-    else
-    {
-        switch (format)
-        {
-            /* 1 */ case GPU::TEXTURE_FORMAT::RGBA8: return 32;
-            /* 2 */ case GPU::TEXTURE_FORMAT::BGRA8: return 32;
-            /* 3 */ case GPU::TEXTURE_FORMAT::DXT1:  return 4;
-            /* 4 */ case GPU::TEXTURE_FORMAT::DXT2:  return 8;
-            /* 5 */ case GPU::TEXTURE_FORMAT::DXT3:  return 8;
-            /* 6 */ case GPU::TEXTURE_FORMAT::DXT4:  return 4;
-            /* 7 */ case GPU::TEXTURE_FORMAT::DXT5:  return 8;
-            default:                                 return 0;
-        }
-    }
-}
-
 void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, const ConstString& name, bool _static)
 {
     GPU::MemoryManager *memory_manager = GraphicsAPI::GetMemoryManager();
@@ -495,12 +351,7 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
 
     DX10Header          *dx10_header    = null;
     u32                  data_offset    = sizeof(u32) + sizeof(DDSHeader);
-    GPU::TEXTURE_FORMAT  texture_format = GPU::TEXTURE_FORMAT::UNKNOWN;
-
-    u32  compression_ratio = 1;
-    bool block_compression = false;
-    bool packed            = false; // @TODO(Roman): #OtherFormats
-    bool planar            = false; // @TODO(Roman): #OtherFormats
+    GPU::TEXTURE_FORMAT  texture_format = GPU::TEXTURE_FORMAT_UNKNOWN;
 
     if (dds_header->pixel_format.flags & PIXEL_FORMAT_FLAG_FOURCC)
     {
@@ -508,44 +359,26 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         {
             case FOURCC_DXT1:
             {
-                texture_format    = GPU::TEXTURE_FORMAT::DXT1;
-                compression_ratio = 8;
-                block_compression = true;
+                texture_format = GPU::TEXTURE_FORMAT_BC1;
             } break;
 
             case FOURCC_DXT2:
-            {
-                texture_format    = GPU::TEXTURE_FORMAT::DXT2;
-                compression_ratio = 16;
-                block_compression = true;
-            } break;
-
             case FOURCC_DXT3:
             {
-                texture_format    = GPU::TEXTURE_FORMAT::DXT3;
-                compression_ratio = 16;
-                block_compression = true;
+                texture_format = GPU::TEXTURE_FORMAT_BC2;
             } break;
 
             case FOURCC_DXT4:
-            {
-                texture_format    = GPU::TEXTURE_FORMAT::DXT4;
-                compression_ratio = 16;
-                block_compression = true;
-            } break;
-
             case FOURCC_DXT5:
             {
-                texture_format    = GPU::TEXTURE_FORMAT::DXT5;
-                compression_ratio = 16;
-                block_compression = true;
+                texture_format = GPU::TEXTURE_FORMAT_BC3;
             } break;
 
             case FOURCC_DX10:
             {
                 dx10_header     = cast(DX10Header *, data.Data() + sizeof(u32) + sizeof(DDSHeader));
                 data_offset    += sizeof(DX10Header);
-                texture_format  = cast(GPU::TEXTURE_FORMAT, dx10_header->format) | GPU::TEXTURE_FORMAT::_DDS_DX10;
+                texture_format  = D3D12::DXGIToREVTextureFormat(dx10_header->format);
             } break;
 
             default:
@@ -557,85 +390,142 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
     }
     else
     {
-        // @TODO(Roman): #OtherFormats: BC4, BC5, Uncompressed RGB(A), YCrCb
+        // @TODO(Roman): #OtherFormats: BC4, BC5, Uncompressed RGB(A), YCrCb, ...
         REV_ERROR_M("Unhandled DDS texture format");
     }
 
+    GPU::RESOURCE_KIND  resource_kind = GPU::RESOURCE_KIND_READ_ONLY_TEXTURE
+                                      | (_static ? GPU::RESOURCE_KIND_STATIC : GPU::RESOURCE_KIND_UNKNOWN);
+    u16                 mipmap_count  = (dds_header->caps.caps1 & CAPS1_MIPMAP) ? cast(u16, dds_header->mipmap_count) : 1;
+    GPU::TextureData   *texture_data  = null;
+
     if (dx10_header)
     {
-        if (dx10_header->dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
+        switch (dx10_header->dimension)
         {
-            REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
-            REV_CHECK(dx10_header->array_size == 1);
-            asset->texture.resource = memory_manager->AllocateTexture3D(cast(u16, dds_header->width),
-                                                                        cast(u16, dds_header->height),
-                                                                        cast(u16, dds_header->depth),
-                                                                        cast(u16, dds_header->mipmap_count),
-                                                                        texture_format,
-                                                                        name,
-                                                                        _static);
-        }
-        else if (dx10_header->dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
-        {
-            if (dx10_header->array_size > 1)
+            case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
             {
-                if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
-                {
-                    REV_CHECK(dx10_header->misc_flags & MISC_FLAG_TEXTURECUBE);
-                    REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-                    asset->texture.resource = memory_manager->AllocateTextureCubeArray(cast(u16, dds_header->width),
-                                                                                       cast(u16, dds_header->height),
-                                                                                       cast(u16, dx10_header->array_size),
-                                                                                       cast(u16, dds_header->mipmap_count),
-                                                                                       texture_format,
-                                                                                       name,
-                                                                                       _static);
-                }
-                else
-                {
-                    asset->texture.resource = memory_manager->AllocateTexture2DArray(cast(u16, dds_header->width),
-                                                                                     cast(u16, dds_header->height),
-                                                                                     cast(u16, dx10_header->array_size),
-                                                                                     cast(u16, dds_header->mipmap_count),
-                                                                                     texture_format,
-                                                                                     name,
-                                                                                     _static);
-                }
-            }
-            else
+                REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
+                REV_CHECK(dx10_header->array_size == 1);
+
+                asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
+                                                                 cast(u16, dds_header->height),
+                                                                 cast(u16, dds_header->depth),
+                                                                 mipmap_count,
+                                                                 resource_kind,
+                                                                 texture_format,
+                                                                 name);
+
+                texture_data = GPU::CreateVolumeTextureData(data.Data() + data_offset,
+                                                            mipmap_count,
+                                                            dds_header->width,
+                                                            dds_header->height,
+                                                            dds_header->depth,
+                                                            texture_format);
+            } break;
+
+            case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
             {
-                if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
+                if (dx10_header->array_size > 1)
                 {
-                    REV_CHECK(dx10_header->misc_flags & MISC_FLAG_TEXTURECUBE);
-                    REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-                    asset->texture.resource = memory_manager->AllocateTextureCube(cast(u16, dds_header->width),
+                    if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
+                    {
+                        REV_CHECK(dx10_header->misc_flags & MISC_FLAG_TEXTURECUBE);
+                        REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
+
+                        asset->texture = memory_manager->AllocateTextureCubeArray(cast(u16, dds_header->width),
                                                                                   cast(u16, dds_header->height),
-                                                                                  cast(u16, dds_header->mipmap_count),
+                                                                                  cast(u16, dx10_header->array_size),
+                                                                                  mipmap_count,
+                                                                                  resource_kind,
                                                                                   texture_format,
-                                                                                  name,
-                                                                                  _static);
+                                                                                  name);
+                    }
+                    else
+                    {
+                        asset->texture = memory_manager->AllocateTextureArray(cast(u16, dds_header->width),
+                                                                              cast(u16, dds_header->height),
+                                                                              cast(u16, dx10_header->array_size),
+                                                                              mipmap_count,
+                                                                              resource_kind,
+                                                                              texture_format,
+                                                                              name);
+                    }
                 }
                 else
                 {
-                    asset->texture.resource = memory_manager->AllocateTexture2D(cast(u16, dds_header->width),
-                                                                                cast(u16, dds_header->height),
-                                                                                cast(u16, dds_header->mipmap_count),
-                                                                                texture_format,
-                                                                                name,
-                                                                                _static);
+                    if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
+                    {
+                        REV_CHECK(dx10_header->misc_flags & MISC_FLAG_TEXTURECUBE);
+                        REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
+
+                        asset->texture = memory_manager->AllocateTextureCube(cast(u16, dds_header->width),
+                                                                             cast(u16, dds_header->height),
+                                                                             mipmap_count,
+                                                                             resource_kind,
+                                                                             texture_format,
+                                                                             name);
+                    }
+                    else
+                    {
+                        asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
+                                                                         cast(u16, dds_header->height),
+                                                                         0,
+                                                                         mipmap_count,
+                                                                         resource_kind,
+                                                                         texture_format,
+                                                                         name);
+                    }
                 }
-            }
-        }
-        else if (dx10_header->dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D)
-        {
-            asset->texture.resource = memory_manager->AllocateTexture1D(cast(u16, dds_header->width),
-                                                                        texture_format,
-                                                                        name,
-                                                                        _static);
-        }
-        else
-        {
-            REV_ERROR_M("Incorrect dimension");
+
+                REV_CHECK(dx10_header->array_size > 0);
+                if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
+                {
+                    texture_data = GPU::CreateTextureData(data.Data() + data_offset,
+                                                          mipmap_count,
+                                                          dx10_header->array_size,
+                                                          dds_header->width,
+                                                          dds_header->height,
+                                                          texture_format);
+                }
+            } break;
+
+            case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+            {
+                if (dx10_header->array_size > 1)
+                {
+                    asset->texture = memory_manager->AllocateTextureArray(cast(u16, dds_header->width),
+                                                                          0,
+                                                                          cast(u16, dx10_header->array_size),
+                                                                          mipmap_count,
+                                                                          resource_kind,
+                                                                          texture_format,
+                                                                          name);
+                }
+                else
+                {
+                    asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
+                                                                     0,
+                                                                     0,
+                                                                     mipmap_count,
+                                                                     resource_kind,
+                                                                     texture_format,
+                                                                     name);
+                }
+
+                REV_CHECK(dx10_header->array_size > 0);
+                texture_data = GPU::CreateTextureData(data.Data() + data_offset,
+                                                      mipmap_count,
+                                                      dx10_header->array_size,
+                                                      dds_header->width,
+                                                      1,
+                                                      texture_format);
+            } break;
+
+            default:
+            {
+                REV_ERROR_M("Incorrect dimension");
+            } break;
         }
     }
     else
@@ -643,96 +533,61 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         if (dds_header->flags & DDS_FLAG_DEPTH)
         {
             REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
-            asset->texture.resource = memory_manager->AllocateTexture3D(cast(u16, dds_header->width),
-                                                                        cast(u16, dds_header->height),
-                                                                        cast(u16, dds_header->depth),
-                                                                        cast(u16, dds_header->mipmap_count),
-                                                                        texture_format,
-                                                                        name,
-                                                                        _static);
+
+            asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
+                                                             cast(u16, dds_header->height),
+                                                             cast(u16, dds_header->depth),
+                                                             mipmap_count,
+                                                             resource_kind,
+                                                             texture_format,
+                                                             name);
+
+            texture_data = GPU::CreateVolumeTextureData(data.Data() + data_offset,
+                                                        mipmap_count,
+                                                        dds_header->width,
+                                                        dds_header->height,
+                                                        dds_header->depth,
+                                                        texture_format);
         }
         else if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
         {
             REV_CHECK_M(dds_header->caps.caps2 & CAPS2_CUBEMAP_ALLFACES, "Currently only DDS cube textures with ALL faces are allowed");
-            asset->texture.resource = memory_manager->AllocateTextureCube(cast(u16, dds_header->width),
-                                                                          cast(u16, dds_header->height),
-                                                                          cast(u16, dds_header->mipmap_count),
-                                                                          texture_format,
-                                                                          name,
-                                                                          _static);
+
+            asset->texture = memory_manager->AllocateTextureCube(cast(u16, dds_header->width),
+                                                                 cast(u16, dds_header->height),
+                                                                 mipmap_count,
+                                                                 resource_kind,
+                                                                 texture_format,
+                                                                 name);
+
+            texture_data = GPU::CreateTextureData(data.Data() + data_offset,
+                                                  mipmap_count,
+                                                  6,
+                                                  dds_header->width,
+                                                  dds_header->height,
+                                                  texture_format);
         }
         else
         {
-            REV_CHECK(dds_header->width && dds_header->height);
-            asset->texture.resource = memory_manager->AllocateTexture2D(cast(u16, dds_header->width),
-                                                                        cast(u16, dds_header->height),
-                                                                        cast(u16, dds_header->mipmap_count),
-                                                                        texture_format,
-                                                                        name,
-                                                                        _static);
+            asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
+                                                             cast(u16, dds_header->height),
+                                                             0,
+                                                             mipmap_count,
+                                                             resource_kind,
+                                                             texture_format,
+                                                             name);
+            
+            texture_data = GPU::CreateTextureData(data.Data() + data_offset,
+                                                  mipmap_count,
+                                                  1,
+                                                  dds_header->width,
+                                                  dds_header->height,
+                                                  texture_format);
         }
+
     }
 
-    GPU::TextureDesc *texture_desc = null;
-
-    // @NOTE(Roman): compressed:   DDS_FLAG_LINEARSIZE, linear_size = number of bytes for the main image.
-    //               uncompressed: DDS_FLAG_PITCH,      pitch       = number of bytes per row.
-    if (dds_header->flags & DDS_FLAG_LINEARSIZE)
-    {
-        u64 alloc_size = sizeof(GPU::TextureDesc) + sizeof(GPU::SubTextureDesc) * dds_header->mipmap_count;
-        texture_desc   = cast(GPU::TextureDesc *, Memory::Get()->PushToFrameArena(alloc_size));
-
-        texture_desc->subtextures_count = dds_header->mipmap_count;
-
-        const byte *mipmap_level_data = data.Data() + data_offset;
-
-        u64 width  = dds_header->width;
-        u64 height = dds_header->height;
-
-        for (u64 i = 0; i < dds_header->mipmap_count; ++i)
-        {
-            s64 row_bytes   = 0;
-            s64 slice_bytes = 0;
-
-            if (block_compression)
-            {
-                row_bytes   = Math::max(1ui64, (width  + 3) / 4) * compression_ratio;
-                slice_bytes = Math::max(1ui64, (height + 3) / 4) * row_bytes;
-            }
-            else if (packed)
-            {
-                row_bytes   = ((width + 1) >> 1) * compression_ratio;
-                slice_bytes = row_bytes * height;
-            }
-            else if (planar)
-            {
-                row_bytes   = ((width + 1) >> 1) * compression_ratio;
-                slice_bytes = (3 * row_bytes * height + 1) >> 1;
-            }
-            else
-            {
-                row_bytes   = (width * BitsPerPixel(texture_format) + 7) / 8;
-                slice_bytes = row_bytes * height;
-            }
-
-            GPU::SubTextureDesc *sub_texture = texture_desc->subtexture_desc + i;
-
-            sub_texture->data            = cast(byte *, mipmap_level_data);
-            sub_texture->bytes_per_row   = row_bytes;
-            sub_texture->bytes_per_tex2d = slice_bytes;
-
-            mipmap_level_data += slice_bytes;
-
-            width  >>= 1;
-            height >>= 1;
-        }
-    }
-    else if (dds_header->flags & DDS_FLAG_PITCH)
-    {
-        REV_ERROR_M("Only BC1-BC5 foramts are supported. Any format supported only with DDS_HEADER_DXT10.");
-    }
-
-    memory_manager->SetTextureData(asset->texture.resource, texture_desc);
+    memory_manager->SetTextureData(asset->texture, texture_data);
 }
 
 }

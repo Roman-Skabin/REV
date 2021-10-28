@@ -8,11 +8,11 @@
 
 #include "core/window.h"
 
-#include <d3d12.h>
-#include <dxgi1_6.h>
-#include <dxgidebug.h>
-
-namespace REV::GPU { class DeviceContext; }
+namespace REV::GPU
+{
+    class DeviceContext;
+    enum TEXTURE_FORMAT : u32;
+}
 
 namespace REV::D3D12
 {
@@ -35,6 +35,8 @@ namespace REV::D3D12
         void SetVSync(bool enable) { m_VsyncEnabled = enable; }
 
         void WaitForGPU();
+
+        u8 GetFormatPlanesCount(GPU::TEXTURE_FORMAT format);
 
         REV_INLINE const ID3D12Device              *Device()              const { return m_Device;                         }
         REV_INLINE const ID3D12CommandQueue        *GraphicsQueue()       const { return m_GraphicsQueue;                  }

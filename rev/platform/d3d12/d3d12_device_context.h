@@ -36,27 +36,27 @@ namespace REV::D3D12
 
         void WaitForGPU();
 
+        u8 GetFormatPlanesCount(DXGI_FORMAT format);
         u8 GetFormatPlanesCount(GPU::TEXTURE_FORMAT format);
 
-        REV_INLINE const ID3D12Device              *Device()              const { return m_Device;                         }
-        REV_INLINE const ID3D12CommandQueue        *GraphicsQueue()       const { return m_GraphicsQueue;                  }
-        REV_INLINE const ID3D12GraphicsCommandList *CurrentGraphicsList() const { return m_GraphicsLists[m_CurrentBuffer]; }
-        REV_INLINE const Logger&                    GetLogger()           const { return m_Logger;                         }
-
-        REV_INLINE ID3D12Device              *Device()              { return m_Device;                         }
-        REV_INLINE ID3D12CommandQueue        *GraphicsQueue()       { return m_GraphicsQueue;                  }
-        REV_INLINE ID3D12GraphicsCommandList *CurrentGraphicsList() { return m_GraphicsLists[m_CurrentBuffer]; }
-        REV_INLINE Logger&                    GetLogger()           { return m_Logger;                         }
-
-        REV_INLINE bool                       HalfPrecisionSupported()      const { return m_Features.options.MinPrecisionSupport & D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT; }
-        REV_INLINE D3D_ROOT_SIGNATURE_VERSION HighestRootSignatureVersion() const { return m_Features.root_signature.HighestVersion; }
-        REV_INLINE u32                        CurrentBuffer()               const { return m_CurrentBuffer; }
-        REV_INLINE D3D12_RESOURCE_HEAP_TIER   ResourceHeapTier()            const { return m_Features.options.ResourceHeapTier; }
-        REV_INLINE D3D_SHADER_MODEL           HighestShaderModel()          const { return m_Features.shader_model.HighestShaderModel; }
+        REV_INLINE ID3D12Device                *Device()                      { return m_Device; }
+        REV_INLINE ID3D12CommandQueue          *GraphicsQueue()               { return m_GraphicsQueue; }
+        REV_INLINE ID3D12GraphicsCommandList   *CurrentGraphicsList()         { return m_GraphicsLists[m_CurrentBuffer]; }
+        REV_INLINE Logger&                      GetLogger()                   { return m_Logger; }
+        REV_INLINE bool                         HalfPrecisionSupported()      { return m_Features.options.MinPrecisionSupport & D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT; }
+        REV_INLINE D3D_ROOT_SIGNATURE_VERSION   HighestRootSignatureVersion() { return m_Features.root_signature.HighestVersion; }
+        REV_INLINE u32                          CurrentBuffer()               { return m_CurrentBuffer; }
+        REV_INLINE D3D12_RESOURCE_HEAP_TIER     ResourceHeapTier()            { return m_Features.options.ResourceHeapTier; }
+        REV_INLINE D3D_SHADER_MODEL             HighestShaderModel()          { return m_Features.shader_model.HighestShaderModel; }
+        REV_INLINE D3D12_CPU_DESCRIPTOR_HANDLE  CurrentRTCPUDescHeap()        { return m_RTVCPUDescHandle; }
+        REV_INLINE ID3D12Resource              *CurrentRenderTarget()         { return m_RTBuffers[m_CurrentBuffer]; }
+        REV_INLINE D3D12_CPU_DESCRIPTOR_HANDLE  DSCPUDescHeap()               { return m_DSVCPUDescHandle; }
+        REV_INLINE u32                          RTVDescSize()                 { return m_RTVDescSize; }
+        REV_INLINE Window                      *GetWindow()                   { return m_Window; }
+        REV_INLINE Math::v2s REV_VECTORCALL     RTSize()                      { return m_ActualRTSize; }
 
     #if REV_DEBUG
-        REV_INLINE const IDXGIInfoQueue *InfoQueue() const { return m_InfoQueue; }
-        REV_INLINE       IDXGIInfoQueue *InfoQueue()       { return m_InfoQueue; }
+        REV_INLINE IDXGIInfoQueue *InfoQueue() { return m_InfoQueue; }
     #endif
 
         REV_INLINE bool FirstFrame()       const { return m_FirstFrame;       }

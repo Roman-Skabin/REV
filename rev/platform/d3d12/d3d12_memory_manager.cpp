@@ -88,16 +88,15 @@ REV_INTERNAL REV_INLINE DXGI_FORMAT REVToDXGIBufferFormat(GPU::BUFFER_FORMAT for
     return DXGI_FORMAT_UNKNOWN;
 }
 
-u64 MemoryManager::AllocateVertexBuffer(u32 count, bool _static, const ConstString& name)
+u64 MemoryManager::AllocateVertexBuffer(u32 count, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
     REV_CHECK(count);
 
     u64     index  = REV_INVALID_U64_INDEX;
-    Buffer *buffer = AllocateBuffer(_static ? &m_StaticMemory.buffer_memory : &m_SceneMemory.buffer_memory,
-                                    CPU_RESOURCE_ACCESS_WRITE,
+    Buffer *buffer = AllocateBuffer(count * sizeof(Vertex),
                                     DXGI_FORMAT_UNKNOWN,
-                                    count * sizeof(Vertex),
                                     D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+                                    flags,
                                     index,
                                     name);
 
@@ -106,16 +105,15 @@ u64 MemoryManager::AllocateVertexBuffer(u32 count, bool _static, const ConstStri
     return index;
 }
 
-u64 MemoryManager::AllocateIndexBuffer(u32 count, bool _static, const ConstString& name)
+u64 MemoryManager::AllocateIndexBuffer(u32 count, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
     REV_CHECK(count);
 
     u64     index  = REV_INVALID_U64_INDEX;
-    Buffer *buffer = AllocateBuffer(_static ? &m_StaticMemory.buffer_memory : &m_SceneMemory.buffer_memory,
-                                    CPU_RESOURCE_ACCESS_WRITE,
+    Buffer *buffer = AllocateBuffer(count * sizeof(Index),
                                     DXGI_FORMAT_UNKNOWN,
-                                    count * sizeof(Index),
                                     D3D12_RESOURCE_STATE_INDEX_BUFFER,
+                                    flags,
                                     index,
                                     name);
 
@@ -125,83 +123,55 @@ u64 MemoryManager::AllocateIndexBuffer(u32 count, bool _static, const ConstStrin
     return index;
 }
 
-u64 MemoryManager::AllocateConstantBuffer(u32 bytes, bool _static, const ConstString& name)
+u64 MemoryManager::AllocateConstantBuffer(u32 bytes, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
     REV_CHECK(bytes);
 
     u64     index  = REV_INVALID_U64_INDEX;
-    Buffer *buffer = AllocateBuffer(_static ? &m_StaticMemory.buffer_memory : &m_SceneMemory.buffer_memory,
-                                    CPU_RESOURCE_ACCESS_WRITE,
+    Buffer *buffer = AllocateBuffer(bytes,
                                     DXGI_FORMAT_UNKNOWN,
-                                    bytes,
                                     D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+                                    flags,
                                     index,
                                     name);
 
     return index;
 }
 
-u64 MemoryManager::AllocateBuffer(u32 bytes, GPU::BUFFER_FORMAT format, bool cpu_read_access, bool _static, const ConstString& name)
-{
-    REV_CHECK(bytes);
-
-    CPU_RESOURCE_ACCESS   access = CPU_RESOURCE_ACCESS_WRITE;
-    D3D12_RESOURCE_STATES state  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE; // @TODO(Roman): But what about compute shaders? Should we use D3D12_RESOURCE_STATE_COMMON then?
-    if (cpu_read_access)
-    {
-        access |= CPU_RESOURCE_ACCESS_READ;
-        state   = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    }
-
-    u32         stride      = 0;
-    DXGI_FORMAT dxgi_format = REVToDXGIBufferFormat(format, stride);
-
-    u64     index  = REV_INVALID_U64_INDEX;
-    Buffer *buffer = AllocateBuffer(_static ? &m_StaticMemory.buffer_memory : &m_SceneMemory.buffer_memory, access, dxgi_format, bytes, state, index, name);
-
-    buffer->ro_rw_type = RO_RW_BUFFER_TYPE_BUFFER;
-    buffer->format     = dxgi_format;
-    buffer->stride     = stride;
-
-    return index;
-}
-
-u64 MemoryManager::AllocateStructuredBuffer(u32 count, u32 stride, bool cpu_read_access, bool _static, const ConstString& name)
+u64 MemoryManager::AllocateStructuredBuffer(u32 count, u32 stride, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
     REV_CHECK(count);
     REV_CHECK(stride);
 
-    CPU_RESOURCE_ACCESS   access = CPU_RESOURCE_ACCESS_WRITE;
-    D3D12_RESOURCE_STATES state  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE; // @TODO(Roman): But what about compute shaders? Should we use D3D12_RESOURCE_STATE_COMMON then?
-    if (cpu_read_access)
+    D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+                                | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
-        access |= CPU_RESOURCE_ACCESS_READ;
-        state   = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
 
     u64     index  = REV_INVALID_U64_INDEX;
-    Buffer *buffer = AllocateBuffer(_static ? &m_StaticMemory.buffer_memory : &m_SceneMemory.buffer_memory, access, DXGI_FORMAT_UNKNOWN, count * stride, state, index, name);
+    Buffer *buffer = AllocateBuffer(count * stride, DXGI_FORMAT_UNKNOWN, state, flags, index, name);
 
     buffer->ro_rw_type = RO_RW_BUFFER_TYPE_STRUCTURED;
     buffer->stride     = stride;
-    
+
     return index;
 }
 
-u64 MemoryManager::AllocateByteAddressBuffer(u32 bytes, bool cpu_read_access, bool _static, const ConstString& name)
+u64 MemoryManager::AllocateByteAddressBuffer(u32 bytes, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
     REV_CHECK(bytes);
 
-    CPU_RESOURCE_ACCESS   access = CPU_RESOURCE_ACCESS_WRITE;
-    D3D12_RESOURCE_STATES state  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE; // @TODO(Roman): But what about compute shaders? Should we use D3D12_RESOURCE_STATE_COMMON then?
-    if (cpu_read_access)
+    D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+                                | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
-        access |= CPU_RESOURCE_ACCESS_READ;
-        state   = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
 
     u64     index  = REV_INVALID_U64_INDEX;
-    Buffer *buffer = AllocateBuffer(_static ? &m_StaticMemory.buffer_memory : &m_SceneMemory.buffer_memory, access, DXGI_FORMAT_UNKNOWN, bytes, state, index, name);
+    Buffer *buffer = AllocateBuffer(bytes, DXGI_FORMAT_UNKNOWN, state, flags, index, name);
 
     buffer->ro_rw_type = RO_RW_BUFFER_TYPE_BYTE_ADDRESS;
     buffer->stride     = 1;
@@ -209,201 +179,192 @@ u64 MemoryManager::AllocateByteAddressBuffer(u32 bytes, bool cpu_read_access, bo
     return index;
 }
 
-REV_INTERNAL REV_INLINE u16 GetMaxMipLevels(u16 width, u16 height = REV_U16_MAX, u16 depth = REV_U16_MAX)
+u64 MemoryManager::AllocateBuffer(u32 bytes, GPU::BUFFER_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name)
+{
+    REV_CHECK(bytes);
+
+    RO_RW_BUFFER_TYPE     ro_rw_type = RO_RW_BUFFER_TYPE_NONE;
+    D3D12_RESOURCE_STATES state      = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+                                     | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    if (flags & GPU::RESOURCE_FLAG_RENDER_TARGET)
+    {
+        state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    }
+    else if (flags & GPU::RESOURCE_FLAG_CPU_READ)
+    {
+        ro_rw_type = RO_RW_BUFFER_TYPE_BUFFER;
+        state      = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    }
+
+    u32         stride      = 0;
+    DXGI_FORMAT dxgi_format = REVToDXGIBufferFormat(format, stride);
+
+    u64     index  = REV_INVALID_U64_INDEX;
+    Buffer *buffer = AllocateBuffer(bytes, dxgi_format, state, flags, index, name);
+
+    buffer->ro_rw_type = ro_rw_type;
+    buffer->format     = dxgi_format;
+    buffer->stride     = stride;
+
+    return index;
+}
+
+REV_INTERNAL REV_INLINE u16 GetMaxMipLevels(u16 width, u16 height = 0, u16 depth = 0)
 {
     u32 count = 0;
-    _BitScanReverse(&count, width & height & depth);
+    _BitScanReverse(&count, width | height | depth);
     return cast(u16, count + 1);
 }
 
-u64 MemoryManager::AllocateTexture(u16 width, u16 height, u16 depth, u16 mip_levels, GPU::RESOURCE_KIND resource_kind, GPU::TEXTURE_FORMAT texture_format, const ConstString& name)
+u64 MemoryManager::AllocateTexture1D(u16 width, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
-    D3D12_RESOURCE_DESC desc{};
-    TEXTURE_DIMENSION   dimension = TEXTURE_DIMENSION_UNKNOWN;
+    REV_CHECK_M(1 <= width && width <= D3D12_REQ_TEXTURE1D_U_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_U_DIMENSION);
 
-    if (depth > 0)
+    u16 max_mip_levels = GetMaxMipLevels(width);
+    if (mip_levels > max_mip_levels)
     {
-        REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
-        REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
-        REV_CHECK_M(1 <= depth  && depth  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Depth gotta be = [1, %hu].",  D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
-
-        u16 max_mip_levels = GetMaxMipLevels(width, height, depth);
-        if (mip_levels > max_mip_levels)
+        REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+        if (mip_levels > D3D12_REQ_MIP_LEVELS)
         {
-            REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
-            mip_levels = max_mip_levels;
-            if (mip_levels > D3D12_REQ_MIP_LEVELS)
-            {
-                REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
-                mip_levels = D3D12_REQ_MIP_LEVELS;
-            }
+            REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
+            mip_levels = D3D12_REQ_MIP_LEVELS;
         }
-
-        desc.Dimension        = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-        desc.Height           = height;
-        desc.DepthOrArraySize = depth;
-
-        dimension = TEXTURE_DIMENSION_3D;
     }
-    else if (height > 0)
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = 1;
+    desc.DepthOrArraySize   = 1;
+    desc.MipLevels          = mip_levels;
+    desc.Format             = REVToDXGITextureFormat(format);
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    if (flags & GPU::RESOURCE_FLAG_RENDER_TARGET)
     {
-        REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
-        REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
-
-        u16 max_mip_levels = GetMaxMipLevels(width, height);
-        if (mip_levels > max_mip_levels)
-        {
-            REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
-            mip_levels = max_mip_levels;
-            if (mip_levels > D3D12_REQ_MIP_LEVELS)
-            {
-                REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
-                mip_levels = D3D12_REQ_MIP_LEVELS;
-            }
-        }
-
-        desc.Dimension        = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        desc.Height           = height;
-        desc.DepthOrArraySize = 1;
-
-        dimension = TEXTURE_DIMENSION_2D;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
-    else if (width > 0)
+    else if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
-        REV_CHECK_M(1 <= width && width <= D3D12_REQ_TEXTURE1D_U_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_U_DIMENSION);
-
-        u16 max_mip_levels = GetMaxMipLevels(width);
-        if (mip_levels > max_mip_levels)
-        {
-            REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
-            mip_levels = max_mip_levels;
-            if (mip_levels > D3D12_REQ_MIP_LEVELS)
-            {
-                REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
-                mip_levels = D3D12_REQ_MIP_LEVELS;
-            }
-        }
-
-        desc.Dimension        = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
-        desc.Height           = 1;
-        desc.DepthOrArraySize = 1;
-
-        dimension = TEXTURE_DIMENSION_1D;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
-    REV_CHECK_M(dimension != TEXTURE_DIMENSION_UNKNOWN, "You can not allocate a texture with width = 0, height = 0 and depth = 0");
 
-    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(texture_format);
+    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(desc.Format);
     REV_CHECK_M(planes_count * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
 
+    u64      index   = REV_INVALID_U64_INDEX;
+    Texture *texture = AllocateTexture(TEXTURE_DIMENSION_1D, desc, flags, planes_count, index, name);
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name)
+{
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Width gotta be = [1, %hu].",  D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
+
+    u16 max_mip_levels = GetMaxMipLevels(width, height);
+    if (mip_levels > max_mip_levels)
+    {
+        REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+        if (mip_levels > D3D12_REQ_MIP_LEVELS)
+        {
+            REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
+            mip_levels = D3D12_REQ_MIP_LEVELS;
+        }
+    }
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
     desc.Width              = width;
+    desc.Height             = height;
+    desc.DepthOrArraySize   = 1;
     desc.MipLevels          = mip_levels;
-    desc.Format             = REVToDXGITextureFormat(texture_format);
+    desc.Format             = REVToDXGITextureFormat(format);
     desc.SampleDesc.Count   = 1;
     desc.SampleDesc.Quality = 0;
     desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
-    TextureMemory       *texture_memory = &m_SceneMemory.texture_memory;
-    CPU_RESOURCE_ACCESS  access         = CPU_RESOURCE_ACCESS_WRITE;
-
-    if ((resource_kind & ~GPU::RESOURCE_KIND_STATIC) == GPU::RESOURCE_KIND_READ_WRITE_TEXTURE)
+    if (flags & GPU::RESOURCE_FLAG_RENDER_TARGET)
     {
-        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        access     |= CPU_RESOURCE_ACCESS_READ;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
-    if (resource_kind & GPU::RESOURCE_KIND_STATIC)
+    else if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
-        texture_memory = &m_StaticMemory.texture_memory;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
-    return AllocateTexture(texture_memory, dimension, access, desc, planes_count, name);
+    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(desc.Format);
+    REV_CHECK_M(planes_count * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
+
+    u64      index   = REV_INVALID_U64_INDEX;
+    Texture *texture = AllocateTexture(TEXTURE_DIMENSION_2D, desc, flags, planes_count, index, name);
+
+    return index;
 }
 
-u64 MemoryManager::AllocateTextureArray(u16 width, u16 height, u16 count, u16 mip_levels, GPU::RESOURCE_KIND resource_kind, GPU::TEXTURE_FORMAT texture_format, const ConstString& name)
+u64 MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
-    REV_CHECK_M(1 <= count && count <= D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION, "Count gotta be = [1, %hu].",  D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION);
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Width gotta be = [1, %hu].",  D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
+    REV_CHECK_M(1 <= depth  && depth  <= D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION, "Depth gotta be = [1, %hu].",  D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION);
 
-    D3D12_RESOURCE_DESC desc{};
-    TEXTURE_DIMENSION   dimension = TEXTURE_DIMENSION_UNKNOWN;
-
-    if (height > 0)
+    u16 max_mip_levels = GetMaxMipLevels(width, height, depth);
+    if (mip_levels > max_mip_levels)
     {
-        REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
-        REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
-
-        u16 max_mip_levels = GetMaxMipLevels(width, height);
-        if (mip_levels > max_mip_levels)
+        REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+        if (mip_levels > D3D12_REQ_MIP_LEVELS)
         {
-            REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
-            mip_levels = max_mip_levels;
-            if (mip_levels > D3D12_REQ_MIP_LEVELS)
-            {
-                REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
-                mip_levels = D3D12_REQ_MIP_LEVELS;
-            }
+            REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
+            mip_levels = D3D12_REQ_MIP_LEVELS;
         }
-
-        desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        desc.Height    = height;
-
-        dimension = TEXTURE_DIMENSION_2D_ARRAY;
     }
-    else if (width > 0)
-    {
-        REV_CHECK_M(1 <= width && width <= D3D12_REQ_TEXTURE1D_U_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_U_DIMENSION);
 
-        u16 max_mip_levels = GetMaxMipLevels(width);
-        if (mip_levels > max_mip_levels)
-        {
-            REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
-            mip_levels = max_mip_levels;
-            if (mip_levels > D3D12_REQ_MIP_LEVELS)
-            {
-                REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
-                mip_levels = D3D12_REQ_MIP_LEVELS;
-            }
-        }
-
-        desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
-        desc.Height    = 1;
-
-        dimension = TEXTURE_DIMENSION_1D_ARRAY;
-    }
-    REV_CHECK_M(dimension != TEXTURE_DIMENSION_UNKNOWN, "You can not allocate a texture with width = 0, height = 0 and depth = 0");
-
-    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(texture_format);
-    REV_CHECK_M(planes_count * count * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
-
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
     desc.Width              = width;
-    desc.DepthOrArraySize   = count;
+    desc.Height             = height;
+    desc.DepthOrArraySize   = depth;
     desc.MipLevels          = mip_levels;
-    desc.Format             = REVToDXGITextureFormat(texture_format);
+    desc.Format             = REVToDXGITextureFormat(format);
     desc.SampleDesc.Count   = 1;
     desc.SampleDesc.Quality = 0;
     desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
-    TextureMemory       *texture_memory = &m_SceneMemory.texture_memory;
-    CPU_RESOURCE_ACCESS  access         = CPU_RESOURCE_ACCESS_WRITE;
-
-    if ((resource_kind & ~GPU::RESOURCE_KIND_STATIC) == GPU::RESOURCE_KIND_READ_WRITE_TEXTURE)
+    if (flags & GPU::RESOURCE_FLAG_RENDER_TARGET)
     {
-        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        access     |= CPU_RESOURCE_ACCESS_READ;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
-    if (resource_kind & GPU::RESOURCE_KIND_STATIC)
+    else if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
-        texture_memory = &m_StaticMemory.texture_memory;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
-    return AllocateTexture(texture_memory, dimension, access, desc, planes_count, name);
+    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(desc.Format);
+    REV_CHECK_M(planes_count * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
+
+    u64      index   = REV_INVALID_U64_INDEX;
+    Texture *texture = AllocateTexture(TEXTURE_DIMENSION_3D, desc, flags, planes_count, index, name);
+
+    texture->depth = depth;
+
+    return index;
 }
 
-u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, GPU::RESOURCE_KIND resource_kind, GPU::TEXTURE_FORMAT texture_format, const ConstString& name)
+u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
-    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURECUBE_DIMENSION, "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURECUBE_DIMENSION, "Width gotta be = [1, %hu].",  D3D12_REQ_TEXTURECUBE_DIMENSION);
     REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURECUBE_DIMENSION, "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
 
     u16 max_mip_levels = GetMaxMipLevels(width, height);
@@ -418,9 +379,6 @@ u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, GP
         }
     }
 
-    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(texture_format);
-    REV_CHECK_M(planes_count * 6 * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
-
     D3D12_RESOURCE_DESC desc;
     desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
@@ -428,29 +386,128 @@ u64 MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip_levels, GP
     desc.Height             = height;
     desc.DepthOrArraySize   = 6;
     desc.MipLevels          = mip_levels;
-    desc.Format             = REVToDXGITextureFormat(texture_format);
+    desc.Format             = REVToDXGITextureFormat(format);
     desc.SampleDesc.Count   = 1;
     desc.SampleDesc.Quality = 0;
     desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
-    TextureMemory       *texture_memory = &m_SceneMemory.texture_memory;
-    CPU_RESOURCE_ACCESS  access         = CPU_RESOURCE_ACCESS_WRITE;
-
-    if ((resource_kind & ~GPU::RESOURCE_KIND_STATIC) == GPU::RESOURCE_KIND_READ_WRITE_TEXTURE)
+    if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
-        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        access     |= CPU_RESOURCE_ACCESS_READ;
-    }
-    if (resource_kind & GPU::RESOURCE_KIND_STATIC)
-    {
-        texture_memory  = &m_StaticMemory.texture_memory;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
-    return AllocateTexture(texture_memory, TEXTURE_DIMENSION_CUBE, access, desc, planes_count, name);
+    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(desc.Format);
+    REV_CHECK_M(planes_count * 6 * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
+
+    u64      index   = REV_INVALID_U64_INDEX;
+    Texture *texture = AllocateTexture(TEXTURE_DIMENSION_CUBE, desc, flags, planes_count, index, name);
+
+    return index;
 }
 
-u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, GPU::RESOURCE_KIND resource_kind, GPU::TEXTURE_FORMAT texture_format, const ConstString& name)
+u64 MemoryManager::AllocateTexture1DArray(u16 width, u16 count, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name)
+{
+    REV_CHECK_M(1 <= width && width <= D3D12_REQ_TEXTURE1D_U_DIMENSION,          "Width gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_U_DIMENSION);
+    REV_CHECK_M(1 <= count && count <= D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION, "Count gotta be = [1, %hu].", D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION);
+
+    u16 max_mip_levels = GetMaxMipLevels(width);
+    if (mip_levels > max_mip_levels)
+    {
+        REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+        if (mip_levels > D3D12_REQ_MIP_LEVELS)
+        {
+            REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
+            mip_levels = D3D12_REQ_MIP_LEVELS;
+        }
+    }
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = 1;
+    desc.DepthOrArraySize   = count;
+    desc.MipLevels          = mip_levels;
+    desc.Format             = REVToDXGITextureFormat(format);
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    if (flags & GPU::RESOURCE_FLAG_RENDER_TARGET)
+    {
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    }
+    else if (flags & GPU::RESOURCE_FLAG_CPU_READ)
+    {
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    }
+
+    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(desc.Format);
+    REV_CHECK_M(planes_count * count * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
+
+    u64      index   = REV_INVALID_U64_INDEX;
+    Texture *texture = AllocateTexture(TEXTURE_DIMENSION_1D_ARRAY, desc, flags, planes_count, index, name);
+
+    texture->subtextures_count = count;
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 count, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name)
+{
+    REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION,     "Width gotta be = [1, %hu].",  D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
+    REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION,     "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION);
+    REV_CHECK_M(1 <= count  && count  <= D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION, "Count gotta be = [1, %hu].",  D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION);
+
+    u16 max_mip_levels = GetMaxMipLevels(width, height);
+    if (mip_levels > max_mip_levels)
+    {
+        REV_WARNING_M("Number of MIP levels is to high: %hu. It has been changed to %hu.", mip_levels, max_mip_levels);
+        mip_levels = max_mip_levels;
+        if (mip_levels > D3D12_REQ_MIP_LEVELS)
+        {
+            REV_WARNING_M("DirectX 12 does not support that many MIP levels. Only %I32u of them will be used", D3D12_REQ_MIP_LEVELS);
+            mip_levels = D3D12_REQ_MIP_LEVELS;
+        }
+    }
+
+    D3D12_RESOURCE_DESC desc;
+    desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+    desc.Width              = width;
+    desc.Height             = height;
+    desc.DepthOrArraySize   = count;
+    desc.MipLevels          = mip_levels;
+    desc.Format             = REVToDXGITextureFormat(format);
+    desc.SampleDesc.Count   = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+    if (flags & GPU::RESOURCE_FLAG_RENDER_TARGET)
+    {
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    }
+    else if (flags & GPU::RESOURCE_FLAG_CPU_READ)
+    {
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    }
+
+    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(desc.Format);
+    REV_CHECK_M(planes_count * count * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
+
+    u64      index   = REV_INVALID_U64_INDEX;
+    Texture *texture = AllocateTexture(TEXTURE_DIMENSION_2D_ARRAY, desc, flags, planes_count, index, name);
+
+    texture->subtextures_count = count;
+
+    return index;
+}
+
+u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
     REV_CHECK_M(1 <= width  && width  <= D3D12_REQ_TEXTURECUBE_DIMENSION,            "Width gotta be = [1, %hu].",  D3D12_REQ_TEXTURECUBE_DIMENSION);
     REV_CHECK_M(1 <= height && height <= D3D12_REQ_TEXTURECUBE_DIMENSION,            "Height gotta be = [1, %hu].", D3D12_REQ_TEXTURECUBE_DIMENSION);
@@ -468,36 +525,33 @@ u64 MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u16 count, u1
         }
     }
 
-    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(texture_format);
-    REV_CHECK_M(planes_count * 6 * count * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
-
     D3D12_RESOURCE_DESC desc;
     desc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
     desc.Width              = width;
     desc.Height             = height;
     desc.DepthOrArraySize   = 6 * count;
-    desc.MipLevels          = 1;
-    desc.Format             = REVToDXGITextureFormat(texture_format);
+    desc.MipLevels          = mip_levels;
+    desc.Format             = REVToDXGITextureFormat(format);
     desc.SampleDesc.Count   = 1;
     desc.SampleDesc.Quality = 0;
     desc.Layout             = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
-    TextureMemory       *texture_memory = &m_SceneMemory.texture_memory;
-    CPU_RESOURCE_ACCESS  access         = CPU_RESOURCE_ACCESS_WRITE;
-
-    if ((resource_kind & ~GPU::RESOURCE_KIND_STATIC) == GPU::RESOURCE_KIND_READ_WRITE_TEXTURE)
+    if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
-        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        access     |= CPU_RESOURCE_ACCESS_READ;
-    }
-    if (resource_kind & GPU::RESOURCE_KIND_STATIC)
-    {
-        texture_memory = &m_StaticMemory.texture_memory;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
-    return AllocateTexture(texture_memory, TEXTURE_DIMENSION_CUBE_ARRAY, access, desc, planes_count, name);
+    u8 planes_count = m_DeviceContext->GetFormatPlanesCount(desc.Format);
+    REV_CHECK_M(planes_count * count * mip_levels <= D3D12_REQ_SUBRESOURCES, "Texture \"%.*s\" is too big for DirectX 12", name.Length(), name.Data());
+
+    u64      index   = REV_INVALID_U64_INDEX;
+    Texture *texture = AllocateTexture(TEXTURE_DIMENSION_CUBE_ARRAY, desc, flags, planes_count, index, name);
+
+    texture->subtextures_count = count;
+
+    return index;
 }
 
 u64 MemoryManager::AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static)
@@ -533,103 +587,235 @@ u64 MemoryManager::AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math:
 
 void MemoryManager::SetBufferData(const GPU::ResourceHandle& resource, const void *data)
 {
-    UploadBufferData(m_DeviceContext->CurrentGraphicsList(),
-                     &GetBuffer(resource),
-                     GPU::MemoryManager::IsStatic(resource),
-                     data);
-}
-
-void MemoryManager::SetBufferDataImmediately(const GPU::ResourceHandle& resource, const void *data)
-{
-    UploadBufferData(m_CommandList,
-                     &GetBuffer(resource),
-                     GPU::MemoryManager::IsStatic(resource),
-                     data);
+    UploadBufferData(m_DeviceContext->CurrentGraphicsList(), resource, data);
 }
 
 void MemoryManager::SetTextureData(const GPU::ResourceHandle& resource, const GPU::TextureData *data)
 {
-    UploadTextureData(m_DeviceContext->CurrentGraphicsList(), &GetTexture(resource), data);
+    UploadTextureData(m_DeviceContext->CurrentGraphicsList(), resource, data);
+}
+
+void MemoryManager::SetBufferDataImmediately(const GPU::ResourceHandle& resource, const void *data)
+{
+    UploadBufferData(m_CommandList, resource, data);
 }
 
 void MemoryManager::SetTextureDataImmediately(const GPU::ResourceHandle& resource, const GPU::TextureData *data)
 {
-    UploadTextureData(m_CommandList, &GetTexture(resource), data);
+    UploadTextureData(m_CommandList, resource, data);
 }
 
-void MemoryManager::CopyDefaultResourcesToReadBackResources(const ConstArray<GPU::ResourceHandle>& read_write_resources)
+void MemoryManager::ClearResource(const GPU::ResourceHandle& resource)
 {
-    for (const GPU::ResourceHandle& resource : read_write_resources)
+    ClearResource(m_DeviceContext->CurrentGraphicsList(), resource);
+}
+
+void MemoryManager::ClearResourceImmediately(const GPU::ResourceHandle& resource)
+{
+    ClearResource(m_CommandList, resource);
+}
+
+void MemoryManager::ResizeRenderTarget(GPU::ResourceHandle resource, u16 width, u16 height, u16 depth)
+{
+    REV_CHECK_M(resource.kind == GPU::RESOURCE_KIND_TEXTURE, "We do not allow to resize render target buffers for now");
+
+    Texture *texture = resource.flags & GPU::RESOURCE_FLAG_STATIC
+                     ? m_StaticMemory.texture_memory.textures.GetPointer(resource.index)
+                     : m_SceneMemory.texture_memory.textures.GetPointer(resource.index);
+    REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_RENDER_TARGET, "Texture \"%.*s\" is not a render target", texture->name.Length(), texture->name.Data());
+
+    ID3D12Device *device = m_DeviceContext->Device();
+
+    D3D12_RESOURCE_DESC default_desc = texture->default_gpu_mem->GetDesc();
     {
-        if (GPU::MemoryManager::IsBuffer(resource))
+        switch (default_desc.Dimension)
         {
-            CopyDefaultBufferResourceToReadBackResource(m_DeviceContext->CurrentGraphicsList(), &GetBuffer(resource), GPU::MemoryManager::IsStatic(resource));
+            case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
+            {
+                default_desc.Width = width;
+            } break;
+
+            case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
+            {
+                default_desc.Width  = width;
+                default_desc.Height = height;
+            } break;
+
+            case D3D12_RESOURCE_DIMENSION_TEXTURE3D:
+            {
+                default_desc.Width            = width;
+                default_desc.Height           = height;
+                default_desc.DepthOrArraySize = depth;
+            } break;
+
+            default:
+            {
+                REV_ERROR_M("Invalid D3D12_RESOURCE_DIMENSION: 0x%I32X", default_desc.Dimension);
+            } break;
         }
-        else if (GPU::MemoryManager::IsTexture(resource))
+
+        D3D12_HEAP_PROPERTIES heap_properties;
+        heap_properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+        heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_properties.CreationNodeMask     = 0;
+        heap_properties.VisibleNodeMask      = 0;
+
+        SafeRelease(texture->default_gpu_mem);
+        HRESULT error = device->CreateCommittedResource(&heap_properties,
+                                                        D3D12_HEAP_FLAG_NONE,
+                                                        &default_desc,
+                                                        D3D12_RESOURCE_STATE_RENDER_TARGET,
+                                                        null,
+                                                        IID_PPV_ARGS(&texture->default_gpu_mem));
+        REV_CHECK(CheckResultAndPrintMessages(error));
+    }
+
+    ID3D12Device4 *device_4 = null;
+    HRESULT        error    = device->QueryInterface(&device_4);
+    REV_CHECK(CheckResultAndPrintMessages(error));
+
+    D3D12_RESOURCE_ALLOCATION_INFO1 info1{};
+    device_4->GetResourceAllocationInfo1(0, 1, &default_desc, &info1);
+
+    SafeRelease(device_4);
+
+    texture->first_subresource_offset = info1.Offset;
+
+    if (resource.flags & (GPU::RESOURCE_FLAG_CPU_WRITE | GPU::RESOURCE_FLAG_CPU_READ))
+    {
+        u64 subresources_count = texture->planes_count * texture->subtextures_count * texture->mip_levels;
+        device->GetCopyableFootprints(&default_desc, 0, cast(u32, subresources_count), texture->first_subresource_offset, null, null, null, &texture->buffer_total_bytes);
+
+        D3D12_HEAP_PROPERTIES heap_properties;
+        heap_properties.Type                 = D3D12_HEAP_TYPE_UPLOAD;
+        heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_properties.CreationNodeMask     = 0;
+        heap_properties.VisibleNodeMask      = 0;
+
+        D3D12_RESOURCE_DESC resource_desc;
+        resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        resource_desc.Width              = texture->buffer_total_bytes;
+        resource_desc.Height             = 1;
+        resource_desc.DepthOrArraySize   = 1;
+        resource_desc.MipLevels          = 1;
+        resource_desc.Format             = DXGI_FORMAT_UNKNOWN;
+        resource_desc.SampleDesc.Count   = 1;
+        resource_desc.SampleDesc.Quality = 0;
+        resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resource_desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+        if (resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
         {
-            CopyDefaultTextureResourceToReadBackResource(m_DeviceContext->CurrentGraphicsList(), &GetTexture(resource));
+            SafeRelease(texture->upload_gpu_mem);
+            HRESULT error = device->CreateCommittedResource(&heap_properties,
+                                                            D3D12_HEAP_FLAG_NONE,
+                                                            &resource_desc,
+                                                            D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                            null,
+                                                            IID_PPV_ARGS(&texture->upload_gpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
+
+            D3D12_RANGE read_range = { 0, 0 };
+            error = texture->upload_gpu_mem->Map(0, &read_range, cast(void **, &texture->upload_cpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
+        }
+
+        if (resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            heap_properties.Type = D3D12_HEAP_TYPE_READBACK;
+
+            SafeRelease(texture->readback_gpu_mem);
+            HRESULT error = device->CreateCommittedResource(&heap_properties,
+                                                            D3D12_HEAP_FLAG_NONE,
+                                                            &resource_desc,
+                                                            D3D12_RESOURCE_STATE_COPY_DEST,
+                                                            null,
+                                                            IID_PPV_ARGS(&texture->readback_gpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
+
+            D3D12_RANGE read_range = { 0, texture->buffer_total_bytes };
+            error = texture->readback_gpu_mem->Map(0, &read_range, cast(void **, &texture->readback_cpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
         }
     }
 }
 
-const void *MemoryManager::GetBufferData(const GPU::ResourceHandle& resource) const
+void MemoryManager::PrepareBuffersToRead(const ConstArray<GPU::ResourceHandle>& resources)
+{
+    PrepareBuffersToRead(m_DeviceContext->CurrentGraphicsList(), resources);
+}
+
+void MemoryManager::PrepareTexturesToRead(const ConstArray<GPU::ResourceHandle>& resources)
+{
+    PrepareTexturesToRead(m_DeviceContext->CurrentGraphicsList(), resources);
+}
+
+void MemoryManager::PrepareBuffersToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources)
+{
+    PrepareBuffersToRead(m_CommandList, resources);
+}
+
+void MemoryManager::PrepareTexturesToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources)
+{
+    PrepareTexturesToRead(m_CommandList, resources);
+}
+
+const void *MemoryManager::GetBufferData(const GPU::ResourceHandle& resource)
 {
     REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
 
     if (GPU::MemoryManager::IsStatic(resource))
     {
         const Buffer *buffer = m_StaticMemory.buffer_memory.buffers.GetPointer(resource.index);
-        REV_CHECK_M(buffer->cpu_access & CPU_RESOURCE_ACCESS_READ, "You are not able to read data from \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
+        REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
 
         const ReadBackBufferMemoryPage *readback_page = m_StaticMemory.buffer_memory.readback_pages.GetPointer(buffer->readback_page_index);
-        return readback_page->cpu_mem[m_DeviceContext->CurrentBuffer()] + buffer->readback_page_offset;
+        return readback_page->cpu_mem + buffer->readback_page_offset;
     }
     else
     {
         const Buffer *buffer = m_SceneMemory.buffer_memory.buffers.GetPointer(resource.index);
-        REV_CHECK_M(buffer->cpu_access & CPU_RESOURCE_ACCESS_READ, "You are not able to read data from \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
+        REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
 
         const ReadBackBufferMemoryPage *readback_page = m_SceneMemory.buffer_memory.readback_pages.GetPointer(buffer->readback_page_index);
-        return readback_page->cpu_mem[m_DeviceContext->CurrentBuffer()] + buffer->readback_page_offset;
+        return readback_page->cpu_mem + buffer->readback_page_offset;
     }
 }
 
-GPU::TextureData *MemoryManager::GetTextureData(const GPU::ResourceHandle& resource) const
+GPU::TextureData *MemoryManager::GetTextureData(const GPU::ResourceHandle& resource)
 {
-    const Texture *texture = m_StaticMemory.texture_memory.textures.GetPointer(resource.index);
-    REV_CHECK_M(texture->cpu_access & CPU_RESOURCE_ACCESS_READ, "You are not able to read data from \"%.*s\" texture", texture->name.Length(), texture->name.Data());
+    REV_CHECK_M(GPU::MemoryManager::IsTexture(resource), "Resource is not a texture");
 
-    byte *readback_memory = texture->readback_cpu_mem[m_DeviceContext->CurrentBuffer()];
+    const Texture *texture = GPU::MemoryManager::IsStatic(resource)
+                           ? m_StaticMemory.texture_memory.textures.GetPointer(resource.index)
+                           : m_SceneMemory.texture_memory.textures.GetPointer(resource.index);
+    REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" texture", texture->name.Length(), texture->name.Data());
 
     ID3D12Device *device = m_DeviceContext->Device();
     Memory       *memory = Memory::Get();
 
-    u64 surfaces_count    = texture->planes_count * texture->desc.MipLevels;
-    u16 subtextures_count = 1;
-
-    if (texture->dimension >= TEXTURE_DIMENSION_CUBE)
-    {
-        surfaces_count    *= texture->desc.DepthOrArraySize;
-        subtextures_count  = texture->desc.DepthOrArraySize;
-    }
+    u64 surfaces_count = texture->planes_count * texture->subtextures_count * texture->mip_levels;
 
     byte *footprints_memory = memory->PushToFA<byte>(surfaces_count * (sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) + sizeof(u32) + sizeof(u64)));
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints         = cast(D3D12_PLACED_SUBRESOURCE_FOOTPRINT *, footprints_memory);
     u32                                *unpadded_num_rows  = cast(u32 *, footprints        + surfaces_count);
     u64                                *unpadded_row_bytes = cast(u64 *, unpadded_num_rows + surfaces_count);
-    device->GetCopyableFootprints(&texture->desc, 0, cast(u32, surfaces_count), texture->first_subresource_offset, footprints, cast(UINT *, unpadded_num_rows), unpadded_row_bytes, null);
+    device->GetCopyableFootprints(&texture->default_gpu_mem->GetDesc(), 0, cast(u32, surfaces_count), texture->first_subresource_offset, footprints, cast(UINT *, unpadded_num_rows), unpadded_row_bytes, null);
 
     GPU::TextureData *texture_data = cast(GPU::TextureData *, memory->PushToFrameArena(REV_StructFieldOffset(GPU::TextureData, surfaces) + surfaces_count * sizeof(GPU::TextureSurface)));
 
     texture_data->planes_count      = texture->planes_count;
-    texture_data->subtextures_count = subtextures_count;
-    texture_data->mip_levels_count  = texture->desc.MipLevels;
+    texture_data->subtextures_count = texture->subtextures_count;
+    texture_data->mip_levels_count  = texture->mip_levels;
     texture_data->surfaces_count    = surfaces_count;
 
     for (GPU::TextureSurface *surface = texture_data->surfaces; surfaces_count--; ++surface)
     {
-        surface->data          = readback_memory + footprints->Offset;
+        surface->data          = texture->readback_cpu_mem + footprints->Offset;
         surface->row_bytes     = (*unpadded_row_bytes);
         surface->size_in_bytes = (*unpadded_row_bytes) * (*unpadded_num_rows);
 
@@ -683,25 +869,108 @@ void MemoryManager::FreeStaticMemory()
     FreeMemory(&m_StaticMemory);
 }
 
-Buffer *MemoryManager::AllocateBuffer(
-    BufferMemory          *buffer_memory,
-    CPU_RESOURCE_ACCESS    cpu_access,
-    DXGI_FORMAT            format,
-    u64                    size,
-    D3D12_RESOURCE_STATES  initial_state,
-    u64&                   index,
-    const ConstString&     name)
+ConstArray<GPU::ResourceHandle> MemoryManager::GetBuffersWithCPUReadAccess()
+{
+    u64 buffers_count = 0;
+    for (Buffer& buffer : m_SceneMemory.buffer_memory.buffers)  if (buffer.flags & GPU::RESOURCE_FLAG_CPU_READ) ++buffers_count;
+    for (Buffer& buffer : m_StaticMemory.buffer_memory.buffers) if (buffer.flags & GPU::RESOURCE_FLAG_CPU_READ) ++buffers_count;
+
+    if (buffers_count)
+    {
+        GPU::ResourceHandle *buffers    = Memory::Get()->PushToFA<GPU::ResourceHandle>(buffers_count);
+        GPU::ResourceHandle *buffers_it = buffers;
+
+        u64 index = 0;
+        for (const Buffer& buffer : m_SceneMemory.buffer_memory.buffers)
+        {
+            if (buffer.flags & GPU::RESOURCE_FLAG_CPU_READ)
+            {
+                buffers_it->index = index;
+                buffers_it->kind  = GPU::RESOURCE_KIND_BUFFER;
+                buffers_it->flags = buffer.flags;
+                buffers_it++;
+            }
+            ++index;
+        }
+    
+        index = 0;
+        for (const Buffer& buffer : m_StaticMemory.buffer_memory.buffers)
+        {
+            if (buffer.flags & GPU::RESOURCE_FLAG_CPU_READ)
+            {
+                buffers_it->index = index;
+                buffers_it->kind  = GPU::RESOURCE_KIND_BUFFER;
+                buffers_it->flags = buffer.flags;
+                buffers_it++;
+            }
+            ++index;
+        }
+
+        return ConstArray(buffers, buffers_count);
+    }
+
+    return null;
+}
+
+ConstArray<GPU::ResourceHandle> MemoryManager::GetTexturesWithCPUReadAccess()
+{
+    u64 textures_count = 0;
+    for (Texture& texture : m_SceneMemory.texture_memory.textures)  if (texture.flags & GPU::RESOURCE_FLAG_CPU_READ) ++textures_count;
+    for (Texture& texture : m_StaticMemory.texture_memory.textures) if (texture.flags & GPU::RESOURCE_FLAG_CPU_READ) ++textures_count;
+
+    if (textures_count)
+    {
+        GPU::ResourceHandle *textures    = Memory::Get()->PushToFA<GPU::ResourceHandle>(textures_count);
+        GPU::ResourceHandle *textures_it = textures;
+
+        u64 index = 0;
+        for (Texture& texture : m_SceneMemory.texture_memory.textures)
+        {
+            if (texture.flags & GPU::RESOURCE_FLAG_CPU_READ)
+            {
+                textures_it->index = index;
+                textures_it->kind  = GPU::RESOURCE_KIND_TEXTURE;
+                textures_it->flags = texture.flags;
+                textures_it++;
+            }
+            ++index;
+        }
+
+        index = 0;
+        for (Texture& texture : m_StaticMemory.texture_memory.textures)
+        {
+            if (texture.flags & GPU::RESOURCE_FLAG_CPU_READ)
+            {
+                textures_it->index = index;
+                textures_it->kind  = GPU::RESOURCE_KIND_TEXTURE;
+                textures_it->flags = texture.flags;
+                textures_it++;
+            }
+            ++index;
+        }
+
+        return ConstArray(textures, textures_count);
+    }
+
+    return null;
+}
+
+Buffer *MemoryManager::AllocateBuffer(u64 size, DXGI_FORMAT format, D3D12_RESOURCE_STATES initial_state, GPU::RESOURCE_FLAG flags, u64& index, const ConstString& name)
 {
     ID3D12Device *device = m_DeviceContext->Device();
 
+    BufferMemory *buffer_memory = (flags & GPU::RESOURCE_FLAG_STATIC)
+                                ? &m_StaticMemory.buffer_memory
+                                : &m_SceneMemory.buffer_memory;
+
     index = buffer_memory->buffers.Count();
 
-    Buffer *buffer              = new (buffer_memory->buffers.PushBack()) Buffer();
-    buffer->cpu_access          = cpu_access;
-    buffer->format              = format;
-    buffer->actual_size         = size;
-    buffer->aligned_size        = AlignUp(size, 256);
-    buffer->name                = name;
+    Buffer *buffer       = new (buffer_memory->buffers.PushBack()) Buffer();
+    buffer->format       = format;
+    buffer->flags        = flags;
+    buffer->actual_size  = size;
+    buffer->aligned_size = AlignUp(size, 256);
+    buffer->name         = name;
 
     {
         u64 page_index = 0;
@@ -745,7 +1014,11 @@ Buffer *MemoryManager::AllocateBuffer(
             resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
             resource_desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
-            if (buffer->cpu_access & CPU_RESOURCE_ACCESS_READ)
+            if (flags & GPU::RESOURCE_FLAG_RENDER_TARGET)
+            {
+                resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+            }
+            else if (flags & GPU::RESOURCE_FLAG_CPU_READ)
             {
                 resource_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
             }
@@ -765,7 +1038,7 @@ Buffer *MemoryManager::AllocateBuffer(
         }
     }
 
-    if (buffer->cpu_access & CPU_RESOURCE_ACCESS_WRITE)
+    if (flags & GPU::RESOURCE_FLAG_CPU_WRITE)
     {
         u64 page_index = 0;
         for (UploadBufferMemoryPage& page : buffer_memory->upload_pages)
@@ -808,25 +1081,22 @@ Buffer *MemoryManager::AllocateBuffer(
 
             UploadBufferMemoryPage *page = buffer_memory->upload_pages.PushBack();
             page->occupied_bytes         = buffer->aligned_size;
+            
+            HRESULT error = device->CreateCommittedResource(&heap_properties,
+                                                            D3D12_HEAP_FLAG_NONE,
+                                                            &resource_desc,
+                                                            D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                            null,
+                                                            IID_PPV_ARGS(&page->gpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
 
-            for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-            {
-                HRESULT error = device->CreateCommittedResource(&heap_properties,
-                                                                D3D12_HEAP_FLAG_NONE,
-                                                                &resource_desc,
-                                                                D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                                null,
-                                                                IID_PPV_ARGS(page->gpu_mem + i));
-                REV_CHECK(CheckResultAndPrintMessages(error));
-
-                D3D12_RANGE read_range = { 0, 0 };
-                error = page->gpu_mem[i]->Map(0, &read_range, cast(void **, page->cpu_mem + i));
-                REV_CHECK(CheckResultAndPrintMessages(error));
-            }
+            D3D12_RANGE read_range = { 0, 0 };
+            error = page->gpu_mem->Map(0, &read_range, cast(void **, &page->cpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
         }
     }
 
-    if (buffer->cpu_access & CPU_RESOURCE_ACCESS_READ)
+    if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
         u64 page_index = 0;
         for (ReadBackBufferMemoryPage& page : buffer_memory->readback_pages)
@@ -870,51 +1140,50 @@ Buffer *MemoryManager::AllocateBuffer(
             ReadBackBufferMemoryPage *page = buffer_memory->readback_pages.PushBack();
             page->occupied_bytes           = buffer->aligned_size;
 
-            for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-            {
-                HRESULT error = device->CreateCommittedResource(&heap_properties,
-                                                                D3D12_HEAP_FLAG_NONE,
-                                                                &resource_desc,
-                                                                D3D12_RESOURCE_STATE_COPY_DEST,
-                                                                null,
-                                                                IID_PPV_ARGS(page->gpu_mem + i));
-                REV_CHECK(CheckResultAndPrintMessages(error));
+            HRESULT error = device->CreateCommittedResource(&heap_properties,
+                                                            D3D12_HEAP_FLAG_NONE,
+                                                            &resource_desc,
+                                                            D3D12_RESOURCE_STATE_COPY_DEST,
+                                                            null,
+                                                            IID_PPV_ARGS(&page->gpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
 
-                D3D12_RANGE read_range = { 0, READBACK_BUFFER_MEMORY_PAGE_SIZE };
-                error = page->gpu_mem[i]->Map(0, &read_range, cast(void **, page->cpu_mem + i));
-                REV_CHECK(CheckResultAndPrintMessages(error));
-            }
+            D3D12_RANGE read_range = { 0, READBACK_BUFFER_MEMORY_PAGE_SIZE };
+            error = page->gpu_mem->Map(0, &read_range, cast(void **, &page->cpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
         }
     }
 
-    SetBufferName(buffer_memory, buffer, name);
-
+    SetBufferName(buffer_memory, buffer, flags, name);
     return buffer;
 }
 
-u64 MemoryManager::AllocateTexture(
-    TextureMemory              *texture_memory,
-    TEXTURE_DIMENSION           dimension,
-    CPU_RESOURCE_ACCESS         cpu_access,
-    const D3D12_RESOURCE_DESC&  desc,
-    u8                          planes_count,
-    const ConstString&          name)
+Texture *MemoryManager::AllocateTexture(TEXTURE_DIMENSION dimension, const D3D12_RESOURCE_DESC& desc, GPU::RESOURCE_FLAG flags, u8 planes_count, u64& index, const ConstString& name)
 {
     ID3D12Device *device = m_DeviceContext->Device();
 
-    Texture *texture      = texture_memory->textures.PushBack();
-    texture->dimension    = dimension;
-    texture->cpu_access   = cpu_access;
-    texture->desc         = desc;
-    texture->planes_count = planes_count;
-    texture->name         = name;
+    TextureMemory *texture_memory = (flags & GPU::RESOURCE_FLAG_STATIC)
+                                  ? &m_StaticMemory.texture_memory
+                                  : &m_SceneMemory.texture_memory;
+
+    index = texture_memory->textures.Count();
+
+    Texture *texture           = texture_memory->textures.PushBack();
+    texture->dimension         = dimension;
+    texture->format            = desc.Format;
+    texture->flags             = flags;
+    texture->depth             = 1;
+    texture->mip_levels        = desc.MipLevels;
+    texture->subtextures_count = 1;
+    texture->planes_count      = planes_count;
+    texture->name              = name;
 
     ID3D12Device4 *device_4 = null;
     HRESULT        error    = device->QueryInterface(&device_4);
     REV_CHECK(CheckResultAndPrintMessages(error));
 
     D3D12_RESOURCE_ALLOCATION_INFO1 info1{};
-    device_4->GetResourceAllocationInfo1(0, 1, &texture->desc, &info1);
+    device_4->GetResourceAllocationInfo1(0, 1, &desc, &info1);
 
     SafeRelease(device_4);
 
@@ -928,157 +1197,94 @@ u64 MemoryManager::AllocateTexture(
         heap_properties.CreationNodeMask     = 0;
         heap_properties.VisibleNodeMask      = 0;
 
-        D3D12_RESOURCE_STATES state = (texture->cpu_access & CPU_RESOURCE_ACCESS_READ)
-                                    ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS
-                                    : D3D12_RESOURCE_STATE_COMMON;
-        
+        D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+                                    | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+
         HRESULT error = device->CreateCommittedResource(&heap_properties,
                                                         D3D12_HEAP_FLAG_NONE,
-                                                        &texture->desc,
+                                                        &desc,
                                                         state,
                                                         null,
                                                         IID_PPV_ARGS(&texture->default_gpu_mem));
         REV_CHECK(CheckResultAndPrintMessages(error));
     }
 
-    if (texture->cpu_access & (CPU_RESOURCE_ACCESS_WRITE | CPU_RESOURCE_ACCESS_READ))
+    if (flags & (GPU::RESOURCE_FLAG_CPU_READ | GPU::RESOURCE_FLAG_CPU_WRITE))
     {
-        device->GetCopyableFootprints(&texture->desc, 0, texture->desc.MipLevels, texture->first_subresource_offset, null, null, null, &texture->upload_and_readback_total_bytes);
+        u64 subresources_count = texture->planes_count * texture->subtextures_count * texture->mip_levels;
+        device->GetCopyableFootprints(&desc, 0, cast(u32, subresources_count), texture->first_subresource_offset, null, null, null, &texture->buffer_total_bytes);
 
-        if (texture->cpu_access & CPU_RESOURCE_ACCESS_WRITE)
+        D3D12_HEAP_PROPERTIES heap_properties;
+        heap_properties.Type                 = D3D12_HEAP_TYPE_UPLOAD;
+        heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heap_properties.CreationNodeMask     = 0;
+        heap_properties.VisibleNodeMask      = 0;
+
+        D3D12_RESOURCE_DESC resource_desc;
+        resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+        resource_desc.Width              = texture->buffer_total_bytes;
+        resource_desc.Height             = 1;
+        resource_desc.DepthOrArraySize   = 1;
+        resource_desc.MipLevels          = 1;
+        resource_desc.Format             = DXGI_FORMAT_UNKNOWN;
+        resource_desc.SampleDesc.Count   = 1;
+        resource_desc.SampleDesc.Quality = 0;
+        resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resource_desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+        if (flags & GPU::RESOURCE_FLAG_CPU_WRITE)
         {
-            D3D12_HEAP_PROPERTIES heap_properties;
-            heap_properties.Type                 = D3D12_HEAP_TYPE_UPLOAD;
-            heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-            heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-            heap_properties.CreationNodeMask     = 0;
-            heap_properties.VisibleNodeMask      = 0;
+            HRESULT error = device->CreateCommittedResource(&heap_properties,
+                                                            D3D12_HEAP_FLAG_NONE,
+                                                            &resource_desc,
+                                                            D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                            null,
+                                                            IID_PPV_ARGS(&texture->upload_gpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
 
-            D3D12_RESOURCE_DESC resource_desc;
-            resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
-            resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-            resource_desc.Width              = texture->upload_and_readback_total_bytes;
-            resource_desc.Height             = 1;
-            resource_desc.DepthOrArraySize   = 1;
-            resource_desc.MipLevels          = 1;
-            resource_desc.Format             = DXGI_FORMAT_UNKNOWN;
-            resource_desc.SampleDesc.Count   = 1;
-            resource_desc.SampleDesc.Quality = 0;
-            resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            resource_desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
-
-            for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-            {
-                HRESULT error = device->CreateCommittedResource(&heap_properties,
-                                                                D3D12_HEAP_FLAG_NONE,
-                                                                &resource_desc,
-                                                                D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                                null,
-                                                                IID_PPV_ARGS(texture->upload_gpu_mem + i));
-                REV_CHECK(CheckResultAndPrintMessages(error));
-
-                D3D12_RANGE read_range = { 0, 0 };
-                error = texture->upload_gpu_mem[i]->Map(0, &read_range, cast(void **, texture->upload_cpu_mem + i));
-                REV_CHECK(CheckResultAndPrintMessages(error));
-            }
+            D3D12_RANGE read_range = { 0, 0 };
+            error = texture->upload_gpu_mem->Map(0, &read_range, cast(void **, &texture->upload_cpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
         }
 
-        if (texture->cpu_access & CPU_RESOURCE_ACCESS_READ)
+        if (flags & GPU::RESOURCE_FLAG_CPU_READ)
         {
-            D3D12_HEAP_PROPERTIES heap_properties;
-            heap_properties.Type                 = D3D12_HEAP_TYPE_READBACK;
-            heap_properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-            heap_properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-            heap_properties.CreationNodeMask     = 0;
-            heap_properties.VisibleNodeMask      = 0;
+            heap_properties.Type = D3D12_HEAP_TYPE_READBACK;
 
-            D3D12_RESOURCE_DESC resource_desc;
-            resource_desc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
-            resource_desc.Alignment          = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-            resource_desc.Width              = texture->upload_and_readback_total_bytes;
-            resource_desc.Height             = 1;
-            resource_desc.DepthOrArraySize   = 1;
-            resource_desc.MipLevels          = 1;
-            resource_desc.Format             = DXGI_FORMAT_UNKNOWN;
-            resource_desc.SampleDesc.Count   = 1;
-            resource_desc.SampleDesc.Quality = 0;
-            resource_desc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-            resource_desc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+            HRESULT error = device->CreateCommittedResource(&heap_properties,
+                                                            D3D12_HEAP_FLAG_NONE,
+                                                            &resource_desc,
+                                                            D3D12_RESOURCE_STATE_COPY_DEST,
+                                                            null,
+                                                            IID_PPV_ARGS(&texture->readback_gpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
 
-            for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-            {
-                HRESULT error = device->CreateCommittedResource(&heap_properties,
-                                                                D3D12_HEAP_FLAG_NONE,
-                                                                &resource_desc,
-                                                                D3D12_RESOURCE_STATE_COPY_DEST,
-                                                                null,
-                                                                IID_PPV_ARGS(texture->readback_gpu_mem + i));
-                REV_CHECK(CheckResultAndPrintMessages(error));
-
-                D3D12_RANGE read_range = { 0, texture->upload_and_readback_total_bytes };
-                error = texture->readback_gpu_mem[i]->Map(0, &read_range, cast(void **, texture->readback_cpu_mem + i));
-                REV_CHECK(CheckResultAndPrintMessages(error));
-            }
+            D3D12_RANGE read_range = { 0, texture->buffer_total_bytes };
+            error = texture->readback_gpu_mem->Map(0, &read_range, cast(void **, &texture->readback_cpu_mem));
+            REV_CHECK(CheckResultAndPrintMessages(error));
         }
     }
 
-    SetTextureName(texture_memory, texture, name);
-
-    return texture_memory->textures.Count() - 1;
+    SetTextureName(texture_memory, texture, flags, name);
+    return texture;
 }
 
-void MemoryManager::UploadBufferData(ID3D12GraphicsCommandList *command_list, Buffer *buffer, bool _static, const void *data)
+void MemoryManager::UploadBufferData(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource, const void *data)
 {
-    REV_CHECK_M(buffer->cpu_access & CPU_RESOURCE_ACCESS_WRITE, "You are not able to upload data to \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
+    BufferMemory *buffer_memory = (resource.flags & GPU::RESOURCE_FLAG_STATIC)
+                                ? &m_StaticMemory.buffer_memory
+                                : &m_SceneMemory.buffer_memory;
 
-    BufferMemory *buffer_memory = _static ? &m_StaticMemory.buffer_memory : &m_SceneMemory.buffer_memory;
+    Buffer *buffer = buffer_memory->buffers.GetPointer(resource.index);
+    REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE, "You are not able to upload data to \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
 
     DefaultBufferMemoryPage *default_page = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
     UploadBufferMemoryPage  *upload_page  = buffer_memory->upload_pages.GetPointer(buffer->upload_page_index);
 
-    ID3D12Resource *upload_gpu_mem = upload_page->gpu_mem[m_DeviceContext->CurrentBuffer()];
-    byte           *upload_cpu_mem = upload_page->cpu_mem[m_DeviceContext->CurrentBuffer()] + buffer->upload_page_offset;
-
-    if (data)
-    {
-        CopyMemory(upload_cpu_mem, data, buffer->actual_size);
-
-        D3D12_RESOURCE_BARRIER resource_barrier;
-        resource_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        resource_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        resource_barrier.Transition.pResource   = default_page->gpu_mem;
-        resource_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        resource_barrier.Transition.StateBefore = default_page->initial_state;
-        resource_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
-
-        command_list->ResourceBarrier(1, &resource_barrier);
-
-        command_list->CopyBufferRegion(default_page->gpu_mem, buffer->default_page_offset, upload_gpu_mem, buffer->upload_page_offset, buffer->actual_size);
-
-        resource_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-        resource_barrier.Transition.StateAfter  = default_page->initial_state;
-
-        command_list->ResourceBarrier(1, &resource_barrier);
-    }
-    else
-    {
-        ZeroMemory(upload_cpu_mem, buffer->actual_size);
-        command_list->DiscardResource(upload_gpu_mem, null);
-        command_list->DiscardResource(default_page->gpu_mem, null);
-    }
-}
-
-void MemoryManager::CopyDefaultBufferResourceToReadBackResource(ID3D12GraphicsCommandList *command_list, Buffer *buffer, bool _static)
-{
-    REV_CHECK_M(buffer->cpu_access & CPU_RESOURCE_ACCESS_READ, "You are not able to read data from \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
-
-    BufferMemory *buffer_memory = _static ? &m_StaticMemory.buffer_memory : &m_SceneMemory.buffer_memory;
-
-    DefaultBufferMemoryPage  *default_page  = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
-    ReadBackBufferMemoryPage *readback_page = buffer_memory->readback_pages.GetPointer(buffer->readback_page_index);
-
-    ID3D12Resource *readback_gpu_mem = readback_page->gpu_mem[m_DeviceContext->CurrentBuffer()];
-    byte           *readback_cpu_mem = readback_page->cpu_mem[m_DeviceContext->CurrentBuffer()] + buffer->readback_page_offset;
+    if (data) CopyMemory(upload_page->cpu_mem + buffer->upload_page_offset, data, buffer->actual_size);
+    else      ZeroMemory(upload_page->cpu_mem + buffer->upload_page_offset,       buffer->actual_size);
 
     D3D12_RESOURCE_BARRIER resource_barrier;
     resource_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -1086,27 +1292,26 @@ void MemoryManager::CopyDefaultBufferResourceToReadBackResource(ID3D12GraphicsCo
     resource_barrier.Transition.pResource   = default_page->gpu_mem;
     resource_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     resource_barrier.Transition.StateBefore = default_page->initial_state;
-    resource_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    resource_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
 
     command_list->ResourceBarrier(1, &resource_barrier);
 
-    command_list->CopyBufferRegion(readback_gpu_mem, buffer->readback_page_offset, default_page->gpu_mem, buffer->default_page_offset, buffer->actual_size);
+    command_list->CopyBufferRegion(default_page->gpu_mem, buffer->default_page_offset, upload_page->gpu_mem, buffer->upload_page_offset, buffer->actual_size);
 
-    resource_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    resource_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
     resource_barrier.Transition.StateAfter  = default_page->initial_state;
 
     command_list->ResourceBarrier(1, &resource_barrier);
 }
 
-void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, Texture *texture, const GPU::TextureData *texture_data)
+void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource, const GPU::TextureData *texture_data)
 {
-    REV_CHECK_M(texture->cpu_access & CPU_RESOURCE_ACCESS_WRITE, "You are not able to upload data to \"%.*s\" texture", texture->name.Length(), texture->name.Data());
+    Texture *texture = &GetTexture(resource);
+
+    REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE, "You are not able to upload data to \"%.*s\" texture", texture->name.Length(), texture->name.Data());
     REV_CHECK(texture->planes_count == texture_data->planes_count);
 
     ID3D12Device *device = m_DeviceContext->Device();
-
-    ID3D12Resource *upload_gpu_mem = texture->upload_gpu_mem[m_DeviceContext->CurrentBuffer()];
-    byte           *upload_cpu_mem = texture->upload_cpu_mem[m_DeviceContext->CurrentBuffer()];
 
     if (texture_data->surfaces_count)
     {
@@ -1115,16 +1320,16 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
         dest_location.Type      = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
 
         D3D12_TEXTURE_COPY_LOCATION source_location;
-        source_location.pResource = upload_gpu_mem;
+        source_location.pResource = texture->upload_gpu_mem;
         source_location.Type      = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints = Memory::Get()->PushToFA<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>(texture_data->surfaces_count);
-        device->GetCopyableFootprints(&texture->desc, 0, cast(u32, texture_data->surfaces_count), texture->first_subresource_offset, footprints, null, null, null);
+        device->GetCopyableFootprints(&texture->default_gpu_mem->GetDesc(), 0, cast(u32, texture_data->surfaces_count), texture->first_subresource_offset, footprints, null, null, null);
 
         const GPU::TextureSurface *surfaces_end = texture_data->surfaces + texture_data->surfaces_count;
         for (const GPU::TextureSurface *surface = texture_data->surfaces; surface < surfaces_end; ++surface)
         {
-            byte *dest_surface = upload_cpu_mem + footprints->Offset;
+            byte *dest_surface = texture->upload_cpu_mem + footprints->Offset;
 
             u64 num_rows = surface->size_in_bytes / surface->row_bytes;
             for (u64 row = 0; row < num_rows; ++row)
@@ -1145,42 +1350,127 @@ void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, T
     }
     else
     {
-        ZeroMemory(upload_cpu_mem, texture->upload_and_readback_total_bytes);
-        command_list->DiscardResource(upload_gpu_mem, null);
+        ZeroMemory(texture->upload_cpu_mem, texture->buffer_total_bytes);
+        command_list->DiscardResource(texture->upload_gpu_mem, null);
         command_list->DiscardResource(texture->default_gpu_mem, null);
     }
 }
 
-void MemoryManager::CopyDefaultTextureResourceToReadBackResource(ID3D12GraphicsCommandList *command_list, Texture *texture)
+void MemoryManager::ClearResource(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource)
 {
-    REV_CHECK_M(texture->cpu_access & CPU_RESOURCE_ACCESS_READ, "You are not able to read data from \"%.*s\" texture", texture->name.Length(), texture->name.Data());
-
-    ID3D12Device *device = m_DeviceContext->Device();
-
-    D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints = Memory::Get()->PushToFA<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>(texture->desc.MipLevels);
-    device->GetCopyableFootprints(&texture->desc, 0, texture->desc.MipLevels, texture->first_subresource_offset, footprints, null, null, null);
-
-    ID3D12Resource *readback_gpu_mem = texture->readback_gpu_mem[m_DeviceContext->CurrentBuffer()];
-    byte           *readback_cpu_mem = texture->readback_cpu_mem[m_DeviceContext->CurrentBuffer()];
-
-    D3D12_TEXTURE_COPY_LOCATION source_location;
-    source_location.pResource = texture->default_gpu_mem;
-    source_location.Type      = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-
-    D3D12_TEXTURE_COPY_LOCATION dest_location;
-    dest_location.pResource = readback_gpu_mem;
-    dest_location.Type      = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-
-    for (u32 i = 0; i < texture->desc.MipLevels; ++i)
+    if (GPU::MemoryManager::IsTexture(resource))
     {
-        source_location.SubresourceIndex = i;
-        dest_location.PlacedFootprint    = footprints[i];
+        TextureMemory *texture_memory = (resource.flags & GPU::RESOURCE_FLAG_STATIC)
+                                      ? &m_StaticMemory.texture_memory
+                                      : &m_SceneMemory.texture_memory;
 
-        command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, null);
+        Texture *texture = texture_memory->textures.GetPointer(resource.index);
+
+        command_list->DiscardResource(texture->default_gpu_mem, null);
+
+        u32 current_buffer = 0;
+
+        if (resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            ZeroMemory(texture->upload_cpu_mem, texture->buffer_total_bytes);
+            command_list->DiscardResource(texture->upload_gpu_mem, null);
+        }
+
+        if (resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            ZeroMemory(texture->readback_cpu_mem, texture->buffer_total_bytes);
+            command_list->DiscardResource(texture->readback_gpu_mem, null);
+        }
+    }
+    else
+    {
+        REV_WARNING_M("Resource #I32u is not a texture. We can't clear buffers for now", resource.index);
     }
 }
 
-void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, const ConstString& name)
+void MemoryManager::PrepareBuffersToRead(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources)
+{
+    if (resources.Empty()) return;
+
+    D3D12_RESOURCE_BARRIER *barriers       = Memory::Get()->PushToFA<D3D12_RESOURCE_BARRIER>(resources.Count());
+    u32                     barriers_count = 0;
+
+    for (const GPU::ResourceHandle& resource : resources)
+    {
+        BufferMemory *buffer_memory = resource.flags & GPU::RESOURCE_FLAG_STATIC
+                                    ? &m_StaticMemory.buffer_memory
+                                    : &m_SceneMemory.buffer_memory;
+
+        Buffer *buffer = buffer_memory->buffers.GetPointer(resource.index);
+        REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
+
+        DefaultBufferMemoryPage *default_page = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
+
+        D3D12_RESOURCE_BARRIER *barrier = barriers + barriers_count++;
+        barrier->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier->Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrier->Transition.pResource   = default_page->gpu_mem;
+        barrier->Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        barrier->Transition.StateBefore = default_page->initial_state;
+        barrier->Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
+    }
+
+    command_list->ResourceBarrier(barriers_count, barriers);
+
+    barriers_count = 0;
+    for (const GPU::ResourceHandle& resource : resources)
+    {
+        BufferMemory *buffer_memory = resource.flags & GPU::RESOURCE_FLAG_STATIC
+                                    ? &m_StaticMemory.buffer_memory
+                                    : &m_SceneMemory.buffer_memory;
+
+        Buffer                   *buffer        = buffer_memory->buffers.GetPointer(resource.index);
+        DefaultBufferMemoryPage  *default_page  = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
+        ReadBackBufferMemoryPage *readback_page = buffer_memory->readback_pages.GetPointer(buffer->readback_page_index);
+
+        D3D12_RESOURCE_BARRIER *barrier = barriers + barriers_count++;
+        barrier->Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+        barrier->Transition.StateAfter  = default_page->initial_state;
+
+        command_list->CopyBufferRegion(readback_page->gpu_mem, buffer->readback_page_offset, default_page->gpu_mem, buffer->default_page_offset, buffer->actual_size);
+    }
+
+    command_list->ResourceBarrier(barriers_count, barriers);
+}
+
+void MemoryManager::PrepareTexturesToRead(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources)
+{
+    for (const GPU::ResourceHandle& resource : resources)
+    {
+        Texture *texture = &GetTexture(resource);
+        REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" texture", texture->name.Length(), texture->name.Data());
+
+        ID3D12Device *device = m_DeviceContext->Device();
+
+        u64 subresources_count = texture->planes_count * texture->subtextures_count * texture->mip_levels;
+
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints = Memory::Get()->PushToFA<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>(subresources_count);
+        device->GetCopyableFootprints(&texture->default_gpu_mem->GetDesc(), 0, cast(u32, subresources_count), texture->first_subresource_offset, footprints, null, null, null);
+
+        D3D12_TEXTURE_COPY_LOCATION source_location;
+        source_location.pResource = texture->default_gpu_mem;
+        source_location.Type      = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+
+        D3D12_TEXTURE_COPY_LOCATION dest_location;
+        dest_location.pResource = texture->readback_gpu_mem;
+        dest_location.Type      = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+
+        for (u32 i = 0; i < subresources_count; ++i)
+        {
+            source_location.SubresourceIndex = i;
+            dest_location.PlacedFootprint    = footprints[i];
+
+            command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, null);
+        }
+    }
+}
+
+void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
     wchar_t *wname = Memory::Get()->PushToFA<wchar_t>(name.Length() + 1);
     MultiByteToWideChar(CP_ACP, 0, name.Data(), cast(u32, name.Length()), wname, cast(u32, name.Length()));
@@ -1220,90 +1510,80 @@ void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, c
         }
     }
 
-    if (buffer->cpu_access & CPU_RESOURCE_ACCESS_WRITE)
+    if (flags & GPU::RESOURCE_FLAG_CPU_WRITE)
     {
         UploadBufferMemoryPage *page = buffer_memory->upload_pages.GetPointer(buffer->upload_page_index);
 
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+        UINT    gotten_wname_length = 0;
+        HRESULT error               = page->gpu_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &gotten_wname_length, null);
+
+        if (gotten_wname_length)
         {
-            ID3D12Resource *resource = page->gpu_mem[i];
+            gotten_wname_length = gotten_wname_length / sizeof(wchar_t) - 1;
 
-            UINT    gotten_wname_length = 0;
-            HRESULT error               = resource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &gotten_wname_length, null);
+            u32      new_wname_length = cast(u32, gotten_wname_length + 1 + name.Length());
+            wchar_t *new_wname        = Memory::Get()->PushToFA<wchar_t>(new_wname_length + 1);
 
-            if (gotten_wname_length)
-            {
-                gotten_wname_length = gotten_wname_length / sizeof(wchar_t) - 1;
+            UINT data_size = (new_wname_length + 1) * sizeof(wchar_t);
+            error = page->gpu_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &data_size, new_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+            REV_CHECK(gotten_wname_length == data_size / sizeof(wchar_t) - 1);
 
-                u32      new_wname_length = cast(u32, gotten_wname_length + 1 + name.Length());
-                wchar_t *new_wname        = Memory::Get()->PushToFA<wchar_t>(new_wname_length + 1);
+            _snwprintf(new_wname + gotten_wname_length, new_wname_length - gotten_wname_length, L" %.*s", cast(u32, name.Length()), wname);
 
-                UINT data_size = (new_wname_length + 1) * sizeof(wchar_t);
-                error = resource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &data_size, new_wname);
-                REV_CHECK(CheckResultAndPrintMessages(error));
-                REV_CHECK(gotten_wname_length == data_size / sizeof(wchar_t) - 1);
+            error = page->gpu_mem->SetName(new_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+        }
+        else
+        {
+            u32      new_wname_length = cast(u32, REV_CSTRLEN("UPLOAD ") + name.Length());
+            wchar_t *new_wname        = Memory::Get()->PushToFA<wchar_t>(new_wname_length + 1);
 
-                _snwprintf(new_wname + gotten_wname_length, new_wname_length - gotten_wname_length, L" %.*s", cast(u32, name.Length()), wname);
+            _snwprintf(new_wname, new_wname_length, L"UPLOAD %.*s", cast(u32, name.Length()), wname);
 
-                error = resource->SetName(new_wname);
-                REV_CHECK(CheckResultAndPrintMessages(error));
-            }
-            else
-            {
-                u32      new_wname_length = cast(u32, REV_CSTRLEN("UPLOAD ") + 2 + name.Length());
-                wchar_t *new_wname        = Memory::Get()->PushToFA<wchar_t>(new_wname_length + 1);
-
-                _snwprintf(new_wname, new_wname_length, L"UPLOAD #%I32u %.*s", i, cast(u32, name.Length()), wname);
-
-                error = resource->SetName(new_wname);
-                REV_CHECK(CheckResultAndPrintMessages(error));
-            }
+            error = page->gpu_mem->SetName(new_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
         }
     }
 
-    if (buffer->cpu_access & CPU_RESOURCE_ACCESS_READ)
+    if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
         ReadBackBufferMemoryPage *page = buffer_memory->readback_pages.GetPointer(buffer->readback_page_index);
 
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
+        UINT    gotten_wname_length = 0;
+        HRESULT error               = page->gpu_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &gotten_wname_length, null);
+
+        if (gotten_wname_length)
         {
-            ID3D12Resource *resource = page->gpu_mem[i];
+            gotten_wname_length = gotten_wname_length / sizeof(wchar_t) - 1;
 
-            UINT    gotten_wname_length = 0;
-            HRESULT error               = resource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &gotten_wname_length, null);
+            u32      new_wname_length = cast(u32, gotten_wname_length + 1 + name.Length());
+            wchar_t *new_wname        = Memory::Get()->PushToFA<wchar_t>(new_wname_length + 1);
 
-            if (gotten_wname_length)
-            {
-                gotten_wname_length = gotten_wname_length / sizeof(wchar_t) - 1;
+            UINT data_size = (new_wname_length + 1) * sizeof(wchar_t);
+            error = page->gpu_mem->GetPrivateData(WKPDID_D3DDebugObjectNameW, &data_size, new_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+            REV_CHECK(gotten_wname_length == data_size / sizeof(wchar_t) - 1);
 
-                u32      new_wname_length = cast(u32, gotten_wname_length + 1 + name.Length());
-                wchar_t *new_wname        = Memory::Get()->PushToFA<wchar_t>(new_wname_length + 1);
+            _snwprintf(new_wname + gotten_wname_length, new_wname_length - gotten_wname_length, L" %.*s", cast(u32, name.Length()), wname);
 
-                UINT data_size = (new_wname_length + 1) * sizeof(wchar_t);
-                error = resource->GetPrivateData(WKPDID_D3DDebugObjectNameW, &data_size, new_wname);
-                REV_CHECK(CheckResultAndPrintMessages(error));
-                REV_CHECK(gotten_wname_length == data_size / sizeof(wchar_t) - 1);
+            error = page->gpu_mem->SetName(new_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
+        }
+        else
+        {
+            u32      new_wname_length = cast(u32, REV_CSTRLEN("READBACK ") + name.Length());
+            wchar_t *new_wname        = Memory::Get()->PushToFA<wchar_t>(new_wname_length + 1);
 
-                _snwprintf(new_wname + gotten_wname_length, new_wname_length - gotten_wname_length, L" %.*s", cast(u32, name.Length()), wname);
+            _snwprintf(new_wname, new_wname_length, L"READBACK %.*s", cast(u32, name.Length()), wname);
 
-                error = resource->SetName(new_wname);
-                REV_CHECK(CheckResultAndPrintMessages(error));
-            }
-            else
-            {
-                u32      new_wname_length = cast(u32, REV_CSTRLEN("READBACK ") + 2 + name.Length());
-                wchar_t *new_wname        = Memory::Get()->PushToFA<wchar_t>(new_wname_length + 1);
-
-                _snwprintf(new_wname, new_wname_length, L"READBACK #%I32u %.*s", i, cast(u32, name.Length()), wname);
-
-                error = resource->SetName(new_wname);
-                REV_CHECK(CheckResultAndPrintMessages(error));
-            }
+            error = page->gpu_mem->SetName(new_wname);
+            REV_CHECK(CheckResultAndPrintMessages(error));
         }
     }
 }
 
-void MemoryManager::SetTextureName(TextureMemory *texture_memory, Texture *texture, const ConstString& name)
+void MemoryManager::SetTextureName(TextureMemory *texture_memory, Texture *texture, GPU::RESOURCE_FLAG flags, const ConstString& name)
 {
     wchar_t *wname = Memory::Get()->PushToFA<wchar_t>(name.Length() + 1);
     MultiByteToWideChar(CP_ACP, 0, name.Data(), cast(u32, name.Length()), wname, cast(u32, name.Length()));
@@ -1319,26 +1599,20 @@ void MemoryManager::SetTextureName(TextureMemory *texture_memory, Texture *textu
         REV_CHECK(CheckResultAndPrintMessages(error));
     }
 
-    if (texture->cpu_access & CPU_RESOURCE_ACCESS_WRITE)
+    if (flags & GPU::RESOURCE_FLAG_CPU_WRITE)
     {
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-        {
-            _snwprintf(new_wname, new_wname_length, L"UPLOAD #%I32u %.*s", i, cast(u32, name.Length()), wname);
+        _snwprintf(new_wname, new_wname_length, L"UPLOAD %.*s", cast(u32, name.Length()), wname);
 
-            HRESULT error = texture->upload_gpu_mem[i]->SetName(new_wname);
-            REV_CHECK(CheckResultAndPrintMessages(error));
-        }
+        HRESULT error = texture->upload_gpu_mem->SetName(new_wname);
+        REV_CHECK(CheckResultAndPrintMessages(error));
     }
 
-    if (texture->cpu_access & CPU_RESOURCE_ACCESS_READ)
+    if (flags & GPU::RESOURCE_FLAG_CPU_READ)
     {
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-        {
-            _snwprintf(new_wname, new_wname_length, L"READBACK #%I32u %.*s", i, cast(u32, name.Length()), wname);
+        _snwprintf(new_wname, new_wname_length, L"READBACK %.*s", cast(u32, name.Length()), wname);
 
-            HRESULT error = texture->readback_gpu_mem[i]->SetName(new_wname);
-            REV_CHECK(CheckResultAndPrintMessages(error));
-        }
+        HRESULT error = texture->readback_gpu_mem->SetName(new_wname);
+        REV_CHECK(CheckResultAndPrintMessages(error));
     }
 }
 
@@ -1354,102 +1628,25 @@ void MemoryManager::FreeMemory(ResourceMemory *memory)
 
     for (UploadBufferMemoryPage& page : memory->buffer_memory.upload_pages)
     {
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-        {
-            SafeRelease(page.gpu_mem[i]);
-        }
+        SafeRelease(page.gpu_mem);
     }
     memory->buffer_memory.upload_pages.Clear();
 
     for (ReadBackBufferMemoryPage& page : memory->buffer_memory.readback_pages)
     {
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-        {
-            SafeRelease(page.gpu_mem[i]);
-        }
+        SafeRelease(page.gpu_mem);
     }
     memory->buffer_memory.readback_pages.Clear();
 
     for (Texture& texture : memory->texture_memory.textures)
     {
         SafeRelease(texture.default_gpu_mem);
-
-        for (u32 i = 0; i < SWAP_CHAIN_BUFFERS_COUNT; ++i)
-        {
-            SafeRelease(texture.upload_gpu_mem[i]);
-            SafeRelease(texture.readback_gpu_mem[i]);
-        }
+        SafeRelease(texture.upload_gpu_mem);
+        SafeRelease(texture.readback_gpu_mem);
     }
     memory->texture_memory.textures.Clear();
 
     memory->sampler_memory.samplers.Clear();
-}
-
-ConstArray<GPU::ResourceHandle> MemoryManager::GetReadWriteResources() const
-{
-    u64 read_write_resources_count = 0;
-    for (const Buffer&  buffer  : m_SceneMemory.buffer_memory.buffers)    if (buffer.cpu_access  & CPU_RESOURCE_ACCESS_READ) ++read_write_resources_count;
-    for (const Buffer&  buffer  : m_StaticMemory.buffer_memory.buffers)   if (buffer.cpu_access  & CPU_RESOURCE_ACCESS_READ) ++read_write_resources_count;
-    for (const Texture& texture : m_SceneMemory.texture_memory.textures)  if (texture.cpu_access & CPU_RESOURCE_ACCESS_READ) ++read_write_resources_count;
-    for (const Texture& texture : m_StaticMemory.texture_memory.textures) if (texture.cpu_access & CPU_RESOURCE_ACCESS_READ) ++read_write_resources_count;
-
-    if (read_write_resources_count)
-    {
-        GPU::ResourceHandle *read_write_resources    = Memory::Get()->PushToFA<GPU::ResourceHandle>(read_write_resources_count);
-        GPU::ResourceHandle *read_write_resources_it = read_write_resources;
-
-        u64 index = 0;
-        for (const Buffer& buffer : m_SceneMemory.buffer_memory.buffers)
-        {
-            if (buffer.cpu_access & CPU_RESOURCE_ACCESS_READ)
-            {
-                read_write_resources_it->index = index;
-                read_write_resources_it->kind  = GPU::RESOURCE_KIND_READ_WRITE_BUFFER;
-                read_write_resources_it++;
-            }
-            ++index;
-        }
-
-        index = 0;
-        for (const Buffer& buffer : m_StaticMemory.buffer_memory.buffers)
-        {
-            if (buffer.cpu_access & CPU_RESOURCE_ACCESS_READ)
-            {
-                read_write_resources_it->index = index;
-                read_write_resources_it->kind  = GPU::RESOURCE_KIND_READ_WRITE_BUFFER | GPU::RESOURCE_KIND_STATIC;
-                read_write_resources_it++;
-            }
-            ++index;
-        }
-
-        index = 0;
-        for (const Texture& texture : m_SceneMemory.texture_memory.textures)
-        {
-            if (texture.cpu_access & CPU_RESOURCE_ACCESS_READ)
-            {
-                read_write_resources_it->index = index;
-                read_write_resources_it->kind  = GPU::RESOURCE_KIND_READ_WRITE_TEXTURE;
-                read_write_resources_it++;
-            }
-            ++index;
-        }
-
-        index = 0;
-        for (const Texture& texture : m_StaticMemory.texture_memory.textures)
-        {
-            if (texture.cpu_access & CPU_RESOURCE_ACCESS_READ)
-            {
-                read_write_resources_it->index = index;
-                read_write_resources_it->kind  = GPU::RESOURCE_KIND_READ_WRITE_TEXTURE | GPU::RESOURCE_KIND_STATIC;
-                read_write_resources_it++;
-            }
-            ++index;
-        }
-
-        return ConstArray(read_write_resources, read_write_resources_count);
-    }
-
-    return null;
 }
 
 };

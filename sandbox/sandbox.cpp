@@ -9,16 +9,16 @@ Sandbox::Sandbox()
       m_DemoScene(&m_Allocator)
 {
     REV::GPU::MemoryManager *memory_manager = REV::GraphicsAPI::GetMemoryManager();
+    REV::GPU::DeviceContext *device_context = REV::GraphicsAPI::GetDeviceContext();
 
-    REV::Math::v4s window_dimension = m_Window.XYWH();
+    REV::Math::v2s rt_dimension = device_context->RTSize();
 
-    m_StaticMousePickTexture = memory_manager->AllocateTexture(cast(u16, window_dimension.wh.w),
-                                                               cast(u16, window_dimension.wh.h),
-                                                               0,
-                                                               1,
-                                                               REV::GPU::RESOURCE_KIND_READ_WRITE_TEXTURE | REV::GPU::RESOURCE_KIND_STATIC,
-                                                               REV::GPU::TEXTURE_FORMAT_U32,
-                                                               REV::ConstString(REV_CSTR_ARGS("StaticMousePickTexture")));
+    m_StaticMousePickTexture = memory_manager->AllocateTexture2D(cast(u16, rt_dimension.w),
+                                                                 cast(u16, rt_dimension.h),
+                                                                 1,
+                                                                 REV::GPU::TEXTURE_FORMAT_U32,
+                                                                 REV::GPU::RESOURCE_FLAG_STATIC | REV::GPU::RESOURCE_FLAG_CPU_READ | REV::GPU::RESOURCE_FLAG_RENDER_TARGET,
+                                                                 REV::ConstString(REV_CSTR_ARGS("StaticMousePickTexture")));
 }
 
 Sandbox::~Sandbox()

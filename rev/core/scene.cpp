@@ -86,7 +86,8 @@ void SceneBase::OnUnsetCurrentEx()
 void SceneBase::OnCopyDefaultResourcesToReadBackResources()
 {
     GPU::MemoryManager *manager = GraphicsAPI::GetMemoryManager();
-    manager->CopyDefaultResourcesToReadBackResources(manager->GetReadWriteResources());
+    manager->PrepareBuffersToRead(manager->GetBuffersWithCPUReadAccess());
+    manager->PrepareTexturesToRead(manager->GetTexturesWithCPUReadAccess());
 }
 
 void SceneBase::SetCurrentGraphicsShader(AssetHandle shader_asset)

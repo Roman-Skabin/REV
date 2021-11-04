@@ -26,17 +26,6 @@ namespace REV
 
     typedef u32 Index;
 
-#ifndef ASSET_HANDLE_DEFINED
-#define ASSET_HANDLE_DEFINED
-    struct AssetHandle
-    {
-        u64  index   = REV_INVALID_U64_INDEX;
-        bool _static = false;
-
-        REV_INLINE operator bool() const { return index != REV_INVALID_U64_INDEX; }
-    };
-#endif
-
     namespace GPU
     {
         enum SHADER_KIND : u32
@@ -63,12 +52,63 @@ namespace REV
 
         // @NOTE(Roman): This is NOT a descriptor for a SRV.
         //               It's just a descriptor for all the resoucres used in a shader.
-        //               e.g. constant buffers, read(-write) buffers, read(-write) textures, samplers.
+        //               e.g. constant buffers, read(-write) buffers, read(-write) textures, samplers, render targets.
         struct ShaderResourceDesc
         {
             GPU::ResourceHandle resource;
-            u32                 shader_register = 0;
-            u32                 register_space  = 0;
+            union
+            {
+                struct
+                {
+                    u32 cbv_srv_sampler_shader_register;
+                    u32 cbv_srv_sampler_register_space;
+                };
+                struct
+                {
+                    Math::v4 rtv_clear_color;
+                };
+                struct
+                {
+                    u32  uav_shader_register;
+                    u32  uav_register_space;
+                    bool uav_is_cleared_with_floats;
+                    union
+                    {
+                        Math::v4  uav_float_clear_color;
+                        Math::v4u uav_uint_clear_color;
+                    };
+                };
+            };
+
+            REV_INLINE ShaderResourceDesc(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space)
+                : resource(resource), cbv_srv_sampler_shader_register(shader_register), cbv_srv_sampler_register_space(register_space)
+            {}
+
+            REV_INLINE ShaderResourceDesc(const GPU::ResourceHandle& resource, Math::v4 clear_color)
+                : resource(resource), rtv_clear_color(clear_color)
+            {}
+
+            REV_INLINE ShaderResourceDesc(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space, Math::v4 clear_color)
+                : resource(resource), uav_shader_register(shader_register), uav_register_space(register_space), uav_is_cleared_with_floats(true), uav_float_clear_color(clear_color)
+            {}
+
+            REV_INLINE ShaderResourceDesc(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space, Math::v4u clear_color)
+                : resource(resource), uav_shader_register(shader_register), uav_register_space(register_space), uav_is_cleared_with_floats(false), uav_uint_clear_color(clear_color)
+            {}
+
+            REV_INLINE ShaderResourceDesc(const ShaderResourceDesc& other)
+            {
+                CopyMemory(this, &other, sizeof(GPU::ResourceHandle));
+            }
+
+            REV_INLINE ShaderResourceDesc& operator=(const ShaderResourceDesc& other)
+            {
+                if (this != &other)
+                {
+                    CopyMemory(this, &other, sizeof(GPU::ResourceHandle));
+                }
+                return *this;
+            }
         };
 
         struct CompileShaderResult
@@ -86,12 +126,12 @@ namespace REV
                 bool                                  _static
             );
 
-            void SetCurrentGraphicsShader(ShaderHandle graphics_shader);
+            void SetCurrentGraphicsShader(const ShaderHandle& graphics_shader);
 
-            void BindVertexBuffer(ShaderHandle graphics_shader, ResourceHandle resource_handle);
-            void BindIndexBuffer(ShaderHandle graphics_shader, ResourceHandle resource_handle);
+            void BindVertexBuffer(const ShaderHandle& graphics_shader, const ResourceHandle& resource_handle);
+            void BindIndexBuffer(const ShaderHandle& graphics_shader, const ResourceHandle& resource_handle);
 
-            void Draw(ShaderHandle graphics_shader);
+            void Draw(const ShaderHandle& graphics_shader);
 
             CompileShaderResult CompileShader(const ConstString& code, const ConstString& name, SHADER_KIND kind);
             void ReleaseCompiledShader(CompileShaderResult& shader_bytecode);

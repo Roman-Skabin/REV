@@ -159,12 +159,6 @@ void DeviceContext::StartFrame()
 
     graphics_list->RSSetScissorRects(1, &scissor_rect);
 
-    // Set RTV And DSV
-    graphics_list->OMSetRenderTargets(1,
-                                      &m_RTVCPUDescHandle,
-                                      false,
-                                      &m_DSVCPUDescHandle);
-
     // Set Resource Barriers
     D3D12_RESOURCE_BARRIER rt_barrier;
     rt_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -179,7 +173,7 @@ void DeviceContext::StartFrame()
     ds_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     ds_barrier.Transition.pResource   = m_DSBuffer;
     ds_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    ds_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    ds_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_READ;
     ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
     D3D12_RESOURCE_BARRIER begin_barriers[] = { rt_barrier, ds_barrier };
@@ -187,13 +181,8 @@ void DeviceContext::StartFrame()
 
     // Clear
     f32 clear_color[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
-    graphics_list->ClearRenderTargetView(m_RTVCPUDescHandle,
-                                         clear_color,
-                                         0, null);
-    graphics_list->ClearDepthStencilView(m_DSVCPUDescHandle,
-                                         D3D12_CLEAR_FLAG_DEPTH,
-                                         1.0f, 0,
-                                         0, null);
+    graphics_list->ClearRenderTargetView(m_RTVCPUDescHandle, clear_color, 0, null);
+    graphics_list->ClearDepthStencilView(m_DSVCPUDescHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, null);
 
     m_FrameStarted = true;
 }
@@ -219,7 +208,7 @@ void DeviceContext::EndFrame()
     ds_barrier.Transition.pResource   = m_DSBuffer;
     ds_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
     ds_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
-    ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    ds_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_READ;
 
     D3D12_RESOURCE_BARRIER end_barriers[] = { rt_barrier, ds_barrier };
     graphics_list->ResourceBarrier(cast(UINT, ArrayCount(end_barriers)), end_barriers);
@@ -277,6 +266,17 @@ void DeviceContext::WaitForGPU()
         u32 wait_result = WaitForSingleObjectEx(m_FenceEvent, INFINITE, false);
         REV_CHECK(wait_result == WAIT_OBJECT_0);
     }
+}
+
+u8 DeviceContext::GetFormatPlanesCount(DXGI_FORMAT format)
+{
+    D3D12_FEATURE_DATA_FORMAT_INFO data = {};
+    data.Format = format;
+
+    HRESULT error = m_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_INFO, &data, sizeof(D3D12_FEATURE_DATA_FORMAT_INFO));
+    REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+    return data.PlaneCount;
 }
 
 u8 DeviceContext::GetFormatPlanesCount(GPU::TEXTURE_FORMAT format)
@@ -611,7 +611,7 @@ void DeviceContext::CreateDepthBuffer()
     error = m_Device->CreateCommittedResource(&ds_heap_properties,
                                               D3D12_HEAP_FLAG_SHARED,
                                               &ds_resource_desc,
-                                              D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                                              D3D12_RESOURCE_STATE_DEPTH_READ,
                                               &ds_clear_value,
                                               IID_PPV_ARGS(&m_DSBuffer));
     REV_CHECK(CheckResultAndPrintMessages(error, this));
@@ -710,7 +710,7 @@ void DeviceContext::ResizeBuffers()
     error = m_Device->CreateCommittedResource(&ds_heap_properties,
                                               D3D12_HEAP_FLAG_SHARED,
                                               &ds_resource_desc,
-                                              D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                                              D3D12_RESOURCE_STATE_DEPTH_READ,
                                               &ds_clear_value,
                                               IID_PPV_ARGS(&m_DSBuffer));
     REV_CHECK(CheckResultAndPrintMessages(error, this));
@@ -733,6 +733,11 @@ void DeviceContext::SetFullscreenMode(bool set)
         HRESULT error = m_SwapChain->SetFullscreenState(set, null);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
+        // @NOTE(Roman): For Windows Store apps for the flip presentation model,
+        //               after you transition the display state to full screen,
+        //               you must call ResizeBuffers to ensure that your call
+        //               to IDXGISwapChain1::Present1 succeeds.
+    #if 0
         if (set)
         {
             m_ActualRTSize = m_Window->Size();
@@ -745,6 +750,10 @@ void DeviceContext::SetFullscreenMode(bool set)
             ResizeBuffers();
             m_Fullscreen = false;
         }
+    #else
+        m_Fullscreen = set;
+        m_FirstFrame = true;
+    #endif
     }
 }
 

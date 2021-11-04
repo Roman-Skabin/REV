@@ -21,18 +21,14 @@ namespace REV
         ASSET_KIND_MESH,     // @Incomplete(Roman): Meshes are not supported yet.
     };
 
-    #ifndef ASSET_HANDLE_DEFINED
-    #define ASSET_HANDLE_DEFINED
-        struct AssetHandle
-        {
-            u64  index   = REV_INVALID_U64_INDEX;
-            bool _static = false;
+    struct AssetHandle
+    {
+        u64  index   = REV_INVALID_U64_INDEX;
+        bool _static = false;
 
-            REV_INLINE operator bool() const { return index != REV_INVALID_U64_INDEX; }
-        };
-    #endif
+        REV_INLINE operator bool() const { return index != REV_INVALID_U64_INDEX; }
+    };
 
-    // @Cleanup(Roman)
     struct Asset
     {
         ASSET_KIND kind;

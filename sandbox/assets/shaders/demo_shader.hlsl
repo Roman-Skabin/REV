@@ -3,7 +3,7 @@ cbuffer DemoSceneCB : register(b0, space0)
     float4x4 cMVP;
     float4   cSunColor;
     float3   cCenter;
-    uint     entity_id;
+    uint     cEntityID;
 };
 
 struct DemoSceneVB
@@ -33,7 +33,16 @@ VSOutput VSMain(DemoSceneVB vbuffer)
     return output;
 }
 
-float4 PSMain(PSInput input) : SV_Target
+struct PSOutput
 {
-    return WoodTexture.Sample(TextureSampler, input.tex_coord);
+    float4 color      : SV_Target0;
+    uint   mouse_pick : SV_Target1;
+};
+
+PSOutput PSMain(PSInput input)
+{
+    PSOutput output;
+    output.color      = WoodTexture.Sample(TextureSampler, input.tex_coord);
+    output.mouse_pick = cEntityID;
+    return output;
 }

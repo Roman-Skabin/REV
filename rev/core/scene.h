@@ -6,11 +6,7 @@
 
 #pragma once
 
-#include "graphics/shader_manager.h"
-#include "math/vec.h"
-#include "tools/const_string.h"
-#include "tools/static_string.hpp"
-#include "core/allocator.h"
+#include "asset_manager/asset_manager.h"
 
 namespace REV
 {

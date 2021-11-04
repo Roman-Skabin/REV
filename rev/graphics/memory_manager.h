@@ -16,36 +16,41 @@ namespace REV { class GraphicsAPI; }
 
 namespace REV::GPU
 {
-    // @TODO(Roman): Add RTVs and DSVs?
     enum RESOURCE_KIND : u32
     {
         RESOURCE_KIND_UNKNOWN = 0,
 
-        RESOURCE_KIND_VERTEX_BUFFER     = 1,
-        RESOURCE_KIND_INDEX_BUFFER      = 2,
-        RESOURCE_KIND_CONSTANT_BUFFER   = 3, // @NOTE(Roman): CBV
-        RESOURCE_KIND_READ_ONLY_BUFFER  = 4, // @NOTE(Roman): SRV
-        RESOURCE_KIND_READ_WRITE_BUFFER = 5, // @NOTE(Roman): UAV
+        RESOURCE_KIND_VERTEX_BUFFER,
+        RESOURCE_KIND_INDEX_BUFFER,
+        RESOURCE_KIND_CONSTANT_BUFFER, // @NOTE(Roman): CBV
+        RESOURCE_KIND_BUFFER,
 
-        RESOURCE_KIND_READ_ONLY_TEXTURE  = 6, // @NOTE(Roman): SRV
-        RESOURCE_KIND_READ_WRITE_TEXTURE = 7, // @NOTE(Roman): UAV
+        RESOURCE_KIND_TEXTURE,
 
-        RESOURCE_KIND_SAMPLER = 8,
-
-        RESOURCE_KIND_STATIC = 0x80000000,
+        RESOURCE_KIND_SAMPLER,
     };
-    REV_ENUM_OPERATORS(RESOURCE_KIND);
+
+    enum RESOURCE_FLAG : u32
+    {
+        RESOURCE_FLAG_NONE          = 0,
+        RESOURCE_FLAG_STATIC        = 1 << 0,
+        RESOURCE_FLAG_CPU_READ      = 1 << 1,
+        RESOURCE_FLAG_CPU_WRITE     = 1 << 2,
+        RESOURCE_FLAG_RENDER_TARGET = 1 << 3,
+    };
+    REV_ENUM_OPERATORS(RESOURCE_FLAG);
 
     struct ResourceHandle final
     {
         u64           index = REV_INVALID_U64_INDEX;
         RESOURCE_KIND kind  = RESOURCE_KIND_UNKNOWN;
+        RESOURCE_FLAG flags = RESOURCE_FLAG_NONE;
 
         REV_INLINE operator bool() const { return index != REV_INVALID_U64_INDEX; }
     };
 
-    REV_INLINE bool operator==(const ResourceHandle& left, const ResourceHandle& right) { return left.index == right.index && left.kind == right.kind; }
-    REV_INLINE bool operator!=(const ResourceHandle& left, const ResourceHandle& right) { return left.index != right.index || left.kind != right.kind; }
+    REV_INLINE bool operator==(const ResourceHandle& left, const ResourceHandle& right) { return left.index == right.index && left.kind == right.kind && left.flags == right.flags; }
+    REV_INLINE bool operator!=(const ResourceHandle& left, const ResourceHandle& right) { return left.index != right.index || left.kind != right.kind || left.flags != right.flags; }
 
     enum BUFFER_FORMAT : u32
     {
@@ -176,20 +181,27 @@ namespace REV::GPU
         //               Vulkan (SPIR-V): uniform buffer, std140;
         ResourceHandle AllocateConstantBuffer(u32 bytes, bool _static, const ConstString& name = null);
         // @NOTE(Roman): D3D12 (HLSL):
-        //                   if (BUFFER_FORMAT == BUFFER_FORMAT_UNKNOWN)
+        //                   if (format == BUFFER_FORMAT_UNKNOWN)
         //                       if (stride) StructuredBuffer;
         //                       else        ByteAddressBuffer;
+        //                   else if (flags & RESOURCE_FLAG_RENDER_TARGET)
+        //                       Render Target;
         //                   else
         //                       Buffer;
         //               Vulkan (SPIR-V):
-        //                   if (cpu_read_access) uniform buffer, std430;
-        //                   else                 storage buffer, std430;
-        ResourceHandle AllocateBuffer(u32 bytes, u32 stride, BUFFER_FORMAT format, bool cpu_read_access, bool _static, const ConstString& name = null);
+        //                   /**/ if (cpu_read_access)                     uniform buffer, std430;
+        //                   else if (flags & RESOURCE_FLAG_RENDER_TARGET) frame buffer;
+        //                   else                                          storage buffer, std430;
+        ResourceHandle AllocateBuffer(u32 bytes, u32 stride, BUFFER_FORMAT format, RESOURCE_FLAG flags, const ConstString& name = null);
 
-        ResourceHandle AllocateTexture(u16 width, u16 height, u16 depth, u16 mip_levels, RESOURCE_KIND kind, TEXTURE_FORMAT texture_format, const ConstString& name);
-        ResourceHandle AllocateTextureArray(u16 width, u16 height, u16 count, u16 mip_levels, RESOURCE_KIND kind, TEXTURE_FORMAT texture_format, const ConstString& name);
-        ResourceHandle AllocateTextureCube(u16 width, u16 height, u16 mip_levels, RESOURCE_KIND kind, TEXTURE_FORMAT texture_format, const ConstString& name);
-        ResourceHandle AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, RESOURCE_KIND kind, TEXTURE_FORMAT texture_format, const ConstString& name);
+        ResourceHandle AllocateTexture1D(u16   width,                        u16 mip_levels, TEXTURE_FORMAT format, RESOURCE_FLAG flags, const ConstString& name);
+        ResourceHandle AllocateTexture2D(u16   width, u16 height,            u16 mip_levels, TEXTURE_FORMAT format, RESOURCE_FLAG flags, const ConstString& name);
+        ResourceHandle AllocateTexture3D(u16   width, u16 height, u16 depth, u16 mip_levels, TEXTURE_FORMAT format, RESOURCE_FLAG flags, const ConstString& name);
+        ResourceHandle AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, TEXTURE_FORMAT format, RESOURCE_FLAG flags, const ConstString& name);
+
+        ResourceHandle AllocateTexture1DArray(u16   width,             u16 count, u16 mip_levels, TEXTURE_FORMAT format, RESOURCE_FLAG flags, const ConstString& name);
+        ResourceHandle AllocateTexture2DArray(u16   width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT format, RESOURCE_FLAG flags, const ConstString& name);
+        ResourceHandle AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, TEXTURE_FORMAT format, RESOURCE_FLAG flags, const ConstString& name);
 
         ResourceHandle AllocateSampler(TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static);
 
@@ -199,7 +211,16 @@ namespace REV::GPU
         void SetBufferDataImmediately(const ResourceHandle& resource, const void *data);
         void SetTextureDataImmediately(const ResourceHandle& resource, const TextureData *data);
 
-        void CopyDefaultResourcesToReadBackResources(const ConstArray<ResourceHandle>& read_write_resources);
+        void ClearResource(const ResourceHandle& resource);
+        void ClearResourceImmediately(const ResourceHandle& resource);
+
+        void ResizeRenderTarget(ResourceHandle resource, u16 width, u16 height = 0, u16 depth = 0);
+
+        void PrepareBuffersToRead(const ConstArray<GPU::ResourceHandle>& resources);
+        void PrepareTexturesToRead(const ConstArray<GPU::ResourceHandle>& resources);
+
+        void PrepareBuffersToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources);
+        void PrepareTexturesToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources);
 
         // @NOTE(Roman): Zero copy return. Just a readback pointer.
         const void *GetBufferData(const ResourceHandle& resource) const;
@@ -213,40 +234,30 @@ namespace REV::GPU
         void FreeStaticMemory();
 
         // @NOTE(Roman): Are pushed onto frame arena.
-        ConstArray<GPU::ResourceHandle> GetReadWriteResources() const;
+        ConstArray<GPU::ResourceHandle> GetBuffersWithCPUReadAccess();
+        ConstArray<GPU::ResourceHandle> GetTexturesWithCPUReadAccess();
 
         static REV_INLINE bool IsBuffer(const ResourceHandle& resource)
         {
-            RESOURCE_KIND kind = resource.kind & ~RESOURCE_KIND_STATIC;
-            return kind == RESOURCE_KIND_VERTEX_BUFFER
-                || kind == RESOURCE_KIND_INDEX_BUFFER
-                || kind == RESOURCE_KIND_CONSTANT_BUFFER
-                || kind == RESOURCE_KIND_READ_ONLY_BUFFER
-                || kind == RESOURCE_KIND_READ_WRITE_BUFFER;
+            return resource.kind == RESOURCE_KIND_VERTEX_BUFFER
+                || resource.kind == RESOURCE_KIND_INDEX_BUFFER
+                || resource.kind == RESOURCE_KIND_CONSTANT_BUFFER
+                || resource.kind == RESOURCE_KIND_BUFFER;
         }
 
         static REV_INLINE bool IsTexture(const ResourceHandle& resource)
         {
-            RESOURCE_KIND kind = resource.kind & ~RESOURCE_KIND_STATIC;
-            return kind == RESOURCE_KIND_READ_ONLY_TEXTURE
-                || kind == RESOURCE_KIND_READ_WRITE_TEXTURE;
+            return resource.kind == RESOURCE_KIND_TEXTURE;
         }
 
         static REV_INLINE bool IsSampler(const ResourceHandle& resource)
         {
-            return (resource.kind & ~RESOURCE_KIND_STATIC) == RESOURCE_KIND_SAMPLER;
+            return resource.kind == RESOURCE_KIND_SAMPLER;
         }
 
         static REV_INLINE bool IsStatic(const ResourceHandle& resource)
         {
-            return resource.kind & RESOURCE_KIND_STATIC;
-        }
-
-        static REV_INLINE bool IsReadWriteResource(const ResourceHandle& resource)
-        {
-            RESOURCE_KIND kind = resource.kind & ~RESOURCE_KIND_STATIC;
-            return kind == RESOURCE_KIND_READ_WRITE_BUFFER
-                || kind == RESOURCE_KIND_READ_WRITE_TEXTURE;
+            return resource.flags & RESOURCE_FLAG_STATIC;
         }
 
     private:

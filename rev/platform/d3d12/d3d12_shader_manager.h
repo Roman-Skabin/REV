@@ -13,27 +13,44 @@
 
 namespace REV::D3D12
 {
-    struct CBV_SRV_UAV_Sampler_TableNode final
+    struct ResourcesTableNode final
     {
-        CBV_SRV_UAV_Sampler_TableNode *next          = null;
-        CBV_SRV_UAV_Sampler_TableNode *prev          = null;
-        GPU::ShaderResourceDesc        resoucre_desc;
+        ResourcesTableNode      *next = null;
+        ResourcesTableNode      *prev = null;
+        GPU::ShaderResourceDesc  resoucre_desc;
     };
 
-    struct CBV_SRV_UAV_Sampler_Table final
+    struct ResourcesTable final
     {
-        CBV_SRV_UAV_Sampler_TableNode *CBV_first     = null;
-        CBV_SRV_UAV_Sampler_TableNode *CBV_last      = null;
-        u64                            CBV_count     = 0;
-        CBV_SRV_UAV_Sampler_TableNode *SRV_first     = null;
-        CBV_SRV_UAV_Sampler_TableNode *SRV_last      = null;
-        u64                            SRV_count     = 0;
-        CBV_SRV_UAV_Sampler_TableNode *UAV_first     = null;
-        CBV_SRV_UAV_Sampler_TableNode *UAV_last      = null;
-        u64                            UAV_count     = 0;
-        CBV_SRV_UAV_Sampler_TableNode *sampler_first = null;
-        CBV_SRV_UAV_Sampler_TableNode *sampler_last  = null;
-        u64                            sampler_count = 0;
+        ResourcesTableNode *CBV_first     = null;
+        ResourcesTableNode *CBV_last      = null;
+        u64                 CBV_count     = 0;
+        ResourcesTableNode *SRV_first     = null;
+        ResourcesTableNode *SRV_last      = null;
+        u64                 SRV_count     = 0;
+        ResourcesTableNode *UAV_first     = null;
+        ResourcesTableNode *UAV_last      = null;
+        u64                 UAV_count     = 0;
+        ResourcesTableNode *RTV_first     = null;
+        ResourcesTableNode *RTV_last      = null;
+        u64                 RTV_count     = 0;
+        ResourcesTableNode *sampler_first = null;
+        ResourcesTableNode *sampler_last  = null;
+        u64                 sampler_count = 0;
+    };
+
+    struct DescriptorHeapTable final
+    {
+        ID3D12DescriptorHeap        *CBV_SRV_UAV_desc_heap;
+        u32                          CBV_SRV_UAV_desc_size;
+        D3D12_GPU_DESCRIPTOR_HANDLE  CBV_SRV_UAV_gpu_desc_handle;
+        D3D12_CPU_DESCRIPTOR_HANDLE  CBV_SRV_UAV_cpu_desc_handle;
+
+        ID3D12DescriptorHeap        *RTV_desc_heap;
+        D3D12_CPU_DESCRIPTOR_HANDLE  RTV_cpu_desc_handle;
+
+        ID3D12DescriptorHeap        *sampler_desc_heap;
+        D3D12_GPU_DESCRIPTOR_HANDLE  sampler_gpu_desc_handle;
     };
 
     struct GraphicsShader final
@@ -41,18 +58,14 @@ namespace REV::D3D12
         ID3DBlob                    *signature;
         ID3D12RootSignature         *root_signature;
         ID3D12PipelineState         *pipeline_state;
-        CBV_SRV_UAV_Sampler_Table    bound_resources;
         GPU::ResourceHandle          index_buffer;
         ID3DBlob                    *vertex_shader;
         ID3DBlob                    *pixel_shader;
         ID3DBlob                    *hull_shader;
         ID3DBlob                    *domain_shader;
         ID3DBlob                    *geometry_shader;
-        ID3D12DescriptorHeap        *cbv_srv_uav_desc_heap;
-        u32                          cbv_srv_uav_desc_size;
-        D3D12_GPU_DESCRIPTOR_HANDLE  cbv_srv_uav_gpu_desc_handle;
-        ID3D12DescriptorHeap        *sampler_desc_heap;
-        D3D12_GPU_DESCRIPTOR_HANDLE  sampler_gpu_desc_handle;
+        ResourcesTable               bound_resources;
+        DescriptorHeapTable          desc_heap_table;
         bool                         _static;
     };
 
@@ -61,13 +74,9 @@ namespace REV::D3D12
         ID3DBlob                    *signature;
         ID3D12RootSignature         *root_signature;
         ID3D12PipelineState         *pipeline_state;
-        CBV_SRV_UAV_Sampler_Table    bound_resources;
         ID3DBlob                    *shader;
-        ID3D12DescriptorHeap        *cbv_srv_uav_desc_heap;
-        u32                          cbv_srv_uav_desc_heap_size;
-        D3D12_CPU_DESCRIPTOR_HANDLE  cbv_srv_uav_desc_heap_cpu_desc_handle;
-        D3D12_GPU_DESCRIPTOR_HANDLE  cbv_srv_uav_desc_heap_gpu_desc_handle;
-        ID3D12DescriptorHeap        *sampler_desc_heap;
+        ResourcesTable               bound_resources;
+        DescriptorHeapTable          desc_heap_table;
         bool                         _static;
     };
 
@@ -83,7 +92,7 @@ namespace REV::D3D12
 
         void SetCurrentGraphicsShader(const GraphicsShader& graphics_shader);
 
-        void BindVertexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource);
+        void BindVertexBuffer(const GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource);
         void BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource);
 
         void Draw(const GraphicsShader& graphics_shader);
@@ -126,7 +135,8 @@ namespace REV::D3D12
     private:
         void LoadShaderCache(GraphicsShader *graphics_shader, const ConstString& shader_cache_filename);
         void InitBoundResources(GraphicsShader *graphics_shader, const ConstArray<GPU::ShaderResourceDesc>& resources);
-        void CreateDescHeapsAndViews(GraphicsShader *graphics_shader);
+        void CreateDescHeaps(GraphicsShader *graphics_shader);
+        void CreateViews(GraphicsShader *graphics_shader);
         ConstArray<D3D12_ROOT_PARAMETER> CreateRootSignatureParameters(GraphicsShader *graphics_shader);
         void CreateRootSignature(GraphicsShader *graphics_shader, const D3D12_ROOT_SIGNATURE_DESC& root_signature_desc);
         void CreatePipelineState(GraphicsShader *graphics_shader, const D3D12_INPUT_LAYOUT_DESC& input_layout, bool blending_enabled, D3D12_CULL_MODE cull_mode, bool depth_test_enabled);

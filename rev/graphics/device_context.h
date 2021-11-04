@@ -33,6 +33,8 @@ namespace REV::GPU
 
         bool FrameStarted();
 
+        Math::v2s REV_VECTORCALL RTSize();
+
     private:
         void SetFullscreenMode(bool set);
 

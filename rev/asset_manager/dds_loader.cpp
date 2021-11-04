@@ -394,10 +394,9 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         REV_ERROR_M("Unhandled DDS texture format");
     }
 
-    GPU::RESOURCE_KIND  resource_kind = GPU::RESOURCE_KIND_READ_ONLY_TEXTURE
-                                      | (_static ? GPU::RESOURCE_KIND_STATIC : GPU::RESOURCE_KIND_UNKNOWN);
-    u16                 mipmap_count  = (dds_header->caps.caps1 & CAPS1_MIPMAP) ? cast(u16, dds_header->mipmap_count) : 1;
-    GPU::TextureData   *texture_data  = null;
+    GPU::RESOURCE_FLAG  resource_flags = GPU::RESOURCE_FLAG_CPU_WRITE | (_static ? GPU::RESOURCE_FLAG_STATIC : GPU::RESOURCE_FLAG_NONE);
+    u16                 mipmap_count   = (dds_header->caps.caps1 & CAPS1_MIPMAP) ? cast(u16, dds_header->mipmap_count) : 1;
+    GPU::TextureData   *texture_data   = null;
 
     if (dx10_header)
     {
@@ -408,13 +407,13 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                 REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
                 REV_CHECK(dx10_header->array_size == 1);
 
-                asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
-                                                                 cast(u16, dds_header->height),
-                                                                 cast(u16, dds_header->depth),
-                                                                 mipmap_count,
-                                                                 resource_kind,
-                                                                 texture_format,
-                                                                 name);
+                asset->texture = memory_manager->AllocateTexture3D(cast(u16, dds_header->width),
+                                                                   cast(u16, dds_header->height),
+                                                                   cast(u16, dds_header->depth),
+                                                                   mipmap_count,
+                                                                   texture_format,
+                                                                   resource_flags,
+                                                                   name);
 
                 texture_data = GPU::CreateVolumeTextureData(data.Data() + data_offset,
                                                             mipmap_count,
@@ -437,19 +436,19 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                                                                                   cast(u16, dds_header->height),
                                                                                   cast(u16, dx10_header->array_size),
                                                                                   mipmap_count,
-                                                                                  resource_kind,
                                                                                   texture_format,
+                                                                                  resource_flags,
                                                                                   name);
                     }
                     else
                     {
-                        asset->texture = memory_manager->AllocateTextureArray(cast(u16, dds_header->width),
-                                                                              cast(u16, dds_header->height),
-                                                                              cast(u16, dx10_header->array_size),
-                                                                              mipmap_count,
-                                                                              resource_kind,
-                                                                              texture_format,
-                                                                              name);
+                        asset->texture = memory_manager->AllocateTexture2DArray(cast(u16, dds_header->width),
+                                                                                cast(u16, dds_header->height),
+                                                                                cast(u16, dx10_header->array_size),
+                                                                                mipmap_count,
+                                                                                texture_format,
+                                                                                resource_flags,
+                                                                                name);
                     }
                 }
                 else
@@ -462,24 +461,32 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                         asset->texture = memory_manager->AllocateTextureCube(cast(u16, dds_header->width),
                                                                              cast(u16, dds_header->height),
                                                                              mipmap_count,
-                                                                             resource_kind,
                                                                              texture_format,
+                                                                             resource_flags,
                                                                              name);
                     }
                     else
                     {
-                        asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
-                                                                         cast(u16, dds_header->height),
-                                                                         0,
-                                                                         mipmap_count,
-                                                                         resource_kind,
-                                                                         texture_format,
-                                                                         name);
+                        asset->texture = memory_manager->AllocateTexture2D(cast(u16, dds_header->width),
+                                                                           cast(u16, dds_header->height),
+                                                                           mipmap_count,
+                                                                           texture_format,
+                                                                           resource_flags,
+                                                                           name);
                     }
                 }
 
-                REV_CHECK(dx10_header->array_size > 0);
+                REV_CHECK(dx10_header->array_size >= 1);
                 if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
+                {
+                    texture_data = GPU::CreateTextureData(data.Data() + data_offset,
+                                                          mipmap_count,
+                                                          6 * dx10_header->array_size,
+                                                          dds_header->width,
+                                                          dds_header->height,
+                                                          texture_format);
+                }
+                else
                 {
                     texture_data = GPU::CreateTextureData(data.Data() + data_offset,
                                                           mipmap_count,
@@ -494,23 +501,20 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
             {
                 if (dx10_header->array_size > 1)
                 {
-                    asset->texture = memory_manager->AllocateTextureArray(cast(u16, dds_header->width),
-                                                                          0,
-                                                                          cast(u16, dx10_header->array_size),
-                                                                          mipmap_count,
-                                                                          resource_kind,
-                                                                          texture_format,
-                                                                          name);
+                    asset->texture = memory_manager->AllocateTexture1DArray(cast(u16, dds_header->width),
+                                                                            cast(u16, dx10_header->array_size),
+                                                                            mipmap_count,
+                                                                            texture_format,
+                                                                            resource_flags,
+                                                                            name);
                 }
                 else
                 {
-                    asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
-                                                                     0,
-                                                                     0,
-                                                                     mipmap_count,
-                                                                     resource_kind,
-                                                                     texture_format,
-                                                                     name);
+                    asset->texture = memory_manager->AllocateTexture1D(cast(u16, dds_header->width),
+                                                                       mipmap_count,
+                                                                       texture_format,
+                                                                       resource_flags,
+                                                                       name);
                 }
 
                 REV_CHECK(dx10_header->array_size > 0);
@@ -534,13 +538,13 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         {
             REV_CHECK(dds_header->caps.caps2 & CAPS2_VOLUME);
 
-            asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
-                                                             cast(u16, dds_header->height),
-                                                             cast(u16, dds_header->depth),
-                                                             mipmap_count,
-                                                             resource_kind,
-                                                             texture_format,
-                                                             name);
+            asset->texture = memory_manager->AllocateTexture3D(cast(u16, dds_header->width),
+                                                               cast(u16, dds_header->height),
+                                                               cast(u16, dds_header->depth),
+                                                               mipmap_count,
+                                                               texture_format,
+                                                               resource_flags,
+                                                               name);
 
             texture_data = GPU::CreateVolumeTextureData(data.Data() + data_offset,
                                                         mipmap_count,
@@ -556,8 +560,8 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
             asset->texture = memory_manager->AllocateTextureCube(cast(u16, dds_header->width),
                                                                  cast(u16, dds_header->height),
                                                                  mipmap_count,
-                                                                 resource_kind,
                                                                  texture_format,
+                                                                 resource_flags,
                                                                  name);
 
             texture_data = GPU::CreateTextureData(data.Data() + data_offset,
@@ -569,14 +573,13 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         }
         else
         {
-            asset->texture = memory_manager->AllocateTexture(cast(u16, dds_header->width),
-                                                             cast(u16, dds_header->height),
-                                                             0,
-                                                             mipmap_count,
-                                                             resource_kind,
-                                                             texture_format,
-                                                             name);
-            
+            asset->texture = memory_manager->AllocateTexture2D(cast(u16, dds_header->width),
+                                                               cast(u16, dds_header->height),
+                                                               mipmap_count,
+                                                               texture_format,
+                                                               resource_flags,
+                                                               name);
+
             texture_data = GPU::CreateTextureData(data.Data() + data_offset,
                                                   mipmap_count,
                                                   1,
@@ -584,7 +587,6 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                                                   dds_header->height,
                                                   texture_format);
         }
-
     }
 
     memory_manager->SetTextureData(asset->texture, texture_data);

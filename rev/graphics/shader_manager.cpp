@@ -36,7 +36,7 @@ ShaderHandle ShaderManager::CreateGraphicsShader(
     return handle;
 }
 
-void ShaderManager::SetCurrentGraphicsShader(ShaderHandle graphics_shader)
+void ShaderManager::SetCurrentGraphicsShader(const ShaderHandle& graphics_shader)
 {
     switch (GraphicsAPI::GetAPI())
     {
@@ -52,7 +52,7 @@ void ShaderManager::SetCurrentGraphicsShader(ShaderHandle graphics_shader)
     }
 }
 
-void ShaderManager::BindVertexBuffer(ShaderHandle graphics_shader, ResourceHandle resource_handle)
+void ShaderManager::BindVertexBuffer(const ShaderHandle& graphics_shader, const ResourceHandle& resource_handle)
 {
     switch (GraphicsAPI::GetAPI())
     {
@@ -68,7 +68,7 @@ void ShaderManager::BindVertexBuffer(ShaderHandle graphics_shader, ResourceHandl
     }
 }
 
-void ShaderManager::BindIndexBuffer(ShaderHandle graphics_shader, ResourceHandle resource_handle)
+void ShaderManager::BindIndexBuffer(const ShaderHandle& graphics_shader, const ResourceHandle& resource_handle)
 {
     switch (GraphicsAPI::GetAPI())
     {
@@ -84,7 +84,7 @@ void ShaderManager::BindIndexBuffer(ShaderHandle graphics_shader, ResourceHandle
     }
 }
 
-void ShaderManager::Draw(ShaderHandle graphics_shader)
+void ShaderManager::Draw(const ShaderHandle& graphics_shader)
 {
     switch (GraphicsAPI::GetAPI())
     {

@@ -120,6 +120,25 @@ bool DeviceContext::FrameStarted()
     return false;
 }
 
+Math::v2s REV_VECTORCALL DeviceContext::RTSize()
+{
+    Math::v2s rt_size;
+
+    switch (GraphicsAPI::GetAPI())
+    {
+        case GraphicsAPI::API::D3D12:
+        {
+            rt_size = cast(D3D12::DeviceContext *, platform)->RTSize();
+        } break;
+
+        case GraphicsAPI::API::VULKAN:
+        {
+        } break;
+    }
+
+    return rt_size;
+}
+
 void DeviceContext::SetFullscreenMode(bool set)
 {
     switch (GraphicsAPI::GetAPI())

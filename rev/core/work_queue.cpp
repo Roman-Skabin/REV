@@ -49,28 +49,27 @@ WorkQueue::WorkQueue(const Logger& logger, Arena& arena, u64 max_simultaneous_wo
     logger.LogSuccess("Work queue has been created. Additional threads count: ", m_ThreadsCount);
 }
 
+WorkQueue::WorkQueue(WorkQueue&& other)
+{
+    other.Lock();
+    other.Wait();
+    CopyMemory(this, &other, sizeof(WorkQueue));
+    other.m_Semaphore = null;
+    other.Unlock();
+}
+
 WorkQueue::~WorkQueue()
 {
-    Wait();
-
-    void **end = m_Threads + m_ThreadsCount;
-    for (void **thread = m_Threads; thread < end; ++thread)
+    if (m_Semaphore)
     {
-        REV_DEBUG_RESULT(TerminateThread(*thread, EXIT_SUCCESS));
-        REV_DEBUG_RESULT(CloseHandle(*thread));
+        Wait();
+        Destroy();
     }
-    m_Threads = null;
-
-    Windows::NTSTATUS status = Windows::NtClose(m_Semaphore);
-    REV_CHECK(status == STATUS_SUCCESS);
-    m_Semaphore = null;
-
-    m_Works = null;
 }
 
 void WorkQueue::AddWork(const Function<void()>& proc)
 {
-    while (true)
+    while (m_Semaphore)
     {
         Work *current_works_add_it = m_WorksAddIterator;
         Work *next_works_add_it    = m_Works + ((current_works_add_it - m_Works + 1) % m_WorksCount);
@@ -79,6 +78,8 @@ void WorkQueue::AddWork(const Function<void()>& proc)
         {
             if (current_works_add_it == _InterlockedCompareExchangePointer(cast(void *volatile *, &m_WorksAddIterator), next_works_add_it, current_works_add_it))
             {
+                while (current_works_add_it->flags & WORK_FLAG_LOCKED);
+
                 _InterlockedOr(cast(volatile s32 *, &current_works_add_it->flags), WORK_FLAG_IS_CHANGING);
                 current_works_add_it->proc = proc;
                 _InterlockedAnd(cast(volatile s32 *, &current_works_add_it->flags), ~WORK_FLAG_IS_CHANGING);
@@ -119,6 +120,62 @@ void WorkQueue::Wait()
                 _InterlockedDecrement64(&m_WorksToDo);
             }
         }
+    }
+}
+
+WorkQueue& WorkQueue::operator=(WorkQueue&& other)
+{
+    if (this != &other)
+    {
+        Lock();
+        other.Lock();
+
+        Wait();
+        other.Wait();
+
+        Destroy();
+
+        CopyMemory(this, &other, sizeof(WorkQueue));
+        other.m_Semaphore = null;
+
+        Unlock();
+        other.Unlock();
+    }
+    return *this;
+}
+
+void WorkQueue::Destroy()
+{
+    void **end = m_Threads + m_ThreadsCount;
+    for (void **thread = m_Threads; thread < end; ++thread)
+    {
+        REV_DEBUG_RESULT(TerminateThread(*thread, EXIT_SUCCESS));
+        REV_DEBUG_RESULT(CloseHandle(*thread));
+    }
+    m_Threads = null;
+
+    Windows::NTSTATUS status = Windows::NtClose(m_Semaphore);
+    REV_CHECK(status == STATUS_SUCCESS);
+    m_Semaphore = null;
+
+    m_Works = null;
+}
+
+void WorkQueue::Lock()
+{
+    Work *works_end = m_Works + m_WorksCount;
+    for (Work *work = m_Works; work < works_end; ++work)
+    {
+        _InterlockedOr(cast(volatile s32 *, &work->flags), WORK_FLAG_LOCKED);
+    }
+}
+
+void WorkQueue::Unlock()
+{
+    Work *works_end = m_Works + m_WorksCount;
+    for (Work *work = m_Works; work < works_end; ++work)
+    {
+        _InterlockedAnd(cast(volatile s32 *, &work->flags), ~WORK_FLAG_LOCKED);
     }
 }
 

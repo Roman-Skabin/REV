@@ -15,18 +15,6 @@ namespace REV
     class REV_API WorkQueue final
     {
     public:
-        WorkQueue(const Logger& logger, Arena& arena, u64 max_simultaneous_works = 16);
-        ~WorkQueue();
-
-        void AddWork(const Function<void()>& proc);
-        void Wait();
-
-    private:
-        friend u32 REV_STDCALL ThreadProc(void *arg);
-
-        REV_DELETE_CONSTRS_AND_OPS(WorkQueue);
-
-    private:
         enum : u64
         {
             MIN_THREADS =   4 - 1,
@@ -35,12 +23,33 @@ namespace REV
             MIN_WORKS   = MIN_THREADS + 1,
         };
 
-    public:
         enum WORK_FLAG : s32
         {
             WORK_FLAG_NONE         = 0,
             WORK_FLAG_IS_CHANGING  = 1 << 0,
+            WORK_FLAG_LOCKED       = 1 << 1,
         };
+
+    public:
+        WorkQueue(const Logger& logger, Arena& arena, u64 max_simultaneous_works = 16);
+        WorkQueue(WorkQueue&& other);
+
+        ~WorkQueue();
+
+        void AddWork(const Function<void()>& proc);
+        void Wait();
+
+        WorkQueue& operator=(WorkQueue&& other);
+
+    private:
+        void Destroy();
+        void Lock();
+        void Unlock();
+
+        friend u32 REV_STDCALL ThreadProc(void *arg);
+
+        WorkQueue(const WorkQueue&)            = delete;
+        WorkQueue& operator=(const WorkQueue&) = delete;
 
     private:
         struct Work

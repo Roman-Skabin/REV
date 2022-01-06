@@ -8,14 +8,14 @@ project "sandbox"
     symbolspath "%{prj.targetdir}/%{prj.name}.pdb"
     includedirs
     {
-        "%{wks.location}/rev",
+        "%{wks.location}/engine",
         "%{prj.location}"
     }
 
     kind "ConsoleApp"
 
-    dependson "rev"
-    links     "rev"
+    dependson "engine"
+    links     "engine"
 
     language   "C++"
     cppdialect "C++17"

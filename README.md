@@ -1,11 +1,11 @@
 # REV
 
 ## What I am working on right now:
-* Extending asset manager with more texture formats to load
-* Writing loader for mesh files (some Blender's output files)
+* Custom shaders
+* Common render stuff: different render pipelines, render graph, render pass
+* Tiled forward (forward+) rendering
 * Fixing bags
-* Removing/rewriting "bad code"
-* Also working on tools
+* Also working on tools (Hash tables, strings, ...)
 
 ## More detailed version:
 * [see here](TODO.txt)

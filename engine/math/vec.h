@@ -111,7 +111,7 @@ union REV_INTRIN_TYPE v2 final
     #elif REV_ISA >= REV_ISA_AVX2
         return _mm_maskload_ps(e, _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0));
     #else
-        return _mm_setr_ps(s.x, s.y, 0, 0);
+        return _mm_setr_ps(x, y, 0.0f, 0.0f);
     #endif
     }
 
@@ -210,7 +210,7 @@ union REV_INTRIN_TYPE v2s final
     #elif REV_ISA >= REV_ISA_AVX2
         return _mm_maskload_epi32(cast(const int *, e), _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0));
     #else
-        return _mm_setr_epi32(s.x, s.y, 0, 0);
+        return _mm_setr_epi32(x, y, 0, 0);
     #endif
     }
 
@@ -310,7 +310,7 @@ union REV_INTRIN_TYPE v2u final
     #elif REV_ISA >= REV_ISA_AVX2
         return _mm_maskload_epi32(cast(const int *, e), _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, 0, 0));
     #else
-        return _mm_setr_epi32(s.x, s.y, 0, 0);
+        return _mm_setr_epi32(x, y, 0, 0);
     #endif
     }
 
@@ -649,7 +649,7 @@ union REV_INTRIN_TYPE v3s final
     #elif REV_ISA >= REV_ISA_AVX2
         return _mm_maskload_epi32(cast(const int *, e), _mm_setr_epi32(REV_U32_MAX, REV_U32_MAX, REV_U32_MAX, 0));
     #else
-        return _mm_setr_epi32(x, y, z, 0.0f);
+        return _mm_setr_epi32(x, y, z, 0);
     #endif
     }
 

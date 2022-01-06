@@ -5,7 +5,7 @@
     - Single namespace for everything? (get rid of Math and GPU namespaces)
     - Minimize number of system calls // @Optimization
     - Mesh files
-    - Max view distance in settings? (max LOD & far)
+    - Several adapters support? (NVidia has gotten rid of SLI so shall we?)
 
 - Tools
     - Wait for multiple events
@@ -23,19 +23,17 @@
 - Git
     - Custom commit/push scripts with tags checks like Jon's nocheckin
 
-- GPU
-    - Several adapters support? (NVidia has gotten rid of SLI so shall we?)
-    - Cross platform shaders?
+- Custom shaders
+    - Resource hooks.
+    - Hot reload.
+    - Smarter includes.
 
 - Graphics
     - static samplers, (constants?)
     - Forward Rendering
     - Multisampling
     - Add Root Signature v1.1 specific settings.
-    - Switch from 1 to 3 Render Targets for OIT
-    - Weighted Blended OIT
-    - Support triangle strips (define topology in shaders?). Probably needs for batch rendering.
-    - Support stream output (define it in shaders too?)
+    - Support triangle strips.
     - Meshes
     - PBR?
     - SubTextures

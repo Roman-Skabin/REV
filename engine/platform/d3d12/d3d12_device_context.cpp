@@ -129,7 +129,8 @@ void DeviceContext::StartFrame()
     ID3D12CommandAllocator    *graphics_allocator = m_GraphicsAllocators[m_CurrentBuffer];
     ID3D12GraphicsCommandList *graphics_list      = m_GraphicsLists[m_CurrentBuffer];
 
-    WaitForGPU();
+    // @Cleanup(Roman): Waiting for the swap chain should be enogh.
+    // WaitForGPU();
 
     u32 wait_result = WaitForSingleObjectEx(m_WaitableObject, INFINITE, false);
     REV_CHECK(wait_result == WAIT_OBJECT_0);

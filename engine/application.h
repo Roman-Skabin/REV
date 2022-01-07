@@ -73,6 +73,7 @@ namespace REV
         Timer         m_Timer;
         SceneBase    *m_CurrentScene;
         AssetManager *m_AssetManager;
+        ForwardPlusPipeline m_ForwardPlusPipeline;
 
     private:
         static Application *s_Application;

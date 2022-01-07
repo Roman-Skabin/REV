@@ -350,17 +350,16 @@ void ShaderManager::BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::
 
 void ShaderManager::Draw(const GraphicsShader& graphics_shader)
 {
-    DeviceContext *device_context = cast(DeviceContext *, GraphicsAPI::GetDeviceContext());
-    MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
+    DeviceContext             *device_context = cast(DeviceContext *, GraphicsAPI::GetDeviceContext());
+    MemoryManager             *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
+    ID3D12GraphicsCommandList *graphics_list  = device_context->CurrentGraphicsList();
 
     Buffer& buffer = memory_manager->GetBuffer(graphics_shader.index_buffer);
-    device_context->CurrentGraphicsList()->DrawIndexedInstanced(cast(u32, buffer.actual_size / buffer.stride), 1, 0, 0, 0);
+    graphics_list->DrawIndexedInstanced(cast(u32, buffer.actual_size / buffer.stride), 1, 0, 0, 0);
 
     u64 barriers_capacity = graphics_shader.bound_resources.RTV_count + graphics_shader.bound_resources.UAV_count;
     if (barriers_capacity)
     {
-        ID3D12GraphicsCommandList *graphics_list = device_context->CurrentGraphicsList();
-
         D3D12_RESOURCE_BARRIER *barriers    = Memory::Get()->PushToFA<D3D12_RESOURCE_BARRIER>(barriers_capacity);
         D3D12_RESOURCE_BARRIER *barriers_it = barriers;
 

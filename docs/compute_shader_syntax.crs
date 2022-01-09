@@ -1,0 +1,24 @@
+pipeline
+{
+	cs_entry  = CSMain;
+	cs_target = 5.0;
+};
+
+#include "path/to/shader.crs"
+
+Sampler SamplerName { ... };
+
+// @NOTE(Roman): const = CBV, readonly = SRV, nothing = UAV.
+[const | readonly] Buffer<StructOrTypeNameOrNothing> BufferName;
+[const | readonly] Texture(1D | 2D | 3D | Cube | 1DArray | 2DArray | CubeArray)<StructOrTypeNameOrNothing> TextureName;
+
+typedef type1 type2;
+
+[numthreads(x, y, z)]
+void CSMain(in uint3 threadID : SV_DispatchThreadID) { ... }
+
+// single line comment
+
+/* multi
+line
+comment */

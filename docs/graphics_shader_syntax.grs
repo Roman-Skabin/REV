@@ -1,0 +1,43 @@
+pipeline
+{
+    topology       = POINT | LINE | TRIANGLE (default) | TRIANGLE_STRIP;
+    fill_mode      = SOLID (default) | WIREFRAME;
+    cull_mode      = NONE (default) | FRONT | BACK;
+    multi_sampling = true | false (default);
+    depth_test     = true (default) | false;
+    stencil_test   = true | false (default);
+    vs_entry       = VSMain;
+    vs_target      = 5.0;
+    ps_entry       = PSMain;
+    ps_target      = 5.0;
+
+    // @TODO(Roman): more settings
+};
+
+#include "path/to/shader.grs"
+
+struct VSInput  { ... };
+struct VSOutput { ... };
+
+Sampler SamplerName;
+
+// @Important(Roman):
+//     HLSL: Buffer:           sizeof(type) <= 4*32 bits.
+//           RawBuffer:        has no type in <>.
+//           StructuredBuffer: has sturct type in <>.
+//           
+
+// @NOTE(Roman): const = CBV, readonly = SRV, nothing = UAV.
+[const | readonly] Buffer<StructOrTypeNameOrNothing> BufferName;
+[const | readonly] Texture(1D | 2D | 3D | Cube | 1DArray | 2DArray | CubeArray)<StructOrTypeNameOrNothing> TextureName;
+
+typedef type1 type2;
+
+VSOutput VSMain(in VSInput  input) { ... }
+PSOutput PSMain(in VSOutput input) { ... }
+
+// single line comment
+
+/* multi
+line
+comment */

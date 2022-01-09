@@ -557,90 +557,30 @@ ResourceHandle MemoryManager::AllocateSampler(TEXTURE_ADDRESS_MODE address_mode,
     return handle;
 }
 
-void MemoryManager::SetBufferData(const ResourceHandle& resource, const void *data)
+void MemoryManager::LoadResources(const ConstArray<GPU::ResourceHandle>& resources)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast(D3D12::MemoryManager *, platform)->SetBufferData(resource, data);
+            cast(D3D12::MemoryManager *, platform)->LoadResources(resources);
         } break;
-
+        
         case GraphicsAPI::API::VULKAN:
         {
         } break;
     }
 }
 
-void MemoryManager::SetTextureData(const ResourceHandle& resource, const TextureData *data)
+void MemoryManager::StoreResources(const ConstArray<GPU::ResourceHandle>& resources)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast(D3D12::MemoryManager *, platform)->SetTextureData(resource, data);
+            cast(D3D12::MemoryManager *, platform)->StoreResources(resources);
         } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::SetBufferDataImmediately(const ResourceHandle& resource, const void *data)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->SetBufferDataImmediately(resource, data);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::SetTextureDataImmediately(const ResourceHandle& resource, const TextureData *data)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->SetTextureDataImmediately(resource, data);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::ClearResource(const ResourceHandle& resource)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->ClearResource(resource);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::ClearResourceImmediately(const ResourceHandle& resource)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->ClearResourceImmediately(resource);
-        } break;
-
+        
         case GraphicsAPI::API::VULKAN:
         {
         } break;
@@ -654,66 +594,6 @@ void MemoryManager::ResizeRenderTarget(ResourceHandle resource, u16 width, u16 h
         case GraphicsAPI::API::D3D12:
         {
             cast(D3D12::MemoryManager *, platform)->ResizeRenderTarget(resource, width, height, depth);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::PrepareBuffersToRead(const ConstArray<GPU::ResourceHandle>& resources)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->PrepareBuffersToRead(resources);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::PrepareTexturesToRead(const ConstArray<GPU::ResourceHandle>& resources)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->PrepareTexturesToRead(resources);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::PrepareBuffersToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->PrepareBuffersToReadImmediately(resources);
-        } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::PrepareTexturesToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources)
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->PrepareTexturesToReadImmediately(resources);
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -741,6 +621,21 @@ const void *MemoryManager::GetBufferData(const ResourceHandle& resource) const
     return data;
 }
 
+void MemoryManager::SetBufferData(const ResourceHandle& resource, const void *data)
+{
+    switch (GraphicsAPI::GetAPI())
+    {
+        case GraphicsAPI::API::D3D12:
+        {
+            cast(D3D12::MemoryManager *, platform)->SetBufferData(resource, data);
+        } break;
+        
+        case GraphicsAPI::API::VULKAN:
+        {
+        } break;
+    }
+}
+
 TextureData *MemoryManager::GetTextureData(const ResourceHandle& resource) const
 {
     TextureData *data = null;
@@ -760,30 +655,15 @@ TextureData *MemoryManager::GetTextureData(const ResourceHandle& resource) const
     return data;
 }
 
-void MemoryManager::StartImmediateExecution()
+void MemoryManager::SetTextureData(const ResourceHandle& resource, const TextureData *data)
 {
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast(D3D12::MemoryManager *, platform)->StartImmediateExecution();
+            cast(D3D12::MemoryManager *, platform)->SetTextureData(resource, data);
         } break;
-
-        case GraphicsAPI::API::VULKAN:
-        {
-        } break;
-    }
-}
-
-void MemoryManager::EndImmediateExecution()
-{
-    switch (GraphicsAPI::GetAPI())
-    {
-        case GraphicsAPI::API::D3D12:
-        {
-            cast(D3D12::MemoryManager *, platform)->EndImmediateExecution();
-        } break;
-
+        
         case GraphicsAPI::API::VULKAN:
         {
         } break;
@@ -820,42 +700,61 @@ void MemoryManager::FreeStaticMemory()
     }
 }
 
-ConstArray<GPU::ResourceHandle> MemoryManager::GetBuffersWithCPUReadAccess()
+ConstString MemoryManager::GetResourceName(const ResourceHandle& resource)
 {
-    ConstArray<ResourceHandle> resoucres = null;
-
+    ConstString name = null;
+    
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
-            resoucres = cast(D3D12::MemoryManager *, platform)->GetBuffersWithCPUReadAccess();
+            name = cast(D3D12::MemoryManager *, platform)->GetResourceName();
         } break;
-
+        
         case GraphicsAPI::API::VULKAN:
         {
         } break;
     }
-
-    return resoucres;
+    
+    return name;
 }
 
-ConstArray<GPU::ResourceHandle> MemoryManager::GetTexturesWithCPUReadAccess()
+ConstString MemoryManager::GetBufferName(const ResourceHandle& resource)
 {
-    ConstArray<ResourceHandle> resoucres = null;
-
+    ConstString name = null;
+    
     switch (GraphicsAPI::GetAPI())
     {
         case GraphicsAPI::API::D3D12:
         {
-            resoucres = cast(D3D12::MemoryManager *, platform)->GetTexturesWithCPUReadAccess();
+            name = cast(D3D12::MemoryManager *, platform)->GetBufferName();
         } break;
-
+        
         case GraphicsAPI::API::VULKAN:
         {
         } break;
     }
+    
+    return name;
+}
 
-    return resoucres;
+ConstString MemoryManager::GetTextureName(const ResourceHandle& resource)
+{
+    ConstString name = null;
+    
+    switch (GraphicsAPI::GetAPI())
+    {
+        case GraphicsAPI::API::D3D12:
+        {
+            name = cast(D3D12::MemoryManager *, platform)->GetTextureName();
+        } break;
+        
+        case GraphicsAPI::API::VULKAN:
+        {
+        } break;
+    }
+    
+    return name;
 }
 
 }

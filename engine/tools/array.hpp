@@ -11,6 +11,7 @@
 
 namespace REV
 {
+    // @TODO(Roman): Grow factor
     template<typename T>
     class Array final
     {

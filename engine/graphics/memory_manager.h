@@ -36,7 +36,10 @@ namespace REV::GPU
         RESOURCE_FLAG_STATIC        = 1 << 0,
         RESOURCE_FLAG_CPU_READ      = 1 << 1,
         RESOURCE_FLAG_CPU_WRITE     = 1 << 2,
-        RESOURCE_FLAG_RENDER_TARGET = 1 << 3,
+        RESOURCE_FLAG_GPU_WRITE     = 1 << 3, // @Important(Roman): Do not combine with RESOURCE_FLAG_RENDER_TARGET nor with RESOURCE_FLAG_DEPTH_STENCIL
+                                              // @NOTE(Roman): D3D12 = UAV, Vulkan = storage buffer
+        RESOURCE_FLAG_RENDER_TARGET = 1 << 4, // @Important(Roman): Do not combine with RESOURCE_FLAG_DEPTH_STENCIL nor with RESOURCE_FLAG_SHADER_WRITE
+        RESOURCE_FLAG_DEPTH_STENCIL = 1 << 5, // @Important(Roman): Do not combine with RESOURCE_FLAG_RENDER_TARGET nor with RESOURCE_FLAG_SHADER_WRITE
     };
     REV_ENUM_OPERATORS(RESOURCE_FLAG);
 
@@ -172,26 +175,39 @@ namespace REV::GPU
         TEXTURE_ADDRESS_MODE_MIRROR_ONCE,
     };
 
+    // @NOTE(Roman): 
+    //               +-----------------------------+------------------------------+
+    //               |            D3D12            |             Vulkan           |
+    //               +-----------------------------+------------------------------+
+    //               | ConstantBuffer       (CBV)  | Uniform Buffer, std140       |
+    //               | TextureBuffer        (SRV?) | Storage Buffer, std430       | // No 256 bytes alignment => std430 => storage blocks
+    //               | Buffer               (SRV?) | Storage Texel Buffer, std430 | // No 256 bytes alignment => std430 => storage blocks
+    //               | StructuredBuffer     (SRV?) | Storage Buffer, std430       | // No 256 bytes alignment => std430 => storage blocks
+    //               | ByteAddressBuffer    (SRV?) | Storage Buffer, std430       | // No 256 bytes alignment => std430 => storage blocks
+    //               | RWBuffer             (UAV)  | Storage Texel Buffer, std430 |
+    //               | RWStructuredBuffer   (UAV)  | Storage Buffer, std430       |
+    //               | RWByteAddressBuffer  (UAV)  | Storage Buffer, std430       |
+    //               | Texture[*D*|Cube*]   (SRV)  | Sampled Image                |
+    //               | RWTexture[*D*|Cube*] (UAV)  | Storage Image                |
+    //               +-----------------------------+------------------------------+
     class REV_API REV_NOVTABLE MemoryManager final
     {
     public:
         ResourceHandle AllocateVertexBuffer(u32 count, bool _static, const ConstString& name = null);
         ResourceHandle AllocateIndexBuffer(u32 count, bool _static, const ConstString& name = null);
-        // @NOTE(Roman): D3D12 (HLSL):    cbuffer or ConstantBuffer;
-        //               Vulkan (SPIR-V): uniform buffer, std140;
+        // @NOTE(Roman): D3D12 (HLSL):
+        //                   ConstantBuffer or cbuffer;
+        //               Vulkan (SPIR-V):
+        //                   uniform buffer, std140;
         ResourceHandle AllocateConstantBuffer(u32 bytes, bool _static, const ConstString& name = null);
         // @NOTE(Roman): D3D12 (HLSL):
         //                   if (format == BUFFER_FORMAT_UNKNOWN)
-        //                       if (stride) StructuredBuffer;
-        //                       else        ByteAddressBuffer;
-        //                   else if (flags & RESOURCE_FLAG_RENDER_TARGET)
-        //                       Render Target;
+        //                       if (stride) [RW]StructuredBuffer or tbuffer;
+        //                       else        [RW]ByteAddressBuffer;
         //                   else
-        //                       Buffer;
+        //                       [RW]Buffer, <= 32 bytes;
         //               Vulkan (SPIR-V):
-        //                   /**/ if (cpu_read_access)                     uniform buffer, std430;
-        //                   else if (flags & RESOURCE_FLAG_RENDER_TARGET) frame buffer;
-        //                   else                                          storage buffer, std430;
+        //                   storage buffer, std430;
         ResourceHandle AllocateBuffer(u32 bytes, u32 stride, BUFFER_FORMAT format, RESOURCE_FLAG flags, const ConstString& name = null);
 
         ResourceHandle AllocateTexture1D(u16   width,                        u16 mip_levels, TEXTURE_FORMAT format, RESOURCE_FLAG flags, const ConstString& name);
@@ -205,37 +221,25 @@ namespace REV::GPU
 
         ResourceHandle AllocateSampler(TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static);
 
-        void SetBufferData(const ResourceHandle& resource, const void *data);
-        void SetTextureData(const ResourceHandle& resource, const TextureData *data);
-
-        void SetBufferDataImmediately(const ResourceHandle& resource, const void *data);
-        void SetTextureDataImmediately(const ResourceHandle& resource, const TextureData *data);
-
-        void ClearResource(const ResourceHandle& resource);
-        void ClearResourceImmediately(const ResourceHandle& resource);
+        void LoadResources(const ConstArray<GPU::ResourceHandle>& resources);
+        void StoreResources(const ConstArray<GPU::ResourceHandle>& resources);
 
         void ResizeRenderTarget(ResourceHandle resource, u16 width, u16 height = 0, u16 depth = 0);
 
-        void PrepareBuffersToRead(const ConstArray<GPU::ResourceHandle>& resources);
-        void PrepareTexturesToRead(const ConstArray<GPU::ResourceHandle>& resources);
-
-        void PrepareBuffersToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources);
-        void PrepareTexturesToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources);
-
         // @NOTE(Roman): Zero copy return. Just a readback pointer.
         const void *GetBufferData(const ResourceHandle& resource) const;
+        void SetBufferData(const ResourceHandle& resource, const void *data);
+
         // @NOTE(Roman): Is pushed onto frame arena.
         TextureData *GetTextureData(const ResourceHandle& resource) const;
-
-        void StartImmediateExecution();
-        void EndImmediateExecution();
+        void SetTextureData(const ResourceHandle& resource, const TextureData *data);
 
         void FreeSceneMemory();
         void FreeStaticMemory();
 
-        // @NOTE(Roman): Are pushed onto frame arena.
-        ConstArray<GPU::ResourceHandle> GetBuffersWithCPUReadAccess();
-        ConstArray<GPU::ResourceHandle> GetTexturesWithCPUReadAccess();
+        ConstString GetResourceName(const ResourceHandle& resource);
+        ConstString GetBufferName(const ResourceHandle& resource);
+        ConstString GetTextureName(const ResourceHandle& resource);
 
         static REV_INLINE bool IsBuffer(const ResourceHandle& resource)
         {

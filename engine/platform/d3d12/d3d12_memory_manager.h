@@ -210,37 +210,25 @@ namespace REV::D3D12
 
         u64 AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static);
 
-        void SetBufferData(const GPU::ResourceHandle& resource, const void *data);
-        void SetTextureData(const GPU::ResourceHandle& resource, const GPU::TextureData *data);
-
-        void SetBufferDataImmediately(const GPU::ResourceHandle& resource, const void *data);
-        void SetTextureDataImmediately(const GPU::ResourceHandle& resource, const GPU::TextureData *data);
-
-        void ClearResource(const GPU::ResourceHandle& resource);
-        void ClearResourceImmediately(const GPU::ResourceHandle& resource);
+        void LoadResources(const ConstArray<GPU::ResourceHandle>& resources);
+        void StoreResources(const ConstArray<GPU::ResourceHandle>& resources);
 
         void ResizeRenderTarget(GPU::ResourceHandle resource, u16 width, u16 height, u16 depth);
 
-        void PrepareBuffersToRead(const ConstArray<GPU::ResourceHandle>& resources);
-        void PrepareTexturesToRead(const ConstArray<GPU::ResourceHandle>& resources);
-
-        void PrepareBuffersToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources);
-        void PrepareTexturesToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources);
-
         // @NOTE(Roman): Zero copy return. Just a readback pointer.
         const void *GetBufferData(const GPU::ResourceHandle& resource);
+        void SetBufferData(const GPU::ResourceHandle& resource, const void *data);
+
         // @NOTE(Roman): Is pushed onto frame arena.
         GPU::TextureData *GetTextureData(const GPU::ResourceHandle& resource);
-
-        void StartImmediateExecution();
-        void EndImmediateExecution();
+        void SetTextureData(const GPU::ResourceHandle& resource, const GPU::TextureData *data);
 
         void FreeSceneMemory();
         void FreeStaticMemory();
 
-        // @NOTE(Roman): Are pushed onto frame arena.
-        ConstArray<GPU::ResourceHandle> GetBuffersWithCPUReadAccess();
-        ConstArray<GPU::ResourceHandle> GetTexturesWithCPUReadAccess();
+        ConstString GetResourceName(const GPU::ResourceHandle& resource);
+        ConstString GetBufferName(const ResourceHandle& resource);
+        ConstString GetTextureName(const ResourceHandle& resource);
 
         #pragma region inline_getters
         REV_INLINE Allocator *GetAllocator() { return m_Allocator; }
@@ -312,13 +300,8 @@ namespace REV::D3D12
         Buffer  *AllocateBuffer(u64 size, DXGI_FORMAT format, D3D12_RESOURCE_STATES initial_state, GPU::RESOURCE_FLAG flags, u64& index, const ConstString& name);
         Texture *AllocateTexture(TEXTURE_DIMENSION dimension, const D3D12_RESOURCE_DESC& desc, GPU::RESOURCE_FLAG flags, u8 planes_count, u64& index, const ConstString& name);
 
-        void UploadBufferData(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource, const void *data);
-        void UploadTextureData(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource, const GPU::TextureData *data);
-
-        void ClearResource(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource);
-
-        void PrepareBuffersToRead(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources);
-        void PrepareTexturesToRead(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources);
+        void UploadResources(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources);
+        void ReadbackResources(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources);
 
         void SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, GPU::RESOURCE_FLAG flags, const ConstString& name);
         void SetTextureName(TextureMemory *texture_memory, Texture *texture, GPU::RESOURCE_FLAG flags, const ConstString& name);
@@ -328,13 +311,9 @@ namespace REV::D3D12
         REV_DELETE_CONSTRS_AND_OPS(MemoryManager);
 
     private:
-        Allocator                 *m_Allocator;
-        DeviceContext             *m_DeviceContext;
-        ID3D12CommandAllocator    *m_CommandAllocator;
-        ID3D12GraphicsCommandList *m_CommandList;
-        ID3D12Fence               *m_Fence;
-        HANDLE                     m_FenceEvent;
-        ResourceMemory             m_StaticMemory;
-        ResourceMemory             m_SceneMemory;
+        Allocator      *m_Allocator;
+        DeviceContext  *m_DeviceContext;
+        ResourceMemory  m_StaticMemory;
+        ResourceMemory  m_SceneMemory;
     };
 }

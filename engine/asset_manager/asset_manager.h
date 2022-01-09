@@ -90,6 +90,9 @@ namespace REV
 
         const Asset *GetAsset(const GPU::ResourceHandle& resource) const;
               Asset *GetAsset(const GPU::ResourceHandle& resource);
+        
+        const Asset *GetAsset(const GPU::ShaderHandle& shader) const;
+              Asset *GetAsset(const GPU::ShaderHandle& shader);
 
         void MakeFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET_KIND kind, const ConstString& asset_name);
         void MakeCacheFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET_KIND kind, const ConstString& asset_name);

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include "graphics/render_pass.h"
+#include "graphics/render_graph.h"
 
 namespace REV
 {
@@ -16,14 +16,18 @@ namespace REV
         ForwardPlusPipeline(Allocator *allocator);
         ~ForwardPlusPipeline();
 
-        void AddStaticPass(RenderPassBase *render_pass);
-        void AddScenePass(RenderPassBase *render_pass);
+        RenderPass *EnableRenderPass(RENDER_PASS_KIND kind);
+        RenderPass *GetRenderPass(RENDER_PASS_KIND kind);
+
+        void ResetPasses();
 
         void Render();
 
     private:
-        Array<RenderPassBase *> m_StaticPasses;
-        Array<RenderPassBase *> m_ScenePasses;
-        RenderGraph             m_RenderGraph;
+        ConstArray<RenderPass *> CollectEnabledPasses();
+    
+    private:
+        RenderGraph m_RenderGraph;
+        RenderPass  m_RenderPasses[RENDER_PASS_KIND_MAX];
     };
 }

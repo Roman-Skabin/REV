@@ -50,12 +50,30 @@ namespace REV
             REV_INLINE operator bool() const { return index != REV_INVALID_U64_INDEX; }
         };
 
+        REV_INLINE bool operator==(const ShaderHandle& left, const ShaderHandle& right) { return left.index == right.index && left._static == right._static; }
+        REV_INLINE bool operator!=(const ShaderHandle& left, const ShaderHandle& right) { return left.index != right.index || left._static != right._static; }
+
+        enum DSV_CLEAR_FLAG : u32
+        {
+            DSV_CLEAR_FLAG_NONE    = 0,
+            DSV_CLEAR_FLAG_DEPTH   = 1 << 0,
+            DSV_CLEAR_FLAG_STENCIL = 1 << 1,
+        };
+        REV_ENUM_OPERATORS(DSV_CLEAR_FLAG);
+
+        enum UAV_CLEAR_OP : u32
+        {
+            UAV_CLEAR_OP_NONE,
+            UAV_CLEAR_OP_FLOAT,
+            UAV_CLEAR_OP_UINT,
+        };
+
         // @NOTE(Roman): This is NOT a descriptor for a SRV.
         //               It's just a descriptor for all the resoucres used in a shader.
         //               e.g. constant buffers, read(-write) buffers, read(-write) textures, samplers, render targets.
         struct ShaderResourceDesc
         {
-            GPU::ResourceHandle resource;
+            ResourceHandle resource;
             union
             {
                 struct
@@ -66,12 +84,19 @@ namespace REV
                 struct
                 {
                     Math::v4 rtv_clear_color;
+                    bool     rtv_clear;
                 };
                 struct
                 {
-                    u32  uav_shader_register;
-                    u32  uav_register_space;
-                    bool uav_is_cleared_with_floats;
+                    DSV_CLEAR_FLAG dsv_clear_flags;
+                    float          dsv_depth_clear_value;
+                    u8             dsv_stencil_clear_value;
+                };
+                struct
+                {
+                    u32          uav_shader_register;
+                    u32          uav_register_space;
+                    UAV_CLEAR_OP uav_clear_op;
                     union
                     {
                         Math::v4  uav_float_clear_color;
@@ -80,35 +105,119 @@ namespace REV
                 };
             };
 
-            REV_INLINE ShaderResourceDesc(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space)
-                : resource(resource), cbv_srv_sampler_shader_register(shader_register), cbv_srv_sampler_register_space(register_space)
-            {}
-
-            REV_INLINE ShaderResourceDesc(const GPU::ResourceHandle& resource, Math::v4 clear_color)
-                : resource(resource), rtv_clear_color(clear_color)
-            {}
-
-            REV_INLINE ShaderResourceDesc(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space, Math::v4 clear_color)
-                : resource(resource), uav_shader_register(shader_register), uav_register_space(register_space), uav_is_cleared_with_floats(true), uav_float_clear_color(clear_color)
-            {}
-
-            REV_INLINE ShaderResourceDesc(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space, Math::v4u clear_color)
-                : resource(resource), uav_shader_register(shader_register), uav_register_space(register_space), uav_is_cleared_with_floats(false), uav_uint_clear_color(clear_color)
-            {}
-
-            REV_INLINE ShaderResourceDesc(const ShaderResourceDesc& other)
+            static REV_INLINE ShaderResourceDesc CBV(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space)
             {
-                CopyMemory(this, &other, sizeof(GPU::ResourceHandle));
+                ShaderResourceDesc desc;
+                desc.resource                        = resource;
+                desc.cbv_srv_sampler_shader_register = shader_register;
+                desc.cbv_srv_sampler_register_space  = register_space;
+                return desc;
             }
 
-            REV_INLINE ShaderResourceDesc& operator=(const ShaderResourceDesc& other)
+            static REV_INLINE ShaderResourceDesc SRV(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space)
             {
-                if (this != &other)
-                {
-                    CopyMemory(this, &other, sizeof(GPU::ResourceHandle));
-                }
-                return *this;
+                ShaderResourceDesc desc;
+                desc.resource                        = resource;
+                desc.cbv_srv_sampler_shader_register = shader_register;
+                desc.cbv_srv_sampler_register_space  = register_space;
+                return desc;
             }
+
+            static REV_INLINE ShaderResourceDesc Sampler(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space)
+            {
+                ShaderResourceDesc desc;
+                desc.resource                        = resource;
+                desc.cbv_srv_sampler_shader_register = shader_register;
+                desc.cbv_srv_sampler_register_space  = register_space;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc RTV(const GPU::ResourceHandle& resource)
+            {
+                ShaderResourceDesc desc;
+                desc.resource  = resource;
+                desc.rtv_clear = false;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc REV_VECTORCALL RTV(const GPU::ResourceHandle& resource, Math::v4 clear_color)
+            {
+                ShaderResourceDesc desc;
+                desc.resource        = resource;
+                desc.rtv_clear_color = clear_color;
+                desc.rtv_clear       = true;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc DSV(const GPU::ResourceHandle& resource)
+            {
+                ShaderResourceDesc desc;
+                desc.resource        = resource;
+                desc.dsv_clear_flags = DSV_CLEAR_FLAG_NONE;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc DSV(const GPU::ResourceHandle& resource, float depth_clear_value)
+            {
+                ShaderResourceDesc desc;
+                desc.resource              = resource;
+                desc.dsv_clear_flags       = DSV_CLEAR_FLAG_DEPTH;
+                dsec.dsv_depth_clear_value = depth_clear_value;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc DSV(const GPU::ResourceHandle& resource, u8 stencil_clear_value)
+            {
+                ShaderResourceDesc desc;
+                desc.resource                = resource;
+                desc.dsv_clear_flags         = DSV_CLEAR_FLAG_STENCIL;
+                desc.dsv_stencil_clear_value = stencil_clear_value;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc DSV(const GPU::ResourceHandle& resource, float depth_clear_value, u8 stencil_clear_value)
+            {
+                ShaderResourceDesc desc;
+                desc.resource                = resource;
+                desc.dsv_clear_flags         = DSV_CLEAR_FLAG_DEPTH | DSV_CLEAR_FLAG_STENCIL;
+                dsec.dsv_depth_clear_value   = depth_clear_value;
+                desc.dsv_stencil_clear_value = stencil_clear_value;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc UAV(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space)
+            {
+                ShaderResourceDesc desc;
+                desc.resource            = resource;
+                desc.uav_shader_register = shader_register;
+                desc.uav_register_space  = register_space;
+                desc.uav_clear_op        = UAV_CLEAR_OP_NONE;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc REV_VECTORCALL UAV(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space, Math::v4 clear_color)
+            {
+                ShaderResourceDesc desc;
+                desc.resource              = resource;
+                desc.uav_shader_register   = shader_register;
+                desc.uav_register_space    = register_space;
+                desc.uav_clear_op          = UAV_CLEAR_OP_FLOAT;
+                desc.uav_float_clear_color = clear_color;
+                return desc;
+            }
+
+            static REV_INLINE ShaderResourceDesc REV_VECTORCALL UAV(const GPU::ResourceHandle& resource, u32 shader_register, u32 register_space, Math::v4u clear_color)
+            {
+                ShaderResourceDesc desc;
+                desc.resource             = resource;
+                desc.uav_shader_register  = shader_register;
+                desc.uav_register_space   = register_space;
+                desc.uav_clear_op         = UAV_CLEAR_OP_UINT;
+                desc.uav_uint_clear_color = clear_color;
+                return desc;
+            }
+
+            REV_INLINE operator bool() const { return resource; }
         };
 
         struct CompileShaderResult
@@ -117,7 +226,7 @@ namespace REV
             ConstArray<byte>  bytecode;
         };
 
-        class REV_API ShaderManager final
+        class REV_API REV_NOVTABLE ShaderManager final
         {
         public:
             ShaderHandle CreateGraphicsShader(
@@ -130,6 +239,9 @@ namespace REV
 
             void BindVertexBuffer(const ShaderHandle& graphics_shader, const ResourceHandle& resource_handle);
             void BindIndexBuffer(const ShaderHandle& graphics_shader, const ResourceHandle& resource_handle);
+
+            ConstArray<ResourceHandle> GetLoadableResources(const ShaderHandle& graphics_shader);
+            ConstArray<ResourceHandle> GetStorableResources(const ShaderHandle& graphics_shader);
 
             void Draw(const ShaderHandle& graphics_shader);
 

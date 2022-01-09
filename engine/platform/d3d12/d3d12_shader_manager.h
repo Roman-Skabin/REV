@@ -22,21 +22,22 @@ namespace REV::D3D12
 
     struct ResourcesTable final
     {
-        ResourcesTableNode *CBV_first     = null;
-        ResourcesTableNode *CBV_last      = null;
-        u64                 CBV_count     = 0;
-        ResourcesTableNode *SRV_first     = null;
-        ResourcesTableNode *SRV_last      = null;
-        u64                 SRV_count     = 0;
-        ResourcesTableNode *UAV_first     = null;
-        ResourcesTableNode *UAV_last      = null;
-        u64                 UAV_count     = 0;
-        ResourcesTableNode *RTV_first     = null;
-        ResourcesTableNode *RTV_last      = null;
-        u64                 RTV_count     = 0;
-        ResourcesTableNode *sampler_first = null;
-        ResourcesTableNode *sampler_last  = null;
-        u64                 sampler_count = 0;
+        ResourcesTableNode      *CBV_first     = null;
+        ResourcesTableNode      *CBV_last      = null;
+        u64                      CBV_count     = 0;
+        ResourcesTableNode      *SRV_first     = null;
+        ResourcesTableNode      *SRV_last      = null;
+        u64                      SRV_count     = 0;
+        ResourcesTableNode      *UAV_first     = null;
+        ResourcesTableNode      *UAV_last      = null;
+        u64                      UAV_count     = 0;
+        ResourcesTableNode      *RTV_first     = null;
+        ResourcesTableNode      *RTV_last      = null;
+        u64                      RTV_count     = 0;
+        GPU::ShaderResourceDesc  DSV;
+        ResourcesTableNode      *sampler_first = null;
+        ResourcesTableNode      *sampler_last  = null;
+        u64                      sampler_count = 0;
     };
 
     struct DescriptorHeapTable final
@@ -48,6 +49,9 @@ namespace REV::D3D12
 
         ID3D12DescriptorHeap        *RTV_desc_heap;
         D3D12_CPU_DESCRIPTOR_HANDLE  RTV_cpu_desc_handle;
+
+        ID3D12DescriptorHeap        *DSV_desc_heap;
+        D3D12_CPU_DESCRIPTOR_HANDLE  DSV_cpu_desc_handle;
 
         ID3D12DescriptorHeap        *sampler_desc_heap;
         D3D12_GPU_DESCRIPTOR_HANDLE  sampler_gpu_desc_handle;
@@ -94,6 +98,9 @@ namespace REV::D3D12
 
         void BindVertexBuffer(const GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource);
         void BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource);
+
+        ConstArray<GPU::ResourceHandle> GetLoadableResources(const GraphicsShader& graphics_shader);
+        ConstArray<GPU::ResourceHandle> GetStorableResources(const GraphicsShader& graphics_shader);
 
         void Draw(const GraphicsShader& graphics_shader);
 

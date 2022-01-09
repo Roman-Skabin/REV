@@ -18,43 +18,15 @@ namespace REV::D3D12
 MemoryManager::MemoryManager(Allocator *allocator)
     : m_Allocator(allocator),
       m_DeviceContext(cast(DeviceContext *, GraphicsAPI::GetDeviceContext())),
-      m_CommandAllocator(null),
-      m_CommandList(null),
-      m_Fence(null),
-      m_FenceEvent(null),
       m_StaticMemory(allocator),
       m_SceneMemory(allocator)
 {
-    HRESULT error = m_DeviceContext->Device()->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_CommandAllocator));
-    REV_CHECK(CheckResultAndPrintMessages(error));
-
-    error = m_DeviceContext->Device()->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator, null, IID_PPV_ARGS(&m_CommandList));
-    REV_CHECK(CheckResultAndPrintMessages(error));
-
-    error = m_CommandList->Close();
-    REV_CHECK(CheckResultAndPrintMessages(error));
-
-    error = m_DeviceContext->Device()->CreateFence(0, D3D12_FENCE_FLAG_SHARED, IID_PPV_ARGS(&m_Fence));
-    REV_CHECK(CheckResultAndPrintMessages(error));
-
-    REV_DEBUG_RESULT(m_FenceEvent = CreateEventExA(null, "REV::D3D12::MemoryManager Event", 0, EVENT_ALL_ACCESS));
 }
 
 MemoryManager::~MemoryManager()
 {
-    if (m_CommandAllocator)
-    {
-        FreeMemory(&m_SceneMemory);
-        FreeMemory(&m_StaticMemory);
-        SafeRelease(m_CommandAllocator);
-        SafeRelease(m_CommandList);
-        SafeRelease(m_Fence);
-        if (m_FenceEvent)
-        {
-            REV_DEBUG_RESULT(CloseHandle(m_FenceEvent));
-            m_FenceEvent = null;
-        }
-    }
+    FreeMemory(&m_SceneMemory);
+    FreeMemory(&m_StaticMemory);
 }
 
 REV_INTERNAL REV_INLINE DXGI_FORMAT REVToDXGIBufferFormat(GPU::BUFFER_FORMAT format, u32& size)
@@ -585,34 +557,14 @@ u64 MemoryManager::AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math:
     return sampler_index;
 }
 
-void MemoryManager::SetBufferData(const GPU::ResourceHandle& resource, const void *data)
+void MemoryManager::LoadResources(const ConstArray<GPU::ResourceHandle>& resources)
 {
-    UploadBufferData(m_DeviceContext->CurrentGraphicsList(), resource, data);
+    UploadResources(m_DeviceContext->CurrentGraphicsList(), resources);
 }
 
-void MemoryManager::SetTextureData(const GPU::ResourceHandle& resource, const GPU::TextureData *data)
+void MemoryManager::StoreResources(const ConstArray<GPU::ResourceHandle>& resources)
 {
-    UploadTextureData(m_DeviceContext->CurrentGraphicsList(), resource, data);
-}
-
-void MemoryManager::SetBufferDataImmediately(const GPU::ResourceHandle& resource, const void *data)
-{
-    UploadBufferData(m_CommandList, resource, data);
-}
-
-void MemoryManager::SetTextureDataImmediately(const GPU::ResourceHandle& resource, const GPU::TextureData *data)
-{
-    UploadTextureData(m_CommandList, resource, data);
-}
-
-void MemoryManager::ClearResource(const GPU::ResourceHandle& resource)
-{
-    ClearResource(m_DeviceContext->CurrentGraphicsList(), resource);
-}
-
-void MemoryManager::ClearResourceImmediately(const GPU::ResourceHandle& resource)
-{
-    ClearResource(m_CommandList, resource);
+    ReadbackResources(m_DeviceContext->CurrentGraphicsList(), resources);
 }
 
 void MemoryManager::ResizeRenderTarget(GPU::ResourceHandle resource, u16 width, u16 height, u16 depth)
@@ -743,26 +695,6 @@ void MemoryManager::ResizeRenderTarget(GPU::ResourceHandle resource, u16 width, 
     }
 }
 
-void MemoryManager::PrepareBuffersToRead(const ConstArray<GPU::ResourceHandle>& resources)
-{
-    PrepareBuffersToRead(m_DeviceContext->CurrentGraphicsList(), resources);
-}
-
-void MemoryManager::PrepareTexturesToRead(const ConstArray<GPU::ResourceHandle>& resources)
-{
-    PrepareTexturesToRead(m_DeviceContext->CurrentGraphicsList(), resources);
-}
-
-void MemoryManager::PrepareBuffersToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources)
-{
-    PrepareBuffersToRead(m_CommandList, resources);
-}
-
-void MemoryManager::PrepareTexturesToReadImmediately(const ConstArray<GPU::ResourceHandle>& resources)
-{
-    PrepareTexturesToRead(m_CommandList, resources);
-}
-
 const void *MemoryManager::GetBufferData(const GPU::ResourceHandle& resource)
 {
     REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
@@ -783,6 +715,21 @@ const void *MemoryManager::GetBufferData(const GPU::ResourceHandle& resource)
         const ReadBackBufferMemoryPage *readback_page = m_SceneMemory.buffer_memory.readback_pages.GetPointer(buffer->readback_page_index);
         return readback_page->cpu_mem + buffer->readback_page_offset;
     }
+}
+
+void MemoryManager::SetBufferData(const GPU::ResourceHandle& resource, const void *data)
+{
+    BufferMemory *buffer_memory = resource.flags & GPU::RESOURCE_FLAG_STATIC
+                                ? &m_StaticMemory.buffer_memory
+                                : &m_SceneMemory.buffer_memory;
+
+    Buffer *buffer = buffer_memory->buffers.GetPointer(resource.index);
+    REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE, "You are not able to upload data to \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
+
+    UploadBufferMemoryPage *upload_page = buffer_memory->upload_pages.GetPointer(buffer->upload_page_index);
+
+    if (data) CopyMemory(upload_page->cpu_mem + buffer->upload_page_offset, data, buffer->actual_size);
+    else      ZeroMemory(upload_page->cpu_mem + buffer->upload_page_offset,       buffer->actual_size);
 }
 
 GPU::TextureData *MemoryManager::GetTextureData(const GPU::ResourceHandle& resource)
@@ -827,35 +774,40 @@ GPU::TextureData *MemoryManager::GetTextureData(const GPU::ResourceHandle& resou
     return texture_data;
 }
 
-void MemoryManager::StartImmediateExecution()
+void MemoryManager::SetTextureData(const GPU::ResourceHandle& resource, const GPU::TextureData *texture_data)
 {
-    HRESULT error = m_CommandAllocator->Reset();
-    REV_CHECK(CheckResultAndPrintMessages(error));
-
-    error = m_CommandList->Reset(m_CommandAllocator, null);
-    REV_CHECK(CheckResultAndPrintMessages(error));
-}
-
-void MemoryManager::EndImmediateExecution()
-{
-    HRESULT error = m_CommandList->Close();
-    REV_CHECK(CheckResultAndPrintMessages(error));
-
-    ID3D12CommandList *command_lists[] = { m_CommandList };
-    m_DeviceContext->GraphicsQueue()->ExecuteCommandLists(cast(u32, ArrayCount(command_lists)), command_lists);
-
-    u64 fence_value = m_Fence->GetCompletedValue() + 1;
-
-    error = m_DeviceContext->GraphicsQueue()->Signal(m_Fence, fence_value);
-    REV_CHECK(CheckResultAndPrintMessages(error));
-
-    if (m_Fence->GetCompletedValue() < fence_value)
+    Texture *texture = &GetTexture(resource);
+    
+    REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE, "You are not able to upload data to \"%.*s\" texture", texture->name.Length(), texture->name.Data());
+    REV_CHECK(texture->planes_count == texture_data->planes_count);
+    
+    ID3D12Device *device = m_DeviceContext->Device();
+    
+    if (texture_data->surfaces_count)
     {
-        error = m_Fence->SetEventOnCompletion(fence_value, m_FenceEvent);
-        REV_CHECK(CheckResultAndPrintMessages(error));
-
-        u32 wait_result = WaitForSingleObjectEx(m_FenceEvent, INFINITE, false);
-        REV_CHECK(wait_result == WAIT_OBJECT_0);
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints = Memory::Get()->PushToFA<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>(texture_data->surfaces_count);
+        device->GetCopyableFootprints(&texture->default_gpu_mem->GetDesc(), 0, cast(u32, texture_data->surfaces_count), texture->first_subresource_offset, footprints, null, null, null);
+        
+        const GPU::TextureSurface *surfaces_end = texture_data->surfaces + texture_data->surfaces_count;
+        for (const GPU::TextureSurface *surface = texture_data->surfaces; surface < surfaces_end; ++surface)
+        {
+            byte *dest_surface = texture->upload_cpu_mem + footprints->Offset;
+            
+            u64 num_rows = surface->size_in_bytes / surface->row_bytes;
+            for (u64 row = 0; row < num_rows; ++row)
+            {
+                byte *dest_row = dest_surface  + footprints->Footprint.RowPitch * row;
+                byte *src_row  = surface->data + surface->row_bytes             * row;
+                
+                CopyMemory(dest_row, src_row, surface->row_bytes);
+            }
+            
+            ++footprints;
+        }
+    }
+    else
+    {
+        ZeroMemory(texture->upload_cpu_mem, texture->buffer_total_bytes);
     }
 }
 
@@ -869,90 +821,42 @@ void MemoryManager::FreeStaticMemory()
     FreeMemory(&m_StaticMemory);
 }
 
-ConstArray<GPU::ResourceHandle> MemoryManager::GetBuffersWithCPUReadAccess()
+ConstString MemoryManager::GetResourceName(const GPU::ResourceHandle& resource)
 {
-    u64 buffers_count = 0;
-    for (Buffer& buffer : m_SceneMemory.buffer_memory.buffers)  if (buffer.flags & GPU::RESOURCE_FLAG_CPU_READ) ++buffers_count;
-    for (Buffer& buffer : m_StaticMemory.buffer_memory.buffers) if (buffer.flags & GPU::RESOURCE_FLAG_CPU_READ) ++buffers_count;
+    ConstString name = null;
 
-    if (buffers_count)
+    if (GPU::MemoryManager::IsBuffer(resource))
     {
-        GPU::ResourceHandle *buffers    = Memory::Get()->PushToFA<GPU::ResourceHandle>(buffers_count);
-        GPU::ResourceHandle *buffers_it = buffers;
-
-        u64 index = 0;
-        for (const Buffer& buffer : m_SceneMemory.buffer_memory.buffers)
-        {
-            if (buffer.flags & GPU::RESOURCE_FLAG_CPU_READ)
-            {
-                buffers_it->index = index;
-                buffers_it->kind  = GPU::RESOURCE_KIND_BUFFER;
-                buffers_it->flags = buffer.flags;
-                buffers_it++;
-            }
-            ++index;
-        }
+        Buffer *buffer = GPU::MemoryManager::IsStatic(resource)
+                       ? m_StaticMemory.buffer_memory.buffers.GetPointer(resource.index)
+                       : m_SceneMemory.buffer_memory.buffers.GetPointer(resource.index);
     
-        index = 0;
-        for (const Buffer& buffer : m_StaticMemory.buffer_memory.buffers)
-        {
-            if (buffer.flags & GPU::RESOURCE_FLAG_CPU_READ)
-            {
-                buffers_it->index = index;
-                buffers_it->kind  = GPU::RESOURCE_KIND_BUFFER;
-                buffers_it->flags = buffer.flags;
-                buffers_it++;
-            }
-            ++index;
-        }
-
-        return ConstArray(buffers, buffers_count);
+        name = buffer->name.ToConstString();
+    }
+    else if (GPU::MemoryManager::IsTexture(resource))
+    {
+        Texture *texture = GPU::MemoryManager::IsStatic(resource)
+                         ? m_StaticMemory.texture_memory.textures.GetPointer(resource.index)
+                         : m_SceneMemory.texture_memory.textures.GetPointer(resource.index);
+    
+        name = texture->name.ToConstString();
+    }
+    else
+    {
+        REV_WARNING_M("Resource #%I64u is not a buffer nor a texture so it doesn't have a name");
     }
 
-    return null;
+    return name;
 }
 
-ConstArray<GPU::ResourceHandle> MemoryManager::GetTexturesWithCPUReadAccess()
+ConstString MemoryManager::GetBufferName(const ResourceHandle& resource)
 {
-    u64 textures_count = 0;
-    for (Texture& texture : m_SceneMemory.texture_memory.textures)  if (texture.flags & GPU::RESOURCE_FLAG_CPU_READ) ++textures_count;
-    for (Texture& texture : m_StaticMemory.texture_memory.textures) if (texture.flags & GPU::RESOURCE_FLAG_CPU_READ) ++textures_count;
+    return GetBuffer(resource).name.ToConstString();
+}
 
-    if (textures_count)
-    {
-        GPU::ResourceHandle *textures    = Memory::Get()->PushToFA<GPU::ResourceHandle>(textures_count);
-        GPU::ResourceHandle *textures_it = textures;
-
-        u64 index = 0;
-        for (Texture& texture : m_SceneMemory.texture_memory.textures)
-        {
-            if (texture.flags & GPU::RESOURCE_FLAG_CPU_READ)
-            {
-                textures_it->index = index;
-                textures_it->kind  = GPU::RESOURCE_KIND_TEXTURE;
-                textures_it->flags = texture.flags;
-                textures_it++;
-            }
-            ++index;
-        }
-
-        index = 0;
-        for (Texture& texture : m_StaticMemory.texture_memory.textures)
-        {
-            if (texture.flags & GPU::RESOURCE_FLAG_CPU_READ)
-            {
-                textures_it->index = index;
-                textures_it->kind  = GPU::RESOURCE_KIND_TEXTURE;
-                textures_it->flags = texture.flags;
-                textures_it++;
-            }
-            ++index;
-        }
-
-        return ConstArray(textures, textures_count);
-    }
-
-    return null;
+ConstString MemoryManager::GetTextureName(const ResourceHandle& resource)
+{
+    return GetTexture(resource).name.ToConstString();
 }
 
 Buffer *MemoryManager::AllocateBuffer(u64 size, DXGI_FORMAT format, D3D12_RESOURCE_STATES initial_state, GPU::RESOURCE_FLAG flags, u64& index, const ConstString& name)
@@ -1271,203 +1175,177 @@ Texture *MemoryManager::AllocateTexture(TEXTURE_DIMENSION dimension, const D3D12
     return texture;
 }
 
-void MemoryManager::UploadBufferData(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource, const void *data)
-{
-    BufferMemory *buffer_memory = (resource.flags & GPU::RESOURCE_FLAG_STATIC)
-                                ? &m_StaticMemory.buffer_memory
-                                : &m_SceneMemory.buffer_memory;
-
-    Buffer *buffer = buffer_memory->buffers.GetPointer(resource.index);
-    REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE, "You are not able to upload data to \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
-
-    DefaultBufferMemoryPage *default_page = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
-    UploadBufferMemoryPage  *upload_page  = buffer_memory->upload_pages.GetPointer(buffer->upload_page_index);
-
-    if (data) CopyMemory(upload_page->cpu_mem + buffer->upload_page_offset, data, buffer->actual_size);
-    else      ZeroMemory(upload_page->cpu_mem + buffer->upload_page_offset,       buffer->actual_size);
-
-    D3D12_RESOURCE_BARRIER resource_barrier;
-    resource_barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    resource_barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    resource_barrier.Transition.pResource   = default_page->gpu_mem;
-    resource_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    resource_barrier.Transition.StateBefore = default_page->initial_state;
-    resource_barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
-
-    command_list->ResourceBarrier(1, &resource_barrier);
-
-    command_list->CopyBufferRegion(default_page->gpu_mem, buffer->default_page_offset, upload_page->gpu_mem, buffer->upload_page_offset, buffer->actual_size);
-
-    resource_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-    resource_barrier.Transition.StateAfter  = default_page->initial_state;
-
-    command_list->ResourceBarrier(1, &resource_barrier);
-}
-
-void MemoryManager::UploadTextureData(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource, const GPU::TextureData *texture_data)
-{
-    Texture *texture = &GetTexture(resource);
-
-    REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE, "You are not able to upload data to \"%.*s\" texture", texture->name.Length(), texture->name.Data());
-    REV_CHECK(texture->planes_count == texture_data->planes_count);
-
-    ID3D12Device *device = m_DeviceContext->Device();
-
-    if (texture_data->surfaces_count)
-    {
-        D3D12_TEXTURE_COPY_LOCATION dest_location;
-        dest_location.pResource = texture->default_gpu_mem;
-        dest_location.Type      = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-
-        D3D12_TEXTURE_COPY_LOCATION source_location;
-        source_location.pResource = texture->upload_gpu_mem;
-        source_location.Type      = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints = Memory::Get()->PushToFA<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>(texture_data->surfaces_count);
-        device->GetCopyableFootprints(&texture->default_gpu_mem->GetDesc(), 0, cast(u32, texture_data->surfaces_count), texture->first_subresource_offset, footprints, null, null, null);
-
-        const GPU::TextureSurface *surfaces_end = texture_data->surfaces + texture_data->surfaces_count;
-        for (const GPU::TextureSurface *surface = texture_data->surfaces; surface < surfaces_end; ++surface)
-        {
-            byte *dest_surface = texture->upload_cpu_mem + footprints->Offset;
-
-            u64 num_rows = surface->size_in_bytes / surface->row_bytes;
-            for (u64 row = 0; row < num_rows; ++row)
-            {
-                byte *dest_row = dest_surface  + footprints->Footprint.RowPitch * row;
-                byte *src_row  = surface->data + surface->row_bytes             * row;
-
-                CopyMemory(dest_row, src_row, surface->row_bytes);
-            }
-
-            dest_location.SubresourceIndex  = cast(u32, surface - texture_data->surfaces);
-            source_location.PlacedFootprint = *footprints;
-
-            command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, null);
-
-            ++footprints;
-        }
-    }
-    else
-    {
-        ZeroMemory(texture->upload_cpu_mem, texture->buffer_total_bytes);
-        command_list->DiscardResource(texture->upload_gpu_mem, null);
-        command_list->DiscardResource(texture->default_gpu_mem, null);
-    }
-}
-
-void MemoryManager::ClearResource(ID3D12GraphicsCommandList *command_list, const GPU::ResourceHandle& resource)
-{
-    if (GPU::MemoryManager::IsTexture(resource))
-    {
-        TextureMemory *texture_memory = (resource.flags & GPU::RESOURCE_FLAG_STATIC)
-                                      ? &m_StaticMemory.texture_memory
-                                      : &m_SceneMemory.texture_memory;
-
-        Texture *texture = texture_memory->textures.GetPointer(resource.index);
-
-        command_list->DiscardResource(texture->default_gpu_mem, null);
-
-        u32 current_buffer = 0;
-
-        if (resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
-        {
-            ZeroMemory(texture->upload_cpu_mem, texture->buffer_total_bytes);
-            command_list->DiscardResource(texture->upload_gpu_mem, null);
-        }
-
-        if (resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
-        {
-            ZeroMemory(texture->readback_cpu_mem, texture->buffer_total_bytes);
-            command_list->DiscardResource(texture->readback_gpu_mem, null);
-        }
-    }
-    else
-    {
-        REV_WARNING_M("Resource #I32u is not a texture. We can't clear buffers for now", resource.index);
-    }
-}
-
-void MemoryManager::PrepareBuffersToRead(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources)
+void MemoryManager::UploadResources(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources)
 {
     if (resources.Empty()) return;
 
-    D3D12_RESOURCE_BARRIER *barriers       = Memory::Get()->PushToFA<D3D12_RESOURCE_BARRIER>(resources.Count());
-    u32                     barriers_count = 0;
+    D3D12_RESOURCE_BARRIER *barriers    = Memory::Get()->PushToFA<D3D12_RESOURCE_BARRIER>(resources.Count());
+    D3D12_RESOURCE_BARRIER *barriers_it = barriers;
 
     for (const GPU::ResourceHandle& resource : resources)
     {
-        BufferMemory *buffer_memory = resource.flags & GPU::RESOURCE_FLAG_STATIC
-                                    ? &m_StaticMemory.buffer_memory
-                                    : &m_SceneMemory.buffer_memory;
-
-        Buffer *buffer = buffer_memory->buffers.GetPointer(resource.index);
-        REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
-
-        DefaultBufferMemoryPage *default_page = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
-
-        D3D12_RESOURCE_BARRIER *barrier = barriers + barriers_count++;
-        barrier->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier->Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier->Transition.pResource   = default_page->gpu_mem;
-        barrier->Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        barrier->Transition.StateBefore = default_page->initial_state;
-        barrier->Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    }
-
-    command_list->ResourceBarrier(barriers_count, barriers);
-
-    barriers_count = 0;
-    for (const GPU::ResourceHandle& resource : resources)
-    {
-        BufferMemory *buffer_memory = resource.flags & GPU::RESOURCE_FLAG_STATIC
-                                    ? &m_StaticMemory.buffer_memory
-                                    : &m_SceneMemory.buffer_memory;
-
-        Buffer                   *buffer        = buffer_memory->buffers.GetPointer(resource.index);
-        DefaultBufferMemoryPage  *default_page  = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
-        ReadBackBufferMemoryPage *readback_page = buffer_memory->readback_pages.GetPointer(buffer->readback_page_index);
-
-        D3D12_RESOURCE_BARRIER *barrier = barriers + barriers_count++;
-        barrier->Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-        barrier->Transition.StateAfter  = default_page->initial_state;
-
-        command_list->CopyBufferRegion(readback_page->gpu_mem, buffer->readback_page_offset, default_page->gpu_mem, buffer->default_page_offset, buffer->actual_size);
-    }
-
-    command_list->ResourceBarrier(barriers_count, barriers);
-}
-
-void MemoryManager::PrepareTexturesToRead(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources)
-{
-    for (const GPU::ResourceHandle& resource : resources)
-    {
-        Texture *texture = &GetTexture(resource);
-        REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" texture", texture->name.Length(), texture->name.Data());
-
-        ID3D12Device *device = m_DeviceContext->Device();
-
-        u64 subresources_count = texture->planes_count * texture->subtextures_count * texture->mip_levels;
-
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints = Memory::Get()->PushToFA<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>(subresources_count);
-        device->GetCopyableFootprints(&texture->default_gpu_mem->GetDesc(), 0, cast(u32, subresources_count), texture->first_subresource_offset, footprints, null, null, null);
-
-        D3D12_TEXTURE_COPY_LOCATION source_location;
-        source_location.pResource = texture->default_gpu_mem;
-        source_location.Type      = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-
-        D3D12_TEXTURE_COPY_LOCATION dest_location;
-        dest_location.pResource = texture->readback_gpu_mem;
-        dest_location.Type      = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-
-        for (u32 i = 0; i < subresources_count; ++i)
+        if (GPU::MemoryManager::IsBuffer(resource))
         {
-            source_location.SubresourceIndex = i;
-            dest_location.PlacedFootprint    = footprints[i];
+            BufferMemory *buffer_memory = (resource.flags & GPU::RESOURCE_FLAG_STATIC)
+                                        ? &m_StaticMemory.buffer_memory
+                                        : &m_SceneMemory.buffer_memory;
 
-            command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, null);
+            Buffer *buffer = buffer_memory->buffers.GetPointer(resource.index);
+            REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE, "You are not able to upload data to \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
+        
+            DefaultBufferMemoryPage *default_page = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
+            UploadBufferMemoryPage  *upload_page  = buffer_memory->upload_pages.GetPointer(buffer->upload_page_index);
+        
+            barriers_it->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barriers_it->Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barriers_it->Transition.pResource   = default_page->gpu_mem;
+            barriers_it->Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            barriers_it->Transition.StateBefore = default_page->initial_state;
+            barriers_it->Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
+
+            ++barriers_it;
         }
     }
+
+    command_list->ResourceBarrier(cast(u32, barriers_it - barriers), barriers);
+
+    barriers_it = barriers;
+    for (const GPU::ResourceHandle& resource : resources)
+    {
+        if (GPU::MemoryManager::IsBuffer(resource))
+        {
+            BufferMemory *buffer_memory = (resource.flags & GPU::RESOURCE_FLAG_STATIC)
+                                        ? &m_StaticMemory.buffer_memory
+                                        : &m_SceneMemory.buffer_memory;
+
+            Buffer                  *buffer       = buffer_memory->buffers.GetPointer(resource.index);
+            DefaultBufferMemoryPage *default_page = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
+            UploadBufferMemoryPage  *upload_page  = buffer_memory->upload_pages.GetPointer(buffer->upload_page_index);
+
+            command_list->CopyBufferRegion(default_page->gpu_mem, buffer->default_page_offset, upload_page->gpu_mem, buffer->upload_page_offset, buffer->actual_size);
+        
+            barriers_it->Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            barriers_it->Transition.StateAfter  = default_page->initial_state;
+        
+            ++barriers_it;
+        }
+        else
+        {
+            Texture *texture = &GetTexture(resource);
+            REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE, "You are not able to upload data to \"%.*s\" texture", texture->name.Length(), texture->name.Data());
+            
+            ID3D12Device *device = m_DeviceContext->Device();
+            
+            u64 subresources_count = texture->planes_count * texture->subtextures_count * texture->mip_levels;
+            
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints = Memory::Get()->PushToFA<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>(subresources_count);
+            device->GetCopyableFootprints(&texture->default_gpu_mem->GetDesc(), 0, cast(u32, subresources_count), texture->first_subresource_offset, footprints, null, null, null);
+            
+            D3D12_TEXTURE_COPY_LOCATION source_location;
+            source_location.pResource = texture->upload_gpu_mem;
+            source_location.Type      = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            
+            D3D12_TEXTURE_COPY_LOCATION dest_location;
+            dest_location.pResource = texture->default_gpu_mem;
+            dest_location.Type      = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            
+            for (u32 i = 0; i < subresources_count; ++i)
+            {
+                source_location.PlacedFootprint = footprints[i];
+                dest_location.SubresourceIndex  = i;
+
+                command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, null);
+            }
+        }
+    }
+
+    command_list->ResourceBarrier(cast(u32, barriers_it - barriers), barriers);
+}
+
+void MemoryManager::ReadbackResources(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources)
+{
+    if (resources.Empty()) return;
+
+    D3D12_RESOURCE_BARRIER *barriers    = Memory::Get()->PushToFA<D3D12_RESOURCE_BARRIER>(resources.Count());
+    D3D12_RESOURCE_BARRIER *barriers_it = barriers;
+
+    for (const GPU::ResourceHandle& resource : resources)
+    {
+        if (GPU::MemoryManager::IsBuffer(resource))
+        {
+            BufferMemory *buffer_memory = resource.flags & GPU::RESOURCE_FLAG_STATIC
+                                        ? &m_StaticMemory.buffer_memory
+                                        : &m_SceneMemory.buffer_memory;
+
+            Buffer *buffer = buffer_memory->buffers.GetPointer(resource.index);
+            REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" buffer", buffer->name.Length(), buffer->name.Data());
+            
+            DefaultBufferMemoryPage *default_page = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
+            
+            barriers_it->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barriers_it->Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barriers_it->Transition.pResource   = default_page->gpu_mem;
+            barriers_it->Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            barriers_it->Transition.StateBefore = default_page->initial_state;
+            barriers_it->Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_SOURCE;
+
+            ++barriers_it;
+        }
+    }
+
+    command_list->ResourceBarrier(cast(u32, barriers_it - barriers), barriers);
+
+    barriers_it = barriers;
+    for (const GPU::ResourceHandle& resource : resources)
+    {
+        if (GPU::MemoryManager::IsBuffer(resource))
+        {
+            BufferMemory *buffer_memory = resource.flags & GPU::RESOURCE_FLAG_STATIC
+                                        ? &m_StaticMemory.buffer_memory
+                                        : &m_SceneMemory.buffer_memory;
+
+            Buffer                   *buffer        = buffer_memory->buffers.GetPointer(resource.index);
+            DefaultBufferMemoryPage  *default_page  = buffer_memory->default_pages.GetPointer(buffer->default_page_index);
+            ReadBackBufferMemoryPage *readback_page = buffer_memory->readback_pages.GetPointer(buffer->readback_page_index);
+
+            command_list->CopyBufferRegion(readback_page->gpu_mem, buffer->readback_page_offset, default_page->gpu_mem, buffer->default_page_offset, buffer->actual_size);
+
+            barriers_it->Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
+            barriers_it->Transition.StateAfter  = default_page->initial_state;
+
+            ++barriers_it;
+        }
+        else
+        {
+            Texture *texture = &GetTexture(resource);
+            REV_CHECK_M(resource.flags & GPU::RESOURCE_FLAG_CPU_READ, "You are not able to read data from \"%.*s\" texture", texture->name.Length(), texture->name.Data());
+            
+            ID3D12Device *device = m_DeviceContext->Device();
+            
+            u64 subresources_count = texture->planes_count * texture->subtextures_count * texture->mip_levels;
+            
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT *footprints = Memory::Get()->PushToFA<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>(subresources_count);
+            device->GetCopyableFootprints(&texture->default_gpu_mem->GetDesc(), 0, cast(u32, subresources_count), texture->first_subresource_offset, footprints, null, null, null);
+            
+            D3D12_TEXTURE_COPY_LOCATION source_location;
+            source_location.pResource = texture->default_gpu_mem;
+            source_location.Type      = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            
+            D3D12_TEXTURE_COPY_LOCATION dest_location;
+            dest_location.pResource = texture->readback_gpu_mem;
+            dest_location.Type      = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            
+            for (u32 i = 0; i < subresources_count; ++i)
+            {
+                source_location.SubresourceIndex = i;
+                dest_location.PlacedFootprint    = footprints[i];
+
+                command_list->CopyTextureRegion(&dest_location, 0, 0, 0, &source_location, null);
+            }
+        }
+    }
+
+    command_list->ResourceBarrier(cast(u32, barriers_it - barriers), barriers);
 }
 
 void MemoryManager::SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, GPU::RESOURCE_FLAG flags, const ConstString& name)

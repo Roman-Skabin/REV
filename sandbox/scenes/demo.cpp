@@ -4,13 +4,13 @@
 #include "sandbox.h"
 
 DemoScene::DemoScene(REV::Allocator *allocator)
-    : SceneBase(allocator, REV::ConstString(REV_CSTR_ARGS("DemoScene")), 1024, 36*1024),
+    : Scene(REV::ConstString(REV_CSTR_ARGS("DemoScene"))),
       m_CBuffer(),
       m_CBufferData{ REV::Math::m4::identity(), REV::Math::v4(252.0f, 212.0f, 64.0f, 255.0f) / 255.0f, REV::Math::v3() },
       m_Translation(REV::Math::m4::identity()),
       m_Rect(),
       m_DemoShader(),
-      m_PickedEntity(0),
+      m_PickedEntity(REV_INVALID_ENTITY_ID),
       m_OriginalWindowTitle(REV::Application::Get()->GetWindow().Title())
 {
 }
@@ -43,19 +43,23 @@ void DemoScene::OnSetCurrent()
     m_CBuffer                           = gpu_memory_manager->AllocateConstantBuffer(sizeof(CBufferData), false, REV::ConstString(REV_CSTR_ARGS("DemoSceneCB")));
     REV::AssetHandle wood_texture_asset = asset_manager->LoadTexture(REV::ConstString(REV_CSTR_ARGS("Wood")), false);
 
-    Sandbox *sandbox = static_cast<Sandbox *>(REV::Application::Get());
+    Sandbox *sandbox = cast(Sandbox *, REV::Application::Get());
 
     REV::GPU::ShaderResourceDesc demo_shader_resources_descs[] =
     {
-        REV::GPU::ShaderResourceDesc(m_CBuffer, 0, 0),
-        REV::GPU::ShaderResourceDesc(asset_manager->GetAsset(wood_texture_asset)->texture, 0, 0),
-        REV::GPU::ShaderResourceDesc(gpu_memory_manager->AllocateSampler(REV::GPU::TEXTURE_ADDRESS_MODE_WRAP, REV::Math::v4(1.0f), REV::Math::v2(0.0f, 100.0f), false), 0, 0),
-        REV::GPU::ShaderResourceDesc(sandbox->GetMousePickTexture(), REV::Math::v4())
+        REV::GPU::ShaderResourceDesc::CBV(m_CBuffer, 0, 0),
+        REV::GPU::ShaderResourceDesc::SRV(asset_manager->GetAsset(wood_texture_asset)->texture, 0, 0),
+        REV::GPU::ShaderResourceDesc::Sampler(gpu_memory_manager->AllocateSampler(REV::GPU::TEXTURE_ADDRESS_MODE_WRAP, REV::Math::v4(1.0f), REV::Math::v2(0.0f, 100.0f), false), 0, 0),
+        REV::GPU::ShaderResourceDesc::RTV(sandbox->GetMousePickTexture(), REV::Math::v4())
     };
 
     m_DemoShader = asset_manager->LoadShader(REV::LoadShaderDesc(REV::ConstString(REV_CSTR_ARGS("demo_shader")),
                                                                  REV::ConstArray(REV_CARRAY_ARGS(demo_shader_resources_descs))),
                                              false);
+
+    REV::ForwardPlusPipeline *pipeline = sandbox->GetForwardPlusPipeline();
+
+    REV::RenderPass *opaque_pass = pipeline->EnableStaticPass(REV::RENDER_PASS_KIND_OPAQUE);
 }
 
 void DemoScene::OnUnsetCurrent()
@@ -122,7 +126,7 @@ void DemoScene::OnUpdate()
     }
     else if (mouse.LeftButton().Released())
     {
-        m_PickedEntity = 0;
+        m_PickedEntity = REV_INVALID_ENTITY_ID;
     }
 
     //
@@ -165,13 +169,6 @@ void DemoScene::OnUpdate()
     m_CBufferData.center    = (m_CBufferData.mvp * ((m_Rect.vertices[0].position + m_Rect.vertices[2].position) / 2.0f)).xyz;
     m_CBufferData.entity_id = m_Rect.ID;
 
-    //
-    // Set demo shader
-    //
-    SetCurrentGraphicsShader(m_DemoShader);
-
-    //
-    // Render Rect
-    //
-    SubmitEntity(&m_Rect);
+    gpu_memory_manager->SetBufferData(m_VertexBuffer, m_Vertices);
+    gpu_memory_manager->SetBufferData(m_IndexBuffer, m_Indices);
 }

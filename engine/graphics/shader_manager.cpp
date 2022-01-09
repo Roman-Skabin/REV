@@ -84,6 +84,46 @@ void ShaderManager::BindIndexBuffer(const ShaderHandle& graphics_shader, const R
     }
 }
 
+ConstArray<ResourceHandle> ShaderManager::GetLoadableResources(const ShaderHandle& graphics_shader)
+{
+    ConstArray<ResourceHandle> resources = null;
+
+    switch (GraphicsAPI::GetAPI())
+    {
+        case GraphicsAPI::API::D3D12:
+        {
+            D3D12::ShaderManager *shader_manager = cast(D3D12::ShaderManager *, platform);
+            resources = shader_manager->GetLoadableResources(shader_manager->GetGraphicsShader(graphics_shader)));
+        } break;
+        
+        case GraphicsAPI::API::VULKAN:
+        {
+        } break;
+    }
+    
+    return resources;
+}
+
+ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const ShaderHandle& graphics_shader)
+{
+    ConstArray<ResourceHandle> resources = null;
+
+    switch (GraphicsAPI::GetAPI())
+    {
+        case GraphicsAPI::API::D3D12:
+        {
+            D3D12::ShaderManager *shader_manager = cast(D3D12::ShaderManager *, platform);
+            resources = shader_manager->GetStorableResources(shader_manager->GetGraphicsShader(graphics_shader)));
+        } break;
+
+        case GraphicsAPI::API::VULKAN:
+        {
+        } break;
+    }
+    
+    return resources;
+}
+
 void ShaderManager::Draw(const ShaderHandle& graphics_shader)
 {
     switch (GraphicsAPI::GetAPI())

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "core/scene.h"
+#include "graphics/scene.h"
 #include "math/mat.h"
 
-class DemoScene final : public REV::SceneBase
+class DemoScene final : public REV::Scene
 {
 public:
     DemoScene(REV::Allocator *allocator);
@@ -11,8 +11,6 @@ public:
 
     virtual void OnSetCurrent()   override;
     virtual void OnUnsetCurrent() override;
-
-    virtual void OnSetResourcesData() override;
 
     virtual void OnUpdate() override;
 

@@ -543,6 +543,32 @@ Asset *AssetManager::GetAsset(const GPU::ResourceHandle& resource)
     return null;
 }
 
+const Asset *AssetManager::GetAsset(const GPU::ShaderHandle& shader) const
+{
+    const Array<Asset>& assets = shader._static ? m_StaticAssets : m_SceneAssets;
+    for (const Asset& asset : assets)
+    {
+        if (asset.kind == ASSET_KIND_SHADER && asset.shader == shader)
+        {
+            return &asset;
+        }
+    }
+    return null;
+}
+
+Asset *AssetManager::GetAsset(const GPU::ShaderHandle& shader)
+{
+    Array<Asset>& assets = shader._static ? m_StaticAssets : m_SceneAssets;
+    for (Asset& asset : assets)
+    {
+        if (asset.kind == ASSET_KIND_SHADER && asset.shader == shader)
+        {
+            return &asset;
+        }
+    }
+    return null;
+}
+
 REV_INTERNAL void ChangeExtension(StaticString<REV_PATH_CAPACITY>& filename, const ConstString& found_filename)
 {
     u64 found_filename_dot_index = found_filename.RFind('.');

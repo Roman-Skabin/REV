@@ -7,15 +7,15 @@
 #pragma once
 
 #include "graphics/render_pass.h"
+#include "tools/string.h"
  
 namespace REV
 {
-    struct RenderGraphLevel
+    struct RenderGraphLayer
     {
-        u64              level;
-        RenderPassBase **render_passes;
-        u64              render_passes_count;
-        u64              render_passes_capacity;
+        REV_INLINE RenderGraphLayer(Allocator *allocator) : render_passes(allocator) {}
+
+        Array<RenderPass *> render_passes;
     };
 
     class REV_API RenderGraph final
@@ -24,16 +24,19 @@ namespace REV
         RenderGraph(Allocator *allocator);
         ~RenderGraph();
 
-        void Sort();
+        void Sort(const ConstArray<RenderPass *>& render_passes);
         void Render();
+
+        String Serialize();
 
     private:
         REV_DELETE_CONSTRS_AND_OPS(RenderGraph);
 
     private:
-        Allocator        *m_Allocator;
-        RenderGraphLevel *m_Levels;
-        u64               m_LevelsCount;
-        u64               m_LevelsCapacity;
+        Allocator               *m_Allocator;
+        Array<RenderGraphLayer>  m_Layers;
+
+    public:
+        bool                     m_NeedToSort;
     };
 }

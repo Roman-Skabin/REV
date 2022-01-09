@@ -262,26 +262,25 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
 
     if (graphics_shader.bound_resources.RTV_count)
     {
-        //
-        // Set render targets
-        //
-        D3D12_CPU_DESCRIPTOR_HANDLE *handles           = memory->PushToFA<D3D12_CPU_DESCRIPTOR_HANDLE>(1 + graphics_shader.bound_resources.RTV_count);
-        D3D12_CPU_DESCRIPTOR_HANDLE *handles_it        = handles;
-        D3D12_CPU_DESCRIPTOR_HANDLE  shader_handles_it = graphics_shader.desc_heap_table.RTV_cpu_desc_handle;
-
-        *handles_it++ = device_context->CurrentRTCPUDescHeap();
-        for (ResourcesTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
+        if (graphics_shader.bound_resources.DSV)
         {
-            *handles_it++          = shader_handles_it;
-            shader_handles_it.ptr += device_context->RTVDescSize();
+            graphics_list->OMSetRenderTargets(graphics_shader.bound_resources.RTV_count,
+                                              &graphics_shader.desc_heap_table.RTV_cpu_desc_handle,
+                                              true,
+                                              &graphics_shader.desc_heap_table.DSV_cpu_desc_handle);
         }
-
-        graphics_list->OMSetRenderTargets(cast(u32, handles_it - handles), handles, false, &device_context->DSCPUDescHeap());
+        else
+        {
+            graphics_list->OMSetRenderTargets(graphics_shader.bound_resources.RTV_count,
+                                              &graphics_shader.desc_heap_table.RTV_cpu_desc_handle,
+                                              true,
+                                              null);
+        }
 
         //
         // Change render targets' states
         //
-        D3D12_RESOURCE_BARRIER *barriers    = memory->PushToFA<D3D12_RESOURCE_BARRIER>(1 + graphics_shader.bound_resources.RTV_count);
+        D3D12_RESOURCE_BARRIER *barriers    = memory->PushToFA<D3D12_RESOURCE_BARRIER>(graphics_shader.bound_resources.RTV_count);
         D3D12_RESOURCE_BARRIER *barriers_it = barriers;
 
         for (ResourcesTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
@@ -303,16 +302,25 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
         //
         // Clear render targets
         //
-        shader_handles_it = graphics_shader.desc_heap_table.RTV_cpu_desc_handle;
+        D3D12_CPU_DESCRIPTOR_HANDLE shader_handles_it = graphics_shader.desc_heap_table.RTV_cpu_desc_handle;
         for (ResourcesTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
         {
             graphics_list->ClearRenderTargetView(shader_handles_it, RTV->resoucre_desc.rtv_clear_color.e, 0, null);
             shader_handles_it.ptr += device_context->RTVDescSize();
         }
     }
-    else
+    else if (graphics_shader.bound_resources.DSV)
     {
-        graphics_list->OMSetRenderTargets(1, &device_context->CurrentRTCPUDescHeap(), false, &device_context->DSCPUDescHeap());
+        Texture& texture = memory_manager->GetTexture(graphics_shader.bound_resources.DSV.resoucre_desc.resource);
+        
+        barriers_it->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barriers_it->Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barriers_it->Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        barriers_it->Transition.pResource   = texture.default_gpu_mem;
+        barriers_it->Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+        barriers_it->Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_READ;
+        
+        ++barriers_it;
     }
 }
 
@@ -348,6 +356,186 @@ void ShaderManager::BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::
     graphics_shader.index_buffer = resource;
 }
 
+ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const GraphicsShader& graphics_shader)
+{
+    u64 resources_count = 0;
+    
+    for (ResourceTableNode *CBV = graphics_shader.bound_resources.CBV_first; CBV; CBV = CBV->next)
+    {
+        if (CBV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            ++resources_count;
+        }
+    }
+
+    for (ResourceTableNode *SRV = graphics_shader.bound_resources.SRV_first; SRV; SRV = SRV->next)
+    {
+        if (SRV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            ++resources_count;
+        }
+    }
+
+    for (ResourceTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
+    {
+        if (UAV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            ++resources_count;
+        }
+    }
+
+    for (ResourceTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
+    {
+        if (RTV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            ++resources_count;
+        }
+    }
+
+    if (graphics_shader.bound_resources.DSV)
+    {
+        if (graphics_shader.bound_resources.DSV.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            ++resources_count;
+        }
+    }
+
+    GPU::ResourceHandle *resources    = Memory::Get()->PushToTA<GPU::ResourceHandle>(resources_count);
+    GPU::ResourceHandle *resources_it = resources;
+
+    for (ResourceTableNode *CBV = graphics_shader.bound_resources.CBV_first; CBV; CBV = CBV->next)
+    {
+        if (CBV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            *resources_it++ = CBV->resoucre_desc.resource;
+        }
+    }
+    
+    for (ResourceTableNode *SRV = graphics_shader.bound_resources.SRV_first; SRV; SRV = SRV->next)
+    {
+        if (SRV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            *resources_it++ = SRV->resoucre_desc.resource;
+        }
+    }
+    
+    for (ResourceTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
+    {
+        if (UAV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            *resources_it++ = UAV->resoucre_desc.resource;
+        }
+    }
+    
+    for (ResourceTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
+    {
+        if (RTV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            *resources_it++ = RTV->resoucre_desc.resource;
+        }
+    }
+
+    if (graphics_shader.bound_resources.DSV)
+    {
+        if (graphics_shader.bound_resources.DSV.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        {
+            *resources_it++ = graphics_shader.bound_resources.DSV.resource;
+        }
+    }
+
+    return ConstArray(resources, resources_count);
+}
+
+ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const GraphicsShader& graphics_shader)
+{
+    u64 resources_count = 0;
+    
+    for (ResourceTableNode *CBV = graphics_shader.bound_resources.CBV_first; CBV; CBV = CBV->next)
+    {
+        if (CBV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            ++resources_count;
+        }
+    }
+
+    for (ResourceTableNode *SRV = graphics_shader.bound_resources.SRV_first; SRV; SRV = SRV->next)
+    {
+        if (SRV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            ++resources_count;
+        }
+    }
+
+    for (ResourceTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
+    {
+        if (UAV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            ++resources_count;
+        }
+    }
+
+    for (ResourceTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
+    {
+        if (RTV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            ++resources_count;
+        }
+    }
+
+    if (graphics_shader.bound_resources.DSV)
+    {
+        if (graphics_shader.bound_resources.DSV.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            ++resources_count;
+        }
+    }
+
+    GPU::ResourceHandle *resources    = Memory::Get()->PushToTA<GPU::ResourceHandle>(resources_count);
+    GPU::ResourceHandle *resources_it = resources;
+
+    for (ResourceTableNode *CBV = graphics_shader.bound_resources.CBV_first; CBV; CBV = CBV->next)
+    {
+        if (CBV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            *resources_it++ = CBV->resoucre_desc.resource;
+        }
+    }
+    
+    for (ResourceTableNode *SRV = graphics_shader.bound_resources.SRV_first; SRV; SRV = SRV->next)
+    {
+        if (SRV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            *resources_it++ = SRV->resoucre_desc.resource;
+        }
+    }
+    
+    for (ResourceTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
+    {
+        if (UAV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            *resources_it++ = UAV->resoucre_desc.resource;
+        }
+    }
+    
+    for (ResourceTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
+    {
+        if (RTV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            *resources_it++ = RTV->resoucre_desc.resource;
+        }
+    }
+
+    if (graphics_shader.bound_resources.DSV)
+    {
+        if (graphics_shader.bound_resources.DSV.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        {
+            *resources_it++ = graphics_shader.bound_resources.DSV.resource;
+        }
+    }
+
+    return ConstArray(resources, resources_count);
+}
+
 void ShaderManager::Draw(const GraphicsShader& graphics_shader)
 {
     DeviceContext             *device_context = cast(DeviceContext *, GraphicsAPI::GetDeviceContext());
@@ -357,7 +545,7 @@ void ShaderManager::Draw(const GraphicsShader& graphics_shader)
     Buffer& buffer = memory_manager->GetBuffer(graphics_shader.index_buffer);
     graphics_list->DrawIndexedInstanced(cast(u32, buffer.actual_size / buffer.stride), 1, 0, 0, 0);
 
-    u64 barriers_capacity = graphics_shader.bound_resources.RTV_count + graphics_shader.bound_resources.UAV_count;
+    u64 barriers_capacity = graphics_shader.bound_resources.RTV_count + graphics_shader.bound_resources.UAV_count + 1;
     if (barriers_capacity)
     {
         D3D12_RESOURCE_BARRIER *barriers    = Memory::Get()->PushToFA<D3D12_RESOURCE_BARRIER>(barriers_capacity);
@@ -374,6 +562,20 @@ void ShaderManager::Draw(const GraphicsShader& graphics_shader)
             barriers_it->Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
             barriers_it->Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
+            ++barriers_it;
+        }
+
+        if (graphics_shader.bound_resources.DSV)
+        {
+            Texture& texture = memory_manager->GetTexture(graphics_shader.bound_resources.DSV.resoucre_desc.resource);
+            
+            barriers_it->Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barriers_it->Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barriers_it->Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            barriers_it->Transition.pResource   = texture.default_gpu_mem;
+            barriers_it->Transition.StateBefore = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+            barriers_it->Transition.StateAfter  = D3D12_RESOURCE_STATE_DEPTH_READ;
+            
             ++barriers_it;
         }
 

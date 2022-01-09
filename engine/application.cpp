@@ -28,7 +28,8 @@ Application::Application(const ConstString& name, const ConstString& ini_filenam
       m_Input(Input::Create(m_Window, m_Logger)),
       m_Timer(ConstString(REV_CSTR_ARGS("REVMainTimer"))),
       m_CurrentScene(null),
-      m_AssetManager(null)
+      m_AssetManager(null),
+      m_ForwardPlusPipeline(&m_Allocator)
 {
     REV_CHECK_M(!s_Application,
                 "Only one application alowed. "
@@ -50,14 +51,14 @@ Application::~Application()
     s_Application = null;
 }
 
-void Application::SetCurrentScene(SceneBase *scene)
+void Application::SetCurrentScene(Scene *scene)
 {
     if (m_CurrentScene) m_CurrentScene->OnUnsetCurrentEx();
     m_CurrentScene = scene;
-    m_CurrentScene->OnSetCurrentEx();
+    m_CurrentScene->OnSetCurrent();
 }
 
-void Application::Run(SceneBase *scene)
+void Application::Run(Scene *scene)
 {
     GPU::DeviceContext *device_context = GraphicsAPI::GetDeviceContext();
 
@@ -86,7 +87,6 @@ void Application::Run(SceneBase *scene)
             }
             m_CurrentScene->OnUpdate();
             m_CurrentScene->FlushBatch();
-            m_CurrentScene->OnCopyDefaultResourcesToReadBackResources();
             device_context->EndFrame();
         }
     }

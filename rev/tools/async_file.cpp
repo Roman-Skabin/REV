@@ -6,100 +6,114 @@
 
 #include "core/pch.h"
 #include "tools/async_file.h"
-#include "tools/file.h"
-#include "tools/static_string_builder.hpp"
+#include "tools/scoped_lock.hpp"
 
 namespace REV
 {
 
+REV_GLOBAL WorkQueue *g_AsyncFilesIOQueue = null;
+
+REV_INTERNAL REV_INLINE u32 GetPageSize()
+{
+    SYSTEM_INFO sys_info{};
+    GetSystemInfo(&sys_info);
+    return sys_info.dwPageSize;
+}
+
 AsyncFile::AsyncFile(nullptr_t)
     : m_Handle(INVALID_HANDLE_VALUE),
       m_Size(0),
+      m_Mapping(null),
+      m_MappingSize(0),
+      m_View(null),
+      m_ViewStart(0),
+      m_ViewEnd(0),
       m_Flags(FILE_FLAG_NONE),
+      m_PageSize(GetPageSize()),
+      m_ChunkSize(0),
+      m_IOOpsCount(0),
       m_CriticalSection(),
-      m_APCEntries{},
-      m_Name()
+      m_Name(null)
 {
-    CreateAPCEntries();
+    if (!g_AsyncFilesIOQueue)
+    {
+        Memory *memory = Memory::Get();
+        g_AsyncFilesIOQueue = new (memory->PushToPA<WorkQueue>()) WorkQueue(memory->PermanentArena(), 64);
+    }
 }
 
 AsyncFile::AsyncFile(const ConstString& filename, FILE_FLAG flags)
     : m_Handle(INVALID_HANDLE_VALUE),
       m_Size(0),
+      m_Mapping(null),
+      m_MappingSize(0),
+      m_View(null),
+      m_ViewStart(0),
+      m_ViewEnd(0),
       m_Flags(flags),
+      m_PageSize(GetPageSize()),
+      m_ChunkSize(0),
+      m_IOOpsCount(0),
       m_CriticalSection(),
-      m_APCEntries{},
       m_Name(filename)
 {
     REV_CHECK_M(m_Name.Length() < REV_PATH_CAPACITY, "Fileanme is to long, max available length is: %I32u", REV_PATH_CAPACITY);
-    CreateAPCEntries();
+
+    if (!g_AsyncFilesIOQueue)
+    {
+        Memory *memory = Memory::Get();
+        g_AsyncFilesIOQueue = new (memory->PushToPA<WorkQueue>()) WorkQueue(memory->PermanentArena(), 64);
+    }
+
     Open();
 }
 
 AsyncFile::AsyncFile(const AsyncFile& other)
     : m_Handle(INVALID_HANDLE_VALUE),
-      m_Size(0),
+      m_Size(other.m_Size),
+      m_Mapping(other.m_Mapping),
+      m_MappingSize(other.m_MappingSize),
+      m_View(null),
+      m_ViewStart(0),
+      m_ViewEnd(0),
       m_Flags(other.m_Flags),
+      m_PageSize(other.m_PageSize),
+      m_ChunkSize(other.m_ChunkSize),
+      m_IOOpsCount(0),
       m_CriticalSection(),
-      m_APCEntries{},
       m_Name(other.m_Name)
 {
-    CreateAPCEntries();
-
-    other.m_CriticalSection.Enter();
-
-    other.Wait();
-
-    m_Size = other.m_Size;
-
     HANDLE current_process = GetCurrentProcess();
     REV_DEBUG_RESULT(DuplicateHandle(current_process, other.m_Handle, current_process, &m_Handle, 0, false, DUPLICATE_SAME_ACCESS));
-
-    other.m_CriticalSection.Leave();
 }
 
 AsyncFile::AsyncFile(AsyncFile&& other)
     : m_Handle(other.m_Handle),
       m_Size(other.m_Size),
+      m_Mapping(other.m_Mapping),
+      m_MappingSize(other.m_MappingSize),
+      m_View(other.m_View),
+      m_ViewStart(other.m_ViewStart),
+      m_ViewEnd(other.m_ViewEnd),
       m_Flags(other.m_Flags),
+      m_PageSize(other.m_PageSize),
+      m_ChunkSize(other.m_ChunkSize),
+      m_IOOpsCount(other.m_IOOpsCount),
       m_CriticalSection(RTTI::move(other.m_CriticalSection)),
-      m_APCEntries{},
       m_Name(RTTI::move(other.m_Name))
 {
-    other.m_CriticalSection.Enter();
-    other.Wait();
-
-    for (u32 i = 0; i < MAX_APCS; ++i)
-    {
-        APCEntry *entry       = m_APCEntries       + i;
-        APCEntry *other_entry = other.m_APCEntries + i;
-
-        entry->file = this;
-        CopyMemory(&entry->overlapped, &other_entry->overlapped, sizeof(OVERLAPPED));
-
-        other_entry->overlapped.hEvent = null;
-    }
     other.m_Handle = INVALID_HANDLE_VALUE;
-
-    other.m_CriticalSection.Leave();
 }
 
 AsyncFile::~AsyncFile()
 {
-    // @NOTE(Roman): Theoretically a file can be destroyed explicitly in several threads.
-    m_CriticalSection.Enter();
-
     Close();
-    DestroyAPCEntries();
-    m_Size  = 0;
-    m_Flags = FILE_FLAG_NONE;
-
-    m_CriticalSection.Leave();
 }
 
 bool AsyncFile::Open(const ConstString& filename, FILE_FLAG flags)
 {
-    m_CriticalSection.Enter();
+    REV_SCOPED_LOCK(m_CriticalSection);
+
     if (m_Handle == INVALID_HANDLE_VALUE)
     {
         REV_CHECK_M(m_Name.Length() < REV_PATH_CAPACITY, "Fileanme is to long, max available length is: %I32u", REV_PATH_CAPACITY);
@@ -127,16 +141,14 @@ bool AsyncFile::Open(const ConstString& filename, FILE_FLAG flags)
         ReOpen(flags);
     }
 
-    bool result = m_Handle != INVALID_HANDLE_VALUE;
-
-    m_CriticalSection.Leave();
-    return result;
+    return m_Handle != INVALID_HANDLE_VALUE;
 }
 
 void AsyncFile::ReOpen(FILE_FLAG new_flags)
 {
-    m_CriticalSection.Enter();
+    REV_SCOPED_LOCK(m_CriticalSection);
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
+
     if (m_Flags != new_flags)
     {
         m_Flags = new_flags;
@@ -152,174 +164,186 @@ void AsyncFile::ReOpen(FILE_FLAG new_flags)
         m_Handle = ReOpenFile(m_Handle, desired_access, shared_access, attributes);
         REV_CHECK(m_Handle != INVALID_HANDLE_VALUE);
     }
-    m_CriticalSection.Leave();
 }
 
-void AsyncFile::Close()
+bool AsyncFile::Close()
 {
-    m_CriticalSection.Enter();
+    REV_SCOPED_LOCK(m_CriticalSection);
+
     if (m_Handle != INVALID_HANDLE_VALUE)
     {
         Wait();
 
+        if (m_View)
+        {
+            REV_DEBUG_RESULT(UnmapViewOfFile(m_View));
+            m_View      = null;
+            m_ViewStart = 0;
+            m_ViewEnd   = 0;
+        }
+
+        if (m_Mapping)
+        {
+            REV_DEBUG_RESULT(CloseHandle(m_Mapping));
+            m_Mapping     = null;
+            m_MappingSize = 0;
+        }
+
         REV_DEBUG_RESULT(CloseHandle(m_Handle));
         m_Handle = INVALID_HANDLE_VALUE;
+
+        _InterlockedExchange64(cast(volatile s64 *, m_Size), 0);
+        m_Flags = FILE_FLAG_NONE;
+
+        return true;
     }
-    m_CriticalSection.Leave();
+
+    return false;
 }
 
 void AsyncFile::Clear()
 {
-    m_CriticalSection.Enter();
+    REV_SCOPED_LOCK(m_CriticalSection);
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
     REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to clear file \"%.*s\". You must have write rights", m_Name.Length(), m_Name.Data());
 
     Wait();
 
-    u32 offset = SetFilePointer(m_Handle, 0, null, FILE_BEGIN);
-    REV_CHECK(offset == 0);
+    if (m_View)
+    {
+        UnmapViewOfFile(m_View);
+        m_View      = null;
+        m_ViewStart = 0;
+        m_ViewEnd   = 0;
+    }
 
+    REV_DEBUG_RESULT(!SetFilePointer(m_Handle, 0, null, FILE_BEGIN));
     REV_DEBUG_RESULT(SetEndOfFile(m_Handle));
-    m_Size = 0;
 
-    m_CriticalSection.Leave();
+    _InterlockedExchange64(cast(volatile s64 *, m_Size), 0);
 }
 
-void AsyncFile::Read(void *buffer, u64 buffer_bytes, u64 file_offset) const
+void AsyncFile::Read(void *buffer, u64 bytes, u64 read_offset) const
 {
-    m_CriticalSection.Enter();
-
-    REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "AsyncFile \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
-    REV_CHECK_M(m_Flags & FILE_FLAG_READ, "You have no rights to read this file");
-    REV_CHECK(buffer);
-    REV_CHECK_M(buffer_bytes, "Buffer size must be more than 0");
-
-    u64 saved_file_offset = file_offset;
-
-    u32 bytes_to_read = 0;
-    for (u64 buffer_offset = 0; buffer_offset < buffer_bytes; buffer_offset += bytes_to_read)
+    if (buffer && bytes)
     {
-        u64 rest_bytes = buffer_bytes - buffer_offset;
-        bytes_to_read  = rest_bytes < REV_U32_MAX ? (u32)rest_bytes : REV_U32_MAX;
+        u64 size = m_Size;
 
-        APCEntry *entry = PopFreeEntry();
-        entry->overlapped.Internal     = 0;
-        entry->overlapped.InternalHigh = 0;
-        entry->overlapped.Pointer      = cast(void *, saved_file_offset);
+        REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "AsyncFile \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
+        REV_CHECK_M(m_Flags & FILE_FLAG_READ, "You have no rights to read this file");
+        REV_CHECK_M(read_offset < size, "File read offset is too high. Offset: %I64u, current file size: %I64u", read_offset, size);
 
-        LockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_read, true);
-
-        REV_DEBUG_RESULT(ReadFileEx(m_Handle,
-                                    cast(byte *, buffer) + buffer_offset,
-                                    bytes_to_read,
-                                    &entry->overlapped,
-                                    OverlappedReadCompletionRoutine));
-
-        u32 bytes_transfered = 0;
-        if (GetOverlappedResult(m_Handle, &entry->overlapped, &bytes_transfered, false))
+        if (read_offset + bytes > size)
         {
-            PushFreeEntry(entry);
-            REV_CHECK(bytes_transfered == bytes_to_read);
-            UnlockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_read);
+            u64 new_bytes_to_read = size - read_offset;
+            REV_WARNING_M("File read offset is %I64u, bytes to read is %I64u, file size is %I64u. You are going out of bounds. Will be read only %I64u first bytes from the read offset",
+                          read_offset, bytes, size, new_bytes_to_read);
+            bytes = new_bytes_to_read;
         }
 
-        saved_file_offset += bytes_to_read;
-    }
+        const_cast<AsyncFile *>(this)->UpdateMappingIfNeeded(read_offset, read_offset + bytes);
 
-    m_CriticalSection.Leave();
-}
-
-void AsyncFile::Write(const void *buffer, u64 buffer_bytes, u64 file_offset)
-{
-    m_CriticalSection.Enter();
-
-    REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "AsyncFile \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
-    REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to write to this file");
-    REV_CHECK(buffer);
-    REV_CHECK_M(buffer_bytes, "Buffer size must be more than 0");
-
-    u64 saved_file_offset = file_offset;
-
-    u32 bytes_to_write = 0;
-    for (u64 buffer_offset = 0; buffer_offset < buffer_bytes; buffer_offset += bytes_to_write)
-    {
-        u64 rest_bytes = buffer_bytes - buffer_offset;
-        bytes_to_write = rest_bytes < REV_U32_MAX ? (u32)rest_bytes : REV_U32_MAX;
-
-        APCEntry *entry = PopFreeEntry();
-        entry->bytes_locked             = bytes_to_write;
-        entry->overlapped.Internal      = 0;
-        entry->overlapped.InternalHigh  = 0;
-        entry->overlapped.Pointer       = cast(void *, saved_file_offset);
-
-        LockSystemCacheFromOtherProcesses(saved_file_offset, bytes_to_write, false);
-
-        REV_DEBUG_RESULT(WriteFileEx(m_Handle,
-                                     cast(byte *, buffer) + buffer_offset,
-                                     bytes_to_write,
-                                     &entry->overlapped,
-                                     OverlappedWriteCompletionRoutine));
-
-        // @NOTE(Roman): "The system sets the state of the event object to nonsignaled
-        //               when a call to the I/O function returns before the operation
-        //               has been completed. The system sets the state of the event
-        //               object to signaled when the operation has been completed.
-        //               When operation completed before the function returns,
-        //               the results are handled as if the operation had been performed
-        //               synchronously.
-
-        u32 bytes_transfered = 0;
-        if (GetOverlappedResult(m_Handle, &entry->overlapped, &bytes_transfered, false))
+        u64 chunk_size = m_ChunkSize;
+        if (chunk_size)
         {
-            PushFreeEntry(entry);
-
-            REV_CHECK(bytes_transfered == bytes_to_write);
-
-            u64 new_offset = saved_file_offset + bytes_transfered;
-            if (new_offset > m_Size)
+            for (u64 chunk_offset = 0; chunk_offset < bytes; chunk_offset += chunk_size)
             {
-                m_Size = new_offset;
+                _InterlockedIncrement64(cast(volatile s64 *, &m_IOOpsCount));
+
+                g_AsyncFilesIOQueue->AddWork([this, buffer, bytes, view_offset = read_offset - m_ViewStart, chunk_offset, chunk_size]
+                {
+                    byte *dest_read     = cast(byte *, buffer) + chunk_offset;
+                    byte *src_read      = cast(byte *, m_View) + view_offset + chunk_offset;
+                    u64   bytes_to_read = Math::min(chunk_size, bytes - chunk_offset);
+
+                    CopyMemory(dest_read, src_read, bytes_to_read);
+
+                    _InterlockedDecrement64(cast(volatile s64 *, &m_IOOpsCount));
+                });
             }
-
-            UnlockSystemCacheFromOtherProcesses(saved_file_offset, bytes_transfered);
         }
+        else
+        {
+            _InterlockedIncrement64(cast(volatile s64 *, &m_IOOpsCount));
 
-        saved_file_offset += bytes_to_write;
+            g_AsyncFilesIOQueue->AddWork([this, buffer, bytes, view_offset = read_offset - m_ViewStart]
+            {
+                CopyMemory(buffer, cast(byte *, m_View) + view_offset, bytes);
+
+                _InterlockedDecrement64(cast(volatile s64 *, &m_IOOpsCount));
+            });
+        }
     }
-
-    m_CriticalSection.Leave();
 }
 
-void AsyncFile::Wait(bool wait_for_all_apcs) const
+void AsyncFile::Write(const void *buffer, u64 bytes, u64 write_offset)
 {
-    m_CriticalSection.Enter();
-
-    HANDLE events[MAX_APCS] = {null};
-    u32    events_count     = 0;
-
-    // @TODO(Roman): continue
-    for (u32 i = 0; i < MAX_APCS; ++i)
+    if (buffer && bytes)
     {
-        APCEntry *entry = m_APCEntries + i;
-        // if (entry->in_progress)
+        u64 size = m_Size;
+
+        REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "AsyncFile \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
+        REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to write to this file");
+
+        UpdateMappingIfNeeded(write_offset, write_offset + bytes);
+
+        u64 chunk_size = m_ChunkSize;
+        if (chunk_size)
         {
-            events[events_count++] = entry->overlapped.hEvent;
+            for (u64 chunk_offset = 0; chunk_offset < bytes; chunk_offset += chunk_size)
+            {
+                _InterlockedIncrement64(cast(volatile s64 *, &m_IOOpsCount));
+
+                g_AsyncFilesIOQueue->AddWork([this, buffer, bytes, write_offset, chunk_offset, chunk_size]
+                {
+                    u64 view_offset = write_offset - m_ViewStart + chunk_offset;
+
+                    byte *dest_write     = cast(byte *, m_View) + view_offset;
+                    byte *src_write      = cast(byte *, buffer) + chunk_offset;
+                    u64   bytes_to_write = Math::min(chunk_size, bytes - chunk_offset);
+
+                    CopyMemory(dest_write, src_write, bytes_to_write);
+
+                    u64 new_size = write_offset + bytes_to_write;
+                    if (new_size > m_Size)
+                    {
+                        _InterlockedExchange64(cast(volatile s64 *, &m_Size), new_size);
+                    }
+
+                    FlushViewIfNeeded(view_offset, bytes_to_write);
+
+                    _InterlockedDecrement64(cast(volatile s64 *, &m_IOOpsCount));
+                });
+            }
+        }
+        else
+        {
+            _InterlockedIncrement64(cast(volatile s64 *, &m_IOOpsCount));
+
+            g_AsyncFilesIOQueue->AddWork([this, buffer, bytes, write_offset]
+            {
+                u64 view_offset = write_offset - m_ViewStart;
+
+                CopyMemory(cast(byte *, m_View) + view_offset, buffer, bytes);
+
+                u64 new_size = write_offset + bytes;
+                if (new_size > m_Size)
+                {
+                    _InterlockedExchange64(cast(volatile s64 *, &m_Size), new_size);
+                }
+
+                FlushViewIfNeeded(view_offset, bytes);
+
+                _InterlockedDecrement64(cast(volatile s64 *, &m_IOOpsCount));
+            });
         }
     }
-
-    if (events_count)
-    {
-        u32 wait_result = WaitForMultipleObjectsEx(events_count, events, wait_for_all_apcs, INFINITE, true);
-        REV_CHECK(wait_result == WAIT_IO_COMPLETION);
-    }
-
-    m_CriticalSection.Leave();
 }
 
 void AsyncFile::Flush()
 {
-    m_CriticalSection.Enter();
+    REV_SCOPED_LOCK(m_CriticalSection);
 
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
     REV_CHECK_M(m_Flags & FILE_FLAG_WRITE, "You have no rights to flush file \"%.*s\". You must have write rights", m_Name.Length(), m_Name.Data());
@@ -331,15 +355,18 @@ void AsyncFile::Flush()
     else
     {
         Wait();
-        REV_DEBUG_RESULT(FlushFileBuffers(m_Handle));
-    }
 
-    m_CriticalSection.Leave();
+        // @NOTE(Roman): Flush data
+        REV_DEBUG_RESULT(FlushViewOfFile(cast(byte *, m_View) + m_ViewStart, m_ViewEnd - m_ViewStart));
+
+        // @NOTE(Roman): Flush metadata (+ all the buffers?)
+        // REV_DEBUG_RESULT(FlushFileBuffers(m_Handle));
+    }
 }
 
 void AsyncFile::Copy(const ConstString& dest_filename, bool copy_if_exists) const
 {
-    m_CriticalSection.Enter();
+    REV_SCOPED_LOCK(m_CriticalSection);
 
     REV_CHECK_M(dest_filename.Length() < REV_PATH_CAPACITY, "Destination fileanme is to long, max available length is: %I32u", REV_PATH_CAPACITY);
     if (m_Name != dest_filename)
@@ -374,13 +401,11 @@ void AsyncFile::Copy(const ConstString& dest_filename, bool copy_if_exists) cons
             }
         }
     }
-
-    m_CriticalSection.Leave();
 }
 
 void AsyncFile::Move(const ConstString& dest_filename, bool move_if_exists)
 {
-    m_CriticalSection.Enter();
+    REV_SCOPED_LOCK(m_CriticalSection);
 
     REV_CHECK_M(dest_filename.Length() < REV_PATH_CAPACITY, "Destination fileanme is to long, max available length is: %I32u", REV_PATH_CAPACITY);
     if (m_Name != dest_filename)
@@ -418,74 +443,52 @@ void AsyncFile::Move(const ConstString& dest_filename, bool move_if_exists)
             m_Name = dest_filename;
         }
     }
-
-    m_CriticalSection.Leave();
 }
 
 void AsyncFile::Delete()
 {
-    m_CriticalSection.Enter();
-
-    Close();
-    m_Size = 0;
-
-    if (!DeleteFileA(m_Name.Data()))
+    if (Close() && !DeleteFileA(m_Name.Data()))
     {
         REV_WARNING_MS("File \"%.*s\" can not be deleted", m_Name.Length(), m_Name.Data());
     }
-
-    m_CriticalSection.Leave();
 }
 
 void AsyncFile::GetTimings(u64& creation_time, u64& last_access_time, u64& last_write_time) const
 {
-    m_CriticalSection.Enter();
-
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
     REV_DEBUG_RESULT(GetFileTime(m_Handle,
                                  cast(FILETIME *, &creation_time),
                                  cast(FILETIME *, &last_access_time),
                                  cast(FILETIME *, &last_write_time)));
-
-    m_CriticalSection.Leave();
 }
 
 u64 AsyncFile::CreationTime() const
 {
-    m_CriticalSection.Enter();
-
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
 
     FILETIME creation_time = {0};
     REV_DEBUG_RESULT(GetFileTime(m_Handle, &creation_time, null, null));
 
-    m_CriticalSection.Leave();
     return *cast(u64 *, &creation_time);
 }
 
 u64 AsyncFile::LastAccessTime() const
 {
-    m_CriticalSection.Enter();
-
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
 
     FILETIME last_access_time = {0};
     REV_DEBUG_RESULT(GetFileTime(m_Handle, null, &last_access_time, null));
 
-    m_CriticalSection.Leave();
     return *cast(u64 *, &last_access_time);
 }
 
 u64 AsyncFile::LastWriteTime() const
 {
-    m_CriticalSection.Enter();
-
     REV_CHECK_M(m_Handle != INVALID_HANDLE_VALUE, "File \"%.*s\" is closed", m_Name.Length(), m_Name.Data());
 
     FILETIME last_write_time = {0};
     REV_DEBUG_RESULT(GetFileTime(m_Handle, null, null, &last_write_time));
 
-    m_CriticalSection.Leave();
     return *cast(u64 *, &last_write_time);
 }
 
@@ -497,110 +500,72 @@ AsyncFile& AsyncFile::operator=(nullptr_t)
 
 AsyncFile& AsyncFile::operator=(const AsyncFile& other)
 {
-    m_CriticalSection.Enter();
-    other.m_CriticalSection.Enter();
-
     if (this != &other)
     {
-        REV_CHECK_M(other.m_Handle != INVALID_HANDLE_VALUE, "Other file \"%.*s\" is closed", other.m_Name.Length(), other.m_Name.Data());
+        REV_SCOPED_LOCK(m_CriticalSection);
+        REV_SCOPED_LOCK(other.m_CriticalSection);
 
         Close();
         other.Wait();
 
-        HANDLE process_handle = GetCurrentProcess();
-        REV_DEBUG_RESULT(DuplicateHandle(process_handle, other.m_Handle, process_handle, &m_Handle, 0, false, DUPLICATE_SAME_ACCESS));
+        HANDLE current_process = GetCurrentProcess();
+        REV_DEBUG_RESULT(DuplicateHandle(current_process, other.m_Handle, current_process, &m_Handle, 0, false, DUPLICATE_SAME_ACCESS));
 
-        m_Size  = other.m_Size;
-        m_Flags = other.m_Flags;
-        m_Name  = other.m_Name;
+        m_Size        = other.m_Size;
+        m_Mapping     = other.m_Mapping;
+        m_MappingSize = other.m_MappingSize;
+        m_View        = null;
+        m_ViewStart   = 0;
+        m_ViewEnd     = 0;
+        m_Flags       = other.m_Flags;
+        m_ChunkSize   = other.m_ChunkSize;
+        m_IOOpsCount  = 0;
+        m_Name        = other.m_Name;
     }
-
-    other.m_CriticalSection.Leave();
-    m_CriticalSection.Leave();
-
     return *this;
 }
 
 AsyncFile& AsyncFile::operator=(AsyncFile&& other)
 {
-    m_CriticalSection.Enter();
-    other.m_CriticalSection.Enter();
-
     if (this != &other)
     {
+        REV_SCOPED_LOCK(m_CriticalSection);
         Close();
 
-        m_Handle          = other.m_Handle;
-        m_Size            = other.m_Size;
-        m_Flags           = other.m_Flags;
-        m_CriticalSection = RTTI::move(other.m_CriticalSection);
-        m_Name            = RTTI::move(other.m_Name);
+        REV_SCOPED_LOCK(other.m_CriticalSection);
 
-        for (u32 i = 0; i < MAX_APCS; ++i)
-        {
-            APCEntry *entry       = m_APCEntries       + i;
-            APCEntry *other_entry = other.m_APCEntries + i;
-
-            REV_DEBUG_RESULT(CloseHandle(entry->overlapped.hEvent));
-
-            CopyMemory(&entry->overlapped, &other_entry->overlapped, sizeof(OVERLAPPED));
-
-            other_entry->overlapped.hEvent = null;
-        }
+        m_Handle      = other.m_Handle;
+        m_Size        = other.m_Size;
+        m_Mapping     = other.m_Mapping;
+        m_MappingSize = other.m_MappingSize;
+        m_View        = other.m_View;
+        m_ViewStart   = other.m_ViewStart;
+        m_ViewEnd     = other.m_ViewEnd;
+        m_Flags       = other.m_Flags;
+        m_ChunkSize   = other.m_ChunkSize;
+        m_Name        = RTTI::move(other.m_Name);
 
         other.m_Handle = INVALID_HANDLE_VALUE;
     }
-
-    other.m_CriticalSection.Leave();
-    m_CriticalSection.Leave();
-
     return *this;
-}
-
-void AsyncFile::CreateAPCEntries()
-{
-    for (u32 i = 0; i < MAX_APCS; ++i)
-    {
-        APCEntry *entry = m_APCEntries + i;
-
-        entry->file              = this;
-        entry->overlapped.hEvent = CreateEventExA(null, null, CREATE_EVENT_MANUAL_RESET, EVENT_ALL_ACCESS);
-        REV_CHECK(entry->overlapped.hEvent);
-
-        if (i < MAX_APCS - 2)
-        {
-            entry->next_free = entry + 1;
-        }
-    }
-
-    m_FreeAPCEntries = m_APCEntries;
-}
-
-void AsyncFile::DestroyAPCEntries()
-{
-    m_FreeAPCEntries = null;
-
-    for (u32 i = 0; i < MAX_APCS; ++i)
-    {
-        APCEntry *entry = m_APCEntries + i;
-
-        entry->file = null;
-
-        if (entry->overlapped.hEvent)
-        {
-            REV_DEBUG_RESULT(CloseHandle(entry->overlapped.hEvent));
-            entry->overlapped.hEvent = null;
-        }
-    }
 }
 
 void AsyncFile::Open()
 {
+    REV_SCOPED_LOCK(m_CriticalSection);
+
     u32 desired_access = 0;
     u32 shared_access  = 0;
     u32 disposition    = 0;
     u32 attributes     = 0;
     SplitFlagsToWin32Flags(desired_access, shared_access, disposition, attributes);
+
+    CreateHandle(desired_access, shared_access, disposition, attributes);
+}
+
+void AsyncFile::CreateHandle(u32 desired_access, u32 shared_access, u32 disposition, u32 attributes)
+{
+    REV_SCOPED_LOCK(m_CriticalSection);
 
     m_Handle = CreateFileA(m_Name.Data(), desired_access, shared_access, null, disposition, attributes, null);
     if (m_Handle == INVALID_HANDLE_VALUE)
@@ -610,10 +575,10 @@ void AsyncFile::Open()
         {
             case ERROR_FILE_NOT_FOUND:
             {
+                REV_CHECK(m_Flags & FILE_FLAG_EXISTS);
+
                 Path path(m_Name.SubString(0, m_Name.RFind('/', 1)));
                 path.Inspect();
-
-                REV_CHECK(m_Flags & FILE_FLAG_EXISTS);
                 path.PrintWarningIfDoesNotExist("File has been tried to be opened with flag FILE_FLAG_EXISTS but it does not exist");
             } break;
 
@@ -646,35 +611,145 @@ void AsyncFile::Open()
     }
 }
 
+void AsyncFile::CreateMapping(u64 wanted_mapping_size)
+{
+    REV_SCOPED_LOCK(m_CriticalSection);
+
+    if (m_Handle != INVALID_HANDLE_VALUE && wanted_mapping_size)
+    {
+        m_MappingSize = AlignUp(wanted_mapping_size, m_PageSize);
+
+        u32 page_access = PAGE_READONLY;
+        if (m_Flags & FILE_FLAG_WRITE) page_access = PAGE_READWRITE;
+
+        m_Mapping = CreateFileMappingA(m_Handle, null, page_access, m_MappingSize >> 32, m_MappingSize & REV_U32_MAX, m_Name.Data());
+        if (!m_Mapping)
+        {
+            REV_ERROR_M("Mapping to file \"%.*s\" can not be created", m_Name.Length(), m_Name.Data());
+        }
+        else if (GetSysErrorCode() == ERROR_ALREADY_EXISTS)
+        {
+            void *view = MapViewOfFile(m_Mapping, FILE_MAP_READ, 0, 0, 0);
+
+            MEMORY_BASIC_INFORMATION memory_basic_info = {};
+            VirtualQueryEx(GetCurrentProcess(), view, &memory_basic_info, sizeof(MEMORY_BASIC_INFORMATION));
+
+            if (m_MappingSize > memory_basic_info.RegionSize)
+            {
+                REV_DEBUG_RESULT(UnmapViewOfFile(view));
+                REV_DEBUG_RESULT(CloseHandle(m_Mapping));
+
+                m_Mapping = CreateFileMappingA(m_Handle, null, page_access, m_MappingSize >> 32, m_MappingSize & REV_U32_MAX, m_Name.Data());
+                REV_CHECK(m_Mapping);
+            }
+            else if (m_MappingSize < memory_basic_info.RegionSize)
+            {
+                // @Important(Roman): Mapping already exists. Returned a handle to already created mapping with current size, not specified.
+                REV_WARNING_M("Mapping to file \"%.*s\" already exists. Existed mapping size: %I64u, required mapping size: %I64u",
+                            m_Name.Length(), m_Name.Data(),
+                            memory_basic_info.RegionSize,
+                            m_MappingSize);
+
+                m_MappingSize = memory_basic_info.RegionSize;
+
+                REV_DEBUG_RESULT(UnmapViewOfFile(view));
+            }
+            else
+            {
+                // @NOTE(Roman): Does nothing, existed mapping's size is equals to required mapping size, so we're good with this one.
+                REV_DEBUG_RESULT(UnmapViewOfFile(view));
+            }
+        }
+    }
+}
+
+REV_INTERNAL u64 AdjustStart(u64 old_start, u64 new_start, u64 page_size)
+{
+    if (old_start             > new_start) return new_start;
+    if (old_start + page_size < new_start) return new_start;
+    return old_start;
+}
+
+REV_INTERNAL u64 AdjustEnd(u64 old_end, u64 new_end, u64 page_size)
+{
+    if (old_end             < new_end) return new_end;
+    if (old_end - page_size > new_end) return new_end;
+    return old_end;
+}
+
+void AsyncFile::UpdateMappingIfNeeded(u64 from, u64 to)
+{
+    REV_SCOPED_LOCK(m_CriticalSection);
+
+    if (m_ViewStart <= from && to <= m_ViewEnd) return;
+
+    u64 map_start = AlignDown(from, m_PageSize);
+    u64 map_end   = AlignUp(to, m_PageSize);
+
+    if (m_View)
+    {
+        map_start = AdjustStart(m_ViewStart, map_start, m_PageSize);
+        map_end   = AdjustEnd(m_ViewEnd, map_end, m_PageSize);
+
+        // @NOTE(Roman): Wait while the view is in use.
+        Wait();
+
+        REV_DEBUG_RESULT(UnmapViewOfFile(m_View));
+        m_View = null;
+    }
+
+    // @NOTE(Roman): Prefetch x2: https://devblogs.microsoft.com/oldnewthing/20120120-00/?p=8493
+    if (m_Flags & FILE_FLAG_SEQ) map_end += map_end - map_start;
+
+    if (m_MappingSize < map_end)
+    {
+        if (m_Mapping)
+        {
+            REV_DEBUG_RESULT(CloseHandle(m_Mapping));
+            m_Mapping = null;
+        }
+        CreateMapping(map_end);
+    }
+
+    u32 map_flags = FILE_MAP_READ;
+    if (m_Flags & FILE_FLAG_WRITE) map_flags |= FILE_MAP_WRITE;
+
+    m_View = MapViewOfFile(m_Mapping, map_flags, map_start >> 32, map_start & REV_U32_MAX, map_end - map_start);
+    REV_CHECK_M(m_View, "View of file \"%.*s\" can not be mapped", m_Name.Length(), m_Name.Data());
+
+    m_ViewStart = map_start;
+    m_ViewEnd   = map_end;
+}
+
 void AsyncFile::SplitFlagsToWin32Flags(u32& desired_access, u32& shared_access, u32& disposition, u32& attributes)
 {
-    attributes = FILE_FLAG_OVERLAPPED;
+    FILE_FLAG flags = m_Flags;
 
-    if (m_Flags & FILE_FLAG_READ)
+    if (flags & FILE_FLAG_READ)
     {
-        desired_access |= GENERIC_READ;
-        shared_access  |= FILE_SHARE_READ;
+        desired_access  = GENERIC_READ;
+        shared_access   = FILE_SHARE_READ;
         attributes     |= FILE_ATTRIBUTE_READONLY;
     }
-    if (m_Flags & FILE_FLAG_WRITE)
+    if (flags & FILE_FLAG_WRITE)
     {
         desired_access |=  GENERIC_WRITE;
         shared_access  |=  FILE_SHARE_WRITE;
         attributes     &= ~FILE_ATTRIBUTE_READONLY;
         attributes     |=  FILE_ATTRIBUTE_NORMAL;
     }
-    REV_DEBUG_RESULT_M(m_Flags & FILE_FLAG_RW, "A file must have FLAG_READ and/or FILE_WRITE flags");
+    REV_DEBUG_RESULT_M(flags & FILE_FLAG_RW, "A file must have FLAG_READ and/or FILE_WRITE flags");
 
     // @NOTE(Roman): CREATE_NEW        - if (exists) fails ,    ERROR_FILE_EXISTS    else creates
     //               CREATE_ALWAYS     - if (exists) truncates, ERROR_ALREADY_EXISTS else creates
     //               OPEN_EXISTING     - if (exists) succeeds                        else fails,  ERROR_FILE_NOT_FOUND
     //               OPEN_ALWAYS       - if (exists) succeeds,  ERROR_ALREADY_EXISTS else creates
     //               TRUNCATE_EXISTING - if (exists) truncates                       else fails,  ERROR_FILE_NOT_FOUND. Must have GENERIC_WRITE.
-    if (m_Flags & FILE_FLAG_EXISTS)
+    if (flags & FILE_FLAG_EXISTS)
     {
-        if (m_Flags & FILE_FLAG_TRUNCATE)
+        if (flags & FILE_FLAG_TRUNCATE)
         {
-            REV_DEBUG_RESULT_M(m_Flags & FILE_FLAG_WRITE, "For truncating an existing file, you have to open it with the write access");
+            REV_DEBUG_RESULT_M(flags & FILE_FLAG_WRITE, "For truncating an existing file, you have to open it with the write access");
             disposition = TRUNCATE_EXISTING;
         }
         else
@@ -682,115 +757,43 @@ void AsyncFile::SplitFlagsToWin32Flags(u32& desired_access, u32& shared_access, 
             disposition = OPEN_EXISTING;
         }
     }
-    else if (m_Flags & FILE_FLAG_NEW)
+    else if (flags & FILE_FLAG_NEW)
     {
         disposition = CREATE_NEW;
     }
     else
     {
-        if (m_Flags & FILE_FLAG_TRUNCATE) disposition = CREATE_ALWAYS;
+        if (flags & FILE_FLAG_TRUNCATE) disposition = CREATE_ALWAYS;
         else                              disposition = OPEN_ALWAYS;
     }
 
-    /**/ if (m_Flags & FILE_FLAG_RAND) attributes |= FILE_FLAG_RANDOM_ACCESS;
-    else if (m_Flags & FILE_FLAG_SEQ)  attributes |= FILE_FLAG_SEQUENTIAL_SCAN;
+    /**/ if (flags & FILE_FLAG_RAND) attributes |= FILE_FLAG_RANDOM_ACCESS;
+    else if (flags & FILE_FLAG_SEQ)  attributes |= FILE_FLAG_SEQUENTIAL_SCAN;
 
-    if (m_Flags & FILE_FLAG_TEMP)
+    if (flags & FILE_FLAG_TEMP)
     {
         shared_access |= FILE_SHARE_DELETE;
         attributes    |= FILE_ATTRIBUTE_TEMPORARY
                       |  FILE_FLAG_DELETE_ON_CLOSE;
     }
-    if (m_Flags & FILE_FLAG_FLUSH)
+    if (flags & FILE_FLAG_FLUSH)
     {
         attributes |= FILE_FLAG_WRITE_THROUGH;
     }
 }
 
-void AsyncFile::LockSystemCacheFromOtherProcesses(u64 offset, u64 bytes, bool shared) const
+void AsyncFile::FlushViewIfNeeded(u64 from, u64 to)
 {
-    ULARGE_INTEGER bytes_to_lock;
-    bytes_to_lock.QuadPart = bytes;
+    REV_SCOPED_LOCK(m_CriticalSection);
 
-    OVERLAPPED overlapped = {0};
-    overlapped.Pointer    = (void *)offset;
-
-    REV_DEBUG_RESULT(LockFileEx(m_Handle,
-                                shared ? 0 : LOCKFILE_EXCLUSIVE_LOCK,
-                                0,
-                                bytes_to_lock.LowPart,
-                                bytes_to_lock.HighPart,
-                                &overlapped));
-}
-
-void AsyncFile::UnlockSystemCacheFromOtherProcesses(u64 offset, u64 bytes) const
-{
-    ULARGE_INTEGER bytes_to_unlock;
-    bytes_to_unlock.QuadPart = bytes;
-
-    OVERLAPPED overlapped = {0};
-    overlapped.Pointer    = (void *)offset;
-
-    REV_DEBUG_RESULT(UnlockFileEx(m_Handle,
-                                  0,
-                                  bytes_to_unlock.LowPart,
-                                  bytes_to_unlock.HighPart,
-                                  &overlapped));
-}
-
-void AsyncFile::PushFreeEntry(APCEntry *entry) const
-{
-    _InterlockedExchange(cast(volatile s32 *, &entry->bytes_locked), 0);
-    _InterlockedExchangePointer(cast(void *volatile *, &entry->next_free), m_FreeAPCEntries);
-    _InterlockedExchangePointer(cast(void *volatile *, &m_FreeAPCEntries), entry);
-}
-
-AsyncFile::APCEntry *AsyncFile::PopFreeEntry() const
-{
-    if (!m_FreeAPCEntries)
+    if (m_Flags & FILE_FLAG_FLUSH)
     {
-        Wait(false);
+        // @NOTE(Roman): Flush data
+        REV_DEBUG_RESULT(FlushViewOfFile(cast(byte *, m_View) + from, to - from));
+
+        // @NOTE(Roman): Flush metadata (+ all the buffers?)
+        // REV_DEBUG_RESULT(FlushFileBuffers(m_Handle));
     }
-
-    APCEntry *entry = m_FreeAPCEntries;
-    _InterlockedExchangePointer(cast(void *volatile *, &m_FreeAPCEntries), entry->next_free);
-    _InterlockedExchangePointer(cast(void *volatile *, &entry->next_free), null);
-
-    return entry;
-}
-
-void REV_STDCALL OverlappedReadCompletionRoutine(u32 error_code, u32 bytes_transfered, OVERLAPPED *overlapped)
-{
-    REV_CHECK(error_code == ERROR_SUCCESS);
-
-    AsyncFile::APCEntry *entry = cast(AsyncFile::APCEntry *, cast(byte *, overlapped) - REV_StructFieldOffset(AsyncFile::APCEntry, overlapped));
-
-    REV_CHECK(bytes_transfered == entry->bytes_locked);
-
-    u64 saved_offset = cast(u64, overlapped->Pointer);
-    entry->file->PushFreeEntry(entry);
-
-    entry->file->UnlockSystemCacheFromOtherProcesses(saved_offset, bytes_transfered);
-}
-
-void REV_STDCALL OverlappedWriteCompletionRoutine(u32 error_code, u32 bytes_transfered, OVERLAPPED *overlapped)
-{
-    REV_CHECK(error_code == ERROR_SUCCESS);
-
-    AsyncFile::APCEntry *entry = cast(AsyncFile::APCEntry *, cast(byte *, overlapped) - REV_StructFieldOffset(AsyncFile::APCEntry, overlapped));
-
-    REV_CHECK(bytes_transfered == entry->bytes_locked);
-
-    u64 saved_offset = cast(u64, overlapped->Pointer);
-    entry->file->PushFreeEntry(entry);
-
-    u64 new_offset = saved_offset + bytes_transfered;
-    if (new_offset > entry->file->m_Size)
-    {
-        entry->file->m_Size = new_offset;
-    }
-
-    entry->file->UnlockSystemCacheFromOtherProcesses(saved_offset, bytes_transfered);
 }
 
 }

@@ -23,30 +23,12 @@ WorkQueue::WorkQueue(const Logger& logger, Arena& arena, u64 max_simultaneous_wo
       m_Threads(null),
       m_ThreadsCount(0)
 {
-    SYSTEM_INFO info{};
-    GetNativeSystemInfo(&info);
+    Create(&logger, arena, max_simultaneous_works);
+}
 
-    m_WorksCount = Math::max<u64>(max_simultaneous_works, MIN_WORKS);
-    // @NOTE(Roman): We exclude Main Thread to achieve better parallelism in WorkQueue::Wait function.
-    m_ThreadsCount = Math::clamp<u64>(info.dwNumberOfProcessors - 1, MIN_THREADS, m_WorksCount);
-
-    void *works_and_threads_memory = arena.PushBytes(m_WorksCount * sizeof(Work) + m_ThreadsCount * sizeof(void *));
-    m_Works   = cast(Work *, works_and_threads_memory);
-    m_Threads = cast(void **, cast(Work *, works_and_threads_memory) + m_WorksCount);
-
-    m_WorksExecuteIterator = m_Works;
-    m_WorksAddIterator     = m_Works;
-
-    Windows::NTSTATUS status = Windows::NtCreateSemaphore(&m_Semaphore, SEMAPHORE_ALL_ACCESS, null, 0, cast(u32, m_ThreadsCount));
-    REV_CHECK(status == STATUS_SUCCESS);
-
-    void **end = m_Threads + m_ThreadsCount;
-    for (void **thread = m_Threads; thread < end; ++thread)
-    {
-        REV_DEBUG_RESULT(*thread = CreateThread(null, 0, ThreadProc, this, 0, null));
-    }
-
-    logger.LogSuccess("Work queue has been created. Additional threads count: ", m_ThreadsCount);
+WorkQueue::WorkQueue(Arena& arena, u64 max_simultaneous_works)
+{
+    Create(null, arena, max_simultaneous_works);
 }
 
 WorkQueue::WorkQueue(WorkQueue&& other)
@@ -142,6 +124,35 @@ WorkQueue& WorkQueue::operator=(WorkQueue&& other)
         other.Unlock();
     }
     return *this;
+}
+
+void WorkQueue::Create(const Logger *logger, Arena& arena, u64 max_simultaneous_works)
+{
+    SYSTEM_INFO info{};
+    GetNativeSystemInfo(&info);
+
+    m_WorksCount = Math::max<u64>(max_simultaneous_works, MIN_WORKS);
+    // @NOTE(Roman): We exclude Main Thread to achieve better parallelism in WorkQueue::Wait function.
+    m_ThreadsCount = Math::clamp<u64>(info.dwNumberOfProcessors - 1, MIN_THREADS, m_WorksCount);
+
+    void *works_and_threads_memory = arena.PushBytes(m_WorksCount * sizeof(Work) + m_ThreadsCount * sizeof(void *));
+    m_Works   = cast(Work *, works_and_threads_memory);
+    m_Threads = cast(void **, cast(Work *, works_and_threads_memory) + m_WorksCount);
+
+    m_WorksExecuteIterator = m_Works;
+    m_WorksAddIterator     = m_Works;
+
+    Windows::NTSTATUS status = Windows::NtCreateSemaphore(&m_Semaphore, SEMAPHORE_ALL_ACCESS, null, 0, cast(u32, m_ThreadsCount));
+    REV_CHECK(status == STATUS_SUCCESS);
+
+    void **end = m_Threads + m_ThreadsCount;
+    for (void **thread = m_Threads; thread < end; ++thread)
+    {
+        REV_DEBUG_RESULT(*thread = CreateThread(null, 0, ThreadProc, this, 0, null));
+    }
+
+    if (logger) logger->LogSuccess("Work queue has been created. Additional threads count: ", m_ThreadsCount);
+    else        REV_INFO_M("Work queue has been created. Additional threads count: ", m_ThreadsCount);
 }
 
 void WorkQueue::Destroy()

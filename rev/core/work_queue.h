@@ -32,6 +32,7 @@ namespace REV
 
     public:
         WorkQueue(const Logger& logger, Arena& arena, u64 max_simultaneous_works = 16);
+        WorkQueue(Arena& arena, u64 max_simultaneous_works = 16);
         WorkQueue(WorkQueue&& other);
 
         ~WorkQueue();
@@ -42,6 +43,7 @@ namespace REV
         WorkQueue& operator=(WorkQueue&& other);
 
     private:
+        void Create(const Logger *logger, Arena& arena, u64 max_simultaneous_works);
         void Destroy();
         void Lock();
         void Unlock();

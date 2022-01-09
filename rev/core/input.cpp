@@ -185,7 +185,7 @@ void Gamepad::Update(const Logger& logger)
         m_ButtonStart.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_START));
         m_ButtonBack.Update(IS_DIGITAL_DOWN(XINPUT_GAMEPAD_BACK));
 
-        m_LeftTrigger.Update(xinput_state.Gamepad.bLeftTrigger / cast(f32, REV_BYTE_MAX));
+        m_LeftTrigger.Update(xinput_state.Gamepad.bLeftTrigger   / cast(f32, REV_BYTE_MAX));
         m_RightTrigger.Update(xinput_state.Gamepad.bRightTrigger / cast(f32, REV_BYTE_MAX));
 
         // @NOTE(Roman): negative invlerp (ret = [-1, 1])

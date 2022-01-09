@@ -26,7 +26,7 @@ namespace REV
         FILE_FLAG_TRUNCATE = 0x40, // Truncate a file on open. Must have FILE_FLAG_WRITE.
 
         // Other flags (optional)
-        FILE_FLAG_RAND     = 0x100, // Optimized for a random access (prefetch 2 times less data than without). There is no sence to combine it with FILE_FLAG_SEQ.
+        FILE_FLAG_RAND     = 0x100, // Optimized for a random access (no prefetch). There is no sence to combine it with FILE_FLAG_SEQ.
         FILE_FLAG_SEQ      = 0x200, // Optimized for a sequential access (prefetch 2 times more data than without). There is no sence to combine it with FILE_FLAG_RAND.
         FILE_FLAG_TEMP     = 0x400, // File will be deleted on close.
         FILE_FLAG_FLUSH    = 0x800, // Flush data immediatly after write.

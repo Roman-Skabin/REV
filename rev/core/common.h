@@ -203,13 +203,13 @@ template<typename T, u64 count> constexpr REV_INLINE u64 ArrayCount(T (&)[count]
 template<typename T, typename U, typename Ret = RTTI::max_size_t<T, U>, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
 constexpr REV_INLINE Ret AlignUp(T x, U a = DEFAULT_ALIGNMENT)
 {
-    return cast(Ret, (x + (a - 1)) & ~(a - 1));
+    return cast(Ret, (x + cast(Ret, a - 1)) & ~cast(Ret, a - 1));
 }
 
 template<typename T, typename U, typename Ret = RTTI::max_size_t<T, U>, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
 constexpr REV_INLINE Ret AlignDown(T x, U a = DEFAULT_ALIGNMENT)
 {
-    return cast(Ret, x & ~(a - 1));
+    return cast(Ret, x & ~cast(Ret, a - 1));
 }
 
 template<typename T, typename = RTTI::enable_if_t<RTTI::is_integral_v<T>>>

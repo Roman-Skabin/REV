@@ -7,58 +7,38 @@
 #pragma once
 
 #include "tools/file.h"
+#include "core/work_queue.h"
 
 namespace REV
 {
-    #define REV_AFD REV_DEPRECATED("Don't use REV::AsyncFile. Wait is not working properly. Also REV::AsyncFile will be rewritten soon. As well as REV::File probably")
-
-    // @TODO(Roman): Rewrite with file views and WorkQueue
+    // @TODO(Roman): 1. We want to read 0-10 symbols and write 5-12 symbols.
+    //                  So we need to wait for writing 5-10 symbols and then read?
+    //                  Or wait for read first and then write?
+    //               2. We want to read/write first and forth page, so we read/write first page first
+    //                  and then we need to remap our view to read/write forth one.
+    //                  What about having several views to support better asynchrony?
     class REV_API AsyncFile final
     {
     public:
-        REV_AFD AsyncFile(nullptr_t = null);
-        REV_AFD AsyncFile(const ConstString& filename, FILE_FLAG flags);
+        AsyncFile(nullptr_t = null);
+        AsyncFile(const ConstString& filename, FILE_FLAG flags);
         template<u64 capacity> REV_INLINE AsyncFile(const StaticString<capacity>& filename, FILE_FLAG flags) : AsyncFile(filename.ToConstString(), flags) {}
-        REV_AFD AsyncFile(const AsyncFile& other);
-        REV_AFD AsyncFile(AsyncFile&& other);
+        AsyncFile(const AsyncFile& other);
+        AsyncFile(AsyncFile&& other);
 
         ~AsyncFile();
 
         bool Open(const ConstString& filename, FILE_FLAG flags);
         template<u64 capacity> REV_INLINE bool Open(const StaticString<capacity>& filename, FILE_FLAG flags) { return Open(filename.ToConstString(), flags); }
         void ReOpen(FILE_FLAG new_flags);
-        void Close();
+        bool Close();
 
         void Clear();
 
-        void Read(void *buffer, u64 buffer_bytes, u64 file_offset) const;
-        void Write(const void *buffer, u64 buffer_bytes, u64 file_offset);
-        REV_INLINE void Append(const void *buffer, u64 buffer_bytes) { Write(buffer, buffer_bytes, m_Size); }
+        void Read(void *buffer, u64 bytes, u64 read_offset) const;
+        void Write(const void *buffer, u64 bytes, u64 write_offset);
 
-        void Wait(bool wait_for_all_apcs = true) const;
-
-        template<typename ...AFs, typename = RTTI::enable_if_t<RTTI::are_same_v<AsyncFile, AFs...>>>
-        static void WaitForAll(const AFs& ...async_files)
-        {
-            HANDLE  events[MAX_APCS * sizeof...(async_files)] = {null};
-            HANDLE *events_it = events;
-
-            auto& AddEntry = [](const AsyncFile& async_file, HANDLE **events_it)
-            {
-                for (u32 i = 0; i < MAX_APCS; ++i)
-                {
-                    *(*events_it)++ = async_file.m_APCEntries[i].overlapped.hEvent;
-                }
-            };
-
-            (..., AddEntry(async_files, &events_it));
-
-            if (events_it > events)
-            {
-                u32 wait_result = WaitForMultipleObjectsEx(cast(u32, events_it - events), events, true, INFINITE, true);
-                REV_CHECK(wait_result == WAIT_IO_COMPLETION);
-            }
-        }
+        REV_INLINE void Wait() const { while (m_IOOpsCount); }
 
         // @NOTE(Roman): Has no effect if FILE_FLAG_FLUSH set.
         void Flush();
@@ -87,44 +67,31 @@ namespace REV
         AsyncFile& operator=(AsyncFile&& other);
 
     private:
-        void CreateAPCEntries();
-        void DestroyAPCEntries();
         void Open();
+        void CreateHandle(u32 desired_access, u32 shared_access, u32 disposition, u32 attributes);
+        void CreateMapping(u64 wanted_mapping_size);
+        void UpdateMappingIfNeeded(u64 from, u64 to);
         void SplitFlagsToWin32Flags(u32& desired_access, u32& shared_access, u32& disposition, u32& attributes);
-        void LockSystemCacheFromOtherProcesses(u64 offset, u64 bytes, bool shared) const;
-        void UnlockSystemCacheFromOtherProcesses(u64 offset, u64 bytes) const;
-
-        friend void REV_STDCALL OverlappedReadCompletionRoutine(
-            u32         error_code,
-            u32         bytes_transfered,
-            OVERLAPPED *overlapped
-        );
-
-        friend void REV_STDCALL OverlappedWriteCompletionRoutine(
-            u32         error_code,
-            u32         bytes_transfered,
-            OVERLAPPED *overlapped
-        );
+        void FlushViewIfNeeded(u64 from, u64 to);
 
     private:
-        enum : u32 { MAX_APCS = 16 };
-
-        struct APCEntry
-        {
-            AsyncFile           *file;
-            APCEntry   *volatile next_free;
-            u32         volatile bytes_locked;
-            OVERLAPPED           overlapped;
-        };
-        void PushFreeEntry(APCEntry *entry) const;
-        APCEntry *PopFreeEntry() const;
-
         HANDLE                          m_Handle;
-        u64                             m_Size;
-        mutable APCEntry      *volatile m_FreeAPCEntries;
+        volatile u64                    m_Size;
+
+        HANDLE                          m_Mapping;
+        u64                             m_MappingSize;
+
+        void                           *m_View;
+        u64                             m_ViewStart; // View start file offset
+        u64                             m_ViewEnd;   // View end file offset
+
         FILE_FLAG                       m_Flags;
+        const u32                       m_PageSize;
+        u64                             m_ChunkSize;
+        volatile u64                    m_IOOpsCount;
+
         mutable CriticalSection<false>  m_CriticalSection;
-        mutable APCEntry                m_APCEntries[MAX_APCS];
+
         StaticString<REV_PATH_CAPACITY> m_Name;
     };
 }

@@ -24,6 +24,7 @@
     - Custom commit/push scripts with tags checks like Jon's nocheckin
 
 - GPU
+    - Review Wait stuff during the frame. I feel like we are waiting to much.
     - Several adapters support? (NVidia has gotten rid of SLI so shall we?)
     - Cross platform shaders?
 

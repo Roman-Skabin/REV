@@ -1,4 +1,4 @@
-project "rev"
+project "engine"
     targetname "%{prj.name}"
 
     location    "%{wks.location}/%{prj.name}"
@@ -15,7 +15,7 @@ project "rev"
     compileas  "C++"
 
     pchheader "core/pch.h"
-    pchsource "../../rev/core/pch.cpp" -- @NOTE(Roman): ${prj.location}/core/pch.cpp does not work for some reason.
+    pchsource "../../engine/core/pch.cpp" -- @NOTE(Roman): ${prj.location}/core/pch.cpp does not work for some reason.
     files
     {
         "%{prj.location}/**.h",

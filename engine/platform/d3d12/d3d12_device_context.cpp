@@ -73,6 +73,8 @@ DeviceContext::~DeviceContext()
             REV_CHECK(CheckResultAndPrintMessages(error, this));
         }
 
+	// @TODO(Roman): Review Wait stuff during the frame.
+	//               I feel like we are waiting to much.
         WaitForGPU();
 
         if (m_FenceEvent)
@@ -322,22 +324,39 @@ void DeviceContext::CreateFactory()
 
 void DeviceContext::CreateAdapterAndDevice()
 {
-    SIZE_T             max_vram      = 0;
+    SIZE_T             max_vram      = 0; // video ram
+    SIZE_T             max_sram      = 0; // shared ram
     UINT               adapter_index = 0;
     DXGI_ADAPTER_DESC1 adapter_desc  = {0};
     HRESULT            error         = S_OK;
 
-    for (UINT i = 0; m_Factory->EnumAdapters1(i, &m_Adapter) != DXGI_ERROR_NOT_FOUND; ++i)
+    for (UINT i = 0; (error = m_Factory->EnumAdapters1(i, &m_Adapter)) != DXGI_ERROR_NOT_FOUND; ++i)
     {
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
         error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_Device));
-        if (Succeeded(error) && max_vram < adapter_desc.DedicatedVideoMemory && !(adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
+        if (Succeeded(error))
         {
-            max_vram      = adapter_desc.DedicatedVideoMemory;
-            adapter_index = i;
-            SafeRelease(m_Device);
+            // @NOTE(Roman): Always prefer hardware adapters.
+            if (adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE && !max_vram)
+            {
+                if (max_sram < adapter_desc.SharedSystemMemory)
+                {
+                    max_sram      = adapter_desc.SharedSystemMemory;
+                    adapter_index = i;
+                    SafeRelease(m_Device);
+                }
+            }
+            else
+            {
+                if (max_vram < adapter_desc.DedicatedVideoMemory)
+                {
+                    max_vram      = adapter_desc.DedicatedVideoMemory;
+                    adapter_index = i;
+                    SafeRelease(m_Device);
+                }
+            }
         }
         SafeRelease(m_Adapter);
     }
@@ -353,37 +372,92 @@ void DeviceContext::CreateAdapterAndDevice()
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: ", cast(const wchar_t *, adapter_desc.Description), ", Feature Level: D3D_FEATURE_LEVEL_12_1");
+        m_Logger.LogInfo("GPU Adapter: ", cast(const wchar_t *, adapter_desc.Description),
+                         ", Feature Level: D3D_FEATURE_LEVEL_12_1"
+                         ", VRAM: ", max_vram, " bytes");
     }
-    else
+    else if (max_sram)
     {
-        for (UINT i = 0; m_Factory->EnumAdapters1(i, &m_Adapter) != D3D12_ERROR_ADAPTER_NOT_FOUND; ++i)
-        {
-            error = m_Adapter->GetDesc1(&adapter_desc);
-            REV_CHECK(CheckResultAndPrintMessages(error, this));
-
-            error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
-            if (Succeeded(error) && max_vram < adapter_desc.DedicatedVideoMemory && !(adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE))
-            {
-                max_vram      = adapter_desc.DedicatedVideoMemory;
-                adapter_index = i;
-                SafeRelease(m_Device);
-            }
-            SafeRelease(m_Adapter);
-        }
-
-        REV_CHECK_M(max_vram, "Direct3D 12 is not supported by your hardware");
-
         error = m_Factory->EnumAdapters1(adapter_index, &m_Adapter);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
+        error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_Device));
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
         error = m_Adapter->GetDesc1(&adapter_desc);
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
-        m_Logger.LogInfo("GPU Adapter: ", cast(const wchar_t *, adapter_desc.Description), ", Feature Level: D3D_FEATURE_LEVEL_12_0");
+        m_Logger.LogInfo("Rendering Adapter: ", cast(const wchar_t *, adapter_desc.Description),
+                         ", Feature Level: D3D_FEATURE_LEVEL_12_1"
+                         ", Shared RAM: ", max_sram, " bytes");
+    }
+    else
+    {
+        for (UINT i = 0; (error = m_Factory->EnumAdapters1(i, &m_Adapter)) != DXGI_ERROR_NOT_FOUND; ++i)
+        {
+            error = m_Adapter->GetDesc1(&adapter_desc);
+            REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+            error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
+            if (Succeeded(error))
+            {
+                // @NOTE(Roman): Always prefer hardware adapters.
+                if (adapter_desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE && !max_vram)
+                {
+                    if (max_sram < adapter_desc.SharedSystemMemory)
+                    {
+                        max_sram      = adapter_desc.SharedSystemMemory;
+                        adapter_index = i;
+                        SafeRelease(m_Device);
+                    }
+                }
+                else
+                {
+                    if (max_vram < adapter_desc.DedicatedVideoMemory)
+                    {
+                        max_vram      = adapter_desc.DedicatedVideoMemory;
+                        adapter_index = i;
+                        SafeRelease(m_Device);
+                    }
+                }
+            }
+            SafeRelease(m_Adapter);
+        }
+
+        if (max_vram)
+        {
+            error = m_Factory->EnumAdapters1(adapter_index, &m_Adapter);
+            REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+            error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
+            REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+            error = m_Adapter->GetDesc1(&adapter_desc);
+            REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+            m_Logger.LogInfo("GPU Adapter: ", cast(const wchar_t *, adapter_desc.Description),
+                             ", Feature Level: D3D_FEATURE_LEVEL_12_0"
+                             ", VRAM: ", max_vram, " bytes");
+        }
+        else if (max_sram)
+        {
+            error = m_Factory->EnumAdapters1(adapter_index, &m_Adapter);
+            REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+            error = D3D12CreateDevice(m_Adapter, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device));
+            REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+            error = m_Adapter->GetDesc1(&adapter_desc);
+            REV_CHECK(CheckResultAndPrintMessages(error, this));
+
+            m_Logger.LogInfo("Rendering Adapter: ", cast(const wchar_t *, adapter_desc.Description),
+                             ", Feature Level: D3D_FEATURE_LEVEL_12_0"
+                             ", Shared RAM: ", max_sram, " bytes");
+        }
+        else
+        {
+            REV_ERROR_M("Direct3D 12 is not supported by your hardware");
+        }
     }
 }
 

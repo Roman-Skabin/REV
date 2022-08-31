@@ -22,7 +22,7 @@ namespace REV::GPU
 
         RESOURCE_KIND_VERTEX_BUFFER,
         RESOURCE_KIND_INDEX_BUFFER,
-        RESOURCE_KIND_CONSTANT_BUFFER, // @NOTE(Roman): CBV
+        RESOURCE_KIND_CONSTANT_BUFFER, // @NOTE(Roman): D3D12 = CBV, Vulkan = uniform buffer
         RESOURCE_KIND_BUFFER,
 
         RESOURCE_KIND_TEXTURE,
@@ -32,14 +32,14 @@ namespace REV::GPU
 
     enum RESOURCE_FLAG : u32
     {
-        RESOURCE_FLAG_NONE          = 0,
-        RESOURCE_FLAG_STATIC        = 1 << 0,
-        RESOURCE_FLAG_CPU_READ      = 1 << 1,
-        RESOURCE_FLAG_CPU_WRITE     = 1 << 2,
-        RESOURCE_FLAG_GPU_WRITE     = 1 << 3, // @Important(Roman): Do not combine with RESOURCE_FLAG_RENDER_TARGET nor with RESOURCE_FLAG_DEPTH_STENCIL
-                                              // @NOTE(Roman): D3D12 = UAV, Vulkan = storage buffer
-        RESOURCE_FLAG_RENDER_TARGET = 1 << 4, // @Important(Roman): Do not combine with RESOURCE_FLAG_DEPTH_STENCIL nor with RESOURCE_FLAG_SHADER_WRITE
-        RESOURCE_FLAG_DEPTH_STENCIL = 1 << 5, // @Important(Roman): Do not combine with RESOURCE_FLAG_RENDER_TARGET nor with RESOURCE_FLAG_SHADER_WRITE
+        RESOURCE_FLAG_NONE                  = 0,
+        RESOURCE_FLAG_STATIC                = 1 << 0,
+        RESOURCE_FLAG_CPU_READ              = 1 << 1,
+        RESOURCE_FLAG_CPU_WRITE             = 1 << 2,
+        RESOURCE_FLAG_NONCOHERENT_GPU_WRITE = 1 << 3, // @Important(Roman): Do not combine with RESOURCE_FLAG_DEPTH_STENCIL
+                                                      // @NOTE(Roman): D3D12 = UAV, Vulkan = storage buffer
+        RESOURCE_FLAG_RENDER_TARGET         = 1 << 4, // @Important(Roman): Do not combine with RESOURCE_FLAG_DEPTH_STENCIL
+        RESOURCE_FLAG_DEPTH_STENCIL         = 1 << 5, // @Important(Roman): Do not combine with RESOURCE_FLAG_NONCOHERENT_GPU_WRITE nor with RESOURCE_FLAG_RENDER_TARGET
     };
     REV_ENUM_OPERATORS(RESOURCE_FLAG);
 
@@ -175,8 +175,7 @@ namespace REV::GPU
         TEXTURE_ADDRESS_MODE_MIRROR_ONCE,
     };
 
-    // @NOTE(Roman): 
-    //               +-----------------------------+------------------------------+
+    // @NOTE(Roman): +-----------------------------+------------------------------+
     //               |            D3D12            |             Vulkan           |
     //               +-----------------------------+------------------------------+
     //               | ConstantBuffer       (CBV)  | Uniform Buffer, std140       |
@@ -193,8 +192,8 @@ namespace REV::GPU
     class REV_API REV_NOVTABLE MemoryManager final
     {
     public:
-        ResourceHandle AllocateVertexBuffer(u32 count, bool _static, const ConstString& name = null);
-        ResourceHandle AllocateIndexBuffer(u32 count, bool _static, const ConstString& name = null);
+        ResourceHandle AllocateVertexBuffer(u32 count, u32 stride, bool _static, const ConstString& name = null);
+        ResourceHandle AllocateIndexBuffer(u32 count, u32 stride, bool _static, const ConstString& name = null);
         // @NOTE(Roman): D3D12 (HLSL):
         //                   ConstantBuffer or cbuffer;
         //               Vulkan (SPIR-V):

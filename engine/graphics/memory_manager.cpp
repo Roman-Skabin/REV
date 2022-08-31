@@ -294,7 +294,7 @@ TextureData *CreateVolumeTextureData(
 // MemoryManager
 //
 
-ResourceHandle MemoryManager::AllocateVertexBuffer(u32 count, bool _static, const ConstString& name)
+ResourceHandle MemoryManager::AllocateVertexBuffer(u32 count, u32 stride, bool _static, const ConstString& name)
 {
     ResourceHandle handle;
     handle.kind  = RESOURCE_KIND_VERTEX_BUFFER;
@@ -305,7 +305,7 @@ ResourceHandle MemoryManager::AllocateVertexBuffer(u32 count, bool _static, cons
     {
         case GraphicsAPI::API::D3D12:
         {
-            handle.index = cast(D3D12::MemoryManager *, platform)->AllocateVertexBuffer(count, handle.flags, name);
+            handle.index = cast(D3D12::MemoryManager *, platform)->AllocateVertexBuffer(count, stride, handle.flags, name);
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -313,10 +313,11 @@ ResourceHandle MemoryManager::AllocateVertexBuffer(u32 count, bool _static, cons
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
-ResourceHandle MemoryManager::AllocateIndexBuffer(u32 count, bool _static, const ConstString& name)
+ResourceHandle MemoryManager::AllocateIndexBuffer(u32 count, u32 stride, bool _static, const ConstString& name)
 {
     ResourceHandle handle;
     handle.kind  = RESOURCE_KIND_INDEX_BUFFER;
@@ -327,7 +328,7 @@ ResourceHandle MemoryManager::AllocateIndexBuffer(u32 count, bool _static, const
     {
         case GraphicsAPI::API::D3D12:
         {
-            handle.index = cast(D3D12::MemoryManager *, platform)->AllocateIndexBuffer(count, handle.flags, name);
+            handle.index = cast(D3D12::MemoryManager *, platform)->AllocateIndexBuffer(count, stride, handle.flags, name);
         } break;
 
         case GraphicsAPI::API::VULKAN:
@@ -335,6 +336,7 @@ ResourceHandle MemoryManager::AllocateIndexBuffer(u32 count, bool _static, const
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -357,6 +359,7 @@ ResourceHandle MemoryManager::AllocateConstantBuffer(u32 bytes, bool _static, co
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -386,6 +389,7 @@ ResourceHandle MemoryManager::AllocateBuffer(u32 bytes, u32 stride, BUFFER_FORMA
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -407,6 +411,7 @@ ResourceHandle MemoryManager::AllocateTexture1D(u16 width, u16 mip_levels, TEXTU
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -428,6 +433,7 @@ ResourceHandle MemoryManager::AllocateTexture2D(u16 width, u16 height, u16 mip_l
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -449,6 +455,7 @@ ResourceHandle MemoryManager::AllocateTexture3D(u16 width, u16 height, u16 depth
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -470,6 +477,7 @@ ResourceHandle MemoryManager::AllocateTextureCube(u16 width, u16 height, u16 mip
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -491,6 +499,7 @@ ResourceHandle MemoryManager::AllocateTexture1DArray(u16 width, u16 count, u16 m
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -512,6 +521,7 @@ ResourceHandle MemoryManager::AllocateTexture2DArray(u16 width, u16 height, u16 
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
@@ -533,13 +543,14 @@ ResourceHandle MemoryManager::AllocateTextureCubeArray(u16 width, u16 height, u1
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 
 ResourceHandle MemoryManager::AllocateSampler(TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static)
 {
     ResourceHandle handle;
-    handle.kind  = RESOURCE_KIND_SAMPLER;
+    handle.kind = RESOURCE_KIND_SAMPLER;
     if (_static) handle.flags = RESOURCE_FLAG_STATIC;
 
     switch (GraphicsAPI::GetAPI())
@@ -554,6 +565,7 @@ ResourceHandle MemoryManager::AllocateSampler(TEXTURE_ADDRESS_MODE address_mode,
         } break;
     }
 
+    REV_CHECK(handle);
     return handle;
 }
 

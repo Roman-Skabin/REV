@@ -72,10 +72,10 @@ enum
 #define REV__CSTRCAT(a, b) a ## b
 #define REV_CSTRCAT(a, b)  REV__CSTRCAT(a, b)
 
-#define REV_CSTRLEN(cstr) ((sizeof(cstr) - sizeof(*(cstr))) / sizeof(*(cstr)))
+#define REV_CSTRLEN(cstr) (::REV::ArrayCount(cstr))
 
-#define REV_CSTR_ARGS(cstr)    cstr,  REV_CSTRLEN(cstr)
-#define REV_CARRAY_ARGS(array) array, ::REV::ArrayCount(array)
+#define REV_CSTR_ARGS(cstr)    (cstr),  REV_CSTRLEN(cstr)
+#define REV_CARRAY_ARGS(array) (array), (::REV::ArrayCount(array))
 
 #define null nullptr
 
@@ -85,8 +85,10 @@ enum
 // Types
 //
 
-namespace Types
+#if _REV_GLOBAL_TYPES
+namespace
 {
+#endif
 
 static_assert(sizeof(long) == 4);
 
@@ -122,17 +124,8 @@ typedef u8 byte;
 typedef u32 intptr32;
 typedef u64 intptr64;
 
-} // Types
-
-using namespace Types;
-
 #if _REV_GLOBAL_TYPES
-} // REV
-
-using namespace ::REV::Types;
-
-namespace REV
-{
+}
 #endif
 
 #define REV_S8_MIN  0x80
@@ -191,8 +184,10 @@ namespace REV
 #define REV_INVALID_U32_OFFSET REV_U32_MAX
 #define REV_INVALID_U64_OFFSET REV_U64_MAX
 
-namespace Helpers
+#if _REV_GLOBAL_HELPERS
+namespace
 {
+#endif
 
 template<typename T, u64 count> constexpr REV_INLINE u64 ArrayCount(T (&)[count]) { return count; }
 
@@ -218,17 +213,8 @@ constexpr REV_INLINE bool IsPowOf2(T x)
     return x && ((x & (x - 1)) == 0);
 }
 
-} // Helpers
-
-using namespace Helpers;
-
 #if _REV_GLOBAL_HELPERS
-} // REV
-
-using namespace ::REV::Helpers;
-
-namespace REV
-{
+}
 #endif
 
 #define REV_ENUM_CLASS_OPERATORS(ENUM_CLASS)                                                                                                                                                                                                                                        \
@@ -276,19 +262,19 @@ namespace REV
         Interface& operator=(const Interface&) = delete; \
         Interface& operator=(Interface&&)      = delete
 
-#define REV_DELETE_CONSTRS_AND_OPS(Class)        \
-        Class(const Class&)            = delete; \
-        Class(Class&&)                 = delete; \
-        Class& operator=(const Class&) = delete; \
-        Class& operator=(Class&&)      = delete
+#define REV_DELETE_CONSTRS_AND_OPS(Class)    \
+    Class(const Class&)            = delete; \
+    Class(Class&&)                 = delete; \
+    Class& operator=(const Class&) = delete; \
+    Class& operator=(Class&&)      = delete
 
-#define REV_REMOVE_OOP_STUFF(Class)              \
-        Class()                        = delete; \
-        Class(const Class&)            = delete; \
-        Class(Class&&)                 = delete; \
-        ~Class()                       = delete; \
-        Class& operator=(const Class&) = delete; \
-        Class& operator=(Class&&)      = delete
+#define REV_REMOVE_OOP_STUFF(Class)          \
+    Class()                        = delete; \
+    ~Class()                       = delete; \
+    Class(const Class&)            = delete; \
+    Class(Class&&)                 = delete; \
+    Class& operator=(const Class&) = delete; \
+    Class& operator=(Class&&)      = delete
 
 //
 // Debugging
@@ -357,4 +343,4 @@ REV_API u32 GetSysErrorCode();
 
 #endif
 
-}
+} // namespace REV

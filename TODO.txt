@@ -6,6 +6,7 @@
     - Minimize number of system calls // @Optimization
     - Mesh files
     - Several adapters support? (NVidia has gotten rid of SLI so shall we?)
+    - Rename all _STATIC to _PERMANENT
 
 - Tools
     - Wait for multiple events
@@ -29,6 +30,7 @@
     - Smarter includes.
 
 - Graphics
+    - Split barriers
     - static samplers, (constants?)
     - Forward Rendering
     - Multisampling

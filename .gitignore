@@ -10,3 +10,4 @@ log/
 nsight/
 old/
 sandbox/assets/shaders/cache/
+*.10x*

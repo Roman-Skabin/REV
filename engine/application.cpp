@@ -53,12 +53,20 @@ Application::~Application()
 
 void Application::SetCurrentScene(Scene *scene)
 {
-    if (m_CurrentScene) m_CurrentScene->OnUnsetCurrentEx();
+    if (m_CurrentScene)
+    {
+        m_CurrentScene->OnUnsetCurrentEx();
+    }
+
     m_CurrentScene = scene;
-    m_CurrentScene->OnSetCurrent();
+
+    if (m_CurrentScene)
+    {
+        m_CurrentScene->OnSetCurrent();
+    }
 }
 
-void Application::Run(Scene *scene)
+int Application::Run()
 {
     GPU::DeviceContext *device_context = GraphicsAPI::GetDeviceContext();
 
@@ -81,12 +89,11 @@ void Application::Run(Scene *scene)
             m_Window.ApplyFullscreenRequest();
 
             device_context->StartFrame();
-            if (!m_CurrentScene)
+            if (m_CurrentScene)
             {
-                SetCurrentScene(scene);
+                m_CurrentScene->OnUpdate();
             }
-            m_CurrentScene->OnUpdate();
-            m_CurrentScene->FlushBatch();
+            m_ForwardPlusPipeline.Render();
             device_context->EndFrame();
         }
     }
@@ -96,6 +103,8 @@ void Application::Run(Scene *scene)
     m_WorkQueue.Wait();
 
     m_CurrentScene->OnUnsetCurrentEx();
+
+    return GetSysErrorCode();
 }
 
 }

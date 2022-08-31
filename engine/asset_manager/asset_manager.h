@@ -106,8 +106,8 @@ namespace REV
 
     private:
         Allocator    *m_Allocator;
-        Array<Asset>  m_StaticAssets;          // @TODO, #Tools(Roman): Use HashTables instead (cuz we can search 'em by names)
-        Array<Asset>  m_SceneAssets;           // @TODO, #Tools(Roman): Use HashTables instead (cuz we can search 'em by names)
+        Array<Asset>  m_StaticAssets; // @TODO, #Tools(Roman): Use HashTables instead (because we can search them by names)
+        Array<Asset>  m_SceneAssets;  // @TODO, #Tools(Roman): Use HashTables instead (because we can search them by names)
         Logger        m_Logger;
         WorkQueue     m_WorkQueue;
     };

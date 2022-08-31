@@ -13,7 +13,7 @@
 #include "core/settings.h"
 
 #include "graphics/graphics_api.h"
-#include "graphics/forward_plus_pipeline.h"
+#include "graphics/render_pipelines.h"
 #include "graphics/scene.h"
 
 #include "tools/logger.h"
@@ -62,21 +62,21 @@ namespace REV
         REV_INLINE ForwardPlusPipeline& GetForwardPlusPipeline() { return m_ForwardPlusPipeline; }
 
     private:
-        void Run(Scene *scene);
+        int Run();
 
         REV_DELETE_CONSTRS_AND_OPS(Application);
 
     protected:
-        Allocator     m_Allocator;
-        Settings     *m_Settings;
-        Logger        m_Logger;
-        WorkQueue     m_WorkQueue;
-        Window        m_Window;
-        Input        *m_Input;
-        Timer         m_Timer;
-        Scene        *m_CurrentScene;
-        AssetManager *m_AssetManager;
-        ForwardPlusPipeline m_ForwardPlusPipeline;
+        Allocator            m_Allocator;
+        Settings            *m_Settings;
+        Logger               m_Logger;
+        WorkQueue            m_WorkQueue;
+        Window               m_Window;
+        Input               *m_Input;
+        Timer                m_Timer;
+        Scene               *m_CurrentScene;
+        AssetManager        *m_AssetManager;
+        ForwardPlusPipeline  m_ForwardPlusPipeline;
 
     private:
         static Application *s_Application;

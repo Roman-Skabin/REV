@@ -38,14 +38,7 @@ namespace REV::GPU
     private:
         void SetFullscreenMode(bool set);
 
-        DeviceContext()                     = delete;
-        DeviceContext(const DeviceContext&) = delete;
-        DeviceContext(DeviceContext&&)      = delete;
-
-        ~DeviceContext() = delete;
-
-        DeviceContext& operator=(const DeviceContext&) = delete;
-        DeviceContext& operator=(DeviceContext&&)      = delete;
+        REV_REMOVE_OOP_STUFF(DeviceContext);
 
     private:
         byte platform[0];

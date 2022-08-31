@@ -267,36 +267,52 @@ namespace REV::RTTI
     template<typename T> using underlying_type_t = typename underlying_type<T>::type;
 
     template<typename T, typename ...ConstructorArgs> inline constexpr bool is_constructible_v = __is_constructible(T, ConstructorArgs...);
-
     template<typename T, typename ...ConstructorArgs> using is_constructible = bool_type<__is_constructible(T, ConstructorArgs...)>;
 
     template<typename T> inline constexpr bool is_default_constructible_v = __is_constructible(T);
-
     template<typename T> using is_default_constructible = bool_type<__is_constructible(T)>;
 
     template<typename T> inline constexpr bool is_copy_constructible_v = __is_constructible(T, const T&);
-
     template<typename T> using is_copy_constructible = bool_type<__is_constructible(T, const T&)>;
 
     template<typename T> inline constexpr bool is_move_constructible_v = __is_constructible(T, T);
-
     template<typename T> using is_move_constructible = bool_type<__is_constructible(T, T)>;
 
     template<typename To, typename From> inline constexpr bool is_assignable_v = __is_assignable(To, From);
-
     template<typename To, typename From> using is_assignable = bool_type<__is_assignable(To, From)>;
 
     template<typename T> inline constexpr bool is_copy_assignable_v = __is_assignable(T&, const T&);
-
     template<typename T> using is_copy_assignable = bool_type<__is_assignable(T&, const T&)>;
 
     template<typename T> inline constexpr bool is_move_assignable_v = __is_assignable(T&, T);
-
     template<typename T> using is_move_assignable = bool_type<__is_assignable(T&, T)>;
 
     template<typename T> inline constexpr bool is_destructible_v = __is_destructible(T);
-
     template<typename T> using is_destructible = bool_type<__is_destructible(T)>;
+
+    template<typename T, typename ...ConstructorArgs> inline constexpr bool is_trivially_constructible_v = __is_trivially_constructible(T, ConstructorArgs...);
+    template<typename T, typename ...ConstructorArgs> using is_trivially_constructible = bool_type<__is_trivially_constructible(T, ConstructorArgs...)>;
+
+    template<typename T> inline constexpr bool is_trivially_default_constructible_v = __is_trivially_constructible(T);
+    template<typename T> using is_trivially_default_constructible = bool_type<__is_trivially_constructible(T)>;
+
+    template<typename T> inline constexpr bool is_trivially_copy_constructible_v = __is_trivially_constructible(T, const T&);
+    template<typename T> using is_trivially_copy_constructible = bool_type<__is_trivially_constructible(T, const T&)>;
+
+    template<typename T> inline constexpr bool is_trivially_move_constructible_v = __is_trivially_constructible(T, T);
+    template<typename T> using is_trivially_move_constructible = bool_type<__is_trivially_constructible(T, T)>;
+
+    template<typename To, typename From> inline constexpr bool is_trivially_assignable_v = __is_trivially_assignable(To, From);
+    template<typename To, typename From> using is_trivially_assignable = bool_type<__is_trivially_assignable(To, From)>;
+
+    template<typename T> inline constexpr bool is_trivially_copy_assignable_v = __is_trivially_assignable(T&, const T&);
+    template<typename T> using is_trivially_copy_assignable = bool_type<__is_trivially_assignable(T&, const T&)>;
+
+    template<typename T> inline constexpr bool is_trivially_move_assignable_v = __is_trivially_assignable(T&, T);
+    template<typename T> using is_trivially_move_assignable = bool_type<__is_trivially_assignable(T&, T)>;
+
+    template<typename T> inline constexpr bool is_trivially_destructible_v = __is_trivially_destructible(T);
+    template<typename T> using is_trivially_destructible = bool_type<__is_trivially_destructible(T)>;
 
     template<typename T, typename U> constexpr auto add(T a, U b) -> decltype(a + b) { return a + b; }
     template<typename T, typename U> constexpr auto sub(T a, U b) -> decltype(a - b) { return a - b; }
@@ -314,31 +330,42 @@ namespace REV::RTTI
     template<typename T> constexpr auto post_dec(T& a) -> decltype(a--) { return a--; }
 
     template<typename ...T> using are_default_constructible = all_true<is_default_constructible<T>...>;
-
     template<typename ...T> inline constexpr bool are_default_constructible_v = are_default_constructible<T...>::value;
 
     template<typename ...T> using are_copy_constructible = all_true<is_copy_constructible<T>...>;
-
     template<typename ...T> inline constexpr bool are_copy_constructible_v = are_copy_constructible<T...>::value;
 
     template<typename ...T> using are_move_constructible = all_true<is_move_constructible<T>...>;
-
     template<typename ...T> inline constexpr bool are_move_constructible_v = are_move_constructible<T...>::value;
 
     template<typename ...T> using are_copy_assignable = all_true<is_copy_assignable<T>...>;
-
     template<typename ...T> inline constexpr bool are_copy_assignable_v = are_copy_assignable<T...>::value;
 
     template<typename ...T> using are_move_assignable = all_true<is_move_assignable<T>...>;
-
     template<typename ...T> inline constexpr bool are_move_assignable_v = are_move_assignable<T...>::value;
 
     template<typename ...T> using are_destructible = all_true<is_destructible<T>...>;
-
     template<typename ...T> inline constexpr bool are_destructible_v = are_destructible<T...>::value;
 
-    template<typename ...T> inline constexpr unsigned long long sequence_count_v = sizeof...(T);
+    template<typename ...T> using are_trivially_default_constructible = all_true<is_trivially_default_constructible<T>...>;
+    template<typename ...T> inline constexpr bool are_trivially_default_constructible_v = are_trivially_default_constructible<T...>::value;
 
+    template<typename ...T> using are_trivially_copy_constructible = all_true<is_trivially_copy_constructible<T>...>;
+    template<typename ...T> inline constexpr bool are_trivially_copy_constructible_v = are_trivially_copy_constructible<T...>::value;
+
+    template<typename ...T> using are_trivially_move_constructible = all_true<is_trivially_move_constructible<T>...>;
+    template<typename ...T> inline constexpr bool are_trivially_move_constructible_v = are_trivially_move_constructible<T...>::value;
+
+    template<typename ...T> using are_trivially_copy_assignable = all_true<is_trivially_copy_assignable<T>...>;
+    template<typename ...T> inline constexpr bool are_trivially_copy_assignable_v = are_trivially_copy_assignable<T...>::value;
+
+    template<typename ...T> using are_trivially_move_assignable = all_true<is_trivially_move_assignable<T>...>;
+    template<typename ...T> inline constexpr bool are_trivially_move_assignable_v = are_trivially_move_assignable<T...>::value;
+
+    template<typename ...T> using are_trivially_destructible = all_true<is_trivially_destructible<T>...>;
+    template<typename ...T> inline constexpr bool are_trivially_destructible_v = are_trivially_destructible<T...>::value;
+
+    template<typename ...T> inline constexpr unsigned long long sequence_count_v = sizeof...(T);
     template<typename ...T> using sequence_count = base<unsigned long long, sizeof...(T)>;
 
     template<unsigned long long index, typename T, typename ...U> struct get_sequence_type             { using type = typename get_sequence_type<index - 1, U...>::type; };

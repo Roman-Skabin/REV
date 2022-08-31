@@ -14,31 +14,45 @@ namespace REV
 
     #define REV_INVALID_ENTITY_ID REV_U32_MAX
 
-    // @Cleanup(Roman): Temporary
-    struct REV_API Entity
+    // @TODO(Roman): Store vertices and indeces in RAM so we can batch them together on GPU
+    class REV_API Entity
     {
-        ConstArray<Vertex>  vertices;
-        ConstArray<Index>   indices;
-        EntityID            ID;
+    public:
+        Entity(const ConstString& name);
+        Entity(Entity&& other);
 
-        REV_INLINE Entity()                    : vertices(null),           indices(null),          ID(++s_LastID) {}
-        REV_INLINE Entity(const Entity& other) : vertices(other.vertices), indices(other.indices), ID(++s_LastID) {}
-        REV_INLINE Entity(Entity&& other)      : vertices(other.vertices), indices(other.indices), ID(other.ID)   { other.ID = REV_INVALID_ENTITY_ID; }
+        ~Entity();
 
-        REV_INLINE ~Entity() {}
+        void SetVertices(const void *vertices, u64 count, u64 stride);
+        void SetIndices(const void *indices, u64 count, u64 stride);
 
-        void Create(u64 vcount, u64 icount);
-        void SetData(const ConstArray<Vertex>& vertices, const ConstArray<Index>& indices);
+        template<typename T> REV_INLINE void SetVertices(const ConstArray<T>& vertices) { SetVertices(vertices.Data(), vertices.Count(), vertices.Stride()); }
+        template<typename T> REV_INLINE void SetIndices(const ConstArray<T>& indices)   { SetIndices(indices.Data(),   indices.Count(),  indices.Stride());  }
 
-        REV_INLINE Entity& operator=(const Entity& other) { if (this != &other) { vertices = other.vertices; indices = other.indices; ID = ++s_LastID;                                   } return *this; }
-        REV_INLINE Entity& operator=(Entity&& other)      { if (this != &other) { vertices = other.vertices; indices = other.indices; ID = other.ID;   other.ID = REV_INVALID_ENTITY_ID; } return *this; }
-    
+        REV_INLINE const ResourceHandle& VertexBuffer() const { return m_VertexBuffer; }
+        REV_INLINE const ResourceHandle& IndexBuffer()  const { return m_IndexBuffer;  }
+        REV_INLINE const ConstString&    Name()         const { return m_Name;         }
+        REV_INLINE EntityID              ID()           const { return m_ID;           }
+
+        REV_INLINE bool Valid() const { return m_ID != REV_INVALID_ENTITY_ID; }
+
+        Entity& operator=(Entity&& other);
+
+        REV_INLINE operator bool() { return Valid(); }
+
     private:
-        static EntityID s_LastID;
+        Entity(const Entity&) = delete;
+        Entity& operator=(const Entity&) = delete;
+
+    private:
+        ResourceHandle m_VertexBuffer;
+        ResourceHandle m_IndexBuffer;
+        ConstString    m_Name;
+        EntityID       m_ID;
     };
 
-    REV_INLINE operator==(const Entity& left, const Entity& right) { return left.ID == right.ID; }
-    REV_INLINE operator!=(const Entity& left, const Entity& right) { return left.ID != right.ID; }
+    REV_INLINE bool operator==(const Entity& left, const Entity& right) { return left.ID() == right.ID(); }
+    REV_INLINE bool operator!=(const Entity& left, const Entity& right) { return left.ID() != right.ID(); }
 
     class REV_API Scene
     {

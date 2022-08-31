@@ -90,11 +90,14 @@ void ShaderManager::FreeSceneShaders()
     }
 }
 
-u64 ShaderManager::CreateGraphicsShader(const ConstString& shader_cache_filename, const ConstArray<GPU::ShaderResourceDesc>& resources, bool _static)
+u64 ShaderManager::CreateGraphicsShader(
+    const ConstString&                         shader_cache_filename,
+    const ConstArray<ShaderResourceDesc>& resources,
+    bool                                       _static)
 {
     Memory                *memory           = Memory::Get();
     Array<GraphicsShader> *graphics_shaders = _static ? &m_StaticGraphicsShaders : &m_SceneGraphicsShaders;
-    GPU::MemoryManager    *memory_manager   = GraphicsAPI::GetMemoryManager();
+    MemoryManager    *memory_manager   = GraphicsAPI::GetMemoryManager();
 
     GraphicsShader *graphics_shader = graphics_shaders->PushBack();
     graphics_shader->_static = _static;
@@ -192,7 +195,7 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
 
             for (ResourcesTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
             {
-                if (UAV->resoucre_desc.resource.kind == GPU::RESOURCE_KIND_TEXTURE)
+                if (UAV->resoucre_desc.resource.kind == RESOURCE_KIND_TEXTURE)
                 {
                     Texture& texture = memory_manager->GetTexture(UAV->resoucre_desc.resource);
 
@@ -221,7 +224,7 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
 
             for (ResourcesTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
             {
-                if (UAV->resoucre_desc.resource.kind == GPU::RESOURCE_KIND_TEXTURE)
+                if (UAV->resoucre_desc.resource.kind == RESOURCE_KIND_TEXTURE)
                 {
                     Texture& texture = memory_manager->GetTexture(UAV->resoucre_desc.resource);
 
@@ -324,9 +327,9 @@ void ShaderManager::SetCurrentGraphicsShader(const GraphicsShader& graphics_shad
     }
 }
 
-void ShaderManager::BindVertexBuffer(const GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource)
+void ShaderManager::BindVertexBuffer(const GraphicsShader& graphics_shader, const ResourceHandle& resource)
 {
-    REV_CHECK_M(resource.kind == GPU::RESOURCE_KIND_VERTEX_BUFFER, "Resource #%I64u is not a vertex buffer", resource.index);
+    REV_CHECK_M(resource.kind == RESOURCE_KIND_VERTEX_BUFFER, "Resource #%I64u is not a vertex buffer", resource.index);
 
     MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
     Buffer&        buffer         = memory_manager->GetBuffer(resource);
@@ -339,9 +342,9 @@ void ShaderManager::BindVertexBuffer(const GraphicsShader& graphics_shader, cons
     cast(DeviceContext *, GraphicsAPI::GetDeviceContext())->CurrentGraphicsList()->IASetVertexBuffers(0, 1, &vbv);
 }
 
-void ShaderManager::BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource)
+void ShaderManager::BindIndexBuffer(GraphicsShader& graphics_shader, const ResourceHandle& resource)
 {
-    REV_CHECK_M(resource.kind == GPU::RESOURCE_KIND_INDEX_BUFFER, "Resource #%I64u is not an index buffer", resource.index);
+    REV_CHECK_M(resource.kind == RESOURCE_KIND_INDEX_BUFFER, "Resource #%I64u is not an index buffer", resource.index);
 
     MemoryManager *memory_manager = cast(MemoryManager *, GraphicsAPI::GetMemoryManager());
     Buffer&        buffer         = memory_manager->GetBuffer(resource);
@@ -356,13 +359,13 @@ void ShaderManager::BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::
     graphics_shader.index_buffer = resource;
 }
 
-ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const GraphicsShader& graphics_shader)
+ConstArray<ResourceHandle> ShaderManager::GetLoadableResources(const GraphicsShader& graphics_shader)
 {
     u64 resources_count = 0;
     
     for (ResourceTableNode *CBV = graphics_shader.bound_resources.CBV_first; CBV; CBV = CBV->next)
     {
-        if (CBV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (CBV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             ++resources_count;
         }
@@ -370,7 +373,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
 
     for (ResourceTableNode *SRV = graphics_shader.bound_resources.SRV_first; SRV; SRV = SRV->next)
     {
-        if (SRV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (SRV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             ++resources_count;
         }
@@ -378,7 +381,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
 
     for (ResourceTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
     {
-        if (UAV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (UAV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             ++resources_count;
         }
@@ -386,7 +389,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
 
     for (ResourceTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
     {
-        if (RTV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (RTV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             ++resources_count;
         }
@@ -394,18 +397,18 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
 
     if (graphics_shader.bound_resources.DSV)
     {
-        if (graphics_shader.bound_resources.DSV.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (graphics_shader.bound_resources.DSV.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             ++resources_count;
         }
     }
 
-    GPU::ResourceHandle *resources    = Memory::Get()->PushToTA<GPU::ResourceHandle>(resources_count);
-    GPU::ResourceHandle *resources_it = resources;
+    ResourceHandle *resources    = Memory::Get()->PushToTA<ResourceHandle>(resources_count);
+    ResourceHandle *resources_it = resources;
 
     for (ResourceTableNode *CBV = graphics_shader.bound_resources.CBV_first; CBV; CBV = CBV->next)
     {
-        if (CBV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (CBV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             *resources_it++ = CBV->resoucre_desc.resource;
         }
@@ -413,7 +416,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
     
     for (ResourceTableNode *SRV = graphics_shader.bound_resources.SRV_first; SRV; SRV = SRV->next)
     {
-        if (SRV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (SRV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             *resources_it++ = SRV->resoucre_desc.resource;
         }
@@ -421,7 +424,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
     
     for (ResourceTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
     {
-        if (UAV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (UAV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             *resources_it++ = UAV->resoucre_desc.resource;
         }
@@ -429,7 +432,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
     
     for (ResourceTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
     {
-        if (RTV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (RTV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             *resources_it++ = RTV->resoucre_desc.resource;
         }
@@ -437,7 +440,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
 
     if (graphics_shader.bound_resources.DSV)
     {
-        if (graphics_shader.bound_resources.DSV.resource.flags & GPU::RESOURCE_FLAG_CPU_WRITE)
+        if (graphics_shader.bound_resources.DSV.resource.flags & RESOURCE_FLAG_CPU_WRITE)
         {
             *resources_it++ = graphics_shader.bound_resources.DSV.resource;
         }
@@ -446,13 +449,13 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetLoadableResources(const Graphi
     return ConstArray(resources, resources_count);
 }
 
-ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const GraphicsShader& graphics_shader)
+ConstArray<ResourceHandle> ShaderManager::GetStorableResources(const GraphicsShader& graphics_shader)
 {
     u64 resources_count = 0;
     
     for (ResourceTableNode *CBV = graphics_shader.bound_resources.CBV_first; CBV; CBV = CBV->next)
     {
-        if (CBV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (CBV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             ++resources_count;
         }
@@ -460,7 +463,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const Graphi
 
     for (ResourceTableNode *SRV = graphics_shader.bound_resources.SRV_first; SRV; SRV = SRV->next)
     {
-        if (SRV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (SRV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             ++resources_count;
         }
@@ -468,7 +471,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const Graphi
 
     for (ResourceTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
     {
-        if (UAV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (UAV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             ++resources_count;
         }
@@ -476,7 +479,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const Graphi
 
     for (ResourceTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
     {
-        if (RTV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (RTV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             ++resources_count;
         }
@@ -484,18 +487,18 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const Graphi
 
     if (graphics_shader.bound_resources.DSV)
     {
-        if (graphics_shader.bound_resources.DSV.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (graphics_shader.bound_resources.DSV.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             ++resources_count;
         }
     }
 
-    GPU::ResourceHandle *resources    = Memory::Get()->PushToTA<GPU::ResourceHandle>(resources_count);
-    GPU::ResourceHandle *resources_it = resources;
+    ResourceHandle *resources    = Memory::Get()->PushToTA<ResourceHandle>(resources_count);
+    ResourceHandle *resources_it = resources;
 
     for (ResourceTableNode *CBV = graphics_shader.bound_resources.CBV_first; CBV; CBV = CBV->next)
     {
-        if (CBV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (CBV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             *resources_it++ = CBV->resoucre_desc.resource;
         }
@@ -503,7 +506,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const Graphi
     
     for (ResourceTableNode *SRV = graphics_shader.bound_resources.SRV_first; SRV; SRV = SRV->next)
     {
-        if (SRV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (SRV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             *resources_it++ = SRV->resoucre_desc.resource;
         }
@@ -511,7 +514,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const Graphi
     
     for (ResourceTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
     {
-        if (UAV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (UAV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             *resources_it++ = UAV->resoucre_desc.resource;
         }
@@ -519,7 +522,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const Graphi
     
     for (ResourceTableNode *RTV = graphics_shader.bound_resources.RTV_first; RTV; RTV = RTV->next)
     {
-        if (RTV->resoucre_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (RTV->resoucre_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             *resources_it++ = RTV->resoucre_desc.resource;
         }
@@ -527,7 +530,7 @@ ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const Graphi
 
     if (graphics_shader.bound_resources.DSV)
     {
-        if (graphics_shader.bound_resources.DSV.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        if (graphics_shader.bound_resources.DSV.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
             *resources_it++ = graphics_shader.bound_resources.DSV.resource;
         }
@@ -581,7 +584,7 @@ void ShaderManager::Draw(const GraphicsShader& graphics_shader)
 
         for (ResourcesTableNode *UAV = graphics_shader.bound_resources.UAV_first; UAV; UAV = UAV->next)
         {
-            if (UAV->resoucre_desc.resource.kind == GPU::RESOURCE_KIND_TEXTURE)
+            if (UAV->resoucre_desc.resource.kind == RESOURCE_KIND_TEXTURE)
             {
                 Texture& texture = memory_manager->GetTexture(UAV->resoucre_desc.resource);
 
@@ -647,10 +650,10 @@ void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const Const
 {
     File file(shader_cache_filename, FILE_FLAG_RES);
     
-    GPU::SHADER_KIND shader_kind = GPU::SHADER_KIND_UNKNOWN;
-    file.Read(&shader_kind, sizeof(GPU::SHADER_KIND));
+    SHADER_KIND shader_kind = SHADER_KIND_UNKNOWN;
+    file.Read(&shader_kind, sizeof(SHADER_KIND));
 
-    REV_CHECK(shader_kind & GPU::SHADER_KIND_VERTEX)
+    REV_CHECK(shader_kind & SHADER_KIND_VERTEX)
     {
         u32 size = 0;
         file.Read(&size, sizeof(size));
@@ -660,7 +663,7 @@ void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const Const
 
         file.Read(graphics_shader->vertex_shader->GetBufferPointer(), size);
     }
-    if (shader_kind & GPU::SHADER_KIND_HULL)
+    if (shader_kind & SHADER_KIND_HULL)
     {
         u32 size = 0;
         file.Read(&size, sizeof(size));
@@ -670,7 +673,7 @@ void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const Const
 
         file.Read(graphics_shader->hull_shader->GetBufferPointer(), size);
     }
-    if (shader_kind & GPU::SHADER_KIND_DOMAIN)
+    if (shader_kind & SHADER_KIND_DOMAIN)
     {
         u32 size = 0;
         file.Read(&size, sizeof(size));
@@ -680,7 +683,7 @@ void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const Const
 
         file.Read(graphics_shader->domain_shader->GetBufferPointer(), size);
     }
-    if (shader_kind & GPU::SHADER_KIND_GEOMETRY)
+    if (shader_kind & SHADER_KIND_GEOMETRY)
     {
         u32 size = 0;
         file.Read(&size, sizeof(size));
@@ -690,7 +693,7 @@ void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const Const
 
         file.Read(graphics_shader->geometry_shader->GetBufferPointer(), size);
     }
-    REV_CHECK(shader_kind & GPU::SHADER_KIND_PIXEL)
+    REV_CHECK(shader_kind & SHADER_KIND_PIXEL)
     {
         u32 size = 0;
         file.Read(&size, sizeof(size));
@@ -702,93 +705,100 @@ void ShaderManager::LoadShaderCache(GraphicsShader *graphics_shader, const Const
     }
 }
 
-void ShaderManager::InitBoundResources(GraphicsShader *graphics_shader, const ConstArray<GPU::ShaderResourceDesc>& resources)
+void ShaderManager::InitBoundResources(GraphicsShader *graphics_shader, const ConstArray<ShaderResourceDesc>& resources)
 {
     Memory *memory = Memory::Get();
     Arena  *arena  = graphics_shader->_static ? &memory->PermanentArena() : &memory->SceneArena();
 
-    for (const GPU::ShaderResourceDesc& resource_desc : resources)
+    ResourcesTableNode *CBV_it     = null;
+    ResourcesTableNode *SRV_it     = null;
+    ResourcesTableNode *UAV_it     = null;
+    ResourcesTableNode *RTV_it     = null;
+    ResourcesTableNode *DSV_it     = null;
+    ResourcesTableNode *sampler_it = null;
+
+    for (const ShaderResourceDesc& resource_desc : resources)
     {
         ResourcesTableNode *node = arena->Push<ResourcesTableNode>();
         node->resoucre_desc = resource_desc;
 
-        if (resource_desc.resource.kind == GPU::RESOURCE_KIND_CONSTANT_BUFFER)
+        if (resource_desc.resource.kind == RESOURCE_KIND_CONSTANT_BUFFER)
         {
-            if (graphics_shader->bound_resources.CBV_first)
+            if (CBV_it)
             {
-                node->prev = graphics_shader->bound_resources.CBV_last;
+                node->prev = CBV_it;
 
-                graphics_shader->bound_resources.CBV_last->next = node;
-                graphics_shader->bound_resources.CBV_last       = node;
+                CBV_it->next = node;
+                CBV_it       = node;
             }
             else
             {
                 graphics_shader->bound_resources.CBV_first = node;
-                graphics_shader->bound_resources.CBV_last  = graphics_shader->bound_resources.CBV_first;
+                CBV_it                                     = node;
             }
             ++graphics_shader->bound_resources.CBV_count;
         }
-        else if (resource_desc.resource.kind == GPU::RESOURCE_KIND_SAMPLER)
+        else if (resource_desc.resource.kind == RESOURCE_KIND_SAMPLER)
         {
-            if (graphics_shader->bound_resources.sampler_first)
+            if (sampler_it)
             {
-                node->prev = graphics_shader->bound_resources.sampler_first;
+                node->prev = sampler_it;
 
-                graphics_shader->bound_resources.sampler_last->next = node;
-                graphics_shader->bound_resources.sampler_last       = node;
+                sampler_it->next = node;
+                sampler_it       = node;
             }
             else
             {
                 graphics_shader->bound_resources.sampler_first = node;
-                graphics_shader->bound_resources.sampler_last  = graphics_shader->bound_resources.sampler_first;
+                sampler_it                                     = node;
             }
             ++graphics_shader->bound_resources.sampler_count;
         }
-        else if (resource_desc.resource.flags & GPU::RESOURCE_FLAG_RENDER_TARGET)
+        else if (resource_desc.resource.flags & RESOURCE_FLAG_RENDER_TARGET)
         {
-            if (graphics_shader->bound_resources.RTV_first)
+            if (RTV_it)
             {
-                node->prev = graphics_shader->bound_resources.RTV_first;
+                node->prev = RTV_it;
 
-                graphics_shader->bound_resources.RTV_last->next = node;
-                graphics_shader->bound_resources.RTV_last       = node;
+                RTV_it->next = node;
+                RTV_it       = node;
             }
             else
             {
                 graphics_shader->bound_resources.RTV_first = node;
-                graphics_shader->bound_resources.RTV_last  = graphics_shader->bound_resources.RTV_first;
+                RTV_it                                     = node;
             }
             ++graphics_shader->bound_resources.RTV_count;
         }
-        else if (resource_desc.resource.flags & GPU::RESOURCE_FLAG_CPU_READ)
+        else if (resource_desc.resource.flags & RESOURCE_FLAG_CPU_READ)
         {
-            if (graphics_shader->bound_resources.UAV_first)
+            if (UAV_it)
             {
-                node->prev = graphics_shader->bound_resources.UAV_first;
+                node->prev = UAV_it;
 
-                graphics_shader->bound_resources.UAV_last->next = node;
-                graphics_shader->bound_resources.UAV_last       = node;
+                UAV_it->next = node;
+                UAV_it       = node;
             }
             else
             {
                 graphics_shader->bound_resources.UAV_first = node;
-                graphics_shader->bound_resources.UAV_last  = graphics_shader->bound_resources.UAV_first;
+                UAV_it                                     = node;
             }
             ++graphics_shader->bound_resources.UAV_count;
         }
         else
         {
-            if (graphics_shader->bound_resources.SRV_first)
+            if (SRV_it)
             {
-                node->prev = graphics_shader->bound_resources.SRV_first;
+                node->prev = SRV_it;
 
-                graphics_shader->bound_resources.SRV_last->next = node;
-                graphics_shader->bound_resources.SRV_last       = node;
+                SRV_it->next = node;
+                SRV_it       = node;
             }
             else
             {
                 graphics_shader->bound_resources.SRV_first = node;
-                graphics_shader->bound_resources.SRV_last  = graphics_shader->bound_resources.SRV_first;
+                SRV_it                                     = node;
             }
             ++graphics_shader->bound_resources.SRV_count;
         }
@@ -842,7 +852,7 @@ void ShaderManager::CreateDescHeaps(GraphicsShader *graphics_shader)
         HRESULT error = device->CreateDescriptorHeap(&sampler_desc_heap_desc, IID_PPV_ARGS(&graphics_shader->desc_heap_table.sampler_desc_heap));
         REV_CHECK(CheckResultAndPrintMessages(error));
         
-        graphics_shader->desc_heap_table.sampler_gpu_desc_handle  = graphics_shader->desc_heap_table.sampler_desc_heap->GetGPUDescriptorHandleForHeapStart();
+        graphics_shader->desc_heap_table.sampler_gpu_desc_handle = graphics_shader->desc_heap_table.sampler_desc_heap->GetGPUDescriptorHandleForHeapStart();
     }
 }
 
@@ -870,7 +880,7 @@ void ShaderManager::CreateViews(GraphicsShader *graphics_shader)
 
         for (ResourcesTableNode *SRV = graphics_shader->bound_resources.SRV_first; SRV; SRV = SRV->next)
         {
-            if (SRV->resoucre_desc.resource.kind == GPU::RESOURCE_KIND_BUFFER)
+            if (SRV->resoucre_desc.resource.kind == RESOURCE_KIND_BUFFER)
             {
                 Buffer& buffer = memory_manager->GetBuffer(SRV->resoucre_desc.resource);
 
@@ -979,7 +989,7 @@ void ShaderManager::CreateViews(GraphicsShader *graphics_shader)
 
         for (ResourcesTableNode *UAV = graphics_shader->bound_resources.UAV_first; UAV; UAV = UAV->next)
         {
-            if (UAV->resoucre_desc.resource.kind == GPU::RESOURCE_KIND_BUFFER)
+            if (UAV->resoucre_desc.resource.kind == RESOURCE_KIND_BUFFER)
             {
                 Buffer& buffer = memory_manager->GetBuffer(UAV->resoucre_desc.resource);
 
@@ -1071,7 +1081,7 @@ void ShaderManager::CreateViews(GraphicsShader *graphics_shader)
 
         for (ResourcesTableNode *RTV = graphics_shader->bound_resources.RTV_first; RTV; RTV = RTV->next)
         {
-            if (RTV->resoucre_desc.resource.kind == GPU::RESOURCE_KIND_BUFFER)
+            if (RTV->resoucre_desc.resource.kind == RESOURCE_KIND_BUFFER)
             {
                 Buffer& buffer = memory_manager->GetBuffer(RTV->resoucre_desc.resource);
 
@@ -1405,17 +1415,17 @@ void ShaderManager::CreatePipelineState(GraphicsShader *graphics_shader, const D
     D3D12_DEPTH_STENCIL_DESC depth_desc;
     depth_desc.DepthEnable                  = depth_test_enabled;
     depth_desc.DepthWriteMask               = blending_enabled ? D3D12_DEPTH_WRITE_MASK_ZERO : D3D12_DEPTH_WRITE_MASK_ALL;
-    depth_desc.DepthFunc                    = D3D12_COMPARISON_FUNC_LESS;
+    depth_desc.DepthFunc                    = D3D12_COMPARISON_FUNC_GREATER;
     depth_desc.StencilEnable                = false;
     depth_desc.StencilReadMask              = REV_U8_MAX;
     depth_desc.StencilWriteMask             = REV_U8_MAX;
-    depth_desc.FrontFace.StencilFailOp      = D3D12_STENCIL_OP_KEEP;
-    depth_desc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-    depth_desc.FrontFace.StencilPassOp      = D3D12_STENCIL_OP_KEEP;
+    depth_desc.FrontFace.StencilFailOp      = D3D12_STENCIL_OP_ZERO;
+    depth_desc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_ZERO;
+    depth_desc.FrontFace.StencilPassOp      = D3D12_STENCIL_OP_ZERO;
     depth_desc.FrontFace.StencilFunc        = D3D12_COMPARISON_FUNC_NEVER;
-    depth_desc.BackFace.StencilFailOp       = D3D12_STENCIL_OP_KEEP;
-    depth_desc.BackFace.StencilDepthFailOp  = D3D12_STENCIL_OP_KEEP;
-    depth_desc.BackFace.StencilPassOp       = D3D12_STENCIL_OP_KEEP;
+    depth_desc.BackFace.StencilFailOp       = D3D12_STENCIL_OP_ZERO;
+    depth_desc.BackFace.StencilDepthFailOp  = D3D12_STENCIL_OP_ZERO;
+    depth_desc.BackFace.StencilPassOp       = D3D12_STENCIL_OP_ZERO;
     depth_desc.BackFace.StencilFunc         = D3D12_COMPARISON_FUNC_NEVER;
 
     // @TODO(Roman): Cached pipeline state
@@ -1456,7 +1466,7 @@ void ShaderManager::CreatePipelineState(GraphicsShader *graphics_shader, const D
         gpsd.RTVFormats[gpsd.NumRenderTargets++] = DXGI_FORMAT_R8G8B8A8_UNORM;
         for (ResourcesTableNode *RTV = graphics_shader->bound_resources.RTV_first; RTV; RTV = RTV->next)
         {
-            if (RTV->resoucre_desc.resource.kind == GPU::RESOURCE_KIND_BUFFER)
+            if (RTV->resoucre_desc.resource.kind == RESOURCE_KIND_BUFFER)
             {
                 Buffer& buffer = memory_manager->GetBuffer(RTV->resoucre_desc.resource);
                 gpsd.RTVFormats[gpsd.NumRenderTargets++] = buffer.format;

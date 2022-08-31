@@ -68,26 +68,27 @@ void Application::SetCurrentScene(Scene *scene)
 
 int Application::Run()
 {
-    GPU::DeviceContext *device_context = GraphicsAPI::GetDeviceContext();
-
     m_Timer.Start();
 
     m_Window.Show();
     while (!m_Window.Closed())
     {
-        m_WorkQueue.AddWork([    ] { Memory::Get()->ResetFrameArena(); });
-        m_WorkQueue.AddWork([this] { m_Window.Resset();                });
-        m_WorkQueue.AddWork([this] { m_Input->Reset();                 });
+        m_WorkQueue.AddWork([    ] { Memory::Get()->ResetFrameArena();                      });
+        m_WorkQueue.AddWork([    ] { GraphicsAPI::GetMemoryManager()->FreePerFrameMemory(); });
+        m_WorkQueue.AddWork([this] { m_Window.Resset();                                     });
+        m_WorkQueue.AddWork([this] { m_Input->Reset();                                      });
         m_WorkQueue.Wait();
 
         m_Window.PollEvents();
 
         if (!m_Window.Closed() && !m_Window.Minimized())
         {
-            m_Input->Update(m_Logger);
-            m_Timer.Tick();
-            m_Window.ApplyFullscreenRequest();
+            m_WorkQueue.AddWork([this] { m_Input->Update(m_Logger);         });
+            m_WorkQueue.AddWork([this] { m_Timer.Tick();                    });
+            m_WorkQueue.AddWork([this] { m_Window.ApplyFullscreenRequest(); });
+            m_WorkQueue.Wait();
 
+            DeviceContext *device_context = GraphicsAPI::GetDeviceContext();
             device_context->StartFrame();
             if (m_CurrentScene)
             {
@@ -98,10 +99,7 @@ int Application::Run()
         }
     }
 
-    m_WorkQueue.AddWork([this          ]{ m_Timer.Stop();               });
-    m_WorkQueue.AddWork([device_context]{ device_context->WaitForGPU(); });
-    m_WorkQueue.Wait();
-
+    m_Timer.Stop();
     m_CurrentScene->OnUnsetCurrentEx();
 
     return GetSysErrorCode();

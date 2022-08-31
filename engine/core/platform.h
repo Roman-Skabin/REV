@@ -116,10 +116,14 @@
 //
 
 #if REV_PLATFORM_WIN64
-    #define NOWINBASEINTERLOCK      1 // Windows.h
-    #define WIN32_LEAN_AND_MEAN     1 // Windows.h
-    #define VC_EXTRALEAN            1 // Windows.h
-    #define NOMINMAX                1 // Windows.h
+    // @NOTE(Roman): Remove all unused stuff from WinAPI
+    #define NOGDICAPMASKS
+    #define NOSYSMETRICS
+    #define NOWINBASEINTERLOCK
+    #define WIN32_LEAN_AND_MEAN
+    #define VC_EXTRALEAN
+    #define NOMINMAX
+
     #define INITGUID                1 // DirectX, WASAPI, MFAPI
     #define _CRT_SECURE_NO_WARNINGS 1 // CRT
 #elif REV_PLATFORM_MACOS

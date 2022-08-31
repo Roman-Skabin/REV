@@ -122,54 +122,110 @@ bool CheckResultAndPrintMessages(HRESULT hr)
     return true;
 }
 
-DXGI_FORMAT REVToDXGITextureFormat(GPU::TEXTURE_FORMAT format)
+DXGI_FORMAT REVToDXGITextureFormat(TEXTURE_FORMAT format)
 {
     switch (format)
     {
-        case GPU::TEXTURE_FORMAT_UNKNOWN:   return DXGI_FORMAT_UNKNOWN;
-        case GPU::TEXTURE_FORMAT_S32:       return DXGI_FORMAT_R32_SINT;
-        case GPU::TEXTURE_FORMAT_U32:       return DXGI_FORMAT_R32_UINT;
-        case GPU::TEXTURE_FORMAT_RGBA8:     return DXGI_FORMAT_R8G8B8A8_UNORM;
-        case GPU::TEXTURE_FORMAT_BGRA8:     return DXGI_FORMAT_B8G8R8A8_UNORM;
-        case GPU::TEXTURE_FORMAT_BC1:       return DXGI_FORMAT_BC1_UNORM;
-        case GPU::TEXTURE_FORMAT_BC2:       return DXGI_FORMAT_BC2_UNORM;
-        case GPU::TEXTURE_FORMAT_BC3:       return DXGI_FORMAT_BC3_UNORM;
-        case GPU::TEXTURE_FORMAT_YUV422_8:  return DXGI_FORMAT_YUY2;
-        case GPU::TEXTURE_FORMAT_YUV422_10: return DXGI_FORMAT_Y210;
-        case GPU::TEXTURE_FORMAT_YUV422_16: return DXGI_FORMAT_Y216;
-        case GPU::TEXTURE_FORMAT_YUV411_8:  return DXGI_FORMAT_NV11;
-        case GPU::TEXTURE_FORMAT_YUV420_8:  return DXGI_FORMAT_NV12;
-        case GPU::TEXTURE_FORMAT_YUV420_10: return DXGI_FORMAT_P010;
-        case GPU::TEXTURE_FORMAT_YUV420_16: return DXGI_FORMAT_P016;
+        case TEXTURE_FORMAT_S32:         return DXGI_FORMAT_R32_SINT;
+        case TEXTURE_FORMAT_U32:         return DXGI_FORMAT_R32_UINT;
+
+        case TEXTURE_FORMAT_R32:         return DXGI_FORMAT_R32_UINT;
+        case TEXTURE_FORMAT_RG32:        return DXGI_FORMAT_R32G32_UINT;
+        case TEXTURE_FORMAT_RGB32:       return DXGI_FORMAT_R32G32B32_UINT;
+        case TEXTURE_FORMAT_RGBA32:      return DXGI_FORMAT_R32G32B32A32_UINT;
+
+        case TEXTURE_FORMAT_BGRA8:       return DXGI_FORMAT_B8G8R8A8_UNORM;
+        case TEXTURE_FORMAT_RGBA8:       return DXGI_FORMAT_R8G8B8A8_UNORM;
+        case TEXTURE_FORMAT_A8:          return DXGI_FORMAT_A8_UNORM;
+        case TEXTURE_FORMAT_B5G6R5:      return DXGI_FORMAT_B5G6R5_UNORM;
+        case TEXTURE_FORMAT_BGR5A1:      return DXGI_FORMAT_B5G5R5A1_UNORM;
+        case TEXTURE_FORMAT_BGRA4:       return DXGI_FORMAT_B4G4R4A4_UNORM;
+        case TEXTURE_FORMAT_R10G10B10A2: return DXGI_FORMAT_R10G10B10A2_UNORM;
+        case TEXTURE_FORMAT_RGBA16:      return DXGI_FORMAT_R16G16B16A16_UNORM;
+
+        case TEXTURE_FORMAT_D16:         return DXGI_FORMAT_D16_UNORM;
+        case TEXTURE_FORMAT_D32:         return DXGI_FORMAT_D32_FLOAT;
+        case TEXTURE_FORMAT_D24S8:       return DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+        case TEXTURE_FORMAT_BC1:         return DXGI_FORMAT_BC1_UNORM;
+        case TEXTURE_FORMAT_BC2:         return DXGI_FORMAT_BC2_UNORM;
+        case TEXTURE_FORMAT_BC3:         return DXGI_FORMAT_BC3_UNORM;
+        case TEXTURE_FORMAT_BC4:         return DXGI_FORMAT_BC4_UNORM;
+        case TEXTURE_FORMAT_BC5:         return DXGI_FORMAT_BC5_UNORM;
+        case TEXTURE_FORMAT_BC7:         return DXGI_FORMAT_BC7_UNORM;
     }
 
-    REV_ERROR_M("Invalid GPU::TEXTURE_FORMAT");
+    REV_ERROR_M("Invalid TEXTURE_FORMAT: %hhu", format);
     return DXGI_FORMAT_UNKNOWN;
 }
 
-GPU::TEXTURE_FORMAT DXGIToREVTextureFormat(DXGI_FORMAT format)
+TEXTURE_FORMAT DXGIToREVTextureFormat(DXGI_FORMAT format)
 {
     switch (format)
     {
-        case DXGI_FORMAT_UNKNOWN:        return GPU::TEXTURE_FORMAT_UNKNOWN;
-        case DXGI_FORMAT_R32_SINT:       return GPU::TEXTURE_FORMAT_S32;
-        case DXGI_FORMAT_R32_UINT:       return GPU::TEXTURE_FORMAT_U32;
-        case DXGI_FORMAT_R8G8B8A8_UNORM: return GPU::TEXTURE_FORMAT_RGBA8;
-        case DXGI_FORMAT_B8G8R8A8_UNORM: return GPU::TEXTURE_FORMAT_BGRA8;
-        case DXGI_FORMAT_BC1_UNORM:      return GPU::TEXTURE_FORMAT_BC1;
-        case DXGI_FORMAT_BC2_UNORM:      return GPU::TEXTURE_FORMAT_BC2;
-        case DXGI_FORMAT_BC3_UNORM:      return GPU::TEXTURE_FORMAT_BC3;
-        case DXGI_FORMAT_YUY2:           return GPU::TEXTURE_FORMAT_YUV422_8;
-        case DXGI_FORMAT_Y210:           return GPU::TEXTURE_FORMAT_YUV422_10;
-        case DXGI_FORMAT_Y216:           return GPU::TEXTURE_FORMAT_YUV422_16;
-        case DXGI_FORMAT_NV11:           return GPU::TEXTURE_FORMAT_YUV411_8;
-        case DXGI_FORMAT_NV12:           return GPU::TEXTURE_FORMAT_YUV420_8;
-        case DXGI_FORMAT_P010:           return GPU::TEXTURE_FORMAT_YUV420_10;
-        case DXGI_FORMAT_P016:           return GPU::TEXTURE_FORMAT_YUV420_16;
+        case DXGI_FORMAT_R32_SINT:           return TEXTURE_FORMAT_S32;
+        case DXGI_FORMAT_R32_UINT:           return TEXTURE_FORMAT_U32;
+
+        case DXGI_FORMAT_R32_UINT:           return TEXTURE_FORMAT_R32;
+        case DXGI_FORMAT_R32G32_UINT:        return TEXTURE_FORMAT_RG32;
+        case DXGI_FORMAT_R32G32B32_UINT:     return TEXTURE_FORMAT_RGB32;
+        case DXGI_FORMAT_R32G32B32A32_UINT:  return TEXTURE_FORMAT_RGBA32;
+
+        case DXGI_FORMAT_B8G8R8A8_UNORM:     return TEXTURE_FORMAT_BGRA8;
+        case DXGI_FORMAT_R8G8B8A8_UNORM:     return TEXTURE_FORMAT_RGBA8;
+        case DXGI_FORMAT_A8_UNORM:           return TEXTURE_FORMAT_A8;
+        case DXGI_FORMAT_B5G6R5_UNORM:       return TEXTURE_FORMAT_B5G6R5;
+        case DXGI_FORMAT_B5G5R5A1_UNORM:     return TEXTURE_FORMAT_BGR5A1;
+        case DXGI_FORMAT_B4G4R4A4_UNORM:     return TEXTURE_FORMAT_BGRA4;
+        case DXGI_FORMAT_R10G10B10A2_UNORM:  return TEXTURE_FORMAT_R10G10B10A2;
+        case DXGI_FORMAT_R16G16B16A16_UNORM: return TEXTURE_FORMAT_RGBA16;
+
+        case DXGI_FORMAT_D16_UNORM:          return TEXTURE_FORMAT_D16;
+        case DXGI_FORMAT_D32_FLOAT:          return TEXTURE_FORMAT_D32;
+        case DXGI_FORMAT_D24_UNORM_S8_UINT:  return TEXTURE_FORMAT_D24S8;
+
+        case DXGI_FORMAT_BC1_UNORM:          return TEXTURE_FORMAT_BC1;
+        case DXGI_FORMAT_BC2_UNORM:          return TEXTURE_FORMAT_BC2;
+        case DXGI_FORMAT_BC3_UNORM:          return TEXTURE_FORMAT_BC3;
+        case DXGI_FORMAT_BC4_UNORM:          return TEXTURE_FORMAT_BC4;
+        case DXGI_FORMAT_BC5_UNORM:          return TEXTURE_FORMAT_BC5;
+        case DXGI_FORMAT_BC7_UNORM:          return TEXTURE_FORMAT_BC7;
     }
 
-    REV_ERROR_M("Invalid or unsupported DXGI_FORMAT");
-    return GPU::TEXTURE_FORMAT_UNKNOWN;
+    REV_ERROR_M("Invalid or unsupported DXGI_FORMAT: %I32u", format);
+    return TEXTURE_FORMAT_UNKNOWN;
+}
+
+D3D12_FILTER RevToD3D12SamplerFilter(SAMPLER_FILTER filter, u32& anisotropy)
+{
+    switch (filter)
+    {
+        case SAMPLER_FILTER_POINT:           anisotropy = 0;  return D3D12_FILTER_MIN_MAG_MIP_POINT;
+        case SAMPLER_FILTER_BILINEAR:        anisotropy = 0;  return D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+        case SAMPLER_FILTER_TRILINEAR:       anisotropy = 0;  return D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+        case SAMPLER_FILTER_ANISOTROPIC_1X:  anisotropy = 1;
+        case SAMPLER_FILTER_ANISOTROPIC_2X:  anisotropy = 2;
+        case SAMPLER_FILTER_ANISOTROPIC_4X:  anisotropy = 4;
+        case SAMPLER_FILTER_ANISOTROPIC_8X:  anisotropy = 8;
+        case SAMPLER_FILTER_ANISOTROPIC_16X: anisotropy = 16; return D3D12_FILTER_ANISOTROPIC;
+    }
+
+    anisotropy = 0;
+    REV_ERROR_M("Invalid or unsupported SAMPLER_FILTER: %hhu", filter);
+    return D3D12_FILTER_MIN_MAG_MIP_POINT;
+}
+
+D3D12_TEXTURE_ADDRESS_MODE RevToD3D12SamplerAddressMode(SAMPLER_ADRESS_MODE address_mode)
+{
+    switch (address_mode)
+    {
+        case SAMPLER_ADRESS_MODE_CLAMP:  return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+        case SAMPLER_ADRESS_MODE_WRAP:   return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+        case SAMPLER_ADRESS_MODE_MIRROR: return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+    }
+
+    REV_ERROR_M("Invalid or unsupported SAMPLER_ADRESS_MODE: %hhu", address_mode);
+    return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 }
 
 }

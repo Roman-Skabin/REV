@@ -97,9 +97,9 @@ Allocator::~Allocator()
         if (m_First)
         {
         #if REV_PLATFORM_WIN64
-            REV_DEBUG_RESULT_M(VirtualFree(m_First, 0, MEM_RELEASE), "Allocator \"%s\": Internal error.", m_Name.Data());
+            REV_DEBUG_RESULT_M(VirtualFree(m_First, 0, MEM_RELEASE), "Allocator \"%s\": Internal error", m_Name.Data());
         #else
-            REV_DEBUG_RESULT_M(!munmap(m_First, m_Capacity), "Allocator \"%s\": Internal error.", m_Name.Data());
+            REV_DEBUG_RESULT_M(!munmap(m_First, m_Capacity), "Allocator \"%s\": Internal error", m_Name.Data());
         #endif
         }
     }
@@ -154,7 +154,7 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
     {
         REV_CHECK_M(it->block_state == BLOCK_STATE::IN_FREE_LIST,
                     "Allocator \"%s\": Internal error.\n"
-                    "    Blocks in the free list gotta be IN_FREE_LIST state.",
+                    "    Blocks in the free list gotta be IN_FREE_LIST state",
                     m_Name.Data());
 
         if (it->data_bytes == bytes)
@@ -188,7 +188,7 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
                     "Allocator \"%s\": Internal error.\n"
                     "    We could not have next block in free list\n"
                     "    and we could not have it as a last block (free block before none block)\n"
-                    "    because we are merging them on deallocation and/or on reallocation step.",
+                    "    because we are merging them on deallocation and/or on reallocation step",
                     m_Name.Data());
 
         first_in_list->block_state = BLOCK_STATE::ALLOCATED;
@@ -232,7 +232,7 @@ BlockHeader *Allocator::FindBestMatch(u64 bytes)
         {
             REV_CHECK_M(header->block_state == BLOCK_STATE::NONE,
                         "Allocator \"%s\": Internal error.\n"
-                        "    This block gotta be none block because it is not in the free list nor allocated.",
+                        "    This block gotta be none block because it is not in the free list nor allocated",
                         m_Name.Data());
 
             header->block_state = BLOCK_STATE::ALLOCATED;
@@ -308,7 +308,7 @@ void Allocator::MergeNearbyBlocksInFreeList(BlockHeader *header)
         {
             REV_CHECK_M(header != m_LastAllocated,
                         "Allocator \"%s\": Internal error.\n"
-                        "    If next block is in free list, so we have to have allocated block(s) after it.",
+                        "    If next block is in free list, so we have to have allocated block(s) after it",
                         m_Name.Data());
 
             BlockHeader *nexts_next = cast(BlockHeader *, next_header->data + next_header->data_bytes);
@@ -317,7 +317,7 @@ void Allocator::MergeNearbyBlocksInFreeList(BlockHeader *header)
                 REV_CHECK_M(nexts_next->block_state == BLOCK_STATE::ALLOCATED,
                             "Allocator \"%s\": Internal error.\n"
                             "    Next's next block gotta be allocated: it can't be in free list, otherwise next block had to be merged with it\n"
-                            "    and it can't be none, otherwise next block had to be none already.",
+                            "    and it can't be none, otherwise next block had to be none already",
                             m_Name.Data());
 
                 if (nexts_next->block_state != BLOCK_STATE::NONE)
@@ -339,7 +339,7 @@ void Allocator::MergeNearbyBlocksInFreeList(BlockHeader *header)
             REV_CHECK_M(header >= m_LastAllocated,
                         "Allocator \"%s\": Internal error.\n"
                         "    If next block is none, then our block must be last allocated.\n"
-                        "    Or if we're merging previous block, then it gotta be after last allocated block.",
+                        "    Or if we're merging previous block, then it gotta be after last allocated block",
                         m_Name.Data());
 
             for (BlockHeader *it = header->prev; it; it = it->prev)
@@ -371,7 +371,7 @@ void Allocator::DeAllocate(void *&mem)
         m_CriticalSection.Enter();
 
         REV_CHECK_M(MemInAllocatorRange(mem),
-                    "Allocator \"%s\": This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p].",
+                    "Allocator \"%s\": This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p]",
                     m_Name.Data(),
                     mem,
                     m_First->data,
@@ -430,7 +430,7 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                     REV_CHECK_M(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
                                 "Allocator \"%s\": Internal error.\n"
                                 "    Next's next block can't be free list because next block is already free list.\n"
-                                "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.",
+                                "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace",
                                 m_Name.Data());
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
@@ -467,7 +467,7 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                     REV_CHECK_M(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
                                 "Allocator \"%s\": Internal error.\n"
                                 "    Next's next block can't be free list because next block is already free list.\n"
-                                "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.",
+                                "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace",
                                 m_Name.Data());
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
@@ -504,7 +504,7 @@ BlockHeader *Allocator::ReAllocateInplace(BlockHeader *header, u64 bytes)
                     REV_CHECK_M(nexts_next->block_state != BLOCK_STATE::IN_FREE_LIST,
                                 "Allocator \"%s\": Internal error.\n"
                                 "    Next's next block can't be free list because next block is already free list.\n"
-                                "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace.",
+                                "    There's some error MergeNearbyBlocksInFreeList or ReallocateInplace",
                                 m_Name.Data());
 
                     if (nexts_next->block_state != BLOCK_STATE::NONE)
@@ -561,7 +561,7 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
     m_CriticalSection.Enter();
 
     REV_CHECK_M(MemInAllocatorRange(mem),
-                "Allocator \"%s\": This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p].",
+                "Allocator \"%s\": This memory block (0x%p) doesn't belong to this allocator [0x%p; 0x%p]",
                 m_Name.Data(),
                 mem,
                 m_First->data,
@@ -570,7 +570,7 @@ void *Allocator::ReAllocate(void *&mem, u64 bytes)
     BlockHeader *header = cast(BlockHeader *, cast(byte *, mem) - sizeof(BlockHeader));
 
     REV_CHECK_M(header->block_state == BLOCK_STATE::ALLOCATED,
-                "Allocator \"%s\": This memory block (0x%p) is not allocated yet/already.",
+                "Allocator \"%s\": This memory block (0x%p) is not allocated yet/already",
                 m_Name.Data(),
                 mem);
 

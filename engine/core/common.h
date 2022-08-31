@@ -66,13 +66,13 @@ enum
 #define REV_INTERNAL static
 #define REV_LOCAL    static
 
-#define REV__CSTR(x) #x 
+#define REV__CSTR(x) #x
 #define REV_CSTR(x)  REV__CSTR(x)
 
 #define REV__CSTRCAT(a, b) a ## b
 #define REV_CSTRCAT(a, b)  REV__CSTRCAT(a, b)
 
-#define REV_CSTRLEN(cstr) (::REV::ArrayCount(cstr))
+#define REV_CSTRLEN(cstr) (sizeof(cstr) / sizeof(*(cstr)) - sizeof(*(cstr)))
 
 #define REV_CSTR_ARGS(cstr)    (cstr),  REV_CSTRLEN(cstr)
 #define REV_CARRAY_ARGS(array) (array), (::REV::ArrayCount(array))
@@ -198,7 +198,8 @@ template<typename T, u64 count> constexpr REV_INLINE u64 ArrayCount(T (&)[count]
 template<typename T, typename U, typename Ret = RTTI::max_size_t<T, U>, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>
 constexpr REV_INLINE Ret AlignUp(T x, U a = DEFAULT_ALIGNMENT)
 {
-    return cast(Ret, (x + (a - 1)) & ~(a - 1));
+    const U mask = a - 1;
+    return cast(Ret, (x + mask) & ~mask);
 }
 
 template<typename T, typename U, typename Ret = RTTI::max_size_t<T, U>, typename = RTTI::enable_if_t<RTTI::is_integral_v<T> && RTTI::is_integral_v<U>>>

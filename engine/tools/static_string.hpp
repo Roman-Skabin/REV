@@ -265,7 +265,7 @@ public:
 
     u64 Find(char what, u64 offset = 0) const
     {
-        REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
+        REV_CHECK_M(offset < m_Length, "Offset out of bounds");
 
         char *_end = m_Data + m_Length;
 
@@ -282,7 +282,7 @@ public:
 
     u64 Find(const char *cstring, u64 cstring_length, u64 offset = 0) const
     {
-        REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
+        REV_CHECK_M(offset < m_Length, "Offset out of bounds");
 
         const char *_end = m_Data + m_Length;
 
@@ -315,7 +315,7 @@ public:
 
     u64 RFind(char what, u64 offset = 0) const
     {
-        REV_CHECK_M(offset < m_Length, "Offset out of bounds.");
+        REV_CHECK_M(offset < m_Length, "Offset out of bounds");
 
         for (const char *it = pLast() - offset; it >= m_Data; --it)
         {

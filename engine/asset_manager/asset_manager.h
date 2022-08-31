@@ -34,12 +34,12 @@ namespace REV
         ASSET_KIND kind;
         union
         {
-            GPU::ResourceHandle texture;
-            GPU::ShaderHandle   shader;
+            ResourceHandle texture;
+            ShaderHandle   shader;
             struct
             {
-                GPU::ResourceHandle vbuffer;
-                GPU::ResourceHandle ibuffer;
+                ResourceHandle vbuffer;
+                ResourceHandle ibuffer;
             } mesh;
         };
         StaticString<64> name;
@@ -48,9 +48,9 @@ namespace REV
     struct LoadShaderDesc final
     {
         const ConstString&                         name;
-        const ConstArray<GPU::ShaderResourceDesc>& resources;
+        const ConstArray<ShaderResourceDesc>& resources;
 
-        REV_INLINE LoadShaderDesc(const ConstString& name, const ConstArray<GPU::ShaderResourceDesc>& resources)
+        REV_INLINE LoadShaderDesc(const ConstString& name, const ConstArray<ShaderResourceDesc>& resources)
             : name(name),
               resources(resources)
         {
@@ -88,11 +88,11 @@ namespace REV
         REV_INLINE const Asset *GetAsset(AssetHandle handle)  const { return handle._static ? m_StaticAssets.GetPointer(handle.index) : m_SceneAssets.GetPointer(handle.index);  }
         REV_INLINE       Asset *GetAsset(AssetHandle handle)        { return handle._static ? m_StaticAssets.GetPointer(handle.index) : m_SceneAssets.GetPointer(handle.index);  }
 
-        const Asset *GetAsset(const GPU::ResourceHandle& resource) const;
-              Asset *GetAsset(const GPU::ResourceHandle& resource);
+        const Asset *GetAsset(const ResourceHandle& resource) const;
+              Asset *GetAsset(const ResourceHandle& resource);
         
-        const Asset *GetAsset(const GPU::ShaderHandle& shader) const;
-              Asset *GetAsset(const GPU::ShaderHandle& shader);
+        const Asset *GetAsset(const ShaderHandle& shader) const;
+              Asset *GetAsset(const ShaderHandle& shader);
 
         void MakeFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET_KIND kind, const ConstString& asset_name);
         void MakeCacheFilename(StaticString<REV_PATH_CAPACITY>& filename, ASSET_KIND kind, const ConstString& asset_name);

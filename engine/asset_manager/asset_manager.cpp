@@ -116,7 +116,7 @@ AssetHandle AssetManager::LoadTexture(const ConstString& name, bool _static)
 
 AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
 {
-    GPU::ShaderManager *shader_manager = GraphicsAPI::GetShaderManager();
+    ShaderManager *shader_manager = GraphicsAPI::GetShaderManager();
 
     StaticString<REV_PATH_CAPACITY> filename;
     MakeFilename(filename, ASSET_KIND_SHADER, desc.name);
@@ -136,11 +136,11 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
     File file(filename, FILE_FLAG_RES);
     File cache_file(cache_filename, FILE_FLAG_RW | FILE_FLAG_SEQ | (cache_exists ? FILE_FLAG_EXISTS : FILE_FLAG_NEW));
 
-    GPU::CompileShaderResult vs_cache;
-    GPU::CompileShaderResult hs_cache;
-    GPU::CompileShaderResult ds_cache;
-    GPU::CompileShaderResult gs_cache;
-    GPU::CompileShaderResult ps_cache;
+    CompileShaderResult vs_cache;
+    CompileShaderResult hs_cache;
+    CompileShaderResult ds_cache;
+    CompileShaderResult gs_cache;
+    CompileShaderResult ps_cache;
 
     if (!cache_exists || file.LastWriteTime() > cache_file.LastWriteTime())
     {
@@ -150,60 +150,60 @@ AssetHandle AssetManager::LoadShader(const LoadShaderDesc& desc, bool _static)
         ConstString code(data, file.Size());
         ConstString name(filename.Data(), filename.Length());
 
-        volatile u64              shaders_count = 0;
-        volatile GPU::SHADER_KIND shader_kind   = GPU::SHADER_KIND_UNKNOWN;
+        volatile u64         shaders_count = 0;
+        volatile SHADER_KIND shader_kind   = SHADER_KIND_UNKNOWN;
         m_Logger.LogInfo('"', name, "\" shaders are being compiled...");
 
         m_WorkQueue.AddWork([&vs_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
         {
-            vs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_VERTEX);
+            vs_cache = shader_manager->CompileShader(code, name, SHADER_KIND_VERTEX);
             if (vs_cache.blob)
             {
                 _InterlockedIncrement64(cast(s64 *, &shaders_count));
-                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_VERTEX);
+                _InterlockedOr(cast(volatile long *, &shader_kind), SHADER_KIND_VERTEX);
             }
         });
         m_WorkQueue.AddWork([&hs_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
         {
-            hs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_HULL);
+            hs_cache = shader_manager->CompileShader(code, name, SHADER_KIND_HULL);
             if (hs_cache.blob)
             {
                 _InterlockedIncrement64(cast(s64 *, &shaders_count));
-                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_HULL);
+                _InterlockedOr(cast(volatile long *, &shader_kind), SHADER_KIND_HULL);
             }
         });
         m_WorkQueue.AddWork([&ds_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
         {
-            ds_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_DOMAIN);
+            ds_cache = shader_manager->CompileShader(code, name, SHADER_KIND_DOMAIN);
             if (ds_cache.blob)
             {
                 _InterlockedIncrement64(cast(s64 *, &shaders_count));
-                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_DOMAIN);
+                _InterlockedOr(cast(volatile long *, &shader_kind), SHADER_KIND_DOMAIN);
             }
         });
         m_WorkQueue.AddWork([&gs_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
         {
-            gs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_GEOMETRY);
+            gs_cache = shader_manager->CompileShader(code, name, SHADER_KIND_GEOMETRY);
             if (gs_cache.blob)
             {
                 _InterlockedIncrement64(cast(s64 *, &shaders_count));
-                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_GEOMETRY);
+                _InterlockedOr(cast(volatile long *, &shader_kind), SHADER_KIND_GEOMETRY);
             }
         });
         m_WorkQueue.AddWork([&ps_cache, shader_manager, &code, &name, &shaders_count, &shader_kind]
         {
-            ps_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_PIXEL);
+            ps_cache = shader_manager->CompileShader(code, name, SHADER_KIND_PIXEL);
             if (ps_cache.blob)
             {
                 _InterlockedIncrement64(cast(s64 *, &shaders_count));
-                _InterlockedOr(cast(volatile long *, &shader_kind), GPU::SHADER_KIND_PIXEL);
+                _InterlockedOr(cast(volatile long *, &shader_kind), SHADER_KIND_PIXEL);
             }
         });
         m_WorkQueue.Wait();
 
         m_Logger.LogInfo('"', name, "\" shaders' compilation has been done. ", shaders_count, "/5 shaders has been successfully compiled.");
 
-        cache_file.Write(cast(GPU::SHADER_KIND *, &shader_kind), sizeof(GPU::SHADER_KIND));
+        cache_file.Write(cast(SHADER_KIND *, &shader_kind), sizeof(SHADER_KIND));
 
         u32 count = cast(u32, vs_cache.bytecode.Count());
         {
@@ -328,7 +328,7 @@ ConstArray<AssetHandle> AssetManager::LoadTextures(const ConstArray<ConstString>
 
 ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDesc>& descs, bool _static)
 {
-    GPU::ShaderManager  *shader_manager     = GraphicsAPI::GetShaderManager();
+    ShaderManager  *shader_manager     = GraphicsAPI::GetShaderManager();
     Array<Asset>        *assets             = _static ? &m_StaticAssets : &m_SceneAssets;
     u64                  new_assets_index   = assets->Count();
     Asset               *new_assets         = assets->PushBack(descs.Count());
@@ -363,11 +363,11 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
             File file(filename, FILE_FLAG_RES);
             File cache_file(cache_filename, FILE_FLAG_RW | FILE_FLAG_SEQ | (cache_exists ? FILE_FLAG_EXISTS : FILE_FLAG_NEW));
 
-            GPU::CompileShaderResult vs_cache;
-            GPU::CompileShaderResult hs_cache;
-            GPU::CompileShaderResult ds_cache;
-            GPU::CompileShaderResult gs_cache;
-            GPU::CompileShaderResult ps_cache;
+            CompileShaderResult vs_cache;
+            CompileShaderResult hs_cache;
+            CompileShaderResult ds_cache;
+            CompileShaderResult gs_cache;
+            CompileShaderResult ps_cache;
 
             if (!cache_exists || file.LastWriteTime() > cache_file.LastWriteTime())
             {
@@ -378,37 +378,37 @@ ConstArray<AssetHandle> AssetManager::LoadShaders(const ConstArray<LoadShaderDes
                 ConstString name(filename.Data(), filename.Length());
 
                 u64              shaders_count = 0;
-                GPU::SHADER_KIND shader_kind   = GPU::SHADER_KIND_UNKNOWN;
+                SHADER_KIND shader_kind   = SHADER_KIND_UNKNOWN;
 
                 m_Logger.LogInfo('"', name, "\" shaders are being compiled...");
                 {
-                    vs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_VERTEX);
+                    vs_cache = shader_manager->CompileShader(code, name, SHADER_KIND_VERTEX);
                     ++shaders_count;
-                    shader_kind |= GPU::SHADER_KIND_VERTEX;
+                    shader_kind |= SHADER_KIND_VERTEX;
                 }
                 {
-                    hs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_HULL);
+                    hs_cache = shader_manager->CompileShader(code, name, SHADER_KIND_HULL);
                     ++shaders_count;
-                    shader_kind |= GPU::SHADER_KIND_HULL;
+                    shader_kind |= SHADER_KIND_HULL;
                 }
                 {
-                    ds_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_DOMAIN);
+                    ds_cache = shader_manager->CompileShader(code, name, SHADER_KIND_DOMAIN);
                     ++shaders_count;
-                    shader_kind |= GPU::SHADER_KIND_DOMAIN;
+                    shader_kind |= SHADER_KIND_DOMAIN;
                 }
                 {
-                    gs_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_GEOMETRY);
+                    gs_cache = shader_manager->CompileShader(code, name, SHADER_KIND_GEOMETRY);
                     ++shaders_count;
-                    shader_kind |= GPU::SHADER_KIND_GEOMETRY;
+                    shader_kind |= SHADER_KIND_GEOMETRY;
                 }
                 {
-                    ps_cache = shader_manager->CompileShader(code, name, GPU::SHADER_KIND_PIXEL);
+                    ps_cache = shader_manager->CompileShader(code, name, SHADER_KIND_PIXEL);
                     ++shaders_count;
-                    shader_kind |= GPU::SHADER_KIND_PIXEL;
+                    shader_kind |= SHADER_KIND_PIXEL;
                 }
                 m_Logger.LogInfo('"', name, "\" shaders' compilation has been done. ", shaders_count, "/5 shaders has been successfully compiled.");
 
-                cache_file.Write(&shader_kind, sizeof(GPU::SHADER_KIND));
+                cache_file.Write(&shader_kind, sizeof(SHADER_KIND));
 
                 u32 count = cast(u32, vs_cache.bytecode.Count());
                 {
@@ -511,11 +511,11 @@ Asset *AssetManager::GetAsset(const ConstString& name, bool _static)
     return null;
 }
 
-const Asset *AssetManager::GetAsset(const GPU::ResourceHandle& resource) const
+const Asset *AssetManager::GetAsset(const ResourceHandle& resource) const
 {
-    if (GPU::MemoryManager::IsTexture(resource))
+    if (MemoryManager::IsTexture(resource))
     {
-        const Array<Asset>& assets = GPU::MemoryManager::IsStatic(resource) ? m_StaticAssets : m_SceneAssets;
+        const Array<Asset>& assets = MemoryManager::IsStatic(resource) ? m_StaticAssets : m_SceneAssets;
         for (const Asset& asset : assets)
         {
             if (asset.texture == resource)
@@ -527,11 +527,11 @@ const Asset *AssetManager::GetAsset(const GPU::ResourceHandle& resource) const
     return null;
 }
 
-Asset *AssetManager::GetAsset(const GPU::ResourceHandle& resource)
+Asset *AssetManager::GetAsset(const ResourceHandle& resource)
 {
-    if (GPU::MemoryManager::IsTexture(resource))
+    if (MemoryManager::IsTexture(resource))
     {
-        Array<Asset>& assets = GPU::MemoryManager::IsStatic(resource) ? m_StaticAssets : m_SceneAssets;
+        Array<Asset>& assets = MemoryManager::IsStatic(resource) ? m_StaticAssets : m_SceneAssets;
         for (Asset& asset : assets)
         {
             if (asset.texture == resource)
@@ -543,7 +543,7 @@ Asset *AssetManager::GetAsset(const GPU::ResourceHandle& resource)
     return null;
 }
 
-const Asset *AssetManager::GetAsset(const GPU::ShaderHandle& shader) const
+const Asset *AssetManager::GetAsset(const ShaderHandle& shader) const
 {
     const Array<Asset>& assets = shader._static ? m_StaticAssets : m_SceneAssets;
     for (const Asset& asset : assets)
@@ -556,7 +556,7 @@ const Asset *AssetManager::GetAsset(const GPU::ShaderHandle& shader) const
     return null;
 }
 
-Asset *AssetManager::GetAsset(const GPU::ShaderHandle& shader)
+Asset *AssetManager::GetAsset(const ShaderHandle& shader)
 {
     Array<Asset>& assets = shader._static ? m_StaticAssets : m_SceneAssets;
     for (Asset& asset : assets)
@@ -651,8 +651,8 @@ void AssetManager::MakeCacheFilename(StaticString<REV_PATH_CAPACITY>& filename, 
 
     switch (GraphicsAPI::GetAPI())
     {
-        case GraphicsAPI::API::D3D12:  filename.PushBack(REV_CSTR_ARGS("hlsl_")); break;
-        case GraphicsAPI::API::VULKAN: filename.PushBack(REV_CSTR_ARGS("glsl_")); break;
+        case GraphicsAPI::D3D12:  filename.PushBack(REV_CSTR_ARGS("d3d_")); break;
+        case GraphicsAPI::VULKAN: filename.PushBack(REV_CSTR_ARGS("vkn_")); break;
     }
     filename += asset_name;
     filename.PushBack(REV_CSTR_ARGS(".cso"));

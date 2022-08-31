@@ -37,6 +37,6 @@ namespace REV
     private:
         static Settings *Init(const ConstString& ini_filename);
 
-        friend class ::REV::Application;
+        friend class Application;
     };
 }

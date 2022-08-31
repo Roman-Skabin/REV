@@ -16,18 +16,14 @@ namespace REV
         ForwardPlusPipeline(Allocator *allocator);
         ~ForwardPlusPipeline();
 
-        RenderPass *EnableRenderPass(RENDER_PASS_KIND kind);
-        RenderPass *GetRenderPass(RENDER_PASS_KIND kind);
+        RenderPass& AddRenderPass(const ConstString& name);
 
         void ResetPasses();
 
         void Render();
 
     private:
-        ConstArray<RenderPass *> CollectEnabledPasses();
-    
-    private:
-        RenderGraph m_RenderGraph;
-        RenderPass  m_RenderPasses[RENDER_PASS_KIND_MAX];
+        Allocator   *m_Allocator;
+        RenderGraph  m_RenderGraph;
     };
 }

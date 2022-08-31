@@ -1,4 +1,7 @@
-cbuffer DemoSceneCB : register(b0, space0)
+//
+// Types
+//
+cbuffer DemoSceneCB // : register(b0, space0)
 {
     float4x4 cMVP;
     float4   cSunColor;
@@ -6,7 +9,7 @@ cbuffer DemoSceneCB : register(b0, space0)
     uint     cEntityID;
 };
 
-struct DemoSceneVB
+struct VSInput
 {
     float4 position  : POSITION;
     float4 normal    : NORMAL;
@@ -19,19 +22,6 @@ struct VSOutput
     float4 normal    : NORMAL;
     float2 tex_coord : TEXCOORD0;
 };
-typedef VSOutput PSInput;
-
-Texture2D    WoodTexture    : register(t0, space0);
-SamplerState TextureSampler : register(s0, space0);
-
-VSOutput VSMain(DemoSceneVB vbuffer)
-{
-    VSOutput output;
-    output.position  = mul(cMVP, vbuffer.position);
-    output.normal    = vbuffer.normal;
-    output.tex_coord = vbuffer.tex_coord;
-    return output;
-}
 
 struct PSOutput
 {
@@ -39,10 +29,32 @@ struct PSOutput
     uint   mouse_pick : SV_Target1;
 };
 
-PSOutput PSMain(PSInput input)
+//
+// Textures
+//
+Texture2D WoodTexture; // : register(t0, space0);
+
+//
+// Samplers
+//
+SamplerState WoodTextureSampler; // : register(s0, space0);
+
+//
+// Functions
+//
+VSOutput VSMain(VSInput input)
+{
+    VSOutput output;
+    output.position  = mul(cMVP, input.position);
+    output.normal    = input.normal;
+    output.tex_coord = input.tex_coord;
+    return output;
+}
+
+PSOutput PSMain(VSOutput input)
 {
     PSOutput output;
-    output.color      = WoodTexture.Sample(TextureSampler, input.tex_coord);
+    output.color      = WoodTexture.Sample(WoodTextureSampler, input.tex_coord);
     output.mouse_pick = cEntityID;
     return output;
 }

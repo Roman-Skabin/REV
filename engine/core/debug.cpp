@@ -140,7 +140,7 @@ void REV_CDECL PrintDebugMessage(DEBUG_COLOR color, const char *format, ...)
 
     va_end(args);
 
-    builder.BuildLn();
+    builder.BuildLn('.');
 
     g_CriticalSection.Enter();
     {
@@ -226,13 +226,13 @@ ConstString GetSysErrorMessage(u32 error_code)
 {
 #if REV_PLATFORM_WIN64
     REV_CHECK(error_code != ERROR_SUCCESS);
-    char *error_message          = Memory::Get()->PushToFA<char>(2048);
-    u32   error_message_length   = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                                  null,
-                                                  error_code,
-                                                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                                  error_message, 2048,
-                                                  null);
+    char *error_message        = Memory::Get()->PushToFA<char>(2048);
+    u32   error_message_length = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                                                null,
+                                                error_code,
+                                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                                error_message, 2048,
+                                                null);
     return ConstString(error_message, error_message_length - REV_CSTRLEN(".\r\n"));
 #else
     REV_ERROR_M("Unhandled platform dependent code!");

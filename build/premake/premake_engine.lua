@@ -20,6 +20,8 @@ project "engine"
     {
         "%{prj.location}/**.h",
         "%{prj.location}/**.hpp",
+        "%{prj.location}/**.inl",
+        "%{prj.location}/**.ipp",
         "%{prj.location}/**.cpp"
     }
 

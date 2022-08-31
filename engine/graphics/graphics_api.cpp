@@ -15,31 +15,31 @@
 namespace REV
 {
 
-GraphicsAPI::API    GraphicsAPI::s_API           = GraphicsAPI::API::NONE;
-GPU::DeviceContext *GraphicsAPI::s_DeviceContext = null;
-GPU::MemoryManager *GraphicsAPI::s_MemoryManager = null;
-GPU::ShaderManager *GraphicsAPI::s_ShaderManager = null;
+GraphicsAPI::API  GraphicsAPI::s_API           = GraphicsAPI::API::NONE;
+DeviceContext    *GraphicsAPI::s_DeviceContext = null;
+MemoryManager    *GraphicsAPI::s_MemoryManager = null;
+ShaderManager    *GraphicsAPI::s_ShaderManager = null;
 
 void GraphicsAPI::SetGraphicsAPI(API api)
 {
-    //@TODO(Roman): Ability to change API with recreating all the GPU stuff.
-    REV_CHECK_M(s_API == API::NONE, "Currently, switching Graphics API to another at run-time is not supported. So you can set it only once for now.");
+    // @TODO(Roman): Ability to change API with recreating all the GPU stuff.
+    REV_CHECK_M(s_API == NONE, "Currently, switching Graphics API to another at run-time is not supported. So you can set it only once for now.");
     s_API = api;
 }
 
-GPU::DeviceContext *GraphicsAPI::GetDeviceContext()
+DeviceContext *GraphicsAPI::GetDeviceContext()
 {
     REV_CHECK_M(s_DeviceContext, "DeviceContext is not created yet");
     return s_DeviceContext;
 }
 
-GPU::MemoryManager *GraphicsAPI::GetMemoryManager()
+MemoryManager *GraphicsAPI::GetMemoryManager()
 {
     REV_CHECK_M(s_MemoryManager, "GPU Memory Manager is not created yet");
     return s_MemoryManager;
 }
 
-GPU::ShaderManager *GraphicsAPI::GetShaderManager()
+ShaderManager *GraphicsAPI::GetShaderManager()
 {
     REV_CHECK_M(s_ShaderManager, "GPU Shader Manager is not created yet");
     return s_ShaderManager;
@@ -49,27 +49,27 @@ void GraphicsAPI::Init(Window *window, Allocator *allocator, const Logger& logge
 {
     switch (s_API)
     {
-        case API::D3D12:
+        case D3D12:
         {
             REV_LOCAL bool d3d12_initialized = false;
             REV_CHECK_M(!d3d12_initialized, "Graphics API for D3D12 is already created.");
 
-            byte *d3d12_area = Memory::Get()->PushToPA<byte>(sizeof(D3D12::DeviceContext)
-                                                           + sizeof(D3D12::MemoryManager)
-                                                           + sizeof(D3D12::ShaderManager));
+            byte *d3d12_memory = Memory::Get()->PushToPA<byte>(sizeof(D3D12::DeviceContext)
+                                                             + sizeof(D3D12::MemoryManager)
+                                                             + sizeof(D3D12::ShaderManager));
 
-            byte *device_context_area = d3d12_area;
-            byte *memory_manager_area = device_context_area + sizeof(D3D12::DeviceContext);
-            byte *shader_manager_area = memory_manager_area + sizeof(D3D12::MemoryManager);
+            byte *device_context_area = d3d12_memory;
+            byte *memory_manager_area = d3d12_memory + sizeof(D3D12::DeviceContext);
+            byte *shader_manager_area = d3d12_memory + sizeof(D3D12::DeviceContext) + sizeof(D3D12::MemoryManager);
 
-            s_DeviceContext = cast(GPU::DeviceContext *, new (device_context_area) D3D12::DeviceContext(window, logger));
-            s_MemoryManager = cast(GPU::MemoryManager *, new (memory_manager_area) D3D12::MemoryManager(allocator));
-            s_ShaderManager = cast(GPU::ShaderManager *, new (shader_manager_area) D3D12::ShaderManager(allocator, logger));
+            s_DeviceContext = cast(DeviceContext *, new (device_context_area) D3D12::DeviceContext(window, logger));
+            s_MemoryManager = cast(MemoryManager *, new (memory_manager_area) D3D12::MemoryManager(allocator));
+            s_ShaderManager = cast(ShaderManager *, new (shader_manager_area) D3D12::ShaderManager(allocator, logger));
 
             d3d12_initialized = true;
         } break;
 
-        case API::VULKAN:
+        case VULKAN:
         {
             REV_ERROR_M("Vulkan API is not supported yet.");
         } break;
@@ -85,15 +85,15 @@ void GraphicsAPI::Destroy()
 {
     switch (s_API)
     {
-        case API::D3D12:
+        case D3D12:
         {
             // @Important(Roman): DeviceContext's destruction must be the last one
-            cast(D3D12::ShaderManager *, s_ShaderManager->platform)->~ShaderManager();
-            cast(D3D12::MemoryManager *, s_MemoryManager->platform)->~MemoryManager();
-            cast(D3D12::DeviceContext *, s_DeviceContext->platform)->~DeviceContext();
+            cast(D3D12::ShaderManager *, s_ShaderManager)->~ShaderManager();
+            cast(D3D12::MemoryManager *, s_MemoryManager)->~MemoryManager();
+            cast(D3D12::DeviceContext *, s_DeviceContext)->~DeviceContext();
         } break;
 
-        case API::VULKAN:
+        case VULKAN:
         {
             REV_ERROR_M("Vulkan API is not supported yet.");
         } break;

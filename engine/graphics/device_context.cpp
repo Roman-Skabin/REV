@@ -9,7 +9,7 @@
 #include "graphics/graphics_api.h"
 #include "platform/d3d12/d3d12_device_context.h"
 
-namespace REV::GPU
+namespace REV
 {
 
 void DeviceContext::StartFrame()
@@ -18,7 +18,7 @@ void DeviceContext::StartFrame()
     {
         case GraphicsAPI::API::D3D12:
         {
-            cast(D3D12::DeviceContext *, platform)->StartFrame();
+            cast(D3D12::DeviceContext *, this)->StartFrame();
         } break;
 
         case GraphicsAPI::API::VULKAN:

@@ -18,21 +18,77 @@ namespace REV
 // Entity
 //
 
-EntityID Entity::s_LastID = REV_INVALID_ENTITY_ID;
+REV_GLOBAL volatile s32 g_LastEntityID = REV_INVALID_ENTITY_ID;
 
-void Entity::Create(u64 vcount, u64 icount)
+Entity::Entity(const ConstString& name)
+    : m_VertexBuffer(),
+      m_IndexBuffer(),
+      m_Name(name),
+      m_ID(_InterlockedIncrement(&g_LastEntityID))
 {
-    Vertex *vertex_memory = cast(Vertex *, Memory::Get()->PushToSceneArena(vcount * sizeof(Vertex) + icount * sizeof(Index)));
-    Index  *index_memory  = cast(Index *, vertex_memory + vcount);
-    
-    vertices = ConstArray(vertex_memory, vcount);
-    indices  = ConstArray(index_memory,  icount);
+    if (m_ID == REV_INVALID_ENTITY_ID - 1)
+    {
+        REV_WARNING_M("This is the last Entity ID, next one gonna be invalid");
+    }
 }
 
-void Entity::SetData(const ConstArray<Vertex>& vertices, const ConstArray<Index>& indices)
+Entity::Entity(Entity&& other)
+    : m_VertexBuffer(RTTI::move(other.m_VertexBuffer)),
+      m_IndexBuffer(RTTI::move(other.m_IndexBuffer)),
+      m_Name(RTTI::move(other.m_Name)),
+      m_ID(other.m_ID)
 {
-    CopyMemory(this->vertices.Data(), vertices.Data(), vertices.Count() * sizeof(Vertex));
-    CopyMemory(this->indices.Data(),  indices.Data(),  indices.Count()  * sizeof(Index));
+    other.m_ID = REV_INVALID_ENTITY_ID;
+}
+
+Entity::~Entity()
+{
+    if (Valid())
+    {
+        // @TODO(Roman): Destroy
+        m_ID = REV_INVALID_ENTITY_ID;
+    }
+}
+
+void Entity::SetVertices(const void *vertices, u64 count, u64 stride)
+{
+    REV_CHECK(Valid());
+
+    MemoryManager *memory_manager = GraphicsAPI::GetMemoryManager();
+
+    StaticString<64> vb_name(REV_CSTR_ARGS("VB_"));
+    vb_name += m_Name;
+
+    m_VertexBuffer = memory_manager->AllocateVertexBuffer(count, stride, false, vb_name.ToConstString());
+
+    memory_manager->SetBufferData(m_VertexBuffer, vertices);
+}
+
+void Entity::SetIndices(const void *indices, u64 count, u64 stride)
+{
+    REV_CHECK(Valid());
+
+    MemoryManager *memory_manager = GraphicsAPI::GetMemoryManager();
+
+    StaticString<64> ib_name(REV_CSTR_ARGS("IB_"));
+    ib_name += m_Name;
+
+    m_IndexBuffer = memory_manager->AllocateIndexBuffer(count, stride, false, ib_name.ToConstString());
+
+    memory_manager->SetBufferData(m_IndexBuffer, indices);
+}
+
+Entity& Entity::operator=(Entity&& other)
+{
+    if (this != &other)
+    {
+        m_VertexBuffer = RTTI::move(other.m_VertexBuffer);
+        m_IndexBuffer  = RTTI::move(other.m_IndexBuffer);
+        m_Name         = RTTI::move(other.m_Name);
+        m_ID           = other.m_ID;
+
+        other.m_ID = REV_INVALID_ENTITY_ID;
+    }
 }
 
 //
@@ -48,9 +104,9 @@ void Scene::OnUnsetCurrentEx()
 {
     OnUnsetCurrent();
 
-    Application::Get()->GetForwardPlusPipeline()->ResetPasses();
+    Application::Get()->GetForwardPlusPipeline().ResetPasses();
     AssetManager::Get()->FreeSceneAssets();
-    GraphicsAPI::GetMemoryManager()->FreeSceneMemory();
+    GraphicsAPI::GetMemoryManager()->FreePerSceneMemory();
     Memory::Get()->ResetSceneArena();
 }
 

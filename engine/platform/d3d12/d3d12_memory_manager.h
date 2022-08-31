@@ -6,314 +6,248 @@
 
 #pragma once
 
-#include "tools/array.hpp"
+#include "tools/chunk_list.hpp"
 #include "graphics/memory_manager.h"
-#include "memory/arena.h"
 
 #include "platform/d3d12/d3d12_device_context.h"
 
 // @TODO(Roman): Thread safety
 
+#ifndef D3D12_REQ_TEXTURECUBE_ARRAY_AXIS_DIMENSION
+#define D3D12_REQ_TEXTURECUBE_ARRAY_AXIS_DIMENSION (D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION / 6)
+#endif
+
 namespace REV
 {
-    enum
+    namespace D3D12
     {
-        D3D12_REQ_TEXTURECUBE_ARRAY_AXIS_DIMENSION = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION / 6,
-    };
+        struct Buffer
+        {
+            DefaultBufferMemoryPage  *default_page  = null;
+            UploadBufferMemoryPage   *upload_page   = null;
+            ReadBackBufferMemoryPage *readback_page = null;
+
+            u64 default_page_offset  = REV_INVALID_U64_OFFSET;
+            u64 upload_page_offset   = REV_INVALID_U64_OFFSET;
+            u64 readback_page_offset = REV_INVALID_U64_OFFSET;
+
+            u64           size       = 0;
+            u32           stride     = 0;
+            RESOURCE_FLAG flags      = RESOURCE_FLAG_NONE;
+
+            // @NOTE(Roman): A handle to this buffer. We have to store it here
+            //               to invalidate it on buffer destruction.
+            // @TODO(Roman): #MultipleHandlesToTheSameResource
+            ResourceHandle handle;
+
+            StaticString<64> name;
+        };
+
+        enum
+        {
+            DEFAULT_BUFFER_MEMORY_PAGE_SIZE  = AlignUp(MB(16), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT),
+            UPLOAD_BUFFER_MEMORY_PAGE_SIZE   = AlignUp(MB(16), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT),
+            READBACK_BUFFER_MEMORY_PAGE_SIZE = AlignUp(MB(16), D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT),
+        };
+
+        struct DefaultBufferMemoryPage
+        {
+            ID3D12Resource        *gpu_mem        = null;
+            u64                    occupied_bytes = 0;
+            D3D12_RESOURCE_STATES  default_state  = D3D12_RESOURCE_STATE_COMMON;
+        };
+
+        struct UploadBufferMemoryPage
+        {
+            ID3D12Resource *gpu_mem                          = null;
+            byte           *cpu_mem                          = null;
+            u64             occupied_bytes                   = 0;
+            u64             upload_once_resources_left_count = 0;
+            bool            upload_once                      = false;
+        };
+
+        struct ReadBackBufferMemoryPage
+        {
+            ID3D12Resource *gpu_mem                            = null;
+            byte           *cpu_mem                            = null;
+            u64             occupied_bytes                     = 0;
+            u64             readback_once_resources_left_count = 0;
+            bool            readback_once                      = false;
+        };
+
+        struct BufferMemory final
+        {
+            ChunkList<Buffer>                   buffers;
+            ChunkList<DefaultBufferMemoryPage>  default_pages;
+            ChunkList<UploadBufferMemoryPage>   upload_pages;
+            ChunkList<ReadBackBufferMemoryPage> readback_pages;
+
+            REV_INLINE BufferMemory(Allocator *allocator)
+                : buffers(allocator),
+                  default_pages(allocator),
+                  upload_pages(allocator),
+                  readback_pages(allocator)
+            {
+            }
+
+            REV_INLINE ~BufferMemory()
+            {
+            }
+
+            REV_DELETE_CONSTRS_AND_OPS(BufferMemory);
+        };
+
+        struct Texture final
+        {
+            ID3D12Resource        *default_gpu_mem      = null;
+
+            ID3D12Resource        *upload_gpu_mem       = null;
+            byte                  *upload_cpu_mem       = null;
+
+            ID3D12Resource        *readback_gpu_mem     = null;
+            byte                  *readback_cpu_mem     = null;
+
+            u64                    first_surface_offset = 0;
+            u64                    buffer_total_bytes   = 0;
+
+            DXGI_FORMAT            format               = DXGI_FORMAT_UNKNOWN;
+            D3D12_RESOURCE_STATES  default_state        = D3D12_RESOURCE_STATE_COMMON;
+
+            RESOURCE_FLAG          flags                = RESOURCE_FLAG_NONE;
+
+            u16                    depth                = 0;
+            u16                    mip_levels           = 1;
+            u16                    array_size           = 0;
+            u8                     planes_count         = 1;
+
+            TEXTURE_DIMENSION      dimension            = TEXTURE_DIMENSION_UNKNOWN;
+
+            // @NOTE(Roman): A handle to this texture. We have to store it here
+            //               to invalidate it on texture destruction.
+            // @TODO(Roman): #MultipleHandlesToTheSameResource
+            ResourceHandle         handle = null;
+
+            StaticString<64>       name;
+        };
+
+        struct TextureMemory final
+        {
+            ChunkList<Texture> textures;
+
+            REV_INLINE TextureMemory(Allocator *allocator) : textures(allocator) {}
+            REV_INLINE ~TextureMemory() {}
+
+            REV_DELETE_CONSTRS_AND_OPS(TextureMemory);
+        };
+
+        struct Sampler final
+        {
+            // @TODO(Roman): Replace with REV::SamplerDesc?
+            D3D12_SAMPLER_DESC desc  = {};
+
+            RESOURCE_FLAG      flags = RESOURCE_FLAG_NONE;
+
+            // @NOTE(Roman): A handle to this sampler. We have to store it here
+            //               to invalidate it on sampler destruction.
+            // @TODO(Roman): #MultipleHandlesToTheSameResource
+            ResourceHandle     handle = null;
+
+            StaticString<64>   name;
+        };
+
+        struct SamplerMemory final
+        {
+            ChunkList<Sampler> samplers;
+
+            REV_INLINE SamplerMemory(Allocator *allocator) : samplers(allocator) {}
+            REV_INLINE ~SamplerMemory() {}
+
+            REV_DELETE_CONSTRS_AND_OPS(SamplerMemory);
+        };
+
+        struct ResourceMemory final
+        {
+            BufferMemory  buffer_memory;
+            TextureMemory texture_memory;
+            SamplerMemory sampler_memory;
+
+            REV_INLINE ResourceMemory(Allocator *allocator)
+                : buffer_memory(allocator),
+                  texture_memory(allocator),
+                  sampler_memory(allocator)
+            {}
+
+            REV_INLINE ~ResourceMemory() {}
+
+            REV_DELETE_CONSTRS_AND_OPS(ResourceMemory);
+        };
+
+        class MemoryManager final
+        {
+        public:
+            MemoryManager(Allocator *allocator);
+            ~MemoryManager();
+
+            //==================== Interface stuff ====================
+
+            const ResourceHandle& AllocateBuffer(const BufferDesc& desc, const ConstString& name = null);
+            const ResourceHandle& AllocateTexture(TextureDesc& desc, const ConstString& name = null);
+            const ResourceHandle& AllocateSampler(const SamplerDesc& desc, const ConstString& name = null);
+
+            void UpdateBuffer(const ResourceHandle& resource, const void *data);
+            void UpdateTexture(const ResourceHandle& resource, const TextureData& data);
+
+            void *ReadBuffer(const ResourceHandle& resource);
+            TextureData ReadTexture(const ResourceHandle& resource);
+
+            void UploadResources(const ConstArray<ResourceHandle>& resources);
+            void ReadbackResources(const ConstArray<ResourceHandle>& resources);
+
+            void ResizeBuffer(ResourceHandle resource, u32 bytes);
+            void ResizeTexture(ResourceHandle resource, u16 width, u16 height = 0, u16 depth = 0);
+
+            void FreePerFrameMemory();
+            void FreePerSceneMemory();
+            void FreePermanentMemory();
+
+            ConstString GetResourceName(const ResourceHandle& resource);
+            ConstString GetBufferName(const ResourceHandle& buffer);
+            ConstString GetTextureName(const ResourceHandle& texture);
+            ConstString GetSamplerName(const ResourceHandle& sampler);
+
+            //==================== Interanl stuff ====================
+
+            D3D12_GPU_VIRTUAL_ADDRESS GetResourceGPUVirtualAddress(const ResourceHandle& resource);
+            D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUVirtualAddress(const ResourceHandle& resource);
+            D3D12_GPU_VIRTUAL_ADDRESS GetTextureGPUVirtualAddress(const ResourceHandle& resource);
+
+            ID3D12Resource *GetBufferDefaultGPUMem(const ResourceHandle& resource);
+
+            Buffer  *GetBuffer(const ResourceHandle& resource);
+            Texture *GetTexture(const ResourceHandle& resource);
+            Sampler *GetSampler(const ResourceHandle& resource);
+
+        private:
+            void SetBufferName(Buffer *buffer);
+            void SetTextureName(Texture *texture);
+
+            void FreeMemory(ResourceMemory *memory);
+
+            D3D12_CLEAR_VALUE GetOptimizedClearValue(RESOURCE_FLAG flags, TEXTURE_FORMAT format);
+            ResourceMemory *GetResourceMemory(RESOURCE_FLAG flags, const ConstString& name = null);
+            D3D12_RESOURCE_STATES GetResourceDefaultState(RESOURCE_KIND kind, RESOURCE_FLAG flags);
+            D3D12_RESOURCE_FLAGS GetResourceFlags(RESOURCE_KIND kind, RESOURCE_FLAG flags);
+
+            REV_DELETE_CONSTRS_AND_OPS(MemoryManager);
+
+        private:
+            Allocator      *m_Allocator;
+            DeviceContext  *m_DeviceContext;
+            ResourceMemory  m_PerFrameMemory;
+            ResourceMemory  m_PerSceneMemory;
+            ResourceMemory  m_PermanentMemory;
+        };
+    }
 }
 
-namespace REV::D3D12
-{
-    enum RO_RW_BUFFER_TYPE : u32
-    {
-        RO_RW_BUFFER_TYPE_NONE,         // @NOTE(Roman): For not RO/RW buffer type
-        RO_RW_BUFFER_TYPE_STRUCTURED,   // @NOTE(Roman): HLSL StructuredBuffer type
-        RO_RW_BUFFER_TYPE_BYTE_ADDRESS, // @NOTE(Roman): HLSL ByteAddressBuffer type
-        RO_RW_BUFFER_TYPE_BUFFER,       // @NOTE(Roman): HLSL Buffer type
-    };
-
-    struct Buffer final
-    {
-        u64 default_page_index  = REV_INVALID_U64_INDEX;
-        u64 upload_page_index   = REV_INVALID_U64_INDEX;
-        u64 readback_page_index = REV_INVALID_U64_INDEX;
-
-        u64 default_page_offset  = REV_INVALID_U64_OFFSET;
-        u64 upload_page_offset   = REV_INVALID_U64_OFFSET;
-        u64 readback_page_offset = REV_INVALID_U64_OFFSET;
-
-        GPU::RESOURCE_FLAG flags      = GPU::RESOURCE_FLAG_NONE;
-        RO_RW_BUFFER_TYPE  ro_rw_type = RO_RW_BUFFER_TYPE_NONE;
-        DXGI_FORMAT        format     = DXGI_FORMAT_UNKNOWN;
-        u32                stride     = 0;
-
-        u64 actual_size  = 0;
-        u64 aligned_size = 0;
-
-        StaticString<64> name;
-    };
-
-    enum
-    {
-        DEFAULT_BUFFER_MEMORY_PAGE_SIZE  = MB(512),
-        UPLOAD_BUFFER_MEMORY_PAGE_SIZE   = MB(512),
-        READBACK_BUFFER_MEMORY_PAGE_SIZE = MB(512),
-    };
-
-    struct DefaultBufferMemoryPage final
-    {
-        ID3D12Resource        *gpu_mem        = null;
-        u64                    occupied_bytes = 0;
-        D3D12_RESOURCE_STATES  initial_state  = D3D12_RESOURCE_STATE_COMMON;
-        DXGI_FORMAT            format         = DXGI_FORMAT_UNKNOWN;
-    };
-
-    struct UploadBufferMemoryPage final
-    {
-        ID3D12Resource *gpu_mem        = null;
-        byte           *cpu_mem        = null;
-        u64             occupied_bytes = 0;
-    };
-
-    struct ReadBackBufferMemoryPage final
-    {
-        ID3D12Resource *gpu_mem        = null;
-        byte           *cpu_mem        = null;
-        u64             occupied_bytes = 0;
-    };
-
-    struct BufferMemory final
-    {
-        Array<Buffer>                   buffers;
-        Array<DefaultBufferMemoryPage>  default_pages;
-        Array<UploadBufferMemoryPage>   upload_pages;
-        Array<ReadBackBufferMemoryPage> readback_pages;
-
-        REV_INLINE BufferMemory(Allocator *allocator)
-            : buffers(allocator),
-              default_pages(allocator),
-              upload_pages(allocator),
-              readback_pages(allocator)
-        {
-        }
-
-        REV_INLINE ~BufferMemory()
-        {
-        }
-
-        REV_DELETE_CONSTRS_AND_OPS(BufferMemory);
-    };
-
-    enum TEXTURE_DIMENSION : u32
-    {
-        TEXTURE_DIMENSION_UNKNOWN = 0,
-        TEXTURE_DIMENSION_1D,
-        TEXTURE_DIMENSION_2D,
-        TEXTURE_DIMENSION_3D,
-        TEXTURE_DIMENSION_CUBE,
-        TEXTURE_DIMENSION_1D_ARRAY,
-        TEXTURE_DIMENSION_2D_ARRAY,
-        TEXTURE_DIMENSION_CUBE_ARRAY,
-    };
-
-    struct Texture final
-    {
-        ID3D12Resource     *default_gpu_mem = null;
-
-        ID3D12Resource     *upload_gpu_mem = null;
-        byte               *upload_cpu_mem = null;
-
-        ID3D12Resource     *readback_gpu_mem = null;
-        byte               *readback_cpu_mem = null;
-
-        u64                 first_subresource_offset = 0;
-        u64                 buffer_total_bytes       = 0;
-
-        TEXTURE_DIMENSION   dimension = TEXTURE_DIMENSION_UNKNOWN;
-        DXGI_FORMAT         format    = DXGI_FORMAT_UNKNOWN;
-
-        GPU::RESOURCE_FLAG  flags = GPU::RESOURCE_FLAG_NONE;
-
-        u16                 depth             = 0;
-        u16                 mip_levels        = 0;
-        u16                 subtextures_count = 0;
-        u8                  planes_count      = 0;
-
-        StaticString<64>    name;
-    };
-
-    struct TextureMemory final
-    {
-        Array<Texture> textures;
-
-        REV_INLINE TextureMemory(Allocator *allocator) : textures(allocator) {}
-        REV_INLINE ~TextureMemory() {}
-
-        REV_DELETE_CONSTRS_AND_OPS(TextureMemory);
-    };
-
-    struct Sampler final
-    {
-        D3D12_SAMPLER_DESC desc;
-        bool               _static;
-    };
-
-    struct SamplerMemory final
-    {
-        Array<Sampler> samplers;
-
-        REV_INLINE SamplerMemory(Allocator *allocator) : samplers(allocator) {}
-        REV_INLINE ~SamplerMemory() {}
-
-        REV_DELETE_CONSTRS_AND_OPS(SamplerMemory);
-    };
-
-    struct ResourceMemory final
-    {
-        BufferMemory  buffer_memory;
-        TextureMemory texture_memory;
-        SamplerMemory sampler_memory;
-
-        REV_INLINE ResourceMemory(Allocator *allocator)
-            : buffer_memory(allocator),
-              texture_memory(allocator),
-              sampler_memory(allocator)
-        {}
-
-        REV_INLINE ~ResourceMemory() {}
-
-        REV_DELETE_CONSTRS_AND_OPS(ResourceMemory);
-    };
-
-    class MemoryManager final
-    {
-    public:
-        MemoryManager(Allocator *allocator);
-        ~MemoryManager();
-
-        u64 AllocateVertexBuffer(u32 count,                 GPU::RESOURCE_FLAG flags, const ConstString& name = null);
-        u64 AllocateIndexBuffer(u32 count,                  GPU::RESOURCE_FLAG flags, const ConstString& name = null);
-        u64 AllocateConstantBuffer(u32 bytes,               GPU::RESOURCE_FLAG flags, const ConstString& name = null);
-        u64 AllocateStructuredBuffer(u32 count, u32 stride, GPU::RESOURCE_FLAG flags, const ConstString& name = null);
-        u64 AllocateByteAddressBuffer(u32 bytes,            GPU::RESOURCE_FLAG flags, const ConstString& name = null);
-
-        u64 AllocateBuffer(u32 bytes, GPU::BUFFER_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name = null);
-
-        u64 AllocateTexture1D(u16   width,                        u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name);
-        u64 AllocateTexture2D(u16   width, u16 height,            u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name);
-        u64 AllocateTexture3D(u16   width, u16 height, u16 depth, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name);
-        u64 AllocateTextureCube(u16 width, u16 height,            u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name);
-
-        u64 AllocateTexture1DArray(u16   width,             u16 count, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name);
-        u64 AllocateTexture2DArray(u16   width, u16 height, u16 count, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name);
-        u64 AllocateTextureCubeArray(u16 width, u16 height, u16 count, u16 mip_levels, GPU::TEXTURE_FORMAT format, GPU::RESOURCE_FLAG flags, const ConstString& name);
-
-        u64 AllocateSampler(GPU::TEXTURE_ADDRESS_MODE address_mode, Math::v4 border_color, Math::v2 min_max_lod, bool _static);
-
-        void LoadResources(const ConstArray<GPU::ResourceHandle>& resources);
-        void StoreResources(const ConstArray<GPU::ResourceHandle>& resources);
-
-        void ResizeRenderTarget(GPU::ResourceHandle resource, u16 width, u16 height, u16 depth);
-
-        // @NOTE(Roman): Zero copy return. Just a readback pointer.
-        const void *GetBufferData(const GPU::ResourceHandle& resource);
-        void SetBufferData(const GPU::ResourceHandle& resource, const void *data);
-
-        // @NOTE(Roman): Is pushed onto frame arena.
-        GPU::TextureData *GetTextureData(const GPU::ResourceHandle& resource);
-        void SetTextureData(const GPU::ResourceHandle& resource, const GPU::TextureData *data);
-
-        void FreeSceneMemory();
-        void FreeStaticMemory();
-
-        ConstString GetResourceName(const GPU::ResourceHandle& resource);
-        ConstString GetBufferName(const ResourceHandle& resource);
-        ConstString GetTextureName(const ResourceHandle& resource);
-
-        #pragma region inline_getters
-        REV_INLINE Allocator *GetAllocator() { return m_Allocator; }
-
-        REV_INLINE D3D12_GPU_VIRTUAL_ADDRESS GetBufferGPUVirtualAddress(const GPU::ResourceHandle& resource)
-        {
-            REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
-            if (GPU::MemoryManager::IsStatic(resource))
-            {
-                const Buffer *buffer = m_StaticMemory.buffer_memory.buffers.GetPointer(resource.index);
-                return m_StaticMemory.buffer_memory.default_pages[buffer->default_page_index].gpu_mem->GetGPUVirtualAddress() + buffer->default_page_offset;
-            }
-            else
-            {
-                const Buffer *buffer = m_SceneMemory.buffer_memory.buffers.GetPointer(resource.index);
-                return m_SceneMemory.buffer_memory.default_pages[buffer->default_page_index].gpu_mem->GetGPUVirtualAddress() + buffer->default_page_offset;
-            }
-        }
-
-        REV_INLINE D3D12_GPU_VIRTUAL_ADDRESS GetTextureGPUVirtualAddress(const GPU::ResourceHandle& resource)
-        {
-            REV_CHECK_M(GPU::MemoryManager::IsTexture(resource), "Resource is not a texture");
-            return GPU::MemoryManager::IsStatic(resource)
-                 ? m_StaticMemory.texture_memory.textures[resource.index].default_gpu_mem->GetGPUVirtualAddress()
-                 : m_SceneMemory.texture_memory.textures[resource.index].default_gpu_mem->GetGPUVirtualAddress();
-        }
-
-        REV_INLINE ID3D12Resource *GetBufferDefaultGPUMem(const GPU::ResourceHandle& resource)
-        {
-            REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
-            if (GPU::MemoryManager::IsStatic(resource))
-            {
-                const Buffer *buffer = m_StaticMemory.buffer_memory.buffers.GetPointer(resource.index);
-                return m_StaticMemory.buffer_memory.default_pages[buffer->default_page_index].gpu_mem;
-            }
-            else
-            {
-                const Buffer *buffer = m_SceneMemory.buffer_memory.buffers.GetPointer(resource.index);
-                return m_SceneMemory.buffer_memory.default_pages[buffer->default_page_index].gpu_mem;
-            }
-        }
-
-        REV_INLINE Buffer& GetBuffer(const GPU::ResourceHandle& resource)
-        {
-            REV_CHECK_M(GPU::MemoryManager::IsBuffer(resource), "Resource is not a buffer");
-            return GPU::MemoryManager::IsStatic(resource)
-                 ? m_StaticMemory.buffer_memory.buffers[resource.index]
-                 : m_SceneMemory.buffer_memory.buffers[resource.index];
-        }
-
-        REV_INLINE Texture& GetTexture(const GPU::ResourceHandle& resource)
-        {
-            REV_CHECK_M(GPU::MemoryManager::IsTexture(resource), "Resource is not a texture");
-            return GPU::MemoryManager::IsStatic(resource)
-                 ? m_StaticMemory.texture_memory.textures[resource.index]
-                 : m_SceneMemory.texture_memory.textures[resource.index];
-        }
-
-        REV_INLINE Sampler& GetSampler(const GPU::ResourceHandle& resource)
-        {
-            REV_CHECK_M(GPU::MemoryManager::IsSampler(resource), "Resource is not a sampler");
-            return GPU::MemoryManager::IsStatic(resource)
-                 ? m_StaticMemory.sampler_memory.samplers[resource.index]
-                 : m_SceneMemory.sampler_memory.samplers[resource.index];
-        }
-        #pragma endregion inline_getters
-
-    private:
-        Buffer  *AllocateBuffer(u64 size, DXGI_FORMAT format, D3D12_RESOURCE_STATES initial_state, GPU::RESOURCE_FLAG flags, u64& index, const ConstString& name);
-        Texture *AllocateTexture(TEXTURE_DIMENSION dimension, const D3D12_RESOURCE_DESC& desc, GPU::RESOURCE_FLAG flags, u8 planes_count, u64& index, const ConstString& name);
-
-        void UploadResources(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources);
-        void ReadbackResources(ID3D12GraphicsCommandList *command_list, const ConstArray<GPU::ResourceHandle>& resources);
-
-        void SetBufferName(BufferMemory *buffer_memory, Buffer *buffer, GPU::RESOURCE_FLAG flags, const ConstString& name);
-        void SetTextureName(TextureMemory *texture_memory, Texture *texture, GPU::RESOURCE_FLAG flags, const ConstString& name);
-
-        void FreeMemory(ResourceMemory *memory);
-
-        REV_DELETE_CONSTRS_AND_OPS(MemoryManager);
-
-    private:
-        Allocator      *m_Allocator;
-        DeviceContext  *m_DeviceContext;
-        ResourceMemory  m_StaticMemory;
-        ResourceMemory  m_SceneMemory;
-    };
-}
+#include "platform/d3d12/d3d12_memory_manager.inl"

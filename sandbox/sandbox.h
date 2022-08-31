@@ -19,18 +19,18 @@ public:
     REV_INLINE const DemoScene& GetDemoScene() const { return m_DemoScene; }
     REV_INLINE       DemoScene& GetDemoScene()       { return m_DemoScene; }
 
-    REV_INLINE const REV::GPU::ResourceHandle& GetMousePickTexture() const { return m_StaticMousePickTexture; }
+    REV_INLINE const REV::ResourceHandle& GetMousePickTexture() const { return m_StaticMousePickTexture; }
+    REV_INLINE const REV::ResourceHandle& GetColorTarget()      const { return m_ColorTarget; }
+    REV_INLINE const REV::ResourceHandle& GetDepthTarget()      const { return m_DepthTarget; }
 
 private:
-    Sandbox(const Sandbox&) = delete;
-    Sandbox(Sandbox&&)      = delete;
-
-    Sandbox& operator=(const Sandbox&) = delete;
-    Sandbox& operator=(Sandbox&&)      = delete;
+    REV_DELETE_CONSTRS_AND_OPS(Sandbox);
 
 private:
-    REV::Logger              m_Logger;
-    REV::GPU::ResourceHandle m_StaticMousePickTexture;
+    REV::Logger         m_Logger;
+    REV::ResourceHandle m_StaticMousePickTexture;
+    REV::ResourceHandle m_ColorTarget;
+    REV::ResourceHandle m_DepthTarget;
 
     DemoScene m_DemoScene;
 };

@@ -17,11 +17,12 @@ namespace REV
         using Type = T;
         static constexpr const u64 npos = REV_U64_MAX;
 
-        REV_INLINE ConstArray()                        : m_Data(null),         m_Count(0)             {}
-        REV_INLINE ConstArray(nullptr_t)               : m_Data(null),         m_Count(0)             {}
-        REV_INLINE ConstArray(T *data, u64 count)      : m_Data(data),         m_Count(count)         {}
-        REV_INLINE ConstArray(const ConstArray& other) : m_Data(other.m_Data), m_Count(other.m_Count) {}
-        REV_INLINE ConstArray(ConstArray&& other)      : m_Data(other.m_Data), m_Count(other.m_Count) { other.m_Data = null; other.m_Count = 0; }
+        REV_INLINE ConstArray()                               : m_Data(null),          m_Count(0)             {}
+        REV_INLINE ConstArray(nullptr_t)                      : m_Data(null),          m_Count(0)             {}
+        REV_INLINE ConstArray(T *data, u64 count)             : m_Data(data),          m_Count(count)         {}
+        REV_INLINE ConstArray(std::initializer_list<T> ilist) : m_Data(ilist.begin()), m_Count(ilist.size())  {}
+        REV_INLINE ConstArray(const ConstArray& other)        : m_Data(other.m_Data),  m_Count(other.m_Count) {}
+        REV_INLINE ConstArray(ConstArray&& other)             : m_Data(other.m_Data),  m_Count(other.m_Count) { other.m_Data = null; other.m_Count = 0; }
 
         REV_INLINE ~ConstArray() { m_Data = null; m_Count = 0; }
 
@@ -57,7 +58,8 @@ namespace REV
             return npos;
         }
 
-        REV_INLINE u64 Count() const { return m_Count; }
+        REV_INLINE u64 Count()  const { return m_Count;   }
+        REV_INLINE u64 Stride() const { return sizeof(T); }
 
         REV_INLINE const T *Data() const { return m_Data; }
         REV_INLINE       T *Data()       { return m_Data; }

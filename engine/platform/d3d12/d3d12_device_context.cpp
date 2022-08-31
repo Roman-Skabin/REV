@@ -183,7 +183,7 @@ void DeviceContext::StartFrame()
     // Clear
     f32 clear_color[4] = { 0.2f, 0.2f, 0.2f, 1.0f };
     graphics_list->ClearRenderTargetView(m_RTVCPUDescHandle, clear_color, 0, null);
-    graphics_list->ClearDepthStencilView(m_DSVCPUDescHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, null);
+    graphics_list->ClearDepthStencilView(m_DSVCPUDescHandle, D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, null);
 
     m_FrameStarted = true;
 }
@@ -280,7 +280,7 @@ u8 DeviceContext::GetFormatPlanesCount(DXGI_FORMAT format)
     return data.PlaneCount;
 }
 
-u8 DeviceContext::GetFormatPlanesCount(GPU::TEXTURE_FORMAT format)
+u8 DeviceContext::GetFormatPlanesCount(TEXTURE_FORMAT format)
 {
     D3D12_FEATURE_DATA_FORMAT_INFO data = {};
     data.Format = REVToDXGITextureFormat(format);
@@ -344,7 +344,6 @@ void DeviceContext::CreateAdapterAndDevice()
                 {
                     max_sram      = adapter_desc.SharedSystemMemory;
                     adapter_index = i;
-                    SafeRelease(m_Device);
                 }
             }
             else
@@ -353,9 +352,9 @@ void DeviceContext::CreateAdapterAndDevice()
                 {
                     max_vram      = adapter_desc.DedicatedVideoMemory;
                     adapter_index = i;
-                    SafeRelease(m_Device);
                 }
             }
+            SafeRelease(m_Device);
         }
         SafeRelease(m_Adapter);
     }
@@ -407,7 +406,6 @@ void DeviceContext::CreateAdapterAndDevice()
                     {
                         max_sram      = adapter_desc.SharedSystemMemory;
                         adapter_index = i;
-                        SafeRelease(m_Device);
                     }
                 }
                 else
@@ -416,9 +414,9 @@ void DeviceContext::CreateAdapterAndDevice()
                     {
                         max_vram      = adapter_desc.DedicatedVideoMemory;
                         adapter_index = i;
-                        SafeRelease(m_Device);
                     }
                 }
+                SafeRelease(m_Device);
             }
             SafeRelease(m_Adapter);
         }
@@ -529,10 +527,10 @@ void DeviceContext::CreateGraphicsQueueAllocatorsAndLists()
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
         error = m_Device->CreateCommandList(graphics_queue_desc.NodeMask,
-                                              graphics_queue_desc.Type,
-                                              *graphics_allocator,
-                                              null,
-                                              IID_PPV_ARGS(graphics_list));
+                                            graphics_queue_desc.Type,
+                                            *graphics_allocator,
+                                            null,
+                                            IID_PPV_ARGS(graphics_list));
         REV_CHECK(CheckResultAndPrintMessages(error, this));
 
         _snwprintf(wname, CACHE_LINE_SIZE / sizeof(wchar_t), L"Graphics List #%I32u", i);

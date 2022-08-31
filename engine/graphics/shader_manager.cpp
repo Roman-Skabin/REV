@@ -10,7 +10,7 @@
 #include "platform/d3d12/d3d12_shader_manager.h"
 #include "platform/d3d12/d3d12_common.h"
 
-namespace REV::GPU
+namespace REV
 {
 
 ShaderHandle ShaderManager::CreateGraphicsShader(
@@ -104,7 +104,7 @@ ConstArray<ResourceHandle> ShaderManager::GetLoadableResources(const ShaderHandl
     return resources;
 }
 
-ConstArray<GPU::ResourceHandle> ShaderManager::GetStorableResources(const ShaderHandle& graphics_shader)
+ConstArray<ResourceHandle> ShaderManager::GetStorableResources(const ShaderHandle& graphics_shader)
 {
     ConstArray<ResourceHandle> resources = null;
 

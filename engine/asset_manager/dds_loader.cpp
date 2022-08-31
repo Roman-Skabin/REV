@@ -339,9 +339,9 @@ struct DX10Header
     MISC_FLAG2               misc_flags2;
 };
 
-void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, const ConstString& name, bool _static)
+void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, const ConstString& name, bool permanent)
 {
-    GPU::MemoryManager *memory_manager = GraphicsAPI::GetMemoryManager();
+    MemoryManager *memory_manager = GraphicsAPI::GetMemoryManager();
 
     u32 magic = *cast(u32 *, data.Data());
     REV_CHECK_M(magic == DDS_MAGIC, "This is not a DDS file");
@@ -349,9 +349,9 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
     DDSHeader *dds_header = cast(DDSHeader *, data.Data() + sizeof(u32));
     REV_CHECK_M(dds_header->self_size == sizeof(DDSHeader) && dds_header->pixel_format.self_size == sizeof(PixelFormat), "Invalid DDS file layout");
 
-    DX10Header          *dx10_header    = null;
-    u32                  data_offset    = sizeof(u32) + sizeof(DDSHeader);
-    GPU::TEXTURE_FORMAT  texture_format = GPU::TEXTURE_FORMAT_UNKNOWN;
+    DX10Header     *dx10_header    = null;
+    u32             data_offset    = sizeof(u32) + sizeof(DDSHeader);
+    TEXTURE_FORMAT  texture_format = TEXTURE_FORMAT_UNKNOWN;
 
     if (dds_header->pixel_format.flags & PIXEL_FORMAT_FLAG_FOURCC)
     {
@@ -359,19 +359,19 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         {
             case FOURCC_DXT1:
             {
-                texture_format = GPU::TEXTURE_FORMAT_BC1;
+                texture_format = TEXTURE_FORMAT_BC1;
             } break;
 
             case FOURCC_DXT2:
             case FOURCC_DXT3:
             {
-                texture_format = GPU::TEXTURE_FORMAT_BC2;
+                texture_format = TEXTURE_FORMAT_BC2;
             } break;
 
             case FOURCC_DXT4:
             case FOURCC_DXT5:
             {
-                texture_format = GPU::TEXTURE_FORMAT_BC3;
+                texture_format = TEXTURE_FORMAT_BC3;
             } break;
 
             case FOURCC_DX10:
@@ -394,10 +394,28 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
         REV_ERROR_M("Unhandled DDS texture format");
     }
 
-    GPU::RESOURCE_FLAG  resource_flags = GPU::RESOURCE_FLAG_CPU_WRITE | (_static ? GPU::RESOURCE_FLAG_STATIC : GPU::RESOURCE_FLAG_NONE);
-    u16                 mipmap_count   = (dds_header->caps.caps1 & CAPS1_MIPMAP) ? cast(u16, dds_header->mipmap_count) : 1;
-    GPU::TextureData   *texture_data   = null;
+    // @TODO(Roman): Rewrite
+    RESOURCE_FLAG   resource_flags = RESOURCE_FLAG_CPU_WRITE_ONCE
+                                   | RESOURCE_FLAG_GPU_READ
+                                   | (permanent ? RESOURCE_FLAG_PERMANENT : RESOURCE_FLAG_NONE);
+    u16             mipmap_count   = (dds_header->caps.caps1 & CAPS1_MIPMAP) ? cast(u16, dds_header->mipmap_count) : 1;
 
+    TextureDataDesc texture_data_desc;
+    texture_data_desc.data              = data.Data() + data_offset;
+    texture_data_desc.format            = texture_format;
+    texture_data_desc.width             = dds_header->width;
+    texture_data_desc.height            = dds_header->height;
+    texture_data_desc.depth             = dds_header->depth;
+    texture_data_desc.mip_levels_count  = mipmap_count;
+    texture_data_desc.subtextures_count = 1;
+
+    if (dx10_header)                            texture_data_desc.subtextures_count  = dx10_header->array_size;
+    if (dds_header->caps.caps2 & CAPS2_CUBEMAP) texture_data_desc.subtextures_count *= 6;
+
+    TextureData texture_data;
+    texture_data.Init(texture_data_desc);
+
+    // @TODO(Roman): Rewrite
     if (dx10_header)
     {
         switch (dx10_header->dimension)
@@ -414,13 +432,6 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                                                                    texture_format,
                                                                    resource_flags,
                                                                    name);
-
-                texture_data = GPU::CreateVolumeTextureData(data.Data() + data_offset,
-                                                            mipmap_count,
-                                                            dds_header->width,
-                                                            dds_header->height,
-                                                            dds_header->depth,
-                                                            texture_format);
             } break;
 
             case D3D12_RESOURCE_DIMENSION_TEXTURE2D:
@@ -475,26 +486,6 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                                                                            name);
                     }
                 }
-
-                REV_CHECK(dx10_header->array_size >= 1);
-                if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
-                {
-                    texture_data = GPU::CreateTextureData(data.Data() + data_offset,
-                                                          mipmap_count,
-                                                          6 * dx10_header->array_size,
-                                                          dds_header->width,
-                                                          dds_header->height,
-                                                          texture_format);
-                }
-                else
-                {
-                    texture_data = GPU::CreateTextureData(data.Data() + data_offset,
-                                                          mipmap_count,
-                                                          dx10_header->array_size,
-                                                          dds_header->width,
-                                                          dds_header->height,
-                                                          texture_format);
-                }
             } break;
 
             case D3D12_RESOURCE_DIMENSION_TEXTURE1D:
@@ -516,14 +507,6 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                                                                        resource_flags,
                                                                        name);
                 }
-
-                REV_CHECK(dx10_header->array_size > 0);
-                texture_data = GPU::CreateTextureData(data.Data() + data_offset,
-                                                      mipmap_count,
-                                                      dx10_header->array_size,
-                                                      dds_header->width,
-                                                      1,
-                                                      texture_format);
             } break;
 
             default:
@@ -545,13 +528,6 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                                                                texture_format,
                                                                resource_flags,
                                                                name);
-
-            texture_data = GPU::CreateVolumeTextureData(data.Data() + data_offset,
-                                                        mipmap_count,
-                                                        dds_header->width,
-                                                        dds_header->height,
-                                                        dds_header->depth,
-                                                        texture_format);
         }
         else if (dds_header->caps.caps2 & CAPS2_CUBEMAP)
         {
@@ -563,13 +539,6 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                                                                  texture_format,
                                                                  resource_flags,
                                                                  name);
-
-            texture_data = GPU::CreateTextureData(data.Data() + data_offset,
-                                                  mipmap_count,
-                                                  6,
-                                                  dds_header->width,
-                                                  dds_header->height,
-                                                  texture_format);
         }
         else
         {
@@ -579,13 +548,6 @@ void AssetManager::LoadDDSTexture(Asset *asset, const ConstArray<byte>& data, co
                                                                texture_format,
                                                                resource_flags,
                                                                name);
-
-            texture_data = GPU::CreateTextureData(data.Data() + data_offset,
-                                                  mipmap_count,
-                                                  1,
-                                                  dds_header->width,
-                                                  dds_header->height,
-                                                  texture_format);
         }
     }
 

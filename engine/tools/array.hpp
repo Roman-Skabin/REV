@@ -67,7 +67,7 @@ namespace REV
         {
             if (m_Header)
             {
-                Clear();
+                Clear(false);
                 m_Header->allocator->DeAllocA(m_Header);
             }
         }
@@ -98,7 +98,7 @@ namespace REV
             REV_CHECK_M(from < m_Header->count && from < to && to <= m_Header->count, "Bad arguments: from = %I64u, to = %I64u, count = %I64u", from, to, m_Header->count);
 
             // @NOTE(Roman): Ugh, we gotta do that because of destructors.
-            if constexpr (RTTI::is_destructible_v<T>)
+            if constexpr (!RTTI::is_trivially_destructible_v<T>)
             {
                 for (T *it = m_Header->data + from; it < m_Header->data + to; ++it)
                 {
@@ -123,10 +123,13 @@ namespace REV
         REV_INLINE void EraseFront() { Erase(0); }
         REV_INLINE void EraseBack()  { Erase(m_Header->count - 1); }
 
-        void Clear()
+        void Clear(bool zero_memory = true)
         {
             DestroyAll();
-            ZeroMemory(m_Header->data, m_Header->count * sizeof(T));
+            if (zero_memory)
+            {
+                ZeroMemory(m_Header->data, m_Header->count * sizeof(T));
+            }
             m_Header->count = 0;
         }
 
@@ -156,6 +159,8 @@ namespace REV
     
         u64 Find(const T& what) const
         {
+            static_assert(RTTI::are_comparable_eq_v<T, T>, "There is no operator==(const T&, const T&)");
+
             T *_begin = m_Header->data;
             T *_end   = m_Header->data + m_Header->count;
             
@@ -172,6 +177,8 @@ namespace REV
     
         u64 RFind(const T& what) const
         {
+            static_assert(RTTI::are_comparable_eq_v<T, T>, "There is no operator==(const T&, const T&)");
+
             T *first = m_Header->data;
             T *last  = pLast();
     
@@ -186,7 +193,8 @@ namespace REV
             return *first == what ? 0 : npos;
         }
 
-        REV_INLINE ConstArray<T> ToConstArray() { return ConstArray<T>(m_Header->data, m_Header->count); }
+        REV_INLINE const ConstArray<T> ToConstArray() const { return ConstArray<T>(m_Header->data, m_Header->count); }
+        REV_INLINE       ConstArray<T> ToConstArray()       { return ConstArray<T>(m_Header->data, m_Header->count); }
     
         REV_INLINE u64 Count()     const { return m_Header->count;             }
         REV_INLINE u64 Capacity()  const { return m_Header->capacity;          }
@@ -243,7 +251,7 @@ namespace REV
         {
             u64 new_count = const_array.Count();
 
-            Clear();
+            Clear(false);
             if (new_count > m_Header->capacity)
             {
                 m_Header->capacity = 2 * new_count;
@@ -337,7 +345,7 @@ namespace REV
     
         void DestroyAll()
         {
-            if constexpr (RTTI::is_destructible_v<T>)
+            if constexpr (!RTTI::is_trivially_destructible_v<T>)
             {
                 if (m_Header)
                 {

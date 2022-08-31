@@ -2,13 +2,14 @@
 #include "application.h"
 #include "tools/static_string_builder.hpp"
 #include "sandbox.h"
+#include "graphics/vertex_index_instance_buffers.h"
 
 DemoScene::DemoScene(REV::Allocator *allocator)
     : Scene(REV::ConstString(REV_CSTR_ARGS("DemoScene"))),
       m_CBuffer(),
-      m_CBufferData{ REV::Math::m4::identity(), REV::Math::v4(252.0f, 212.0f, 64.0f, 255.0f) / 255.0f, REV::Math::v3() },
+      m_CBufferData{ REV::Math::m4::identity(), REV::Math::v4(252.0f, 212.0f, 64.0f, 255.0f) / 255.0f, REV_INVALID_ENTITY_ID },
       m_Translation(REV::Math::m4::identity()),
-      m_Rect(),
+      m_Rect("Rect"),
       m_DemoShader(),
       m_PickedEntity(REV_INVALID_ENTITY_ID),
       m_OriginalWindowTitle(REV::Application::Get()->GetWindow().Title())
@@ -21,55 +22,27 @@ DemoScene::~DemoScene()
 
 void DemoScene::OnSetCurrent()
 {
-    REV::Vertex vertices[] =
+    m_Rect.SetVertices(REV::ConstArray<REV::VertexPosTex>(
     {
-        { REV::Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2(0.0f, 1.0f) },
-        { REV::Math::v4(-0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2(0.0f, 0.0f) },
-        { REV::Math::v4( 0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2(1.0f, 0.0f) },
-        { REV::Math::v4( 0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v4(), REV::Math::v2(1.0f, 1.0f) },
-    };
-    REV::Index indices[] =
+        { REV::Math::v4(-0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v2(0.0f, 1.0f) },
+        { REV::Math::v4(-0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v2(0.0f, 0.0f) },
+        { REV::Math::v4( 0.5f,  0.5f, 0.5f, 1.0f), REV::Math::v2(1.0f, 0.0f) },
+        { REV::Math::v4( 0.5f, -0.5f, 0.5f, 1.0f), REV::Math::v2(1.0f, 1.0f) },
+    }));
+
+    m_Rect.SetIndices(REV::ConstArray<REV::Index16>(
     {
         0, 1, 2,
         0, 2, 3
-    };
+    }));
 
-    m_Rect.Create(REV::ArrayCount(vertices), REV::ArrayCount(indices));
-    m_Rect.SetData(REV::ConstArray(REV_CARRAY_ARGS(vertices)), REV::ConstArray(REV_CARRAY_ARGS(indices)));
-
-    REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
-    REV::AssetManager       *asset_manager      = REV::AssetManager::Get();
-
-    m_CBuffer                           = gpu_memory_manager->AllocateConstantBuffer(sizeof(CBufferData), false, REV::ConstString(REV_CSTR_ARGS("DemoSceneCB")));
-    REV::AssetHandle wood_texture_asset = asset_manager->LoadTexture(REV::ConstString(REV_CSTR_ARGS("Wood")), false);
-
-    Sandbox *sandbox = cast(Sandbox *, REV::Application::Get());
-
-    REV::GPU::ShaderResourceDesc demo_shader_resources_descs[] =
-    {
-        REV::GPU::ShaderResourceDesc::CBV(m_CBuffer, 0, 0),
-        REV::GPU::ShaderResourceDesc::SRV(asset_manager->GetAsset(wood_texture_asset)->texture, 0, 0),
-        REV::GPU::ShaderResourceDesc::Sampler(gpu_memory_manager->AllocateSampler(REV::GPU::TEXTURE_ADDRESS_MODE_WRAP, REV::Math::v4(1.0f), REV::Math::v2(0.0f, 100.0f), false), 0, 0),
-        REV::GPU::ShaderResourceDesc::RTV(sandbox->GetMousePickTexture(), REV::Math::v4())
-    };
-
-    m_DemoShader = asset_manager->LoadShader(REV::LoadShaderDesc(REV::ConstString(REV_CSTR_ARGS("demo_shader")),
-                                                                 REV::ConstArray(REV_CARRAY_ARGS(demo_shader_resources_descs))),
-                                             false);
-
-    REV::ForwardPlusPipeline *pipeline = sandbox->GetForwardPlusPipeline();
-
-    REV::RenderPass *opaque_pass = pipeline->EnableStaticPass(REV::RENDER_PASS_KIND_OPAQUE);
+    CreateResources();
+    CreateShaders();
+    AddOpaquePass();
 }
 
 void DemoScene::OnUnsetCurrent()
 {
-}
-
-void DemoScene::OnSetResourcesData()
-{
-    REV::GPU::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
-    gpu_memory_manager->SetBufferData(m_CBuffer, &m_CBufferData);
 }
 
 REV_INTERNAL REV::Math::v2 REV_VECTORCALL WindowToRTCoord(REV::Math::v2 win_xy)
@@ -81,15 +54,15 @@ REV_INTERNAL REV::Math::v2 REV_VECTORCALL WindowToRTCoord(REV::Math::v2 win_xy)
 
 void DemoScene::OnUpdate()
 {
-    REV::Application               *application        = REV::Application::Get();
-    Sandbox                        *sandbox            = cast(Sandbox *, application);
-    const REV::Keyboard&            keyboard           = application->GetInput()->GetKeyboard();
-    const REV::Mouse&               mouse              = application->GetInput()->GetMouse();
-    REV::Window&                    window             = application->GetWindow();
-    REV::Timer&                     timer              = application->GetTimer();
-    const REV::GPU::ResourceHandle& mouse_pick_texture = sandbox->GetMousePickTexture();
-    REV::GPU::MemoryManager        *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
-    REV::GPU::DeviceContext        *device_context     = REV::GraphicsAPI::GetDeviceContext();
+    REV::Application          *application        = REV::Application::Get();
+    Sandbox                   *sandbox            = cast(Sandbox *, application);
+    const REV::Keyboard&       keyboard           = application->GetInput()->GetKeyboard();
+    const REV::Mouse&          mouse              = application->GetInput()->GetMouse();
+    REV::Window&               window             = application->GetWindow();
+    REV::Timer&                timer              = application->GetTimer();
+    const REV::ResourceHandle& mouse_pick_texture = sandbox->GetMousePickTexture();
+    REV::MemoryManager        *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
+    REV::DeviceContext        *device_context     = REV::GraphicsAPI::GetDeviceContext();
 
     REV_LOCAL f32 last_print_time;
     if (!window.Fullscreened() && timer.Seconds() - last_print_time >= 0.1)
@@ -121,7 +94,7 @@ void DemoScene::OnUpdate()
     {
         m_PickedEntity = *cast(u32 *, GetTexturePixelData(gpu_memory_manager->GetTextureData(mouse_pick_texture),
                                                           0, 0, 0,
-                                                          REV::GPU::TEXTURE_FORMAT_U32,
+                                                          REV::TEXTURE_FORMAT_U32,
                                                           REV::Math::v2_to_v2u(WindowToRTCoord(REV::Math::v2s_to_v2(mouse.Pos())))));
     }
     else if (mouse.LeftButton().Released())
@@ -133,7 +106,7 @@ void DemoScene::OnUpdate()
     // Update Rect
     //
     REV::Math::v4 translation;
-    if (m_PickedEntity == m_Rect.ID)
+    if (m_PickedEntity == m_Rect.ID())
     {
         // @NOTE(Roman): delta mouse position in window space to delta mouse position in render target space also normalized to [-1, 1].
 
@@ -166,9 +139,77 @@ void DemoScene::OnUpdate()
     m_Translation *= REV::Math::m4::translation(translation);
 
     m_CBufferData.mvp       = m_Translation;
-    m_CBufferData.center    = (m_CBufferData.mvp * ((m_Rect.vertices[0].position + m_Rect.vertices[2].position) / 2.0f)).xyz;
-    m_CBufferData.entity_id = m_Rect.ID;
+    m_CBufferData.entity_id = m_Rect.ID();
 
-    gpu_memory_manager->SetBufferData(m_VertexBuffer, m_Vertices);
-    gpu_memory_manager->SetBufferData(m_IndexBuffer, m_Indices);
+    gpu_memory_manager->SetBufferData(m_CBuffer, &m_CBufferData);
+}
+
+void DemoScene::CreateResources()
+{
+    REV::MemoryManager *gpu_memory_manager = REV::GraphicsAPI::GetMemoryManager();
+    REV::AssetManager  *asset_manager      = REV::AssetManager::Get();
+
+    m_CBuffer = gpu_memory_manager->AllocateConstantBuffer(sizeof(CBufferData), false, REV::ConstString(REV_CSTR_ARGS("DemoSceneCB")));
+
+    REV::AssetHandle wood_texture_asset = asset_manager->LoadTexture(REV::ConstString(REV_CSTR_ARGS("Wood")), false);
+
+    m_WoodTexture        = asset_manager->GetAsset(wood_texture_asset)->texture;
+    m_WoodTextureSampler = gpu_memory_manager->AllocateSampler(REV::TEXTURE_ADDRESS_MODE_WRAP,
+                                                               REV::Math::v4(1.0f),
+                                                               REV::Math::v2(0.0f, 100.0f),
+                                                               false);
+}
+
+void DemoScene::CreateShaders()
+{
+    REV::AssetManager *asset_manager = REV::AssetManager::Get();
+    Sandbox           *sandbox       = cast(Sandbox *, REV::Application::Get());
+
+    m_DemoShader = asset_manager->LoadShader(REV::LoadShaderDesc(REV::ConstString(REV_CSTR_ARGS("demo_shader")),
+                                                                 REV::ConstArray<REV::ShaderResourceDesc>(
+                                                                 {
+                                                                     REV::ShaderResourceDesc::CBV(m_CBuffer, 0, 0),
+                                                                     REV::ShaderResourceDesc::SRV(m_WoodTexture, 0, 0),
+                                                                     REV::ShaderResourceDesc::Sampler(m_WoodTextureSampler, 0, 0)
+                                                                     REV::ShaderResourceDesc::RTV(sandbox->GetColorTarget(), REV::Math::v4(0.2f, 0.2f, 0.2f, 1.0f)),
+                                                                     REV::ShaderResourceDesc::RTV(sandbox->GetMousePickTexture(), REV::Math::v4()),
+                                                                     REV::ShaderResourceDesc::DSV(sandbox->GetDepthTarget(), 0.0f),
+                                                                 }),
+                                                                 REV::ConstArray<REV::ConstString>(
+                                                                 {
+                                                                     REV::ConstString(REV_CSTR_ARGS("TEST_DEFINE=1"))
+                                                                 })),
+                                             false);
+}
+
+void DemoScene::AddOpaquePass()
+{
+    Sandbox                  *sandbox          = cast(Sandbox *, REV::Application::Get());
+    REV::AssetManager        *asset_manager    = REV::AssetManager::Get();
+    REV::ForwardPlusPipeline& forward_pipeline = sandbox->GetForwardPlusPipeline();
+
+    REV::RenderPass& opaque_pass = forward_pipeline.AddRenderPass(REV::ConstString(REV_CSTR_ARGS("Opaque Pass")));
+    {
+        REV::RenderPassRTDesc color_rt_desc;
+        color_rt_desc.resource_handle = sandbox->GetColorTarget();
+        color_rt_desc.load_action     = REV::RT_DS_LOAD_ACTION_CLEAR;
+        color_rt_desc.store_action    = REV::RT_DS_STORE_ACTION_STORE;
+        color_rt_desc.clear_value     = REV::Math::v4(0.2f, 0.2f, 0.2f, 1.0f);
+
+        REV::RenderPassRTDesc mouse_picker_rt_desc;
+        mouse_picker_rt_desc.resource_handle = sandbox->GetMousePickTexture();
+        mouse_picker_rt_desc.load_action     = REV::RT_DS_LOAD_ACTION_CLEAR;
+        mouse_picker_rt_desc.store_action    = REV::RT_DS_STORE_ACTION_STORE;
+        mouse_picker_rt_desc.clear_value     = REV::Math::v4();
+
+        REV::RenderPassDSDesc ds_desc;
+        ds_desc.resource_handle    = sandbox->GetDepthTarget();
+        ds_desc.depth_load_action  = REV::RT_DS_LOAD_ACTION_CLEAR;
+        ds_desc.depth_store_action = REV::RT_DS_STORE_ACTION_STORE;
+        ds_desc.depth_clear_value  = 0.0f;
+
+        opaque_pass.AddRenderTarget(color_rt_desc);
+        opaque_pass.AddRenderTarget(mouse_picker_rt_desc);
+        opaque_pass.SetDepthStencil(ds_desc);
+    }
 }

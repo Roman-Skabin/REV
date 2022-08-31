@@ -24,6 +24,7 @@
 #include <vcruntime_typeinfo.h>
 #include <vcruntime_new.h>
 #include <functional>
+#include <initializer_list>
 
 //
 // Stable headers

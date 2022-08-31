@@ -12,10 +12,7 @@ namespace REV
 {
     class Window;
     class GraphicsAPI;
-}
 
-namespace REV::GPU
-{
     enum TEXTURE_FORMAT : u32;
 
     class REV_API DeviceContext final
@@ -41,9 +38,7 @@ namespace REV::GPU
         REV_REMOVE_OOP_STUFF(DeviceContext);
 
     private:
-        byte platform[0];
-
-        friend class ::REV::Window;
-        friend class ::REV::GraphicsAPI;
+        friend class Window;
+        friend class GraphicsAPI;
     };
 }

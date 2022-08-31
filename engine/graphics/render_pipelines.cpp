@@ -5,7 +5,7 @@
 // LICENSE.md file in the root directory of this source tree. 
 
 #include "core/pch.h"
-#include "graphics/forward_plus_pipeline.h"
+#include "graphics/render_pipelines.h"
 #include "memory/memory.h"
 
 namespace REV
@@ -14,10 +14,6 @@ namespace REV
 ForwardPlusPipeline::ForwardPlusPipeline(Allocator *allocator)
     : m_RenderGraph(allocator)
 {
-    for (u32 i = 0; i < RENDER_PASS_KIND_MAX; ++i)
-    {
-        new (m_RenderPasses + i) RenderPass(allocator, i);
-    }
 }
 
 ForwardPlusPipeline::~ForwardPlusPipeline()

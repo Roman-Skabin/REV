@@ -15,29 +15,25 @@ namespace REV::D3D12
 {
     struct ResourcesTableNode final
     {
-        ResourcesTableNode      *next = null;
-        ResourcesTableNode      *prev = null;
-        GPU::ShaderResourceDesc  resoucre_desc;
+        ResourcesTableNode *next = null;
+        ResourcesTableNode *prev = null;
+        ShaderResourceDesc  resoucre_desc;
     };
 
     struct ResourcesTable final
     {
-        ResourcesTableNode      *CBV_first     = null;
-        ResourcesTableNode      *CBV_last      = null;
-        u64                      CBV_count     = 0;
-        ResourcesTableNode      *SRV_first     = null;
-        ResourcesTableNode      *SRV_last      = null;
-        u64                      SRV_count     = 0;
-        ResourcesTableNode      *UAV_first     = null;
-        ResourcesTableNode      *UAV_last      = null;
-        u64                      UAV_count     = 0;
-        ResourcesTableNode      *RTV_first     = null;
-        ResourcesTableNode      *RTV_last      = null;
-        u64                      RTV_count     = 0;
-        GPU::ShaderResourceDesc  DSV;
-        ResourcesTableNode      *sampler_first = null;
-        ResourcesTableNode      *sampler_last  = null;
-        u64                      sampler_count = 0;
+        ResourcesTableNode *CBV_first     = null;
+        u64                 CBV_count     = 0;
+        ResourcesTableNode *SRV_first     = null;
+        u64                 SRV_count     = 0;
+        ResourcesTableNode *UAV_first     = null;
+        u64                 UAV_count     = 0;
+        ResourcesTableNode *RTV_first     = null;
+        u64                 RTV_count     = 0;
+        ResourcesTableNode *DSV_first     = null;
+        u64                 DSV_count     = 0;
+        ResourcesTableNode *sampler       = null;
+        u64                 sampler_count = 0;
     };
 
     struct DescriptorHeapTable final
@@ -59,29 +55,29 @@ namespace REV::D3D12
 
     struct GraphicsShader final
     {
-        ID3DBlob                    *signature;
-        ID3D12RootSignature         *root_signature;
-        ID3D12PipelineState         *pipeline_state;
-        GPU::ResourceHandle          index_buffer;
-        ID3DBlob                    *vertex_shader;
-        ID3DBlob                    *pixel_shader;
-        ID3DBlob                    *hull_shader;
-        ID3DBlob                    *domain_shader;
-        ID3DBlob                    *geometry_shader;
-        ResourcesTable               bound_resources;
-        DescriptorHeapTable          desc_heap_table;
-        bool                         _static;
+        ID3DBlob            *signature;
+        ID3D12RootSignature *root_signature;
+        ID3D12PipelineState *pipeline_state;
+        ResourceHandle       index_buffer;
+        ID3DBlob            *vertex_shader;
+        ID3DBlob            *pixel_shader;
+        ID3DBlob            *hull_shader;
+        ID3DBlob            *domain_shader;
+        ID3DBlob            *geometry_shader;
+        ResourcesTable       bound_resources;
+        DescriptorHeapTable  desc_heap_table;
+        bool                 _static;
     };
 
     struct ComputeShader final
     {
-        ID3DBlob                    *signature;
-        ID3D12RootSignature         *root_signature;
-        ID3D12PipelineState         *pipeline_state;
-        ID3DBlob                    *shader;
-        ResourcesTable               bound_resources;
-        DescriptorHeapTable          desc_heap_table;
-        bool                         _static;
+        ID3DBlob            *signature;
+        ID3D12RootSignature *root_signature;
+        ID3D12PipelineState *pipeline_state;
+        ID3DBlob            *shader;
+        ResourcesTable       bound_resources;
+        DescriptorHeapTable  desc_heap_table;
+        bool                 _static;
     };
 
     class ShaderManager final
@@ -92,43 +88,43 @@ namespace REV::D3D12
 
         void FreeSceneShaders();
 
-        u64 CreateGraphicsShader(const ConstString& shader_cache_filename, const ConstArray<GPU::ShaderResourceDesc>& resources, bool _static);
+        u64 CreateGraphicsShader(const ConstString& shader_cache_filename, const ConstArray<ShaderResourceDesc>& resources, bool _static);
 
         void SetCurrentGraphicsShader(const GraphicsShader& graphics_shader);
 
-        void BindVertexBuffer(const GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource);
-        void BindIndexBuffer(GraphicsShader& graphics_shader, const GPU::ResourceHandle& resource);
+        void BindVertexBuffer(const GraphicsShader& graphics_shader, const ResourceHandle& resource);
+        void BindIndexBuffer(GraphicsShader& graphics_shader, const ResourceHandle& resource);
 
-        ConstArray<GPU::ResourceHandle> GetLoadableResources(const GraphicsShader& graphics_shader);
-        ConstArray<GPU::ResourceHandle> GetStorableResources(const GraphicsShader& graphics_shader);
+        ConstArray<ResourceHandle> GetLoadableResources(const GraphicsShader& graphics_shader);
+        ConstArray<ResourceHandle> GetStorableResources(const GraphicsShader& graphics_shader);
 
         void Draw(const GraphicsShader& graphics_shader);
 
         ID3DBlob *CompileShader(const ConstString& hlsl_code, const char *name, const char *entry_point, const char *target);
 
         #pragma region inline_getters
-        REV_INLINE const GraphicsShader& GetGraphicsShader(const GPU::ShaderHandle& shader_handle) const
+        REV_INLINE const GraphicsShader& GetGraphicsShader(const ShaderHandle& shader_handle) const
         {
             return shader_handle._static
                  ? m_StaticGraphicsShaders[shader_handle.index]
                  : m_SceneGraphicsShaders[shader_handle.index];
         }
 
-        REV_INLINE const ComputeShader& GetComputeShader(const GPU::ShaderHandle& shader_handle) const
+        REV_INLINE const ComputeShader& GetComputeShader(const ShaderHandle& shader_handle) const
         {
             return shader_handle._static
                  ? m_StaticComputeShaders[shader_handle.index]
                  : m_SceneComputeShaders[shader_handle.index];
         }
 
-        REV_INLINE GraphicsShader& GetGraphicsShader(const GPU::ShaderHandle& shader_handle)
+        REV_INLINE GraphicsShader& GetGraphicsShader(const ShaderHandle& shader_handle)
         {
             return shader_handle._static
                  ? m_StaticGraphicsShaders[shader_handle.index]
                  : m_SceneGraphicsShaders[shader_handle.index];
         }
 
-        REV_INLINE ComputeShader& GetComputeShader(const GPU::ShaderHandle& shader_handle)
+        REV_INLINE ComputeShader& GetComputeShader(const ShaderHandle& shader_handle)
         {
             return shader_handle._static
                  ? m_StaticComputeShaders[shader_handle.index]
@@ -141,7 +137,7 @@ namespace REV::D3D12
 
     private:
         void LoadShaderCache(GraphicsShader *graphics_shader, const ConstString& shader_cache_filename);
-        void InitBoundResources(GraphicsShader *graphics_shader, const ConstArray<GPU::ShaderResourceDesc>& resources);
+        void InitBoundResources(GraphicsShader *graphics_shader, const ConstArray<ShaderResourceDesc>& resources);
         void CreateDescHeaps(GraphicsShader *graphics_shader);
         void CreateViews(GraphicsShader *graphics_shader);
         ConstArray<D3D12_ROOT_PARAMETER> CreateRootSignatureParameters(GraphicsShader *graphics_shader);
@@ -151,10 +147,10 @@ namespace REV::D3D12
         REV_DELETE_CONSTRS_AND_OPS(ShaderManager);
 
     private:
-        Array<GraphicsShader>  m_StaticGraphicsShaders;
-        Array<ComputeShader>   m_StaticComputeShaders;
-        Array<GraphicsShader>  m_SceneGraphicsShaders;
-        Array<ComputeShader>   m_SceneComputeShaders;
-        Logger                 m_Logger;
+        Array<GraphicsShader> m_StaticGraphicsShaders;
+        Array<ComputeShader>  m_StaticComputeShaders;
+        Array<GraphicsShader> m_SceneGraphicsShaders;
+        Array<ComputeShader>  m_SceneComputeShaders;
+        Logger                m_Logger;
     };
 }

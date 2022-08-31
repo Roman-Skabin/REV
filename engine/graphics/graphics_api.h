@@ -20,7 +20,7 @@ namespace REV
     class REV_API GraphicsAPI final
     {
     public:
-        enum class API
+        enum API
         {
             NONE,
             D3D12,
@@ -31,19 +31,19 @@ namespace REV
 
         static void SetGraphicsAPI(API api);
 
-        static GPU::DeviceContext *GetDeviceContext();
-        static GPU::MemoryManager *GetMemoryManager();
-        static GPU::ShaderManager *GetShaderManager();
+        static DeviceContext *GetDeviceContext();
+        static MemoryManager *GetMemoryManager();
+        static ShaderManager *GetShaderManager();
 
     private:
         static void Init(Window *window, Allocator *allocator, const Logger& logger);
         static void Destroy();
 
     private:
-        static API                 s_API;
-        static GPU::DeviceContext *s_DeviceContext;
-        static GPU::MemoryManager *s_MemoryManager;
-        static GPU::ShaderManager *s_ShaderManager;
+        static API            s_API;
+        static DeviceContext *s_DeviceContext;
+        static MemoryManager *s_MemoryManager;
+        static ShaderManager *s_ShaderManager;
 
         friend class Application;
     };

@@ -1,5 +1,11 @@
 # REV
 
+## <img src="https://www.freeiconspng.com/uploads/alert-storm-warning-weather-icon--icon-search-engine-0.png" width="50"></img> The development of this project is dropped since:
+* I have no patience anymore to use C++ for my own projecs.
+* I have learned a lot in the last year.
+
+So I am going to rewrite an entire engine with my new ideas and knowledges [here](https://github.com/Pet-Engine).
+
 ## What I am working on right now:
 * Custom shaders
 * Common render stuff: different render pipelines, render graph, render pass
